@@ -98,6 +98,71 @@
 
   .scrim{display:none;position:fixed;inset:0;background:rgba(10,30,22,.45);z-index:25}
 
+
+  /* ===== Auth lock: บังคับ LINE Login + เช็กสิทธิ์ Admin ก่อนแสดงหน้า ===== */
+  body.auth-lock .sidebar,
+  body.auth-lock .main{
+    display:none;
+  }
+
+  .auth-screen{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    background:linear-gradient(135deg,#EEF2F0,#FFFFFF);
+    display:grid;
+    place-items:center;
+    font-family:'Noto Sans Thai',sans-serif;
+  }
+
+  body:not(.auth-lock) .auth-screen{
+    display:none;
+  }
+
+  .auth-card{
+    width:min(420px,90vw);
+    background:#fff;
+    border:1px solid #E2EAE6;
+    border-radius:22px;
+    padding:34px 28px;
+    text-align:center;
+    box-shadow:0 22px 60px -24px rgba(15,50,38,.35);
+  }
+
+  .auth-logo{
+    width:64px;
+    height:64px;
+    border-radius:18px;
+    margin:0 auto 18px;
+    display:grid;
+    place-items:center;
+    background:linear-gradient(135deg,#3FA06E,#1F7A5A);
+    color:#fff;
+    font-weight:800;
+    letter-spacing:.06em;
+  }
+
+  .auth-title{
+    font-size:22px;
+    font-weight:800;
+    color:#13201B;
+  }
+
+  .auth-sub{
+    margin-top:8px;
+    font-size:14px;
+    color:#8A9A92;
+    line-height:1.6;
+  }
+
+  .auth-denied .auth-logo{
+    background:#C0492F;
+  }
+
+  .auth-denied .auth-title{
+    color:#C0492F;
+  }
+
   @media(max-width:860px){
     .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 40px rgba(0,0,0,.3)}
     body.menu-open .sidebar{transform:translateX(0)}
@@ -114,7 +179,15 @@
   }
 </style>
 </head>
-<body>
+<body class="auth-lock">
+
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">SSB</div>
+    <div class="auth-title">กำลังตรวจสอบสิทธิ์</div>
+    <div class="auth-sub">กรุณาเข้าสู่ระบบ LINE เพื่อยืนยันสิทธิ์ผู้บริหาร</div>
+  </div>
+</div>
 
 <div class="scrim" id="scrim" onclick="document.body.classList.remove('menu-open')"></div>
 
@@ -491,32 +564,72 @@
     }
   }
 
- async function bootstrapStatus(){
-  renderFleetStatus();
+async function bootstrapStatus(){
+    const authScreen = document.getElementById('authScreen');
 
-  try{
-    await liff.init({ liffId: LIFF_ID });
+    function deny(msg){
+      document.body.classList.add('auth-lock');
+      if(authScreen){
+        authScreen.classList.add('auth-denied');
+        authScreen.innerHTML = `
+          <div class="auth-card">
+            <div class="auth-logo">!</div>
+            <div class="auth-title">ไม่มีสิทธิ์เข้าใช้งาน</div>
+            <div class="auth-sub">${msg || 'หน้านี้สำหรับผู้บริหารหรือแอดมินเท่านั้น'}</div>
+          </div>
+        `;
+      }
+    }
 
-    // ✅ สำคัญ: ถ้ายังไม่ login ให้ login ก่อน เหมือนหน้า notify
-    if(!liff.isLoggedIn()){
-      liff.login({ redirectUri: window.location.href });
+    try{
+      await liff.init({ liffId: LIFF_ID });
+
+      // ✅ บังคับ LINE Login ตั้งแต่เปิด Dashboard
+      if(!liff.isLoggedIn()){
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+
+      const p = await liff.getProfile();
+      MY_UID = p.userId || '';
+
+      if(!MY_UID){
+        deny('ไม่พบ LINE UID กรุณาเปิดผ่าน LINE LIFF อีกครั้ง');
+        return;
+      }
+
+      // ✅ เช็กสิทธิ์จากหลังบ้านก่อนเปิดหน้า
+      const r = await fetch(
+        GAS_URL +
+        '?action=getUser' +
+        '&userId=' + encodeURIComponent(MY_UID) +
+        '&t=' + Date.now()
+      );
+
+      const u = await r.json();
+      const role = String(u.role || '').toLowerCase();
+
+      if(!(role === 'admin' || role === 'ผู้บริหาร' || role === 'executive')){
+        deny('บัญชีนี้ไม่ใช่สิทธิ์แอดมิน / ผู้บริหาร');
+        return;
+      }
+
+      // ✅ ผ่านสิทธิ์แล้ว ค่อยแสดง Dashboard
+      document.body.classList.remove('auth-lock');
+      if(authScreen) authScreen.style.display = 'none';
+
+    }catch(e){
+      console.error('AUTH_ERROR:', e);
+      deny('ตรวจสอบสิทธิ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       return;
     }
 
-    const p = await liff.getProfile();
-    MY_UID = p.userId || '';
+    refreshFleetStatus();
+    setInterval(refreshFleetStatus, REFRESH_MS);
 
-  }catch(e){
-    console.warn('LIFF init skipped:', e);
-    MY_UID = '';
+    refreshNotifyBadge();
+    setInterval(refreshNotifyBadge, 60000);
   }
-
-  refreshFleetStatus();
-  setInterval(refreshFleetStatus, REFRESH_MS);
-
-  refreshNotifyBadge();
-  setInterval(refreshNotifyBadge, 60000);
-}
 
   bootstrapStatus();
 
