@@ -390,13 +390,20 @@
 
   async function refreshFleetStatus(){
     try{
-      const r = await fetch(
-        GAS_URL +
-        '?action=getFleetGpsStatus' +
-        '&t=' + Date.now()
-      );
+      const url = GAS_URL + '?action=getFleetGpsStatus&t=' + Date.now();
+      console.log('FLEET_API_URL:', url);
   
-      const j = await r.json();
+      const r = await fetch(url);
+      const text = await r.text();
+  
+      console.log('FLEET_API_RAW:', text);
+  
+      let j;
+      try{
+        j = JSON.parse(text);
+      }catch(parseErr){
+        throw new Error('API ไม่ได้ตอบ JSON: ' + text.slice(0,120));
+      }
   
       if(j && j.ok){
         fleet = {
@@ -409,30 +416,53 @@
           ready: true
         };
       }else{
-        fleet.connected = false;
-        fleet.ready = true;
+        fleet = {
+          gpsOnline: false,
+          total: 0,
+          online: null,
+          offline: null,
+          unknown: null,
+          connected: false,
+          ready: true,
+          error: (j && j.error) ? j.error : 'API ไม่ ok'
+        };
       }
   
     }catch(e){
-      fleet.connected = false;
-      fleet.ready = true;
+      console.error('FLEET_API_ERROR:', e);
+  
+      fleet = {
+        gpsOnline: false,
+        total: 0,
+        online: null,
+        offline: null,
+        unknown: null,
+        connected: false,
+        ready: true,
+        error: e.toString()
+      };
     }
   
     renderFleetStatus();
   }
 
   async function bootstrapStatus(){
-    renderFleetStatus();                    // โชว์ตัวเลขตั้งต้นทันที
+    renderFleetStatus();
+  
     try{
       await liff.init({ liffId: LIFF_ID });
+  
       if(liff.isLoggedIn()){
         const p = await liff.getProfile();
-        MY_UID = p.userId;
-        refreshFleetStatus();
-        setInterval(refreshFleetStatus, REFRESH_MS);
+        MY_UID = p.userId || '';
       }
-      // ถ้ายังไม่ล็อกอิน ไม่ต้อง force login ที่หน้าหลัก — ปล่อยให้โชว์ตัวเลขตั้งต้นไปก่อน
-    }catch(e){ /* เปิดนอก LINE / LIFF ไม่พร้อม → คงตัวเลขตั้งต้น ไม่แดง */ }
+    }catch(e){
+      console.warn('LIFF init skipped:', e);
+      MY_UID = '';
+    }
+  
+    refreshFleetStatus();
+    setInterval(refreshFleetStatus, REFRESH_MS);
   }
 
   bootstrapStatus();
