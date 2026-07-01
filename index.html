@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SSB Smart Supply · ผู้บริหาร</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --pine:#1F7A5A; --pine-deep:#13533C; --pine-soft:#EAF3EF;
+    --leaf:#3FA06E; --gold:#E9B949;
+    --ink:#13201B; --ink-soft:#4A5B53; --ink-faint:#8A9A92;
+    --surface:#FFFFFF; --surface-2:#F4F7F5; --canvas:#EEF2F0;
+    --line:#E2EAE6; --line-strong:#CBD8D2;
+    --danger:#C0492F; --danger-bg:#FBEDE9;
+    --sb-w:248px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{overflow-x:hidden}
+  body{font-family:'Noto Sans Thai',sans-serif;background:var(--canvas);color:var(--ink);display:flex;min-height:100vh;max-width:100%}
+  .mono{font-family:'IBM Plex Mono',monospace}
+
+  /* scrollbar เนียนๆ ทั้งหน้า */
+  .nav,.content{scrollbar-width:thin;scrollbar-color:rgba(120,140,130,.35) transparent}
+  .nav::-webkit-scrollbar,.content::-webkit-scrollbar{width:7px;height:0}
+  .nav::-webkit-scrollbar-thumb,.content::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:10px}
+  .content::-webkit-scrollbar-thumb{background:rgba(120,140,130,.3)}
+  .nav::-webkit-scrollbar-track,.content::-webkit-scrollbar-track{background:transparent}
+
+  .sidebar{width:var(--sb-w);background:var(--pine-deep);color:#DCE9E3;display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;z-index:30}
+  .brand{padding:22px 20px 18px;display:flex;align-items:center;gap:12px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .brand .logo{width:42px;height:42px;border-radius:11px;background:linear-gradient(135deg,var(--leaf),var(--pine));display:grid;place-items:center;flex-shrink:0;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+  .brand .logo svg{width:24px;height:24px;color:#fff}
+  .brand .bt{font-weight:700;font-size:16px;color:#fff;line-height:1.15}
+  .brand .bs{font-size:11px;color:#86B3A0;margin-top:2px}
+
+  .nav{flex:1;padding:12px 12px;overflow-y:auto;overflow-x:hidden}
+  .nav-group{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:#5E8A78;font-weight:600;padding:12px 12px 6px}
+
+  .nav-block{position:relative}
+  .nav-item{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:10px;color:#C2D6CD;font-size:14px;font-weight:500;cursor:pointer;position:relative;transition:.16s;border:none;background:none;width:100%;text-align:left;font-family:inherit}
+  .nav-item svg.ic{width:19px;height:19px;flex-shrink:0;opacity:.85}
+  .nav-item .lbl{flex:1}
+  .nav-item .tag{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:20px;background:var(--gold);color:#5A4400}
+  .nav-item .chev{width:15px;height:15px;opacity:.45;transition:transform .2s}
+  .nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
+  .nav-item.on{background:linear-gradient(90deg,rgba(63,160,110,.28),rgba(63,160,110,.08));color:#fff}
+  .nav-item.on::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--gold)}
+  .nav-item.on svg.ic{opacity:1}
+
+  .submenu{
+    position:absolute;left:calc(100% + 8px);top:-4px;min-width:250px;
+    background:#fff;border:1px solid var(--line);border-radius:13px;
+    box-shadow:0 16px 44px -10px rgba(15,50,38,.32);padding:8px;
+    opacity:0;visibility:hidden;transition:opacity .1s ease;z-index:60
+  }
+  .submenu::before{content:"";position:absolute;left:-14px;top:0;width:14px;height:100%}
+  .submenu.show{opacity:1;visibility:visible}
+  .submenu .sh{font-size:11px;color:var(--ink-faint);font-weight:600;padding:7px 11px 4px}
+  .sub-item{display:flex;align-items:flex-start;gap:10px;padding:9px 11px;border-radius:9px;color:var(--ink-soft);font-size:13.5px;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:inherit;transition:.13s;line-height:1.3}
+  .sub-item .dot{width:6px;height:6px;border-radius:50%;background:var(--line-strong);flex-shrink:0;margin-top:6px}
+  .sub-item .st{font-weight:600}
+  .sub-item .ss{display:block;font-size:11px;color:var(--ink-faint);margin-top:1px;font-weight:400}
+  .sub-item:hover{background:var(--pine-soft);color:var(--pine-deep)}
+  .sub-item:hover .dot{background:var(--leaf)}
+
+  .side-foot{margin:12px;padding:15px;border-radius:13px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+  .side-foot .row{display:flex;align-items:center;gap:9px}
+  .dotpulse{width:9px;height:9px;border-radius:50%;background:var(--leaf);box-shadow:0 0 0 0 rgba(63,160,110,.6);animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(63,160,110,.55)}70%{box-shadow:0 0 0 8px rgba(63,160,110,0)}100%{box-shadow:0 0 0 0 rgba(63,160,110,0)}}
+  .side-foot .ft{font-size:12.5px;font-weight:600;color:#fff}
+  .side-foot .fs{font-size:11px;color:#86B3A0;margin-top:5px;line-height:1.5}
+
+  .main{flex:1;display:flex;flex-direction:column;min-width:0}
+  .topbar{background:var(--surface);border-bottom:1px solid var(--line);padding:14px 22px;display:flex;align-items:center;gap:14px;position:sticky;top:0;z-index:20}
+  .burger{display:none;width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--surface-2);place-items:center;cursor:pointer;color:var(--ink-soft)}
+  .burger svg{width:20px;height:20px}
+  .topbar h1{font-size:19px;font-weight:700}
+  .topbar .sub{font-size:12.5px;color:var(--ink-faint);margin-top:2px}
+  .topbar .spacer{flex:1}
+  .icon-btn{position:relative;width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center;cursor:pointer;color:var(--ink-soft)}
+  .icon-btn svg{width:19px;height:19px}
+  .icon-btn .bell-dot{position:absolute;top:7px;right:8px;width:15px;height:15px;border-radius:50%;background:var(--danger);color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;border:2px solid var(--surface)}
+  .who{display:flex;align-items:center;gap:11px;padding-left:4px}
+  .who .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--leaf),var(--pine));display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
+  .who .wn{font-size:13.5px;font-weight:600}
+  .who .wr{font-size:11px;color:var(--ink-faint)}
+
+  .content{padding:24px;overflow-y:auto}
+  .page-tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--pine);background:var(--pine-soft);padding:5px 12px;border-radius:20px;font-weight:600;margin-bottom:18px}
+  .panel{background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:22px}
+  .panel h2{font-size:16px;font-weight:700;margin-bottom:4px}
+  .panel .ph{font-size:12.5px;color:var(--ink-faint);margin-bottom:16px}
+  .ghost{border:1.5px dashed var(--line-strong);border-radius:13px;min-height:230px;display:grid;place-items:center;color:var(--ink-faint);font-size:13px;text-align:center;padding:20px;line-height:1.7}
+
+  .scrim{display:none;position:fixed;inset:0;background:rgba(10,30,22,.45);z-index:25}
+
+  @media(max-width:860px){
+    .sidebar{position:fixed;left:0;top:0;transform:translateX(-100%);transition:transform .25s;box-shadow:0 0 40px rgba(0,0,0,.3)}
+    body.menu-open .sidebar{transform:translateX(0)}
+    body.menu-open .scrim{display:block}
+    .burger{display:grid}
+    .submenu{position:static;opacity:1;visibility:visible;transform:none;box-shadow:none;border:none;background:rgba(0,0,0,.16);border-radius:10px;margin:2px 0 6px;padding:4px;max-height:0;overflow:hidden;transition:max-height .28s;min-width:0}
+    .submenu::before{display:none}
+    .nav-block.open > .submenu{max-height:900px}
+    .submenu .sh{color:#9ec4b4}
+    .sub-item{color:#cfe0d8}
+    .sub-item .ss{color:#8fb3a4}
+    .sub-item:hover{background:rgba(255,255,255,.08);color:#fff}
+    .nav-block.open .nav-item .chev{transform:rotate(90deg)}
+  }
+</style>
+</head>
+<body>
+
+<div class="scrim" id="scrim" onclick="document.body.classList.remove('menu-open')"></div>
+
+<aside class="sidebar">
+  <div class="brand">
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 3h15v13H1z"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    </div>
+    <div>
+      <div class="bt">SSB Smart Supply</div>
+      <div class="bs">ระบบบริหารขนส่งปาล์ม</div>
+    </div>
+  </div>
+
+  <nav class="nav" id="nav"></nav>
+
+  <div class="side-foot">
+    <div class="row"><span class="dotpulse"></span><span class="ft">GPS เชื่อมต่ออยู่</span></div>
+    <div class="fs">รถในระบบ 104 คัน · อัปเดตทุก 2 นาที</div>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <button class="burger" onclick="document.body.classList.toggle('menu-open')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div>
+      <h1 id="pgTitle">แดชบอร์ดภาพรวม</h1>
+      <div class="sub" id="pgSub">สรุปงานขนส่งและสถานะรถแบบเรียลไทม์</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="icon-btn"><span class="bell-dot">3</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+    </button>
+    <div class="who">
+      <div class="av">ผ</div>
+      <div><div class="wn">ผู้บริหาร</div><div class="wr">Admin</div></div>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="page-tag" id="pgTag">📊 ตัวอย่างหน้า — ต่อข้อมูลจริงภายหลัง</div>
+    <div class="panel">
+      <h2 id="panelTitle">แดชบอร์ดภาพรวม</h2>
+      <div class="ph" id="panelSub">เอาเมาส์ไปชี้เมนูซ้าย (จอใหญ่) เพื่อดูหัวข้อย่อย · บนมือถือแตะเพื่อกางลง</div>
+      <div class="ghost" id="ghost">เนื้อหาของหน้านี้จะมาอยู่ตรงนี้</div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const ICON = {
+    dash:'<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
+    pin:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+    order:'<path d="M9 11H1l3-7h7l-1 7"/><path d="M14 11h9l-3 7h-7"/><path d="M12 4v14"/>',
+    users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+    truck:'<path d="M5 17H3V7h11l4 4h3v6h-2"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>',
+    ramp:'<path d="M3 21h18"/><path d="M5 21V7l8-4v18"/><path d="M19 21V11l-6-4"/>',
+    cal:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M9 16l2 2 4-4"/>',
+    wrench:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.3 2.3-2-2 2.3-2.3z"/>',
+    chart:'<path d="M3 3v18h18"/><rect x="7" y="11" width="3" height="6"/><rect x="12" y="7" width="3" height="10"/><rect x="17" y="13" width="3" height="4"/>',
+    gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>'
+  };
+
+  const MENU = [
+    {group:'ภาพรวม', items:[
+      {icon:'dash', label:'Command Center', sub:'สรุปงานขนส่งและสถานะรถแบบเรียลไทม์', url:'https://liff.line.me/2010274217-jaHQFGHG'},
+      {icon:'pin', label:'ติดตามรถ', tag:'สด', sub:'ตำแหน่งและสถานะรถทุกคันบนแผนที่', children:[
+        ['แผนที่รวมทุกคัน','ดูทั้งฟลีตพร้อมกัน'],['ติดตามรายคัน','เลือกคันเจาะลึก'],['รถใกล้โรงงาน','เข้า/ออกรัศมีโรงงาน']
+      ]}
+    ]},
+    {group:'งานขนส่ง', items:[
+      {icon:'order', label:'ออเดอร์', sub:'งานรับ-ส่งปาล์มทั้งหมด', children:[
+        ['ออเดอร์ทั้งหมด','ทุกสถานะ'],['สร้าง/มอบหมายงาน','assign คนขับ'],['รอลานเทยืนยัน','คิวค้างยืนยัน'],['ประวัติงาน','งานที่จบแล้ว']
+      ]},
+      {icon:'users', label:'จัดการคนขับ', sub:'สถานะ เครื่องเดินเบา สรุปพฤติกรรมรายคน', children:[
+        ['รายชื่อคนขับ','การ์ดสถานะรายคน'],['เครื่องเดินเบา','ติดเครื่องค้าง/เกินเกณฑ์'],['สรุปต่อเที่ยว','กม./ลิตร · %วิ่งหนัก'],['สรุปรายวัน/สัปดาห์','เดินเบา/วิ่ง/ขับเกิน']
+      ]},
+      {icon:'truck', label:'ยานพาหนะ', sub:'ทะเบียนรถ ประเภท และการจับคู่ GPS', children:[
+        ['รถทั้งหมด','ทะเบียน/ประเภท'],['จับคู่ GPS','ทะเบียน ↔ DTC'],['รถยืม/เช่า','หัว-ลูกที่ยืม']
+      ]},
+      {icon:'ramp', label:'ลานเท', sub:'ลานเทคู่ค้าและการยืนยันงาน', children:[
+        ['รายชื่อลานเท','คู่ค้าทั้งหมด'],['คิวยืนยันงาน','รอลานเทตอบ']
+      ]}
+    ]},
+    {group:'บุคลากร', items:[
+      {icon:'cal', label:'ลงเวลา/ขาดลา', sub:'เวลาเข้า-ออกงาน และคำขอแก้เวลา', children:[
+        ['ลงเวลาวันนี้','เข้า-ออกรายคน'],['ประวัติย้อนหลัง','รายเดือน'],['คำขอแก้เวลา','อนุมัติ/ปฏิเสธ'],['ใบลา','คำขอลา']
+      ]},
+      {icon:'wrench', label:'แจ้งซ่อม', sub:'คำขอซ่อมและสถานะรถเสีย', children:[
+        ['คำขอซ่อมใหม่','รอดำเนินการ'],['กำลังซ่อม','สถานะปัจจุบัน'],['ประวัติซ่อม','ปิดงานแล้ว']
+      ]}
+    ]},
+    {group:'วิเคราะห์', items:[
+      {icon:'chart', label:'รายงาน', sub:'ระยะทาง น้ำมัน พฤติกรรมขับ และต้นทุน', children:[
+        ['กราฟการวิ่ง/วัน รายคัน','ระยะทางต่อวันแต่ละคัน'],
+        ['Ranking — Rate น้ำมัน','จัดอันดับ กม./ลิตร'],
+        ['Ranking — %วิ่งหนัก/ระยะ','คนขับที่วิ่งคุ้มสุด'],
+        ['สรุปน้ำมัน','กม./ลิตร รายคัน/เดือน'],
+        ['พฤติกรรมขับ','เดินเบา/ขับเกิน/จอดดับ'],
+        ['ระยะทางสะสม','รายคัน/รายสาย'],
+        ['ต้นทุน/ค่าเที่ยว','สรุปเชิงเงิน']
+      ]},
+      {icon:'gear', label:'ตั้งค่า', sub:'เกณฑ์เดินเบา การแจ้งเตือน และผู้ใช้งาน', children:[
+        ['เกณฑ์เดินเบา','IDLE_LIMIT_MIN'],['การแจ้งเตือน','ใครได้รับ alert'],['ผู้ใช้งาน/สิทธิ์','แอดมิน/ผู้บริหาร']
+      ]}
+    ]}
+  ];
+
+  function svg(p){return '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'+p+'</svg>';}
+  const chev='<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18l6-6-6-6"/></svg>';
+
+  const nav=document.getElementById('nav');
+  let html='';
+  MENU.forEach(g=>{
+    html+='<div class="nav-group">'+g.group+'</div>';
+    g.items.forEach(it=>{
+      const kids=(it.children||[]).map(c=>
+        `<button class="sub-item" data-title="${it.label} · ${c[0]}" data-sub="${c[1]}"><span class="dot"></span><span><span class="st">${c[0]}</span><span class="ss">${c[1]}</span></span></button>`
+      ).join('');
+      const subHead = it.children&&it.children.length ? `<div class="sh">${it.label}</div>` : '';
+      html+=`<div class="nav-block">
+        <button class="nav-item" data-title="${it.label}" data-sub="${it.sub}"${it.url?` data-url="${it.url}"`:''}>
+          ${svg(ICON[it.icon])}<span class="lbl">${it.label}</span>
+          ${it.tag?`<span class="tag">${it.tag}</span>`:''}
+          ${kids?chev:''}
+        </button>
+        ${kids?`<div class="submenu">${subHead}${kids}</div>`:''}
+      </div>`;
+    });
+  });
+  nav.innerHTML=html;
+
+  function setPage(title,sub){
+    document.getElementById('pgTitle').textContent=title.split(' · ')[0];
+    document.getElementById('pgSub').textContent=sub||'';
+    document.getElementById('panelTitle').textContent=title;
+    document.getElementById('panelSub').textContent=sub||'';
+    document.getElementById('pgTag').textContent='📊 '+title+' — ต่อข้อมูลจริงภายหลัง';
+    document.getElementById('ghost').innerHTML='เนื้อหาหน้า "'+title+'"<br>จะมาอยู่ตรงนี้';
+  }
+  function markActive(btn){
+    nav.querySelectorAll('.nav-item').forEach(b=>b.classList.remove('on'));
+    const top=btn.closest('.nav-block')?.querySelector('.nav-item');
+    if(top) top.classList.add('on');
+  }
+  const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
+
+  nav.addEventListener('click',e=>{
+    const top=e.target.closest('.nav-item');
+    const sub=e.target.closest('.sub-item');
+    if(sub){
+      setPage(sub.dataset.title, sub.dataset.sub); markActive(sub);
+      document.body.classList.remove('menu-open');
+      return;
+    }
+    if(top){
+      if(top.dataset.url){          // เมนูที่ลิงก์ออกไปหน้าอื่น (เช่น Command Center → LIFF)
+        window.location.href = top.dataset.url;
+        return;
+      }
+      const block=top.closest('.nav-block');
+      if(isMobile() && block.querySelector('.submenu')){
+        const wasOpen=block.classList.contains('open');
+        nav.querySelectorAll('.nav-block.open').forEach(b=>b.classList.remove('open'));
+        if(!wasOpen) block.classList.add('open');
+        return;
+      }
+      setPage(top.dataset.title, top.dataset.sub); markActive(top);
+      document.body.classList.remove('menu-open');
+    }
+  });
+
+  // ── desktop flyout: ใช้ position:fixed ให้ submenu หลุดออกนอก overflow ของ .nav ──
+  let hideTimer=null, showTimer=null;
+  function placeFlyout(block){
+    const item=block.querySelector('.nav-item');
+    const menu=block.querySelector('.submenu');
+    if(!menu) return;
+    const r=item.getBoundingClientRect();
+    menu.style.position='fixed';
+    menu.style.left=(r.right+8)+'px';
+    const h=menu.offsetHeight;            // วัดได้แม้ยังซ่อน (visibility:hidden เก็บ layout)
+    let top=r.top-4;
+    if(top+h>window.innerHeight-8) top=Math.max(8, window.innerHeight-8-h);
+    menu.style.top=top+'px';              // ตั้งตำแหน่งเสร็จ "ก่อน" โชว์ → ไม่เด้ง
+    menu.classList.add('show');
+  }
+  function hideFlyout(block){
+    const menu=block.querySelector('.submenu');
+    if(!menu) return;
+    menu.classList.remove('show');
+    menu.style.position=''; menu.style.left=''; menu.style.top='';
+  }
+  nav.querySelectorAll('.nav-block').forEach(block=>{
+    const menu=block.querySelector('.submenu'); if(!menu) return;
+    block.addEventListener('mouseenter',()=>{
+      if(isMobile()) return;
+      clearTimeout(hideTimer); clearTimeout(showTimer);
+      showTimer=setTimeout(()=>{          // หน่วงนิด กันเด้งตอนกวาดเมาส์ผ่านเร็วๆ
+        nav.querySelectorAll('.submenu.show').forEach(m=>{
+          if(m!==menu){ m.classList.remove('show'); m.style.position=''; m.style.left=''; m.style.top=''; }
+        });
+        placeFlyout(block);
+      },60);
+    });
+    block.addEventListener('mouseleave',()=>{ if(isMobile()) return; clearTimeout(showTimer); hideTimer=setTimeout(()=>hideFlyout(block),130); });
+    menu.addEventListener('mouseenter',()=>clearTimeout(hideTimer));
+    menu.addEventListener('mouseleave',()=>{ hideTimer=setTimeout(()=>hideFlyout(block),130); });
+  });
+  // เปลี่ยนขนาดจอ → เคลียร์ flyout (กันค้างตอนสลับ desktop/mobile)
+  window.addEventListener('resize',()=>{
+    nav.querySelectorAll('.submenu').forEach(m=>{ m.classList.remove('show'); m.style.position=''; m.style.left=''; m.style.top=''; });
+  });
+</script>
+</body>
+</html>
