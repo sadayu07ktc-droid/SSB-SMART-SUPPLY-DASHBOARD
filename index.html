@@ -381,8 +381,8 @@
     }else{
       dot.className='dotpulse';
       state.textContent='GPS เชื่อมต่ออยู่';
-      meta.textContent = (fleet.online != null)
-        ? `รถในระบบ ${fleet.total} คัน · ออนไลน์ ${fleet.online} · ออฟไลน์ ${fleet.offline}${fleet.unknown ? ' · ไม่ทราบ ' + fleet.unknown : ''}`
+      meta.innerHTML = (fleet.online != null)
+        ? `รถในระบบ ${fleet.total} คัน<br>ออนไลน์ ${fleet.online} · ออฟไลน์ ${fleet.offline}${fleet.unknown ? ' · ไม่ทราบ ' + fleet.unknown : ''}`
         : `รถในระบบ ${fleet.total} คัน`;
     }
     upd.textContent='อัปเดตล่าสุด ' + fmtClock(new Date());
