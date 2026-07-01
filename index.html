@@ -455,20 +455,30 @@
         + '&userId=' + encodeURIComponent(MY_UID || '')
         + '&t=' + Date.now();
   
-      const r = await fetch(url);
-      const j = await r.json();
+      console.log('NOTIFY_BADGE_URL:', url);
   
-      if(!j || j.success === false){
+      const r = await fetch(url);
+      const text = await r.text();
+  
+      console.log('NOTIFY_BADGE_RAW:', text);
+  
+      let j;
+      try{
+        j = JSON.parse(text);
+      }catch(parseErr){
+        throw new Error('Notify API ไม่ได้ตอบ JSON: ' + text.slice(0,120));
+      }
+  
+      if(!j || j.denied || j.success === false || j.ok === false){
         badge.textContent = '0';
         badge.style.display = 'none';
         return;
       }
   
+      // นับเฉพาะผู้ใช้ใหม่ InActive ก่อน
       const count = Number(
-        (j.counts && j.counts.total) ||
         (j.counts && j.counts.pendingUsers) ||
-        j.count ||
-        j.unread ||
+        j.pendingUsersCount ||
         0
       );
   
