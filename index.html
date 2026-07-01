@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SSB Smart Supply · ผู้บริหาร</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -331,13 +332,14 @@
     nav.querySelectorAll('.submenu').forEach(m=>{ m.classList.remove('show'); m.style.position=''; m.style.left=''; m.style.top=''; });
   });
 
-  /* ===== สถานะฟลีตแบบเรียลไทม์ (มุมซ้ายล่าง) =====
-     - ถ้าตั้ง STATUS_URL (เช่น GAS /exec) จะดึงสถานะจริงมาแสดง
-     - GAS ควรตอบ JSON รูปแบบ: { ok:true, gpsOnline:true, total:104, online:98, offline:6 }
-     - ถ้าไม่ตั้ง จะแสดงจำนวนตั้งต้น + เดินเวลา "อัปเดตล่าสุด" จริงทุกครั้งที่รีเฟรช */
-  const STATUS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';                 // ← ใส่ URL /exec ของ GAS ที่คืนสถานะฟลีต (เว้นว่างได้)
-  const REFRESH_MS = 60000;              // 1 นาที
-  let fleet = { gpsOnline:true, total:104, online:null, offline:null, connected:true };
+  /* ===== สถานะฟลีตมุมซ้ายล่าง — เชื่อมแบบเดียวกับหน้า manage =====
+     LIFF (LIFF_ID_ADMIN) → userId → GAS action=getDrivers → นับ online จาก drivers[].gps
+     ไม่ต้องมี action ใหม่ฝั่ง GAS · getDrivers ตอบ drivers[] ที่มีฟิลด์ gps อยู่แล้ว */
+  const LIFF_ID = '2010274217-Ot7vGhri';   // LIFF_ID_ADMIN (หน้า SSB Dashboard)
+  const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+  const REFRESH_MS = 60000;                 // 1 นาที
+  let MY_UID = '';
+  let fleet = { gpsOnline:true, total:104, online:null, offline:null, connected:true, ready:false };
 
   function fmtClock(d){ return [d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':'); }
 
@@ -348,14 +350,14 @@
     const upd=document.getElementById('gpsUpdated');
     if(!dot) return;
 
-    if(!fleet.connected){
-      dot.className='dotpulse off';
-      state.textContent='เชื่อมต่อเซิร์ฟเวอร์ไม่ได้';
-      meta.textContent='แสดงข้อมูลล่าสุดที่มี';
-    }else if(!fleet.gpsOnline){
-      dot.className='dotpulse stale';
-      state.textContent='GPS หลุดการเชื่อมต่อ';
+    if(!fleet.ready){                       // ยังไม่ได้เชื่อม LINE/ยังไม่มีข้อมูลจริง → โชว์ตัวเลขตั้งต้น (ไม่แดง)
+      dot.className='dotpulse';
+      state.textContent='GPS เชื่อมต่ออยู่';
       meta.textContent=`รถในระบบ ${fleet.total} คัน`;
+    }else if(!fleet.connected){
+      dot.className='dotpulse stale';
+      state.textContent='ข้อมูลไม่อัปเดต';
+      meta.textContent=`แสดงข้อมูลล่าสุด · รถในระบบ ${fleet.total} คัน`;
     }else{
       dot.className='dotpulse';
       state.textContent='GPS เชื่อมต่ออยู่';
@@ -367,26 +369,41 @@
   }
 
   async function refreshFleetStatus(){
-    if(!STATUS_URL){ fleet.connected=true; renderFleetStatus(); return; }   // โหมดยังไม่ต่อ backend
+    if(!MY_UID){ renderFleetStatus(); return; }   // ยังไม่ล็อกอิน LINE → คงตัวเลขตั้งต้น
     try{
-      const r = await fetch(STATUS_URL + (STATUS_URL.includes('?')?'&':'?') + 'action=fleetStatus&t=' + Date.now());
+      const r = await fetch(GAS_URL + '?action=getDrivers&userId=' + encodeURIComponent(MY_UID) + '&t=' + Date.now());
       const j = await r.json();
-      if(j && j.ok){
+      if(j && j.ok && Array.isArray(j.drivers)){
+        const ds = j.drivers;
+        const offline = ds.filter(d=>d.gps==='off').length;
         fleet = {
-          gpsOnline: j.gpsOnline!==false,
-          total: (j.total!=null? j.total : fleet.total),
-          online: (j.online!=null? j.online : null),
-          offline: (j.offline!=null? j.offline : null),
-          connected: true
+          gpsOnline:true,
+          total: ds.length || fleet.total,
+          online: ds.length - offline,
+          offline: offline,
+          connected:true, ready:true
         };
-      }else{ fleet.connected=false; }
-    }catch(e){ fleet.connected=false; }
+      }else{ fleet.connected=false; fleet.ready=true; }
+    }catch(e){ fleet.connected=false; fleet.ready=true; }
     renderFleetStatus();
   }
 
-  renderFleetStatus();
-  refreshFleetStatus();
-  setInterval(refreshFleetStatus, REFRESH_MS);
+  async function bootstrapStatus(){
+    renderFleetStatus();                    // โชว์ตัวเลขตั้งต้นทันที
+    try{
+      await liff.init({ liffId: LIFF_ID });
+      if(liff.isLoggedIn()){
+        const p = await liff.getProfile();
+        MY_UID = p.userId;
+        refreshFleetStatus();
+        setInterval(refreshFleetStatus, REFRESH_MS);
+      }
+      // ถ้ายังไม่ล็อกอิน ไม่ต้อง force login ที่หน้าหลัก — ปล่อยให้โชว์ตัวเลขตั้งต้นไปก่อน
+    }catch(e){ /* เปิดนอก LINE / LIFF ไม่พร้อม → คงตัวเลขตั้งต้น ไม่แดง */ }
+  }
+
+  bootstrapStatus();
+
 </script>
 </body>
 </html>
