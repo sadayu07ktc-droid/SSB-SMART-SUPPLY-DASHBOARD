@@ -450,36 +450,30 @@
     if(!badge) return;
   
     try{
-      const url = GAS_URL
-        + '?action=getAdminNotifications'
-        + '&userId=' + encodeURIComponent(MY_UID || '')
-        + '&t=' + Date.now();
-  
-      console.log('NOTIFY_BADGE_URL:', url);
-  
-      const r = await fetch(url);
-      const text = await r.text();
-  
-      console.log('NOTIFY_BADGE_RAW:', text);
-  
-      let j;
-      try{
-        j = JSON.parse(text);
-      }catch(parseErr){
-        throw new Error('Notify API ไม่ได้ตอบ JSON: ' + text.slice(0,120));
+      if(!MY_UID){
+        badge.style.display = 'none';
+        return;
       }
   
-      if(!j || j.denied || j.success === false || j.ok === false){
+      const url = GAS_URL
+        + '?action=getAdminNotifications'
+        + '&userId=' + encodeURIComponent(MY_UID)
+        + '&t=' + Date.now();
+  
+      const r = await fetch(url);
+      const j = await r.json();
+  
+      if(!j || j.success === false || j.denied){
         badge.textContent = '0';
         badge.style.display = 'none';
         return;
       }
   
-      // นับเฉพาะผู้ใช้ใหม่ InActive ก่อน
+      // ✅ ตอนนี้นับเฉพาะผู้ใช้ใหม่ InActive
       const count = Number(
-        (j.counts && j.counts.pendingUsers) ||
-        j.pendingUsersCount ||
-        0
+        j.counts && j.counts.pendingUsers
+          ? j.counts.pendingUsers
+          : 0
       );
   
       if(count > 0){
@@ -496,27 +490,32 @@
     }
   }
 
-  async function bootstrapStatus(){
-    renderFleetStatus();
-  
-    try{
-      await liff.init({ liffId: LIFF_ID });
-  
-      if(liff.isLoggedIn()){
-        const p = await liff.getProfile();
-        MY_UID = p.userId || '';
-      }
-    }catch(e){
-      console.warn('LIFF init skipped:', e);
-      MY_UID = '';
+ async function bootstrapStatus(){
+  renderFleetStatus();
+
+  try{
+    await liff.init({ liffId: LIFF_ID });
+
+    // ✅ สำคัญ: ถ้ายังไม่ login ให้ login ก่อน เหมือนหน้า notify
+    if(!liff.isLoggedIn()){
+      liff.login({ redirectUri: window.location.href });
+      return;
     }
-  
-    refreshFleetStatus();
-    setInterval(refreshFleetStatus, REFRESH_MS);
-    
-    refreshNotifyBadge();
-    setInterval(refreshNotifyBadge, 60000);
+
+    const p = await liff.getProfile();
+    MY_UID = p.userId || '';
+
+  }catch(e){
+    console.warn('LIFF init skipped:', e);
+    MY_UID = '';
   }
+
+  refreshFleetStatus();
+  setInterval(refreshFleetStatus, REFRESH_MS);
+
+  refreshNotifyBadge();
+  setInterval(refreshNotifyBadge, 60000);
+}
 
   bootstrapStatus();
 
