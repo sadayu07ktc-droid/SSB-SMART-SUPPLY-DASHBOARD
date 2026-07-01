@@ -351,7 +351,15 @@
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
   const REFRESH_MS = 60000;                 // 1 นาที
   let MY_UID = '';
-  let fleet = { gpsOnline:true, total:104, online:null, offline:null, connected:true, ready:false };
+  let fleet = {
+    gpsOnline: false,
+    total: 0,
+    online: null,
+    offline: null,
+    unknown: null,
+    connected: false,
+    ready: false
+  };
 
   function fmtClock(d){ return [d.getHours(),d.getMinutes(),d.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':'); }
 
@@ -373,30 +381,43 @@
     }else{
       dot.className='dotpulse';
       state.textContent='GPS เชื่อมต่ออยู่';
-      meta.textContent = (fleet.online!=null)
-        ? `รถในระบบ ${fleet.total} คัน · ออนไลน์ ${fleet.online}${fleet.offline?(' · ออฟไลน์ '+fleet.offline):''}`
+      meta.textContent = (fleet.online != null)
+        ? `รถในระบบ ${fleet.total} คัน · ออนไลน์ ${fleet.online} · ออฟไลน์ ${fleet.offline}${fleet.unknown ? ' · ไม่ทราบ ' + fleet.unknown : ''}`
         : `รถในระบบ ${fleet.total} คัน`;
     }
     upd.textContent='อัปเดตล่าสุด ' + fmtClock(new Date());
   }
 
   async function refreshFleetStatus(){
-    if(!MY_UID){ renderFleetStatus(); return; }   // ยังไม่ล็อกอิน LINE → คงตัวเลขตั้งต้น
     try{
-      const r = await fetch(GAS_URL + '?action=getDrivers&userId=' + encodeURIComponent(MY_UID) + '&t=' + Date.now());
+      const r = await fetch(
+        GAS_URL +
+        '?action=getFleetGpsStatus' +
+        '&t=' + Date.now()
+      );
+  
       const j = await r.json();
-      if(j && j.ok && Array.isArray(j.drivers)){
-        const ds = j.drivers;
-        const offline = ds.filter(d=>d.gps==='off').length;
+  
+      if(j && j.ok){
         fleet = {
-          gpsOnline:true,
-          total: ds.length || fleet.total,
-          online: ds.length - offline,
-          offline: offline,
-          connected:true, ready:true
+          gpsOnline: true,
+          total: Number(j.total || 0),
+          online: Number(j.online || 0),
+          offline: Number(j.offline || 0),
+          unknown: Number(j.unknown || 0),
+          connected: true,
+          ready: true
         };
-      }else{ fleet.connected=false; fleet.ready=true; }
-    }catch(e){ fleet.connected=false; fleet.ready=true; }
+      }else{
+        fleet.connected = false;
+        fleet.ready = true;
+      }
+  
+    }catch(e){
+      fleet.connected = false;
+      fleet.ready = true;
+    }
+  
     renderFleetStatus();
   }
 
