@@ -190,7 +190,7 @@
     ]},
     {group:'งานขนส่ง', items:[
       {icon:'order', label:'ออเดอร์', sub:'งานรับ-ส่งปาล์มทั้งหมด', children:[
-        ['ออเดอร์ทั้งหมด','ทุกสถานะ','https://liff.line.me/2010274217-BF41B8c2'],['สร้าง/มอบหมายงาน','assign คนขับ'],['รอลานเทยืนยัน','คิวค้างยืนยัน'],['ประวัติงาน','งานที่จบแล้ว']
+        ['ออเดอร์ทั้งหมด','ทุกสถานะ','https://liff.line.me/2010274217-KGSFWvpp'],['สร้าง/มอบหมายงาน','assign คนขับ','https://liff.line.me/2010274217-BF41B8c2'],['รอลานเทยืนยัน','คิวค้างยืนยัน'],['ประวัติงาน','งานที่จบแล้ว']
       ]},
       {icon:'users', label:'จัดการคนขับ', sub:'สถานะ เครื่องเดินเบา สรุปพฤติกรรมรายคน', children:[
         ['รายชื่อคนขับ','การ์ดสถานะรายคน'],['เครื่องเดินเบา','ติดเครื่องค้าง/เกินเกณฑ์'],['สรุปต่อเที่ยว','กม./ลิตร · %วิ่งหนัก'],['สรุปรายวัน/สัปดาห์','เดินเบา/วิ่ง/ขับเกิน']
@@ -235,7 +235,7 @@
     html+='<div class="nav-group">'+g.group+'</div>';
     g.items.forEach(it=>{
       const kids=(it.children||[]).map(c=>
-        `<button class="sub-item" data-title="${it.label} · ${c[0]}" data-sub="${c[1]}"><span class="dot"></span><span><span class="st">${c[0]}</span><span class="ss">${c[1]}</span></span></button>`
+        `<button class="sub-item" data-title="${it.label} · ${c[0]}" data-sub="${c[1]}"${c[2]?` data-url="${c[2]}"`:''}><span class="dot"></span><span><span class="st">${c[0]}</span><span class="ss">${c[1]}</span></span></button>`
       ).join('');
       const subHead = it.children&&it.children.length ? `<div class="sh">${it.label}</div>` : '';
       html+=`<div class="nav-block">
@@ -265,17 +265,29 @@
   }
   const isMobile=()=>window.matchMedia('(max-width:860px)').matches;
 
+  // เปิดลิงก์แบบทน: ปกติเด้งทั้งหน้า (same-tab) · ถ้าอยู่ใน iframe/พรีวิวที่บล็อก → เปิดแท็บใหม่
+  function openLink(url){
+    try{
+      if(window.top && window.top!==window.self){ window.top.location.href = url; return; }
+    }catch(e){ window.open(url,'_blank'); return; }
+    window.location.href = url;
+  }
+
   nav.addEventListener('click',e=>{
     const top=e.target.closest('.nav-item');
     const sub=e.target.closest('.sub-item');
     if(sub){
+      if(sub.dataset.url){          // เมนูย่อยที่ลิงก์ไป LIFF (เช่น ออเดอร์ทั้งหมด)
+        openLink(sub.dataset.url);
+        return;
+      }
       setPage(sub.dataset.title, sub.dataset.sub); markActive(sub);
       document.body.classList.remove('menu-open');
       return;
     }
     if(top){
       if(top.dataset.url){          // เมนูที่ลิงก์ออกไปหน้าอื่น (เช่น Command Center → LIFF)
-        window.location.href = top.dataset.url;
+        openLink(top.dataset.url);
         return;
       }
       const block=top.closest('.nav-block');
