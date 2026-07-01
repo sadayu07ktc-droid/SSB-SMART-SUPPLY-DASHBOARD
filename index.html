@@ -148,7 +148,7 @@
       <div class="sub" id="pgSub">สรุปงานขนส่งและสถานะรถแบบเรียลไทม์</div>
     </div>
     <div class="spacer"></div>
-    <button class="icon-btn"><span class="bell-dot">3</span>
+    <button class="icon-btn"><span class="bell-dot" id="notifyBadge" style="display:none">0</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
     </button>
     <div class="who">
@@ -381,9 +381,9 @@
     }else{
       dot.className='dotpulse';
       state.textContent='GPS เชื่อมต่ออยู่';
-      meta.innerHTML = (fleet.online != null)
-        ? `รถในระบบ ${fleet.total} คัน<br>ออนไลน์ ${fleet.online} · ออฟไลน์ ${fleet.offline}${fleet.unknown ? ' · ไม่ทราบ ' + fleet.unknown : ''}`
-        : `รถในระบบ ${fleet.total} คัน`;
+      meta.textContent = (fleet.online != null)
+        ? `ทั้งหมด ${fleet.total} · ออนไลน์ ${fleet.online} · ออฟไลน์ ${fleet.offline}${fleet.unknown ? ' · ไม่ทราบ ' + fleet.unknown : ''}`
+        : `ทั้งหมด ${fleet.total} คัน`;
     }
     upd.textContent='อัปเดตล่าสุด ' + fmtClock(new Date());
   }
@@ -445,6 +445,40 @@
   
     renderFleetStatus();
   }
+  async function refreshNotifyBadge(){
+    const badge = document.getElementById('notifyBadge');
+    if(!badge) return;
+  
+    try{
+      const url = GAS_URL
+        + '?action=getAdminNotifications'
+        + '&userId=' + encodeURIComponent(MY_UID || '')
+        + '&t=' + Date.now();
+  
+      const r = await fetch(url);
+      const j = await r.json();
+  
+      const list = Array.isArray(j.notifications)
+        ? j.notifications
+        : Array.isArray(j.items)
+          ? j.items
+          : [];
+  
+      const count = Number(j.count || j.unread || list.length || 0);
+  
+      if(count > 0){
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.style.display = 'grid';
+      }else{
+        badge.textContent = '0';
+        badge.style.display = 'none';
+      }
+  
+    }catch(e){
+      console.error('NOTIFY_BADGE_ERROR:', e);
+      badge.style.display = 'none';
+    }
+  }
 
   async function bootstrapStatus(){
     renderFleetStatus();
@@ -463,6 +497,9 @@
   
     refreshFleetStatus();
     setInterval(refreshFleetStatus, REFRESH_MS);
+    
+    refreshNotifyBadge();
+    setInterval(refreshNotifyBadge, 60000);
   }
 
   bootstrapStatus();
