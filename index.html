@@ -458,16 +458,22 @@
       const r = await fetch(url);
       const j = await r.json();
   
-      const list = Array.isArray(j.notifications)
-        ? j.notifications
-        : Array.isArray(j.items)
-          ? j.items
-          : [];
+      if(!j || j.success === false){
+        badge.textContent = '0';
+        badge.style.display = 'none';
+        return;
+      }
   
-      const count = Number(j.count || j.unread || list.length || 0);
+      const count = Number(
+        (j.counts && j.counts.total) ||
+        (j.counts && j.counts.pendingUsers) ||
+        j.count ||
+        j.unread ||
+        0
+      );
   
       if(count > 0){
-        badge.textContent = count > 99 ? '99+' : count;
+        badge.textContent = count > 99 ? '99+' : String(count);
         badge.style.display = 'grid';
       }else{
         badge.textContent = '0';
