@@ -84,6 +84,35 @@
   .icon-btn{position:relative;width:40px;height:40px;border-radius:11px;border:1px solid var(--line);background:var(--surface-2);display:grid;place-items:center;cursor:pointer;color:var(--ink-soft)}
   .icon-btn svg{width:19px;height:19px}
   .icon-btn .bell-dot{position:absolute;top:7px;right:8px;width:15px;height:15px;border-radius:50%;background:var(--danger);color:#fff;font-size:9px;font-weight:700;display:grid;place-items:center;border:2px solid var(--surface)}
+
+  /* ===== Notify dropdown: คลิกกระดิ่งแล้วเห็นรายการค้างย่อ ๆ ===== */
+  .notify-pop{
+    position:absolute;
+    top:62px;
+    right:92px;
+    width:340px;
+    max-width:calc(100vw - 24px);
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:16px;
+    box-shadow:0 22px 60px -20px rgba(15,50,38,.38);
+    z-index:80;
+    padding:12px;
+    display:none;
+  }
+  .notify-pop.show{display:block}
+  .np-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 6px 10px;border-bottom:1px solid var(--line)}
+  .np-head b{display:block;font-size:14px;color:var(--ink)}
+  .np-head span{display:block;font-size:11px;color:var(--ink-faint);margin-top:2px}
+  .np-head button{border:none;background:var(--pine);color:#fff;border-radius:10px;padding:7px 10px;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .np-list{padding-top:8px;max-height:360px;overflow:auto}
+  .np-item{display:flex;gap:10px;padding:10px 8px;border-radius:12px;cursor:pointer}
+  .np-item:hover{background:var(--pine-soft)}
+  .np-ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;background:#F4F7F5;flex-shrink:0}
+  .np-t{font-size:13px;font-weight:700;color:var(--ink);line-height:1.35}
+  .np-s{font-size:11.5px;color:var(--ink-faint);margin-top:2px;line-height:1.35}
+  .np-empty{padding:22px 10px;text-align:center;color:var(--ink-faint);font-size:13px}
+
   .who{display:flex;align-items:center;gap:11px;padding-left:4px}
   .who .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--leaf),var(--pine));display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
   .who .wn{font-size:13.5px;font-weight:600}
@@ -176,6 +205,8 @@
     .sub-item .ss{color:#8fb3a4}
     .sub-item:hover{background:rgba(255,255,255,.08);color:#fff}
     .nav-block.open .nav-item .chev{transform:rotate(90deg)}
+    .notify-pop{right:12px;top:64px}
+
   }
 </style>
 </head>
@@ -221,10 +252,20 @@
       <div class="sub" id="pgSub">สรุปงานขนส่งและสถานะรถแบบเรียลไทม์</div>
     </div>
     <div class="spacer"></div>
-    <button class="icon-btn" onclick="openLink('https://liff.line.me/2010274217-O9sTtyuR')">
+    <button class="icon-btn" onclick="toggleNotifyPanel(event)">
       <span class="bell-dot" id="notifyBadge" style="display:none">0</span>
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg>
     </button>
+    <div class="notify-pop" id="notifyPop">
+      <div class="np-head">
+        <div>
+          <b>รายการแจ้งเตือน</b>
+          <span id="notifyPopSub">กำลังโหลด...</span>
+        </div>
+        <button onclick="openLink('https://liff.line.me/2010274217-O9sTtyuR')">ดูทั้งหมด</button>
+      </div>
+      <div class="np-list" id="notifyPopList"></div>
+    </div>
     <div class="who">
       <div class="av">ผ</div>
       <div><div class="wn">ผู้บริหาร</div><div class="wr">Admin</div></div>
@@ -519,37 +560,150 @@
   
     renderFleetStatus();
   }
+
+
+  let NOTIFY_CACHE = null;
+
+  function toggleNotifyPanel(e){
+    if(e) e.stopPropagation();
+    const pop = document.getElementById('notifyPop');
+    if(!pop) return;
+    pop.classList.toggle('show');
+    if(pop.classList.contains('show')){
+      renderNotifyPanel();
+      refreshNotifyBadge();
+    }
+  }
+
+  function closeNotifyPanel(){
+    const pop = document.getElementById('notifyPop');
+    if(pop) pop.classList.remove('show');
+  }
+
+  function escapeNotifyHtml(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;')
+      .replace(/'/g,'&#039;');
+  }
+
+  function renderNotifyPanel(){
+    const sub = document.getElementById('notifyPopSub');
+    const list = document.getElementById('notifyPopList');
+    if(!sub || !list) return;
+
+    const j = NOTIFY_CACHE;
+    if(!j || j.success === false || j.denied){
+      sub.textContent = MY_UID ? 'ยังไม่มีข้อมูล' : 'รอเข้าสู่ระบบ LINE';
+      list.innerHTML = '<div class="np-empty">กำลังโหลดรายการ...</div>';
+      return;
+    }
+
+    const counts = j.counts || {};
+    const total = Number(counts.total || counts.pendingUsers || 0);
+    sub.textContent = total > 0 ? `มี ${total} รายการรอดำเนินการ` : 'ไม่มีรายการค้าง';
+
+    const items = [];
+
+    (j.pendingUsers || []).forEach(x => {
+      items.push({
+        icon:'👤',
+        title:'ผู้ใช้ใหม่รออนุมัติ',
+        sub:`${x.name || x.displayName || '—'} · ${x.role || 'ไม่ระบุ role'}${x.phone ? ' · ' + x.phone : ''}`
+      });
+    });
+
+    (j.pendingRamp || []).forEach(x => {
+      items.push({icon:'🏭', title:'ลานเทไม่ตอบ', sub:`${x.orderId || '—'} · ${x.gardenName || x.pickup || 'รอตรวจสอบ'}`});
+    });
+
+    (j.pendingDriver || []).forEach(x => {
+      items.push({icon:'🚛', title:'ไม่มีคนขับรับงาน', sub:`${x.orderId || '—'} · ${x.pickup || x.gardenName || 'รอมอบหมาย'}`});
+    });
+
+    (j.pendingCancel || []).forEach(x => {
+      items.push({icon:'⛔', title:'คนขับขอยกเลิก', sub:`${x.orderId || '—'} · ${x.driverName || 'ไม่ระบุคนขับ'}`});
+    });
+
+    (j.pendingLeave || []).forEach(x => {
+      items.push({icon:'📅', title:'ใบลารออนุมัติ', sub:`${x.name || '—'} · ${x.leaveType || x.type || ''} ${x.dateStart || x.date || ''}`});
+    });
+
+    (j.pendingRepair || []).forEach(x => {
+      items.push({icon:'🔧', title:'แจ้งซ่อมรออนุมัติ', sub:`${x.name || '—'} · ${x.plate || ''} ${x.symptom || x.detail || ''}`});
+    });
+
+    if(!items.length){
+      list.innerHTML = '<div class="np-empty">ไม่มีรายการค้างตอนนี้</div>';
+      return;
+    }
+
+    list.innerHTML = items.slice(0, 6).map(x => `
+      <div class="np-item" onclick="openLink('https://liff.line.me/2010274217-O9sTtyuR')">
+        <div class="np-ic">${x.icon}</div>
+        <div>
+          <div class="np-t">${escapeNotifyHtml(x.title)}</div>
+          <div class="np-s">${escapeNotifyHtml(x.sub)}</div>
+        </div>
+      </div>
+    `).join('');
+
+    if(items.length > 6){
+      list.innerHTML += `
+        <div class="np-item" onclick="openLink('https://liff.line.me/2010274217-O9sTtyuR')">
+          <div class="np-ic">⋯</div>
+          <div>
+            <div class="np-t">ดูรายการทั้งหมด</div>
+            <div class="np-s">ยังมีอีก ${items.length - 6} รายการ</div>
+          </div>
+        </div>
+      `;
+    }
+  }
+
+  document.addEventListener('click', e => {
+    const pop = document.getElementById('notifyPop');
+    if(!pop) return;
+    if(e.target.closest('.notify-pop') || e.target.closest('.icon-btn')) return;
+    closeNotifyPanel();
+  });
+
   async function refreshNotifyBadge(){
     const badge = document.getElementById('notifyBadge');
     if(!badge) return;
-  
+
     try{
       if(!MY_UID){
         badge.style.display = 'none';
+        renderNotifyPanel();
         return;
       }
-  
+
       const url = GAS_URL
         + '?action=getAdminNotifications'
         + '&userId=' + encodeURIComponent(MY_UID)
         + '&t=' + Date.now();
-  
+
       const r = await fetch(url);
       const j = await r.json();
-  
+      NOTIFY_CACHE = j;
+
       if(!j || j.success === false || j.denied){
         badge.textContent = '0';
         badge.style.display = 'none';
+        renderNotifyPanel();
         return;
       }
-  
-      // ✅ ตอนนี้นับเฉพาะผู้ใช้ใหม่ InActive
+
+      // Badge ตอนนี้นับเฉพาะผู้ใช้ใหม่ InActive ตามที่ตั้งใจไว้
       const count = Number(
         j.counts && j.counts.pendingUsers
           ? j.counts.pendingUsers
           : 0
       );
-  
+
       if(count > 0){
         badge.textContent = count > 99 ? '99+' : String(count);
         badge.style.display = 'grid';
@@ -557,12 +711,16 @@
         badge.textContent = '0';
         badge.style.display = 'none';
       }
-  
+
+      renderNotifyPanel();
+
     }catch(e){
       console.error('NOTIFY_BADGE_ERROR:', e);
       badge.style.display = 'none';
+      renderNotifyPanel();
     }
   }
+
 
 async function bootstrapStatus(){
     const authScreen = document.getElementById('authScreen');
