@@ -267,8 +267,11 @@
       <div class="np-list" id="notifyPopList"></div>
     </div>
     <div class="who">
-      <div class="av">ผ</div>
-      <div><div class="wn">ผู้บริหาร</div><div class="wr">Admin</div></div>
+      <div class="av" id="profileAvatar">ผ</div>
+      <div>
+        <div class="wn" id="profileName">กำลังโหลด...</div>
+        <div class="wr" id="profileRole">ตรวจสอบสิทธิ์</div>
+      </div>
     </div>
   </header>
 
@@ -720,7 +723,34 @@
       renderNotifyPanel();
     }
   }
+function setTopProfile(profile, userData){
+  const av = document.getElementById('profileAvatar');
+  const nameEl = document.getElementById('profileName');
+  const roleEl = document.getElementById('profileRole');
 
+  const lineName = profile && profile.displayName ? profile.displayName : '';
+  const systemName = userData && userData.name ? userData.name : '';
+  const role = userData && userData.role ? userData.role : '';
+
+  const finalName = systemName || lineName || 'ผู้บริหาร';
+  const finalRole = role || 'Admin';
+
+  if(nameEl) nameEl.textContent = finalName;
+  if(roleEl) roleEl.textContent = finalRole;
+
+  if(av){
+    if(profile && profile.pictureUrl){
+      av.innerHTML = '';
+      av.style.backgroundImage = `url('${profile.pictureUrl}')`;
+      av.style.backgroundSize = 'cover';
+      av.style.backgroundPosition = 'center';
+      av.textContent = '';
+    }else{
+      av.style.backgroundImage = '';
+      av.textContent = finalName.trim().charAt(0) || 'ผ';
+    }
+  }
+}
 
 async function bootstrapStatus(){
     const authScreen = document.getElementById('authScreen');
@@ -765,6 +795,9 @@ async function bootstrapStatus(){
       );
 
       const u = await r.json();
+
+      setTopProfile(p, u);
+      
       const role = String(u.role || '').toLowerCase();
 
       if(!(role === 'admin' || role === 'ผู้บริหาร' || role === 'executive')){
