@@ -105,9 +105,10 @@ async function loadReport(){
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
   $('driver').innerHTML='<option value="">ทุกคน</option>'+ds.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
   if(!ROWS.length){$('tbl').innerHTML='<div class="msg">ไม่มีเที่ยวในช่วงที่เลือก</div>';return;}
-  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ทะเบียน</th><th class="num">ค่าแรง</th><th>สถานะ</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>สวน / ปลายทาง</th><th class="num">ค่าแรง</th><th>สถานะ</th></tr></thead><tbody>';
   ROWS.forEach((r,i)=>{
-    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}</td><td>${r.driver||'—'}</td><td>${r.plate||'—'}</td><td class="num"><b>${money(r.wage)}</b></td><td><span class="pill${r.locked?' lock':''}">${r.locked?'🔒 จ่ายแล้ว':'คำนวณ'}</span></td></tr>`;
+    const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
+    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${place}</td><td class="num"><b>${money(r.wage)}</b></td><td><span class="pill${r.locked?' lock':''}">${r.locked?'🔒 จ่ายแล้ว':'คำนวณ'}</span></td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(ROWS[+tr.dataset.i].orderId));
@@ -122,7 +123,9 @@ async function openDetail(orderId){
   if(!res.ok){$('drBody').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
   const w=res.wage, c=res.cost;
   function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
+  const place=[w.garden,w.dest].filter(Boolean).join(' → ');
   let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate} · รุ่น ${w.model} · ${w.distTotal} กม.</div>`;
+  if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. ×2×${l.pct}%`,money(l.runWage)+' บ.'));
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
@@ -148,10 +151,10 @@ $('ov').onclick=closeDr;
 
 function exportCsv(){
   if(!ROWS.length)return;
-  const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','ค่าแรง','ค่าวิ่ง','ขึ้น-ลง','น้ำมัน','สถานะ'];
-  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','สวน','ปลายทาง','ค่าแรง','ค่าวิ่ง','ขึ้น-ลง','น้ำมัน','สถานะ'];
+  const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
   const lines=[head.map(q).join(',')];
-  ROWS.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,Math.round(r.wage),Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.fuelAdj),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
+  ROWS.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,r.garden,r.dest,Math.round(r.wage),Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.fuelAdj),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
 }
