@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ค่าแรง/ต้นทุน คนขับ · SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
+  @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 60px}
+  .wrap{max-width:960px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 16px}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+  h1{font-size:17px;margin:0;font-weight:700}.sub{font-size:12px;color:var(--txt2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .filt{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+  label{font-size:12px;color:var(--txt2)}
+  input,select{margin-top:3px;padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--card2);color:var(--txt);font:inherit;font-size:13.5px}
+  .btn{padding:9px 16px;border:0;border-radius:9px;background:var(--primary);color:#fff;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt2);font-weight:400}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-top:12px}
+  .kpi{background:var(--card2);border-radius:var(--radius);padding:9px 12px}
+  .kpi .k{font-size:11px;color:var(--txt2)}.kpi .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px 6px;text-align:left;border-bottom:1px solid var(--line)}
+  th{font-size:11.5px;color:var(--txt2);font-weight:600}
+  td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+  tr.row{cursor:pointer}tr.row:hover{background:var(--card2)}
+  .pill{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--card2);color:var(--txt2)}
+  .pill.lock{background:var(--primary);color:#fff}
+  .msg{text-align:center;color:var(--txt2);padding:30px;font-size:13.5px}
+  #ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40}
+  #ov.on{display:block}
+  #dr{position:fixed;top:0;right:0;width:420px;max-width:94vw;height:100%;background:var(--card);box-shadow:-6px 0 24px rgba(0,0,0,.25);z-index:41;transform:translateX(105%);transition:.25s;overflow-y:auto;padding:16px 18px}
+  #dr.on{transform:translateX(0)}
+  .drow{display:flex;justify-content:space-between;padding:5px 0;font-size:13px}
+  .drow .l{color:var(--txt2)}
+  .sec{margin:12px 0 4px;font-size:12px;font-weight:700;color:var(--primary)}
+  .big{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px solid var(--line);margin-top:10px;padding-top:10px}
+  .big .amt{font-size:26px;font-weight:800;color:var(--primary)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <div class="logo">฿</div>
+    <div><h1>ค่าแรง / ต้นทุน คนขับ</h1><div class="sub">SSB Smart Supply · ล็อกค่าตอนจบงาน</div></div>
+  </div>
+
+  <div class="card">
+    <div class="filt">
+      <label>ตั้งแต่<br><input type="date" id="from"></label>
+      <label>ถึง<br><input type="date" id="to"></label>
+      <label>คนขับ<br><select id="driver"><option value="">ทุกคน</option></select></label>
+      <button class="btn" id="load">ค้นหา</button>
+      <button class="btn ghost" id="csv">⬇️ Excel</button>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">จำนวนเที่ยว</div><div class="v" id="kTrips">—</div></div>
+      <div class="kpi"><div class="k">ค่าแรงรวม</div><div class="v" id="kWage">—</div></div>
+      <div class="kpi"><div class="k">เฉลี่ย/เที่ยว</div><div class="v" id="kAvg">—</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="tbl"><div class="msg" id="msg">กำลังเข้าสู่ระบบ…</div></div>
+  </div>
+</div>
+
+<div id="ov"></div>
+<aside id="dr">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+    <b style="font-size:15px">🧾 รายละเอียดเที่ยว</b>
+    <button onclick="closeDr()" style="border:0;background:transparent;color:var(--txt2);font-size:18px;cursor:pointer">✕</button>
+  </div>
+  <div id="drBody"><div class="msg">กำลังโหลด…</div></div>
+</aside>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID='2010274217-Ot7vGhri';
+let MY_UID='', ROWS=[];
+const money=n=>Math.round(n||0).toLocaleString('th-TH');
+const $=id=>document.getElementById(id);
+
+function deny(t){$('msg').textContent=t;$('msg').style.color='var(--danger)';}
+
+async function api(params){
+  const u=GAS_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+  const r=await fetch(u); return r.json();
+}
+
+async function loadReport(){
+  $('tbl').innerHTML='<div class="msg">กำลังโหลด…</div>';
+  const res=await api({action:'getWageReport',userId:MY_UID,from:$('from').value,to:$('to').value,driver:$('driver').value});
+  if(res.denied){deny('ไม่มีสิทธิ์เข้าถึง (เฉพาะแอดมิน)');return;}
+  if(!res.ok){$('tbl').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
+  ROWS=res.rows||[];
+  $('kTrips').textContent=res.count;
+  $('kWage').textContent=money(res.totalWage)+' บ.';
+  $('kAvg').textContent=(res.count?money(res.totalWage/res.count):0)+' บ.';
+  // driver options (คงค่าเดิม)
+  const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
+  $('driver').innerHTML='<option value="">ทุกคน</option>'+ds.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
+  if(!ROWS.length){$('tbl').innerHTML='<div class="msg">ไม่มีเที่ยวในช่วงที่เลือก</div>';return;}
+  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ทะเบียน</th><th class="num">ค่าแรง</th><th>สถานะ</th></tr></thead><tbody>';
+  ROWS.forEach((r,i)=>{
+    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}</td><td>${r.driver||'—'}</td><td>${r.plate||'—'}</td><td class="num"><b>${money(r.wage)}</b></td><td><span class="pill${r.locked?' lock':''}">${r.locked?'🔒 จ่ายแล้ว':'คำนวณ'}</span></td></tr>`;
+  });
+  $('tbl').innerHTML=h+'</tbody></table>';
+  $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(ROWS[+tr.dataset.i].orderId));
+}
+
+function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
+
+async function openDetail(orderId){
+  $('ov').classList.add('on');$('dr').classList.add('on');
+  $('drBody').innerHTML='<div class="msg">กำลังคิด…</div>';
+  const res=await api({action:'getWageMonitor',userId:MY_UID,orderId});
+  if(!res.ok){$('drBody').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
+  const w=res.wage, c=res.cost;
+  function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
+  let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate} · รุ่น ${w.model} · ${w.distTotal} กม.</div>`;
+  h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
+  (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. ×2×${l.pct}%`,money(l.runWage)+' บ.'));
+  h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
+  h+=row('ค่าคลุมผ้าใบ',money(w.tarp)+' บ.');
+  h+=row((w.fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+' ×'+w.snapshot.fuelRate,(w.fuelAdj>=0?'+':'−')+money(Math.abs(w.fuelAdj))+' บ.',(w.fuelAdj<0?'color:var(--danger)':'color:var(--primary)'));
+  h+=row('โบนัส '+w.snapshot.bonusPct+'%','+'+money(w.bonus)+' บ.');
+  h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt">${money(w.wage)} บ.</span></div>`;
+  if(c){
+    h+='<div class="sec">🏢 ต้นทุนบริษัท</div>';
+    h+=row('ค่าแรงคนขับ',money(c.wage)+' บ.');
+    h+=row('น้ำมันต้นทุน ('+w.litersActual+'ล.×'+c.fuelPriceDaily+')',money(c.fuelCost)+' บ.');
+    h+=row('ต้นทุนคงที่ (รวมค่าเสื่อม)',money(c.fixedCost)+' บ.');
+    h+=row('ต้นทุนผันแปร',money(c.varCost)+' บ.');
+    h+=row('ค่าดำเนินงาน',money(c.opsCost)+' บ.');
+    if(c.extraCost)h+=row('ค่าใช้จ่ายรายเที่ยว',money(c.extraCost)+' บ.');
+    h+=`<div class="big"><span style="font-weight:700">ต้นทุนรวม</span><span class="amt" style="color:var(--txt)">${money(c.total)} บ.</span></div>`;
+    if(c.perUnit!=null)h+=row('ต่อหน่วย ('+money(c.qty)+' '+c.unit+')','<b>'+c.perUnit+'</b> บ./'+c.unit,'font-size:14px');
+  }
+  $('drBody').innerHTML=h;
+}
+function closeDr(){$('ov').classList.remove('on');$('dr').classList.remove('on');}
+$('ov').onclick=closeDr;
+
+function exportCsv(){
+  if(!ROWS.length)return;
+  const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','ค่าแรง','ค่าวิ่ง','ขึ้น-ลง','น้ำมัน','สถานะ'];
+  const q=s=>'"'+String(s).replace(/"/g,'""')+'"';
+  const lines=[head.map(q).join(',')];
+  ROWS.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,Math.round(r.wage),Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.fuelAdj),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
+  const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
+}
+
+$('load').onclick=loadReport;
+$('csv').onclick=exportCsv;
+
+(function initDates(){
+  const t=new Date(), y=new Date(t.getFullYear(),t.getMonth()-1,t.getDate());
+  $('to').value=t.toISOString().slice(0,10);
+  $('from').value=y.toISOString().slice(0,10);
+})();
+
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
+    const p=await liff.getProfile();
+    MY_UID=p.userId||'';
+    if(!MY_UID){deny('ไม่พบ LINE UID — เปิดผ่าน LINE อีกครั้ง');return;}
+    loadReport();
+  }catch(e){deny('LIFF error: '+e);}
+})();
+</script>
+</body>
+</html>
