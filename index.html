@@ -287,6 +287,7 @@
 
 <script>
   const ICON = {
+    wage:'<circle cx="12" cy="12" r="9"/><path d="M12 7v10M9.5 9.5h4a1.5 1.5 0 0 1 0 3h-3a1.5 1.5 0 0 0 0 3h4"/>',
     dash:'<rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/>',
     pin:'<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
     order:'<path d="M9 11H1l3-7h7l-1 7"/><path d="M14 11h9l-3 7h-7"/><path d="M12 4v14"/>',
@@ -328,6 +329,13 @@
         ['คำขอซ่อมใหม่','รอดำเนินการ'],['กำลังซ่อม','สถานะปัจจุบัน'],['ประวัติซ่อม','ปิดงานแล้ว']
       ]}
     ]},
+    {group:'ค่าแรง / ต้นทุน', items:[
+      {icon:'wage', label:'ค่าแรง / ต้นทุน', sub:'สรุปค่าแรงคนขับ + ต้นทุนต่อเที่ยว', children:[
+        ['รายงานค่าแรง','รายเที่ยว · export Excel','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage.html'],
+        ['🧮 เครื่องคิดค่าแรง','ลองคิด/อธิบายคนขับ','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage-calc.html'],
+        ['⚙️ ตั้งค่าต้นทุน/ค่าแรง','แก้ param → บันทึกเข้าฐาน','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage-settings.html']
+      ]}
+    ]},
     {group:'วิเคราะห์', items:[
       {icon:'chart', label:'รายงาน', sub:'ระยะทาง น้ำมัน พฤติกรรมขับ และต้นทุน', children:[
         ['กราฟการวิ่ง/วัน รายคัน','ระยะทางต่อวันแต่ละคัน','https://sadayu07ktc-droid.github.io/pages_chart_daily/'],
@@ -335,10 +343,7 @@
         ['Ranking — %วิ่งหนัก/ระยะ','คนขับที่วิ่งคุ้มสุด'],
         ['สรุปน้ำมัน','กม./ลิตร รายคัน/เดือน'],
         ['พฤติกรรมขับ','เดินเบา/ขับเกิน/จอดดับ'],
-        ['ระยะทางสะสม','รายคัน/รายสาย'],
-        ['ค่าแรงคนขับ','สรุป+รายเที่ยว · export Excel','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage.html'],
-        ['ต้นทุน/ค่าเที่ยว','ต้นทุนบริษัทต่อเที่ยว','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage.html'],
-        ['⚙️ ตั้งค่าต้นทุน/ค่าแรง','แก้ param → บันทึกเข้าฐาน','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage-settings.html']
+        ['ระยะทางสะสม','รายคัน/รายสาย']
       ]},
       {icon:'gear', label:'ตั้งค่า', sub:'เกณฑ์เดินเบา การแจ้งเตือน และผู้ใช้งาน', children:[
         ['เกณฑ์เดินเบา','IDLE_LIMIT_MIN'],['การแจ้งเตือน','ใครได้รับ alert'],['ผู้ใช้งาน/สิทธิ์','แอดมิน/ผู้บริหาร','https://liff.line.me/2010274217-rlXrxPJz']

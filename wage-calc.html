@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>เครื่องคิดค่าแรง · SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
+  @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 40px}
+  .wrap{max-width:560px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 14px}
+  .back{border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+  h1{font-size:17px;margin:0;font-weight:700}.sub{font-size:12px;color:var(--txt2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .ch{font-size:14px;font-weight:700;margin-bottom:10px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+  label{font-size:11.5px;color:var(--txt2)}
+  input,select{width:100%;margin-top:3px;padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--card2);color:var(--txt);font:inherit;font-size:14px}
+  .seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--radius);overflow:hidden;margin-top:3px}
+  .seg button{border:0;padding:8px 16px;font:inherit;font-size:13px;cursor:pointer;background:transparent;color:var(--txt2)}
+  .seg button.on{background:var(--primary);color:#fff}
+  .row{display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px}
+  .row .l{color:var(--txt2)}
+  .sec{margin:10px 0 2px;font-size:12px;font-weight:700;color:var(--primary)}
+  .big{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px solid var(--line);margin-top:10px;padding-top:12px}
+  .big .amt{font-size:30px;font-weight:800;color:var(--primary)}
+  .load{display:flex;gap:8px;align-items:flex-end}
+  .btn{padding:9px 14px;border:0;border-radius:9px;background:var(--primary);color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .msg{color:var(--txt2);font-size:12px;text-align:center;padding:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button class="back" onclick="goBack()">←</button>
+    <div class="logo">🧮</div>
+    <div><h1>เครื่องคิดค่าแรง</h1><div class="sub">ลองคิด/อธิบายคนขับ · สูตรเดียวกับที่จ่ายจริง</div></div>
+  </div>
+
+  <div class="card">
+    <div class="ch">📋 ดึงออเดอร์จริงมาดู (ไม่บังคับ)</div>
+    <div class="load">
+      <div style="flex:1"><label>Order ID<input id="oid" placeholder="ORD-260714-8454"></label></div>
+      <button class="btn" id="loadOrder">ดึง</button>
+    </div>
+    <div class="msg" id="loadMsg"></div>
+  </div>
+
+  <div class="card">
+    <div class="ch">✏️ กรอกเลขเที่ยว</div>
+    <div class="grid">
+      <label>รุ่นรถ<select id="model"><option value="360">360</option><option value="240">240</option></select></label>
+      <label>ประเภทงาน<select id="job"></select></label>
+      <label>ระยะเบา (วิ่งเปล่า กม.)<input type="number" id="dLight" value="179.9"></label>
+      <label>ระยะหนัก (บรรทุก กม.)<input type="number" id="dHeavy" value="179.1"></label>
+      <label>น้ำมันเติมจริง (ลิตร)<input type="number" id="liters" value="113"></label>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch">🧾 ผลคำนวณ</div>
+    <div id="out"><div class="msg">กำลังโหลดค่าตั้ง…</div></div>
+  </div>
+</div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID='2010274217-Ot7vGhri';
+let MY_UID='', CFG=null;
+const $=id=>document.getElementById(id);
+const money=n=>Math.round(n||0).toLocaleString('th-TH');
+const N=id=>parseFloat($(id).value)||0;
+function goBack(){ if(history.length>1)history.back(); else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
+
+// ชั่วโมงวิ่งขั้นบันได (ตาม tier ของรุ่น)
+function stairHours(dist, tiers){
+  let h=0, prev=0;
+  for(const t of tiers){ const max=(t.max_km==null?Infinity:+t.max_km); const top=Math.min(dist,max); if(top>prev)h+=(top-prev)/(+t.speed_kmph||1); prev=max; if(dist<=prev)break; }
+  return h;
+}
+
+function calc(){
+  if(!CFG){return;}
+  const p=CFG.params, model=$('model').value;
+  const tiers=CFG.speedTier.filter(t=>t.model===model).sort((a,b)=>a.seq-b.seq);
+  const fw=CFG.fuelWeight.find(f=>f.model===model)||{kmpl_heavy:3.2,kmpl_light:4};
+  const jt=CFG.jobTypes.find(j=>j.job_type===$('job').value)||{up_min:30,down_min:30};
+  const runRate=p.run_rate_per_hr, loadRate=p.load_rate_per_hr, fuelRate=p.fuel_rate_wage;
+  const heavyPct=p.heavy_pct, lightPct=p.light_pct, bonusPct=p.bonus_pct, tarp=p.tarp_fee;
+
+  const dLight=N('dLight'), dHeavy=N('dHeavy'), liters=N('liters');
+  // ระยะขา×2×%
+  const runLight=runRate*stairHours(dLight,tiers)*2*(lightPct/100);
+  const runHeavy=runRate*stairHours(dHeavy,tiers)*2*(heavyPct/100);
+  const runWage=runLight+runHeavy;
+  const loadWage=loadRate*(jt.up_min+jt.down_min)/60;
+  const benchL=dHeavy/(+fw.kmpl_heavy||1)+dLight/(+fw.kmpl_light||1);
+  const fuelAdj=(benchL-liters)*fuelRate;
+  const subtotal=runWage+loadWage+tarp+fuelAdj;
+  const bonus=subtotal*bonusPct/100;
+  const net=Math.round(subtotal+bonus);
+
+  function row(l,v,cl){return `<div class="row"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
+  let h='';
+  h+=row(`ค่าวิ่ง เบา ${dLight} กม. ×2×${lightPct}%`,money(runLight)+' บ.');
+  h+=row(`ค่าวิ่ง หนัก ${dHeavy} กม. ×2×${heavyPct}%`,money(runHeavy)+' บ.');
+  h+=row(`ขึ้น-ลงของ (${$('job').value} ${jt.up_min}+${jt.down_min}น.)`,money(loadWage)+' บ.');
+  h+=row('ค่าคลุมผ้าใบ',money(tarp)+' บ.');
+  h+=`<div class="sec">น้ำมัน (เกณฑ์ ${benchL.toFixed(1)} vs เติม ${liters} ล.)</div>`;
+  h+=row((fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+` ×${fuelRate}`,(fuelAdj>=0?'+':'−')+money(Math.abs(fuelAdj))+' บ.',(fuelAdj<0?'color:var(--danger)':'color:var(--primary)'));
+  h+=row(`โบนัส ${bonusPct}%`,'+'+money(bonus)+' บ.');
+  h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt">${money(net)} บ.</span></div>`;
+  $('out').innerHTML=h;
+}
+
+async function loadOrder(){
+  const oid=$('oid').value.trim(); if(!oid)return;
+  $('loadMsg').textContent='กำลังดึง…';
+  const r=await fetch(GAS_URL+'?action=getWageMonitor&userId='+encodeURIComponent(MY_UID)+'&orderId='+encodeURIComponent(oid));
+  const d=await r.json();
+  if(!d.ok){$('loadMsg').textContent=d.error||d.denied?'ไม่มีสิทธิ์':'ไม่พบ';return;}
+  const w=d.wage;
+  $('model').value=w.model;
+  $('job').value=w.jobType;
+  $('dLight').value=w.distLight; $('dHeavy').value=w.distHeavy; $('liters').value=w.litersActual;
+  $('loadMsg').innerHTML='ดึงแล้ว: '+(w.driver||'')+' · '+[w.garden,w.dest].filter(Boolean).join(' → ')+' · <b>ค่าจริง '+money(w.wage)+' บ.</b>';
+  calc();
+}
+
+async function init(){
+  const r=await fetch(GAS_URL+'?action=getWageSettings&userId='+encodeURIComponent(MY_UID));
+  const d=await r.json();
+  if(d.denied){$('out').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
+  if(!d.ok){$('out').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
+  // params → {key:value}
+  const p={}; Object.keys(d.params).forEach(k=>p[k]=d.params[k].value);
+  CFG={params:p, speedTier:d.speedTier, fuelWeight:d.fuelWeight, jobTypes:d.jobTypes};
+  $('job').innerHTML=d.jobTypes.map(j=>`<option>${j.job_type}</option>`).join('');
+  ['model','job','dLight','dHeavy','liters'].forEach(id=>{$(id).oninput=calc;$(id).onchange=calc;});
+  calc();
+}
+$('loadOrder').onclick=loadOrder;
+
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
+    const pr=await liff.getProfile(); MY_UID=pr.userId||'';
+    if(!MY_UID){$('out').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
+    init();
+  }catch(e){$('out').innerHTML='<div class="msg">LIFF error: '+e+'</div>';}
+})();
+</script>
+</body>
+</html>
