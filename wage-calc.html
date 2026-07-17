@@ -1,159 +1,980 @@
-<!doctype html>
-<html lang="th">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>เครื่องคิดค่าแรง · SSB</title>
-<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
-  :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
-  @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}}
+  :root{
+    --bg:#eef1f4; --card:#ffffff; --card2:#f6f8fa; --line:#e2e6ea; --line2:#cfd5db;
+    --txt:#1a2530; --txt2:#6b7785; --primary:#1f8a52; --on-primary:#fff;
+    --danger:#c8352f; --success:#1f8a52; --radius:8px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;
+      --txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}
+  }
+  :root[data-theme="light"]{
+    --bg:#eef1f4;--card:#ffffff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;
+    --txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--success:#1f8a52;
+  }
+  :root[data-theme="dark"]{
+    --bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;
+    --txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d;--success:#2ea567;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 40px}
-  .wrap{max-width:560px;margin:0 auto}
-  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 14px}
-  .back{border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer}
-  .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
-  h1{font-size:17px;margin:0;font-weight:700}.sub{font-size:12px;color:var(--txt2)}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
-  .ch{font-size:14px;font-weight:700;margin-bottom:10px}
-  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
-  label{font-size:11.5px;color:var(--txt2)}
-  input,select{width:100%;margin-top:3px;padding:8px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--card2);color:var(--txt);font:inherit;font-size:14px}
-  .seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--radius);overflow:hidden;margin-top:3px}
-  .seg button{border:0;padding:8px 16px;font:inherit;font-size:13px;cursor:pointer;background:transparent;color:var(--txt2)}
-  .seg button.on{background:var(--primary);color:#fff}
-  .row{display:flex;justify-content:space-between;padding:5px 0;font-size:13.5px}
-  .row .l{color:var(--txt2)}
-  .sec{margin:10px 0 2px;font-size:12px;font-weight:700;color:var(--primary)}
-  .big{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px solid var(--line);margin-top:10px;padding-top:12px}
-  .big .amt{font-size:30px;font-weight:800;color:var(--primary)}
-  .load{display:flex;gap:8px;align-items:flex-end}
-  .btn{padding:9px 14px;border:0;border-radius:9px;background:var(--primary);color:#fff;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
-  .msg{color:var(--txt2);font-size:12px;text-align:center;padding:8px}
+  body{margin:0;background:var(--bg);color:var(--txt);
+    font-family:-apple-system,"Segoe UI",Roboto,"Sarabun","Noto Sans Thai",sans-serif;
+    line-height:1.5;padding:18px 14px 40px;}
+  .wrap{max-width:1700px;margin:0 auto}
+  .layout{display:grid;grid-template-columns:300px 320px minmax(0,1fr) 400px;gap:16px;align-items:start}
+  .left{position:sticky;top:14px}
+  .right{min-width:0}
+  .slipcol{position:sticky;top:14px}
+  .anacol{position:sticky;top:14px}
+  @media(max-width:1450px){
+    .wrap{max-width:1360px}
+    .layout{grid-template-columns:320px minmax(0,1fr) 400px}
+    .anacol{position:static;grid-column:1 / -1;order:4}
+  }
+  @media(max-width:1180px){
+    .wrap{max-width:720px}
+    .layout{grid-template-columns:320px 1fr}
+    .slipcol{position:static;grid-column:1 / -1;order:3}
+  }
+  @media(max-width:760px){
+    .wrap{max-width:560px}
+    .layout{grid-template-columns:1fr}
+    .left{position:static;order:2}
+    .right{order:1}
+    .slipcol{order:3}
+  }
+  .slipwrap{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;
+    box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .slipwrap canvas{width:100%;height:auto;border-radius:8px;display:block}
+  .btn{width:100%;margin-top:12px;padding:11px;border:0;border-radius:10px;background:var(--primary);color:#fff;
+    font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .btn:hover{filter:brightness(1.06)}
+  .slipcap{font-size:11.5px;color:var(--txt2);margin-top:8px;text-align:center}
+  .bar{display:flex;align-items:center;gap:12px;padding:4px 4px 18px}
+  .logo{width:42px;height:42px;border-radius:11px;background:var(--primary);color:#fff;
+    display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700}
+  .bar h1{font-size:17px;margin:0;font-weight:700}
+  .bar .sub{font-size:12px;color:var(--txt2)}
+  .badge{margin-left:auto;font-size:10.5px;font-weight:700;color:#fff;background:var(--txt2);
+    padding:3px 10px;border-radius:999px;letter-spacing:.5px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:15px 16px;margin-bottom:14px;
+    box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .ch{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;margin-bottom:12px}
+  .modes{display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--card2);border:1px solid var(--line);
+    border-radius:12px;padding:5px;margin-bottom:14px}
+  .modes button{border:0;border-radius:9px;padding:10px 8px;font:inherit;font-size:13px;cursor:pointer;
+    background:transparent;color:var(--txt2);transition:.12s}
+  .modes button.on{background:var(--card);color:var(--txt);font-weight:700;box-shadow:0 1px 4px rgba(20,40,60,.13)}
+  select,input[type=number]{font:inherit;color:var(--txt)}
+  .sel{width:100%;padding:10px 11px;border:1px solid var(--line2);border-radius:var(--radius);font-size:13.5px;background:var(--card2)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:10px;margin-top:12px}
+  .tile{background:var(--card2);border-radius:var(--radius);padding:9px 11px}
+  .tile .k{font-size:11px;color:var(--txt2)}
+  .tile .v{font-size:15px;font-weight:600;margin-top:1px}
+  .tile .u{font-size:10px;color:var(--txt2);font-weight:400}
+  .tile input{width:100%;border:0;border-bottom:1.5px solid var(--line2);background:transparent;
+    font-size:15px;font-weight:600;padding:2px 0;margin-top:2px}
+  .tile input:focus{outline:0;border-color:var(--primary)}
+  .leg{border:1px solid var(--line);border-radius:10px;padding:10px 11px;margin:9px 0;background:var(--card2)}
+  .leg .lh{font-size:12.5px;font-weight:700;margin-bottom:7px}
+  .leg .lr{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .leg .mini{font-size:10.5px;color:var(--txt2);display:inline-flex;align-items:center;gap:3px}
+  .leg .mini input{width:46px;padding:4px;border:1px solid var(--line2);border-radius:6px;background:var(--card);font-size:13px;color:var(--txt)}
+  .leg .lsum{margin-left:auto;font-size:12.5px;font-weight:700}
+  .togrow{display:flex;align-items:center;gap:10px;margin:11px 0}
+  .togrow .lb{flex:1;font-size:13.5px}
+  .seg{display:inline-flex;border:1px solid var(--line2);border-radius:var(--radius);overflow:hidden}
+  .seg button{border:0;padding:7px 15px;font:inherit;font-size:12.5px;cursor:pointer;background:transparent;color:var(--txt2)}
+  .seg button.on{background:var(--primary);color:var(--on-primary)}
+  .seg button.hv.on{background:var(--danger)}
+  .seg button.off.on{background:var(--danger)}
+  .params{border-top:1px solid var(--line);padding-top:13px;margin-top:4px;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px 14px}
+  .params label{font-size:11.5px;color:var(--txt2)}
+  .params input{width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--line2);border-radius:var(--radius);
+    font-size:14px;background:var(--card2)}
+  .note{margin-top:13px;font-size:11px;color:var(--txt2);background:var(--card2);border-radius:var(--radius);
+    padding:9px 11px;line-height:1.6}
+  .result{border:1.5px solid var(--primary)}
+  .bd .row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px}
+  .bd .row .l{color:var(--txt2)}
+  .dash{border-top:1px dashed var(--line2);margin:7px 0}
+  .net{border-top:1px solid var(--line);margin-top:11px;padding-top:13px;display:flex;align-items:baseline;justify-content:space-between}
+  .net .lab{font-size:14px;color:var(--txt2)}
+  .net .amt{font-size:32px;font-weight:800;font-variant-numeric:tabular-nums}
+  .pos{color:var(--success)} .neg{color:var(--danger)}
+  #dOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:50}
+  #dOverlay.open{display:block}
+  #costDrawer{position:fixed;top:0;right:0;width:400px;max-width:92vw;height:100%;background:var(--card);
+    box-shadow:-6px 0 24px rgba(0,0,0,.25);z-index:51;transform:translateX(105%);transition:transform .25s;
+    overflow-y:auto;padding:16px 18px}
+  #costDrawer.open{transform:translateX(0)}
 </style>
-</head>
-<body>
+
 <div class="wrap">
   <div class="bar">
-    <button class="back" onclick="goBack()">←</button>
-    <div class="logo">🧮</div>
-    <div><h1>เครื่องคิดค่าแรง</h1><div class="sub">ลองคิด/อธิบายคนขับ · สูตรเดียวกับที่จ่ายจริง</div></div>
-  </div>
-
-  <div class="card">
-    <div class="ch">📋 ดึงออเดอร์จริงมาดู (ไม่บังคับ)</div>
-    <div class="load">
-      <div style="flex:1"><label>Order ID<input id="oid" placeholder="ORD-260714-8454"></label></div>
-      <button class="btn" id="loadOrder">ดึง</button>
+    <div class="logo">฿</div>
+    <div>
+      <h1>คำนวณค่าแรงคนขับ</h1>
+      <div class="sub">เมนูแอดมิน · monitor การคิดเงิน</div>
     </div>
-    <div class="msg" id="loadMsg"></div>
+    <div id="costbar" style="display:flex;gap:10px;align-items:stretch;margin-left:20px;flex:1;flex-wrap:wrap"></div>
+    <button id="themeBtn" style="border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:999px;padding:5px 12px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap">🌙 โหมดมืด</button>
+    <span class="badge">ADMIN</span>
   </div>
 
-  <div class="card">
-    <div class="ch">✏️ กรอกเลขเที่ยว</div>
-    <div class="grid">
-      <label>รุ่นรถ<select id="model"><option value="360">360</option><option value="240">240</option></select></label>
-      <label>ประเภทงาน<select id="job"></select></label>
-      <label>ระยะเบา (วิ่งเปล่า กม.)<input type="number" id="dLight" value="179.9"></label>
-      <label>ระยะหนัก (บรรทุก กม.)<input type="number" id="dHeavy" value="179.1"></label>
-      <label>น้ำมันเติมจริง (ลิตร)<input type="number" id="liters" value="113"></label>
+  <div class="layout">
+    <div class="anacol">
+      <div class="card">
+        <div class="ch">🔍 วิเคราะห์เที่ยวนี้</div>
+        <div id="ana"></div>
+      </div>
+    </div>
+
+    <div class="left">
+      <div class="card result">
+        <div class="ch">🧾 สรุปค่าแรง</div>
+        <div class="bd" id="bd"></div>
+        <div class="net"><span class="lab">ค่าแรงสุทธิ</span><span class="amt" id="net">—</span></div>
+      </div>
+    </div>
+
+    <div class="right">
+      <div class="modes" id="mode"></div>
+
+      <div class="card">
+        <div class="ch" id="srcHead"></div>
+        <div id="picker"></div>
+        <div class="grid" id="srcBody"></div>
+      </div>
+
+      <div class="card">
+        <div class="ch">⚙️ การตั้งค่าคำนวณ</div>
+        <div style="font-size:12px;color:var(--txt2);margin-bottom:8px">ช่วงงาน (checkpoint) — <b>คิดตามขา</b> · แต่ละขากำหนด เบา/หนัก + ขึ้น/ลง (นาที) เอง</div>
+        <div id="pattern" style="display:flex;gap:8px;margin-bottom:10px"></div>
+        <div id="legs"></div>
+        <div id="jobTimes" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px"></div>
+        <div id="speedTiers" style="margin-top:12px;border-top:1px dashed var(--line);padding-top:10px"></div>
+        <div id="tog" style="margin:14px 0"></div>
+        <div class="params" id="params"></div>
+        <div class="note">
+          🗄️ เกณฑ์กินน้ำมัน/ยี่ห้อ ดึงตามทะเบียนจาก <b>DATA_Vehicle</b> · 360→3.2 · 240→4.0<br>
+          🚚 <b>เบา</b> = รถวิ่งเปล่า/ขนน้อย · <b>หนัก</b> = บรรทุกของ · ขึ้น=รับของ · ลง=ถึงปลายทาง<br>
+          ℹ️ เลทน้ำมัน <b>28</b> = คิดค่าแรง (คนละตัวกับ 32 = ต้นทุนบริษัท)
+        </div>
+      </div>
+    </div>
+
+    <div class="slipcol">
+      <div class="slipwrap">
+        <canvas id="slip"></canvas>
+        <button class="btn" id="save">⬇️ บันทึกเป็นรูป (ส่งให้คนขับ)</button>
+        <div class="slipcap">แจงค่าแรงแบบ checkpoint ตาม timeline · เซฟรูปแล้วส่งเข้า LINE คนขับได้</div>
+      </div>
     </div>
   </div>
 
-  <div class="card">
-    <div class="ch">🧾 ผลคำนวณ</div>
-    <div id="out"><div class="msg">กำลังโหลดค่าตั้ง…</div></div>
+  <div class="card" style="max-width:none">
+    <div class="ch">📊 รายงานค่าแรงสำหรับ HR (Excel)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end">
+      <label style="font-size:12px;color:var(--txt2)">ตั้งแต่วันที่<br><input type="date" id="rpFrom" value="2026-07-01" style="margin-top:4px;padding:9px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--card2);color:var(--txt);font:inherit;font-size:13px"></label>
+      <label style="font-size:12px;color:var(--txt2)">ถึงวันที่<br><input type="date" id="rpTo" value="2026-07-31" style="margin-top:4px;padding:9px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--card2);color:var(--txt);font:inherit;font-size:13px"></label>
+      <label style="font-size:12px;color:var(--txt2)">คนขับ<br><select id="rpDriver" style="margin-top:4px;padding:9px 10px;border:1px solid var(--line2);border-radius:8px;background:var(--card2);color:var(--txt);font:inherit;font-size:13px;min-width:160px"></select></label>
+      <button class="btn" id="rpDetail" style="width:auto;margin-top:0;padding:11px 18px">📄 Excel รายคน (แจงต่อเที่ยว)</button>
+      <button class="btn" id="rpDaily" style="width:auto;margin-top:0;padding:11px 18px;background:var(--txt2)">📅 Excel สรุปรายวัน</button>
+    </div>
+    <div style="margin-top:10px;font-size:11px;color:var(--txt2)">เลือกช่วงวัน + คนขับ (หรือทุกคน) → ดาวน์โหลดไฟล์ให้ HR คิดค่าแรง · ของจริงดึงจากออเดอร์ที่ปิดงานแล้ว (คิดตามค่า/toggle ปัจจุบัน)</div>
   </div>
 </div>
 
+<div id="dOverlay"></div>
+<aside id="costDrawer">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <b style="font-size:15px">🧾 รายการต้นทุนเที่ยวนี้</b>
+    <button id="dClose" style="border:0;background:transparent;color:var(--txt2);font-size:18px;cursor:pointer">✕</button>
+  </div>
+  <div id="dBody"></div>
+</aside>
+
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
-const LIFF_ID='2010274217-Ot7vGhri';
-let MY_UID='', CFG=null;
-const $=id=>document.getElementById(id);
-const money=n=>Math.round(n||0).toLocaleString('th-TH');
-const N=id=>parseFloat($(id).value)||0;
-function goBack(){ if(history.length>1)history.back(); else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
+(function(){
+  var FUEL_BENCH={'360':3.2,'240':4.0};
+  var ORDERS=[
+    {id:'ORD-260714-8454',driver:'ธนกร เริงไทสงค์',plate:'86-1685',brand:'ISUZU',model:'360',dest:'ลานวัฒนานคร',date:'2026-07-14',distActual:359,distCentral:350,heavyKm:179.1,lightKm:179.9,yardKm:100,yardHomeKm:79.1,litersFilled:113,qty:30360,extraCost:0},
+    {id:'ORD-260715-8461',driver:'สมชาย ใจดี',plate:'87-3639',brand:'ISUZU',model:'240',dest:'โรงงานสระแก้ว',date:'2026-07-15',distActual:118,distCentral:120,heavyKm:59,lightKm:59,yardKm:30,yardHomeKm:29,litersFilled:27,qty:15000,extraCost:60},
+    {id:'ORD-260715-8470',driver:'วิรัช พงษ์ไทย',plate:'86-1685',brand:'ISUZU',model:'360',dest:'ท่าเรือ',date:'2026-07-15',distActual:86,distCentral:90,heavyKm:43,lightKm:43,yardKm:25,yardHomeKm:18,litersFilled:29,qty:12000}
+  ];
+  // เวลามาตรฐานต่อประเภทงาน (นาที) — master (แก้ที่เดียว มีผลทุกขาที่ใช้งานนั้น)
+  var JOB_TYPES={'ปาล์ม':{up:30,down:30},'Packing':{up:120,down:120},'Bulk':{up:60,down:60},'อื่นๆ':{up:30,down:30}};
+  // แต่ละขา: weight(เบา/หนัก) + job(ประเภทงาน) + doUp/doDown(มีขึ้น/ลงไหม) + distKey
+  // รูปแบบทริป — งานตรง (2 ขา) vs ผ่านลานเท (3 ขา, ช่วงหนักแบ่ง 2 ท่อน group เดียว = แชร์ 70% ร่วมกัน)
+  var PATTERNS={
+    direct:{label:'งานตรง (ไป-กลับ)',legs:[
+      {name:'ขาไป · โรงงาน→ถึงลูกค้า',   sub:'รถเบา วิ่งไปรับ', weight:'light', job:'ปาล์ม', doUp:true,  doDown:false, distKey:'lightKm', tOut:'08:44', tIn:'12:23'},
+      {name:'ขากลับ · ลูกค้า→ถึงโรงงาน', sub:'รถหนัก บรรทุกปาล์ม', weight:'heavy', job:'ปาล์ม', doUp:false, doDown:true,  distKey:'heavyKm', tOut:'13:05', tIn:'17:20'}
+    ]},
+    viaYard:{label:'ผ่านลานเท (แวะลาน)',legs:[
+      {name:'ขาไป · โรงงาน→สวน',      sub:'รถเบา วิ่งไปรับ', weight:'light', job:'ปาล์ม', doUp:true,  doDown:false, distKey:'lightKm', tOut:'08:44', tIn:'12:23'},
+      {name:'ช่วงกลาง · ลูกค้า→ลานเท', sub:'รถหนัก · แวะชั่ง/เทที่ลาน', weight:'heavy', job:'ปาล์ม', doUp:false, doDown:false, distKey:'yardKm', group:'H', tOut:'13:05', tIn:'15:20'},
+      {name:'ขากลับ · ลานเท→โรงงาน',  sub:'รถหนัก บรรทุกปาล์ม', weight:'heavy', job:'ปาล์ม', doUp:false, doDown:true,  distKey:'yardHomeKm', group:'H', tOut:'15:40', tIn:'17:20'}
+    ]}
+  };
+  var PATTERN='direct';
+  var LEGS=PATTERNS.direct.legs;
+  // mock ประวัติย้อนหลังต่อคนขับ (ของจริง = คำนวณจากออเดอร์ที่ปิดแล้วใน Supabase)
+  var HIST={
+    'ธนกร เริงไทสงค์':{trips:12,kmpl:3.26,driveMin:450,dist:352},
+    'สมชาย ใจดี':{trips:8,kmpl:4.10,driveMin:150,dist:115},
+    'วิรัช พงษ์ไทย':{trips:5,kmpl:3.05,driveMin:120,dist:88}
+  };
+  // runRate = เลทค่าวิ่ง (บ./ชม.) · loadRate = ค่าขึ้น-ลงของ (บ./ชม.) — แยกกัน แก้ตัวไหนกระทบเฉพาะส่วนนั้น
+  // ต้นทุนบริษัท (ค่าจริงจาก vehicles รุ่น 360): fixed_cost_per_km รวมค่าเสื่อมแล้ว · variable_cost_per_km รวมน้ำมัน · ops_cost_trip
+  var P={runRate:100,loadRate:100,fuelRate:28,benchmark:3.2,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
+    fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};
+  // ความเร็วเลทตามช่วงระยะ — ระยะขาไหนเข้าช่วงไหน ใช้ความเร็วช่วงนั้น (master ใน DB, ค่า mock)
+  // แต่ละช่วงระยะมีทั้ง ความเร็ว (กม./ชม.) และ เกณฑ์น้ำมัน (กม./ล.) — ตามที่ user กำหนด 1-25 = 20 กม./ชม. · 2.2 กม./ล.
+  // เกณฑ์น้ำมัน (กม./ล.) แยกตามรุ่นรถ — 360 ตัวใหญ่กินเยอะกว่า 240 (ค่า 240 เป็น placeholder ~×1.25)
+  // อิงข้อมูลจริง: Isuzu 240 (FTR) เฉลี่ย 4.0–5.0 กม./ล. · Isuzu 360 (GXZ/FXZ) เฉลี่ย 3.2–3.8 (ทดสอบจริง 3.56 @50ตัน)
+  // default ตามที่ user เคาะ 17/7: 1-30=20·2 / 31-75=30·2.25 / 76-150=45·3 / 151-400=55·3.75 / >400=60·4 (รุ่น 360)
+  // default user เคาะ 2026-07-17: 360 = 2/2.25/3/3.75/4 · 240 = 2.5/3/3.8/4.7/5 · ความเร็ว 20/30/45/55/60
+  var SPEED_TIERS=[
+    {label:'',max:30,speed:20,kmplBy:{'360':2,'240':2.5}},
+    {label:'',max:75,speed:30,kmplBy:{'360':2.25,'240':3}},
+    {label:'',max:150,speed:45,kmplBy:{'360':3,'240':3.8}},
+    {label:'',max:400,speed:55,kmplBy:{'360':3.75,'240':4.7}},
+    {label:'',max:Infinity,speed:60,kmplBy:{'360':4,'240':5}}
+  ];
+  function kmplTier(t){var m=src().model;return (t.kmplBy&&(t.kmplBy[m]||t.kmplBy['360']))||P.benchmark;}
+  // เกณฑ์น้ำมันแยกหนัก/เบา ต่อรุ่น (ข้อมูลจริง: 360 หนัก 3.0-3.4 เบา 4.5-5.2 · 240 หนัก 3.8-4.2 เบา 5.0-5.5)
+  // เกณฑ์หนัก/เบา ต่อรุ่น (user เคาะ 2026-07-17): 360 หนัก2.75 เบา4 · 240 หนัก3.75 เบา5
+  var FUEL_WEIGHT={'360':{heavy:2.75,light:4},'240':{heavy:3.75,light:5}};
+  function tierIdx(d){for(var i=0;i<SPEED_TIERS.length;i++){if(d<=SPEED_TIERS[i].max)return i;}return SPEED_TIERS.length-1;}
+  function speedFor(d){return SPEED_TIERS[tierIdx(d)].speed;}
+  // ขั้นบันได: หั่นระยะตามช่วงสะสม แต่ละท่อนใช้ความเร็วช่วงตัวเอง (เหมือนขั้นภาษี) → คืนชั่วโมงรวม
+  function stairHours(d){var h=0,prev=0;for(var i=0;i<SPEED_TIERS.length;i++){var top=Math.min(d,SPEED_TIERS[i].max);if(top>prev)h+=(top-prev)/(SPEED_TIERS[i].speed||1);prev=SPEED_TIERS[i].max;if(d<=prev)break;}return h;}
+  function kmplFor(d){return kmplTier(SPEED_TIERS[tierIdx(d)]);}
+  function stairLiters(d,mult){mult=mult||1;var L=0,prev=0;for(var i=0;i<SPEED_TIERS.length;i++){var top=Math.min(d,SPEED_TIERS[i].max);if(top>prev)L+=(top-prev)/((kmplTier(SPEED_TIERS[i])*mult)||1);prev=SPEED_TIERS[i].max;if(d<=prev)break;}return L;}
+  var T={mode:'order',ordIdx:0,distMode:'actual',speedMode:'tier',speedCalc:'stair',fuelBench:'tier',fuelPenalty:true,weight:true,bonus10:true,tarp:true,depr:true,groupAlloc:'leg2x'};
+  var M={brand:'ISUZU',model:'360',distActual:200,distCentral:200,heavyKm:100,lightKm:100,yardKm:100,yardHomeKm:100,litersFilled:62.5,qty:30000,qtyPk:500,extraCost:0,dest:'—',driver:'(จำลอง)',plate:'—',id:'จำลอง'};
+  function mSum(){return PATTERN==='viaYard'?(M.lightKm+M.yardKm+M.yardHomeKm):(M.lightKm+M.heavyKm);}
+  var money=function(n){return Math.round(n).toLocaleString('th-TH');};
+  function toMin(t){var p=String(t||'0:0').split(':');return (+p[0])*60+(+p[1]||0);}
+  function durMin(a,b){var m=toMin(b)-toMin(a);if(m<0)m+=1440;return m;}
+  function hm(m){var h=Math.floor(m/60),n=Math.round(m%60);return h?(h+' ชม.'+(n?' '+n+' น.':'')):(n+' น.');}
+  function src(){return T.mode==='order'?ORDERS[T.ordIdx]:M;}
+  function syncBench(){var bi=document.querySelector('input[data-p="benchmark"]');if(bi)bi.value=P.benchmark;}
 
-// ชั่วโมงวิ่งขั้นบันได (ตาม tier ของรุ่น)
-function stairHours(dist, tiers){
-  let h=0, prev=0;
-  for(const t of tiers){ const max=(t.max_km==null?Infinity:+t.max_km); const top=Math.min(dist,max); if(top>prev)h+=(top-prev)/(+t.speed_kmph||1); prev=max; if(dist<=prev)break; }
-  return h;
-}
+  // ── โหมด ──
+  var modeBox=document.getElementById('mode');
+  [['order','🗂️ ดึงจากออเดอร์'],['manual','✏️ จำลอง (เติมเลข)']].forEach(function(m){
+    var b=document.createElement('button');b.dataset.mode=m[0];b.textContent=m[1];modeBox.appendChild(b);
+  });
+  function paintMode(){modeBox.querySelectorAll('button').forEach(function(b){b.classList.toggle('on',b.dataset.mode===T.mode);});}
+  modeBox.onclick=function(e){var b=e.target.closest('button');if(!b)return;T.mode=b.dataset.mode;paintMode();buildSource();render();};
 
-function calc(){
-  if(!CFG){return;}
-  const p=CFG.params, model=$('model').value;
-  const tiers=CFG.speedTier.filter(t=>t.model===model).sort((a,b)=>a.seq-b.seq);
-  const fw=CFG.fuelWeight.find(f=>f.model===model)||{kmpl_heavy:3.2,kmpl_light:4};
-  const jt=CFG.jobTypes.find(j=>j.job_type===$('job').value)||{up_min:30,down_min:30};
-  const runRate=p.run_rate_per_hr, loadRate=p.load_rate_per_hr, fuelRate=p.fuel_rate_wage;
-  const heavyPct=p.heavy_pct, lightPct=p.light_pct, bonusPct=p.bonus_pct, tarp=p.tarp_fee;
+  // ── ที่มาข้อมูล ──
+  var head=document.getElementById('srcHead'),picker=document.getElementById('picker'),body=document.getElementById('srcBody');
+  function tile(k,v,u){return '<div class="tile"><div class="k">'+k+'</div><div class="v">'+v+(u?' <span class="u">'+u+'</span>':'')+'</div></div>';}
+  function itile(k,key,v,u){return '<div class="tile"><div class="k">'+k+(u?' ('+u+')':'')+'</div><input type="number" step="any" data-m="'+key+'" value="'+v+'"></div>';}
+  function buildSource(){
+    var s=src();picker.innerHTML='';body.innerHTML='';
+    if(T.mode==='order'){
+      head.textContent='🗂️ เลือกออเดอร์ (ตัวอย่าง 3 รายการ)';
+      var h='<select class="sel" id="ordSel">';
+      ORDERS.forEach(function(o,i){h+='<option value="'+i+'"'+(i===T.ordIdx?' selected':'')+'>'+o.id+' · '+o.driver+'</option>';});
+      picker.innerHTML=h+'</select>';
+      document.getElementById('ordSel').onchange=function(e){T.ordIdx=+e.target.value;P.benchmark=FUEL_BENCH[src().model]||3.2;syncBench();buildSource();render();};
+      body.innerHTML=tile('คนขับ',s.driver)+tile('ทะเบียน',s.plate)+tile('ยี่ห้อ/รุ่น',s.brand+' '+s.model)+tile('ปลายทาง',s.dest)+
+        tile('ระยะจริง',s.distActual,'กม.')+tile('ขาไป/ขากลับ',s.lightKm.toFixed(1)+'/'+s.heavyKm.toFixed(1),'กม.')+
+        tile('น้ำมันเติม',s.litersFilled.toFixed(1),'ล.')+tile('อัตราจริง',(s.distActual/s.litersFilled).toFixed(2),'กม./ล.')+
+        tile('ปริมาณ',(s.qty||0).toLocaleString('th-TH'),'กก.')+
+        '<div class="tile"><div class="k">เกณฑ์รุ่น</div><div class="v"><span id="benchDisp">'+P.benchmark+'</span> <span class="u">กม./ล.</span></div></div>';
+    }else{
+      head.textContent='✏️ เติมเลขจำลอง';
+      var h='<label style="font-size:12px;color:var(--txt2)">รุ่นรถ (เกณฑ์กินน้ำมัน)<select class="sel" id="mModel" style="margin-top:4px">';
+      Object.keys(FUEL_BENCH).forEach(function(md){h+='<option value="'+md+'"'+(md===M.model?' selected':'')+'>'+md+' (เกณฑ์ '+FUEL_BENCH[md]+' กม./ล.)</option>';});
+      picker.innerHTML=h+'</select></label>';
+      document.getElementById('mModel').onchange=function(e){M.model=e.target.value;P.benchmark=FUEL_BENCH[M.model];syncBench();buildSource();render();};
+      M.distActual=mSum();
+      var distTiles = PATTERN==='viaYard'
+        ? itile('โรงงาน→ลูกค้า (จริง)','lightKm',M.lightKm,'กม.')+itile('ลูกค้า→ลาน','yardKm',M.yardKm,'กม.')+itile('ลาน→โรงงาน','yardHomeKm',M.yardHomeKm,'กม.')
+        : itile('ระยะขาไป','lightKm',M.lightKm,'กม.')+itile('ระยะขากลับ','heavyKm',M.heavyKm,'กม.');
+      body.innerHTML=distTiles+
+        '<div class="tile"><div class="k">ระยะจริงรวม (บวกอัตโนมัติ)</div><div class="v"><span id="mDistSum">'+M.distActual.toFixed(1)+'</span> <span class="u">กม.</span></div></div>'+
+        itile('ระยะกลาง','distCentral',M.distCentral,'กม.')+itile('น้ำมันเติม','litersFilled',M.litersFilled,'ลิตร')+
+        itile('ปริมาณปาล์ม/Bulk','qty',M.qty,'กก.')+itile('จำนวน Packing','qtyPk',M.qtyPk,'ชิ้น')+itile('คชจ.รายเที่ยว (ทางด่วน/ลงของ)','extraCost',M.extraCost,'บ.');
+      body.querySelectorAll('input[data-m]').forEach(function(inp){inp.oninput=function(){
+        M[inp.dataset.m]=parseFloat(inp.value)||0;
+        M.distActual=mSum();
+        var d=document.getElementById('mDistSum');if(d)d.textContent=M.distActual.toFixed(1);
+        renderSpeedTiers();renderLegs();render();};});
+    }
+    renderSpeedTiers();
+  }
 
-  const dLight=N('dLight'), dHeavy=N('dHeavy'), liters=N('liters');
-  // ระยะขา×2×%
-  const runLight=runRate*stairHours(dLight,tiers)*2*(lightPct/100);
-  const runHeavy=runRate*stairHours(dHeavy,tiers)*2*(heavyPct/100);
-  const runWage=runLight+runHeavy;
-  const loadWage=loadRate*(jt.up_min+jt.down_min)/60;
-  const benchL=dHeavy/(+fw.kmpl_heavy||1)+dLight/(+fw.kmpl_light||1);
-  const fuelAdj=(benchL-liters)*fuelRate;
-  const subtotal=runWage+loadWage+tarp+fuelAdj;
-  const bonus=subtotal*bonusPct/100;
-  const net=Math.round(subtotal+bonus);
+  // ── สลับรูปแบบทริป ──
+  var patBox=document.getElementById('pattern');
+  function renderPattern(){
+    patBox.innerHTML='';
+    Object.keys(PATTERNS).forEach(function(k){
+      var on=PATTERN===k;
+      var b=document.createElement('button');b.dataset.pat=k;
+      b.style.cssText='border:1px solid '+(on?'var(--primary)':'var(--line2)')+';border-radius:999px;padding:7px 16px;font:inherit;font-size:12.5px;cursor:pointer;'
+        +(on?'background:var(--primary);color:var(--on-primary);font-weight:700':'background:transparent;color:var(--txt2)');
+      b.textContent=(on?'✓ ':'')+PATTERNS[k].label;patBox.appendChild(b);
+    });
+  }
+  patBox.addEventListener('click',function(e){
+    var b=e.target.closest('button[data-pat]');if(!b)return;
+    PATTERN=b.dataset.pat;LEGS=PATTERNS[PATTERN].legs;
+    renderPattern();buildSource();renderLegs();render();
+  });
 
-  function row(l,v,cl){return `<div class="row"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
-  let h='';
-  h+=row(`ค่าวิ่ง เบา ${dLight} กม. ×2×${lightPct}%`,money(runLight)+' บ.');
-  h+=row(`ค่าวิ่ง หนัก ${dHeavy} กม. ×2×${heavyPct}%`,money(runHeavy)+' บ.');
-  h+=row(`ขึ้น-ลงของ (${$('job').value} ${jt.up_min}+${jt.down_min}น.)`,money(loadWage)+' บ.');
-  h+=row('ค่าคลุมผ้าใบ',money(tarp)+' บ.');
-  h+=`<div class="sec">น้ำมัน (เกณฑ์ ${benchL.toFixed(1)} vs เติม ${liters} ล.)</div>`;
-  h+=row((fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+` ×${fuelRate}`,(fuelAdj>=0?'+':'−')+money(Math.abs(fuelAdj))+' บ.',(fuelAdj<0?'color:var(--danger)':'color:var(--primary)'));
-  h+=row(`โบนัส ${bonusPct}%`,'+'+money(bonus)+' บ.');
-  h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt">${money(net)} บ.</span></div>`;
-  $('out').innerHTML=h;
-}
+  // ── ป้ายขาแบบไดนามิก: ปลายทาง+คำอธิบาย เปลี่ยนตาม งาน (Packing→ลูกค้า, ปาล์ม→สวน/ลาน) และ เบา/หนัก (หนัก=บรรทุกไปส่ง/ขนกลับ) ──
+  function _jobPlace_(job){return job==='Packing'?'ลูกค้า':(job==='ปาล์ม'?'สวน':'จุดรับ');}
+  function _legMeta_(l,idx,total){
+    var heavy=l.weight==='heavy';
+    if(l.custom)return {name:l.name,sub:(heavy?'รถหนัก':'รถเบา')+' · ขาที่เพิ่มเอง (กรอกระยะ)'};
+    var place=_jobPlace_(l.job);
+    if(PATTERN==='viaYard'){
+      if(idx===0)return {name:'ขาไป · โรงงาน→'+place,
+        sub:heavy?('รถหนัก · บรรทุก '+l.job+' ไปส่งที่'+place):('รถเบา · วิ่งเปล่าไปรับ '+l.job)};
+      if(idx===1){
+        // ปลายทางช่วงกลางตามงานของขานี้: ปาล์ม=ลานเท (รูปแบบผ่านลาน) · งานอื่น=สถานที่ของงานนั้น
+        var to1=(l.job==='ปาล์ม')?'ลานเท':_jobPlace_(l.job);
+        return {name:'ช่วงกลาง · '+_jobPlace_(LEGS[0]?LEGS[0].job:l.job)+'→'+to1,
+          sub:heavy?('รถหนัก · บรรทุก '+l.job+(to1==='ลานเท'?' แวะชั่ง/เทที่ลาน':' ไปส่งที่'+to1)):('รถเบา · วิ่งเปล่าไป'+to1)};
+      }
+      var m1=LEGS[1];var from2=m1?((m1.job==='ปาล์ม')?'ลานเท':_jobPlace_(m1.job)):'ลานเท';
+      return {name:'ขากลับ · '+from2+'→โรงงาน',
+        sub:heavy?('รถหนัก · บรรทุก '+l.job+' กลับโรงงาน'):'รถเบา · ตีรถเปล่ากลับโรงงาน'};
+    }
+    if(idx===0)return {name:'ขาไป · โรงงาน→'+place,
+      sub:heavy?('รถหนัก · บรรทุก '+l.job+' ไปส่งที่'+place):('รถเบา · วิ่งเปล่าไปรับ '+l.job)};
+    return {name:'ขากลับ · '+place+'→โรงงาน',
+      sub:heavy?('รถหนัก · บรรทุก '+l.job+' กลับโรงงาน'):'รถเบา · ตีรถเปล่ากลับโรงงาน'};
+  }
 
-async function loadOrder(){
-  const oid=$('oid').value.trim(); if(!oid)return;
-  $('loadMsg').textContent='กำลังดึง…';
-  const r=await fetch(GAS_URL+'?action=getWageMonitor&userId='+encodeURIComponent(MY_UID)+'&orderId='+encodeURIComponent(oid));
-  const d=await r.json();
-  if(!d.ok){$('loadMsg').textContent=d.error||d.denied?'ไม่มีสิทธิ์':'ไม่พบ';return;}
-  const w=d.wage;
-  $('model').value=w.model;
-  $('job').value=w.jobType;
-  $('dLight').value=w.distLight; $('dHeavy').value=w.distHeavy; $('liters').value=w.litersActual;
-  $('loadMsg').innerHTML='ดึงแล้ว: '+(w.driver||'')+' · '+[w.garden,w.dest].filter(Boolean).join(' → ')+' · <b>ค่าจริง '+money(w.wage)+' บ.</b>';
-  calc();
-}
+  // ── ช่วงงาน (legs) : ประเภทงาน + เบา/หนัก + มีขึ้น/ลงไหม ──
+  var legBox=document.getElementById('legs');
+  function renderLegs(){
+    var c=calc();var totalMin=0;var h='';
+    LEGS.forEach(function(l,idx){
+      var lc=c.legs[idx];totalMin+=lc.upMin+lc.downMin;
+      var jt=JOB_TYPES[l.job]||{up:0,down:0};
+      var jobSel='<select data-legjob="'+idx+'" style="padding:5px 6px;border:1px solid var(--line2);border-radius:6px;background:var(--card);color:var(--txt);font:inherit;font-size:12px">';
+      Object.keys(JOB_TYPES).forEach(function(j){jobSel+='<option'+(l.job===j?' selected':'')+'>'+j+'</option>';});
+      jobSel+='</select>';
+      var mt=_legMeta_(l,idx,LEGS.length);
+      h+='<div class="leg">'
+        +'<div class="lh">'+mt.name+(l.custom?' <button data-del="'+idx+'" style="border:0;background:transparent;color:var(--danger);cursor:pointer;font-size:13px;font-weight:700">✕ ลบ</button>':'')
+        +'<div style="font-weight:400;font-size:10.5px;color:var(--txt2);margin-top:1px">'+mt.sub+'</div></div>'
+        +'<div class="lr">'
+          +jobSel
+          +'<span class="seg"><button data-leg="'+idx+'" data-w="light" class="'+(l.weight==='light'?'on':'')+'">เบา</button>'
+          +'<button data-leg="'+idx+'" data-w="heavy" class="hv '+(l.weight==='heavy'?'on':'')+'">หนัก</button></span>'
+          +(l.custom?'<span class="mini">ระยะ<input type="number" step="1" min="0" data-legdist="'+idx+'" value="'+(l.dist||0)+'">กม.</span>':'')
+          +(l.weight==='light'?'<span class="mini" style="color:var(--txt2)">← วิ่งเปล่าเพื่องานนี้</span>':'')
+          +'<span class="lsum">'+money(lc.sum)+' บ.</span>'
+        +'</div>'
+        +'<div class="lr" style="margin-top:7px">'
+          +'<span class="seg"><button data-act="'+idx+'|doUp" class="'+(l.doUp?'on':'')+'">ขึ้นของ '+jt.up+'น.</button></span>'
+          +'<span class="seg"><button data-act="'+idx+'|doDown" class="'+(l.doDown?'on':'')+'">ลงของ '+jt.down+'น.</button></span>'
+          +'<span class="mini" style="margin-left:auto">รวม '+(lc.upMin+lc.downMin)+' นาที</span>'
+        +'</div>'
+      +'</div>';
+    });
+    h+='<div style="margin-top:4px;font-size:12px;color:var(--txt2);display:flex;align-items:center;gap:10px">รวมขึ้น-ลง (ทุกขา): <b style="color:var(--txt)">'+totalMin+' นาที ('+(totalMin/60).toFixed(2)+' ชม.)</b>'
+      +'<button class="chip" data-addleg="1" style="margin-left:auto">➕ เพิ่มเที่ยว/ขา</button></div>';
+    legBox.innerHTML=h;
+  }
+  legBox.addEventListener('click',function(e){
+    var w=e.target.closest('button[data-leg]');
+    if(w){LEGS[+w.dataset.leg].weight=w.dataset.w;renderLegs();render();return;}
+    var a=e.target.closest('button[data-act]');
+    if(a){var p=a.dataset.act.split('|');LEGS[+p[0]][p[1]]=!LEGS[+p[0]][p[1]];renderLegs();render();return;}
+    var add=e.target.closest('button[data-addleg]');
+    if(add){
+      var n=LEGS.filter(function(l){return l.custom;}).length+1;
+      LEGS.push({name:'เที่ยวเพิ่ม '+n+' · (กำหนดเอง)',sub:'ขาที่เพิ่มเอง — กรอกระยะ เลือกงาน/หนัก-เบา/ขึ้น-ลง',weight:'heavy',job:'ปาล์ม',doUp:false,doDown:false,dist:50,custom:true});
+      renderSpeedTiers();renderLegs();render();return;
+    }
+    var del=e.target.closest('button[data-del]');
+    if(del){LEGS.splice(+del.dataset.del,1);renderSpeedTiers();renderLegs();render();return;}
+  });
+  legBox.addEventListener('input',function(e){
+    var i=e.target.closest('input[data-legdist]');if(!i)return;
+    var idx=+i.dataset.legdist;LEGS[idx].dist=parseFloat(i.value)||0;
+    render();var c=calc();
+    var box=i.closest('.leg');if(box){var sm=box.querySelector('.lsum');if(sm)sm.textContent=money(c.legs[idx].sum)+' บ.';}
+  });
+  legBox.addEventListener('change',function(e){
+    var s=e.target.closest('select[data-legjob]');if(!s)return;
+    LEGS[+s.dataset.legjob].job=s.value;renderLegs();render();
+  });
 
-async function init(){
-  const r=await fetch(GAS_URL+'?action=getWageSettings&userId='+encodeURIComponent(MY_UID));
-  const d=await r.json();
-  if(d.denied){$('out').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
-  if(!d.ok){$('out').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
-  // params → {key:value}
-  const p={}; Object.keys(d.params).forEach(k=>p[k]=d.params[k].value);
-  CFG={params:p, speedTier:d.speedTier, fuelWeight:d.fuelWeight, jobTypes:d.jobTypes};
-  $('job').innerHTML=d.jobTypes.map(j=>`<option>${j.job_type}</option>`).join('');
-  ['model','job','dLight','dHeavy','liters'].forEach(id=>{$(id).oninput=calc;$(id).onchange=calc;});
-  calc();
-}
-$('loadOrder').onclick=loadOrder;
+  // ── ตารางเวลามาตรฐานต่อประเภทงาน (master) ──
+  var jtBox=document.getElementById('jobTimes');
+  var JT_OPEN=false;
+  function renderJobTimes(){
+    var h='<div data-jthead="1" style="font-size:12px;color:var(--txt2);margin-bottom:6px;cursor:pointer;user-select:none"><b>'+(JT_OPEN?'▾':'▸')+'</b> ⏱️ เวลามาตรฐานต่อประเภทงาน (นาที · แก้ได้)'+(JT_OPEN?'':' — <u>กดเพื่อแสดง</u>')+'</div>';
+    if(JT_OPEN)Object.keys(JOB_TYPES).forEach(function(j){
+      var t=JOB_TYPES[j];
+      h+='<div style="display:flex;align-items:center;gap:8px;margin:6px 0">'
+        +'<span style="flex:1;font-size:12.5px">'+j+'</span>'
+        +'<label style="font-size:10.5px;color:var(--txt2)">ขึ้น<input type="number" step="5" min="0" data-jt="'+j+'|up" value="'+t.up+'" style="width:54px;margin-left:3px;padding:5px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"> น.</label>'
+        +'<label style="font-size:10.5px;color:var(--txt2)">ลง<input type="number" step="5" min="0" data-jt="'+j+'|down" value="'+t.down+'" style="width:54px;margin-left:3px;padding:5px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"> น.</label>'
+        +'</div>';
+    });
+    jtBox.innerHTML=h;
+  }
+  jtBox.addEventListener('input',function(e){
+    var i=e.target.closest('input[data-jt]');if(!i)return;
+    var p=i.dataset.jt.split('|');JOB_TYPES[p[0]][p[1]]=parseFloat(i.value)||0;
+    renderLegs();render();
+  });
+  jtBox.addEventListener('click',function(e){
+    if(e.target.closest('[data-jthead]')){JT_OPEN=!JT_OPEN;renderJobTimes();}
+  });
 
-(async function(){
-  try{
-    await liff.init({liffId:LIFF_ID});
-    if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
-    const pr=await liff.getProfile(); MY_UID=pr.userId||'';
-    if(!MY_UID){$('out').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
-    init();
-  }catch(e){$('out').innerHTML='<div class="msg">LIFF error: '+e+'</div>';}
+  // ── เกณฑ์ความเร็วตามช่วงระยะ (master) ──
+  var stBox=document.getElementById('speedTiers');
+  var ST_OPEN=false;
+  function renderSpeedTiers(){
+    var s=src();var used={};
+    LEGS.forEach(function(l){
+      var d=l.distKey?(s[l.distKey]||0):(l.dist||0);var nm=l.name.split('·')[0].trim();
+      if(T.speedCalc==='stair'&&T.speedMode!=='gps'){
+        var prev=0;for(var i=0;i<SPEED_TIERS.length;i++){if(d>prev)(used[i]=used[i]||[]).push(nm);prev=SPEED_TIERS[i].max;if(d<=prev)break;}
+      }else{var ti=tierIdx(d);(used[ti]=used[ti]||[]).push(nm);}
+    });
+    var h='<div data-sthead="1" style="font-size:12px;color:var(--txt2);margin-bottom:6px;cursor:pointer;user-select:none"><b>'+(ST_OPEN?'▾':'▸')+'</b> 🚚 เลทตามช่วงระยะ — ความเร็ว + เกณฑ์น้ำมัน'+(ST_OPEN?' <b style="color:var(--primary)">(รุ่น '+src().model+')</b>':' — <u>กดเพื่อแสดง</u>')+'</div>';
+    if(ST_OPEN){var prevMax=0;
+    SPEED_TIERS.forEach(function(t,i){
+      var from=prevMax+1,inf=!isFinite(t.max);
+      h+='<div style="display:flex;align-items:center;gap:6px;margin:6px 0;flex-wrap:wrap">'
+        +'<span style="flex:1;min-width:130px;font-size:12.5px">'
+          +(inf?('มากกว่า '+prevMax+' กม.')
+               :(from+'–<input type="number" step="5" min="'+from+'" data-stm="'+i+'" value="'+t.max+'" style="width:60px;padding:4px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:12.5px;color:var(--txt)"> กม.'))
+          +(used[i]?' <span style="font-size:10px;color:var(--primary);font-weight:700">● '+used[i].join(', ')+'</span>':'')+'</span>'
+        +'<label style="font-size:10.5px;color:var(--txt2)"><input type="number" step="5" min="1" data-st="'+i+'" value="'+t.speed+'" style="width:52px;padding:5px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"> กม./ชม.</label>'
+        +'<label style="font-size:10.5px;color:var(--txt2)"><input type="number" step="0.1" min="0.1" data-stk="'+i+'" value="'+kmplTier(t)+'" style="width:52px;padding:5px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"> กม./ล.</label>'
+        +(inf?'<span style="width:18px"></span>':'<button data-stdel="'+i+'" style="border:0;background:transparent;color:var(--danger);cursor:pointer;font-size:13px;width:18px">✕</button>')
+        +'</div>';
+      if(isFinite(t.max))prevMax=t.max;
+    });
+    h+='<div style="margin:8px 0 2px"><button data-stadd="1" style="border:1px solid var(--line2);border-radius:999px;padding:5px 14px;background:transparent;color:var(--txt2);font:inherit;font-size:12px;cursor:pointer">➕ เพิ่มช่วง</button></div>';
+    }
+    if(ST_OPEN){
+      var fw=FUEL_WEIGHT[src().model]||FUEL_WEIGHT['360'];
+      h+='<div style="display:flex;align-items:center;gap:8px;margin-top:9px;padding-top:8px;border-top:1px dashed var(--line2);font-size:11.5px;color:var(--txt2)">'
+        +'⛽ เกณฑ์หนัก/เบา (รุ่น '+src().model+'):'
+        +'<label style="font-size:10.5px">หนัก<input type="number" step="0.1" min="0.1" data-fw="heavy" value="'+fw.heavy+'" style="width:52px;margin-left:3px;padding:5px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"></label>'
+        +'<label style="font-size:10.5px">เบา<input type="number" step="0.1" min="0.1" data-fw="light" value="'+fw.light+'" style="width:52px;margin-left:3px;padding:5px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"></label>'
+        +'<span style="font-size:10px">กม./ล. — ใช้กับโหมด "หนัก/เบา" (ตรงๆ) และ "ช่วง×หนัก/เบา" (คิดสัดส่วน เบา÷หนัก ขยายเกณฑ์ขาเบา)</span></div>';
+    }
+    stBox.innerHTML=h;
+  }
+  stBox.addEventListener('input',function(e){
+    var f=e.target.closest('input[data-fw]');
+    if(f){var m=src().model;FUEL_WEIGHT[m]=FUEL_WEIGHT[m]||{heavy:3.2,light:4.8};FUEL_WEIGHT[m][f.dataset.fw]=parseFloat(f.value)||1;renderLegs();render();return;}
+    var i=e.target.closest('input[data-st]');
+    if(i){SPEED_TIERS[+i.dataset.st].speed=parseFloat(i.value)||1;renderLegs();render();return;}
+    var k=e.target.closest('input[data-stk]');
+    if(k){var t=SPEED_TIERS[+k.dataset.stk];t.kmplBy=t.kmplBy||{};t.kmplBy[src().model]=parseFloat(k.value)||1;renderLegs();render();}
+  });
+  stBox.addEventListener('click',function(e){
+    if(e.target.closest('[data-sthead]')){ST_OPEN=!ST_OPEN;renderSpeedTiers();return;}
+    var del=e.target.closest('button[data-stdel]');
+    if(del){SPEED_TIERS.splice(+del.dataset.stdel,1);renderSpeedTiers();renderLegs();render();return;}
+    if(e.target.closest('button[data-stadd]')){
+      var infIdx=SPEED_TIERS.length-1;
+      var lastFin=SPEED_TIERS[infIdx-1];
+      var proto=lastFin||SPEED_TIERS[infIdx];
+      SPEED_TIERS.splice(infIdx,0,{label:'',max:(lastFin?lastFin.max:100)+100,speed:proto.speed,kmplBy:JSON.parse(JSON.stringify(proto.kmplBy||{}))});
+      renderSpeedTiers();renderLegs();render();
+    }
+  });
+  // แก้ขอบเขตช่วง (กม.) — ใช้ change (ยืนยันค่า) แล้ว sort ช่วงใหม่อัตโนมัติ
+  stBox.addEventListener('change',function(e){
+    var m=e.target.closest('input[data-stm]');if(!m)return;
+    var v=parseFloat(m.value);
+    if(!isNaN(v)&&v>0){SPEED_TIERS[+m.dataset.stm].max=v;SPEED_TIERS.sort(function(a,b){return a.max-b.max;});}
+    renderSpeedTiers();renderLegs();render();
+  });
+
+  // ── toggle ──
+  var toggles=[
+    {k:'distMode',label:'ระยะทาง',opts:[['actual','จริง'],['central','ค่ากลาง']]},
+    {k:'speedMode',label:'ความเร็ว',opts:[['tier','เลทตามช่วง'],['gps','GPS จริง']]},
+    {k:'speedCalc',label:'วิธีคิดเลทความเร็ว',opts:[['stair','ขั้นบันได'],['flat','เหมาช่วงเดียว']]},
+    {k:'fuelBench',label:'เกณฑ์น้ำมันอิงจาก',opts:[['tier','ช่วงระยะ'],['tierWeight','ช่วง×หนัก/เบา'],['weight','หนัก/เบา'],['model','รุ่นรถ']]},
+    {k:'fuelPenalty',label:'เพิ่ม/หักน้ำมัน',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'weight',label:'ถ่วงหนัก/เบา',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'groupAlloc',label:'วิธีปันส่วนหนัก/เบา',opts:[['leg2x','ระยะขา×2×% ✓ (มติ)']]},
+    {k:'bonus10',label:'บวก % ค่าเที่ยว (หลังคิดน้ำมัน)',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'tarp',label:'ค่าคลุมผ้าใบ',opts:[[true,'เปิด'],[false,'ปิด']]}
+  ]; // toggle ค่าเสื่อม → ย้ายไปอยู่ท้าย drawer ต้นทุน
+  var togBox=document.getElementById('tog');
+  toggles.forEach(function(t){
+    var row=document.createElement('div');row.className='togrow';
+    var seg='<span class="seg">';
+    t.opts.forEach(function(o){seg+='<button data-k="'+t.k+'" data-v="'+o[0]+'" class="'+(o[0]===false?'off ':'')+(String(T[t.k])===String(o[0])?'on':'')+'">'+o[1]+'</button>';});
+    row.innerHTML='<span class="lb">'+t.label+'</span>'+seg+'</span>';togBox.appendChild(row);
+  });
+  // เทาจาง+ล็อกตัวที่ไม่มีผล เมื่อปิดถ่วงหนัก/เบา (วิธีปันส่วน + ช่อง % ถ่วง)
+  function updateDeps(){
+    var dis=!T.weight;
+    togBox.querySelectorAll('button[data-k="groupAlloc"]').forEach(function(b){
+      var row=b.closest('.togrow');
+      if(row){row.style.opacity=dis?0.35:1;row.style.pointerEvents=dis?'none':'auto';}
+    });
+    ['heavyPct','lightPct'].forEach(function(k){
+      var inp=pBox.querySelector('input[data-p="'+k+'"]');
+      if(inp){inp.disabled=dis;var lab=inp.closest('label');if(lab)lab.style.opacity=dis?0.35:1;}
+    });
+  }
+  togBox.onclick=function(e){var b=e.target.closest('button');if(!b)return;var v=b.dataset.v;if(v==='true')v=true;else if(v==='false')v=false;T[b.dataset.k]=v;
+    b.parentNode.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');updateDeps();renderSpeedTiers();renderLegs();render();};
+
+  // ── param ──
+  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์รุ่นนี้'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'% บวกเพิ่มค่าเที่ยว'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'}]; // param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer
+  var pBox=document.getElementById('params');
+  params.forEach(function(p){var l=document.createElement('label');l.innerHTML=p.label+'<input type="number" step="any" data-p="'+p.k+'" value="'+P[p.k]+'">';pBox.appendChild(l);});
+  pBox.oninput=function(e){var i=e.target.closest('input[data-p]');if(!i)return;P[i.dataset.p]=parseFloat(i.value)||0;renderLegs();render();};
+
+  // ── คำนวณ (จาก legs) ──
+  function computeLegs(s){
+    var ratio=(T.distMode==='central'&&s.distActual>0)?s.distCentral/s.distActual:1;
+    return LEGS.map(function(l,li){
+      var dist=(l.distKey?(s[l.distKey]||0):(l.dist||0))*ratio;
+      var pct=T.weight?(l.weight==='heavy'?P.heavyPct:P.lightPct):100;
+      // เวลาจริง (GPS) มีเฉพาะโหมดออเดอร์ — โหมดจำลอง = คำนวณเวลาจากเลทความเร็ว × ระยะที่กรอก
+      var realMin=(T.mode==='order'&&l.tOut&&l.tIn)?durMin(l.tOut,l.tIn):0;
+      var hoursFull;
+      if(T.speedMode==='gps'&&realMin>0)hoursFull=realMin/60;
+      else if(T.speedCalc==='stair')hoursFull=stairHours(dist);
+      else hoursFull=dist/(speedFor(dist)||1);
+      var speed=hoursFull>0?dist/hoursFull:speedFor(dist); // ความเร็วเฉลี่ยที่ใช้คิด
+      var driveMin=realMin>0?realMin:Math.round(hoursFull*60);
+      var travelFull=P.runRate*hoursFull; // ค่าวิ่งเต็ม ไม่ถ่วง
+      var travel=travelFull*pct/100;
+      var jt=JOB_TYPES[l.job]||{up:0,down:0};
+      var upMin=l.doUp?jt.up:0,downMin=l.doDown?jt.down:0;
+      var up=upMin/60,down=downMin/60;
+      var upWage=P.loadRate*up,downWage=P.loadRate*down;
+      return {name:_legMeta_(l,li,LEGS.length).name,weight:l.weight,job:l.job,dist:dist,pct:pct,speed:speed,travel:travel,up:up,upMin:upMin,upWage:upWage,down:down,downMin:downMin,downWage:downWage,sum:travel,sumFull:travelFull,travelFull:travelFull,tOut:(realMin>0?l.tOut:''),tIn:(realMin>0?l.tIn:''),driveMin:driveMin};
+    });
+  }
+  function calc(){
+    var s=src();var legs=computeLegs(s);
+    var fullTime=legs.reduce(function(a,l){return a+l.sumFull;},0);
+    // ถ่วงหนัก/เบา: แต่ละขาได้ pct% ของยอดฐานเต็ม — เบาไป+หนักกลับ=100% · หนักไป+หนักกลับ=140%
+    // ยกเว้นขาที่อยู่ group เดียวกัน (ของก้อนเดียวแบ่งหลายท่อน เช่น สวน→ลาน→โรงงาน) = แชร์ pct ร่วมกัน ปันตามระยะ
+    if(T.weight){
+      // แชร์เฉพาะ "ของก้อนเดียวกันจริง": กลุ่มเดียวกัน + หนัก/เบาเหมือนกัน + งานเดียวกัน
+      // (เช่น ปาล์มหนัก สวน→ลาน→โรงงาน = แชร์ 70% · แต่ เบาไปลาน + หนักขนกลับ = คนละเฟส ต่างคนต่างได้ % เต็ม)
+      var grp={};
+      legs.forEach(function(l,i){var g=LEGS[i].group;if(g){var key=g+'|'+l.weight+'|'+(LEGS[i].job||'');grp[key]=grp[key]||{dist:0,n:0};grp[key].dist+=l.dist;grp[key].n++;}});
+      // วิธี "ครึ่งทริป": ยอดรวม = ค่าวิ่ง(ระยะรวม÷2)×2 → ปันเข้าแต่ละขาตาม "ระยะตัวเอง% ของลูป × หนัก/เบา" (normalize)
+      if(T.groupAlloc==='half'){
+        var tripD=legs.reduce(function(a,l){return a+l.dist;},0);
+        var hD=tripD/2;
+        var hH=(T.speedCalc==='stair')?stairHours(hD):(hD/(speedFor(hD)||1));
+        var halfTotal=P.runRate*hH*2;
+        var wSum=legs.reduce(function(a,l){return a+l.dist*l.pct;},0)||1;
+        legs.forEach(function(l){l.sum=halfTotal*(l.dist*l.pct)/wSum;});
+      }else{
+        legs.forEach(function(l,i){
+          var g=LEGS[i].group;
+          // leg2x=ค่าวิ่งขานั้น×2×% · share=ฐานรวม (แชร์เฉพาะก้อนเดียวกัน)
+          if(T.groupAlloc==='leg2x'){l.sum=l.sumFull*2*(l.pct/100);}
+          else if(g&&T.groupAlloc==='share'){
+            var G=grp[g+'|'+l.weight+'|'+(LEGS[i].job||'')];
+            if(G&&G.n>1){l.sum=fullTime*(l.pct/100)*(G.dist>0?l.dist/G.dist:1/G.n);}
+            else l.sum=fullTime*l.pct/100;
+          }
+          else l.sum=fullTime*l.pct/100;
+        });
+      }
+    }else{legs.forEach(function(l){l.sum=l.sumFull;});}
+    var timeWage=legs.reduce(function(a,l){return a+l.sum;},0);
+    legs.forEach(function(l){l.effPct=fullTime>0?Math.round(l.sum/fullTime*1000)/10:0;}); // % ที่ได้จริงของฐาน
+    // % รวมจริง = ยอดหลังปันส่วน ÷ ฐานเต็ม (กันเพี้ยนตอนกลุ่มมีทั้งหนัก/เบาปน)
+    var pctSum=fullTime>0?Math.round(timeWage/fullTime*1000)/10:100;
+    var loadHours=legs.reduce(function(a,l){return a+l.up+l.down;},0);
+    var totalDist=legs.reduce(function(a,l){return a+l.dist;},0);
+    var fuelDist=s.distActual,actualL=s.litersFilled,kmplA=actualL>0?fuelDist/actualL:0;
+    // เกณฑ์ลิตร "ตามช่วงระยะ" = ขั้นบันได "รายขา" เสมอ — แต่ละขาเริ่มนับช่วงแรกใหม่ (ใช้ระยะจริงของขา ไม่อิงค่ากลาง)
+    var benchL;
+    if(T.fuelBench==='tier'){
+      benchL=LEGS.reduce(function(a,l){var d=l.distKey?(s[l.distKey]||0):(l.dist||0);return a+stairLiters(d);},0);
+    }else if(T.fuelBench==='tierWeight'){
+      // ช่วงระยะ × หนัก/เบา: ขั้นบันไดรายขา โดยขาเบาขยายเกณฑ์ตามสัดส่วน เบา/หนัก ของรุ่น
+      var fw1=FUEL_WEIGHT[s.model]||FUEL_WEIGHT['360'];
+      var lightMult=fw1.heavy>0?fw1.light/fw1.heavy:1.5;
+      benchL=LEGS.reduce(function(a,l){var d=l.distKey?(s[l.distKey]||0):(l.dist||0);return a+stairLiters(d,l.weight==='light'?lightMult:1);},0);
+    }else if(T.fuelBench==='weight'){
+      // รายขา: ขาหนักใช้เกณฑ์หนัก ขาเบาใช้เกณฑ์เบา (ต่อรุ่น)
+      var fw=FUEL_WEIGHT[s.model]||FUEL_WEIGHT['360'];
+      benchL=LEGS.reduce(function(a,l){var d=l.distKey?(s[l.distKey]||0):(l.dist||0);return a+d/((l.weight==='heavy'?fw.heavy:fw.light)||1);},0);
+    }else benchL=fuelDist/P.benchmark;
+    var benchKmpl=benchL>0?fuelDist/benchL:P.benchmark;
+    var fuelAdj=T.fuelPenalty?(benchL-actualL)*P.fuelRate:0;
+    // ค่าขึ้น-ลงของ (รวมทุกขา) — แยกออกจากฐานปันส่วน เป็นรายการบวกท้าย
+    var loadWage=legs.reduce(function(a,l){return a+l.upWage+l.downWage;},0);
+    // ค่าคลุมผ้าใบ (เหมาต่อเที่ยว, toggle)
+    var tarp=T.tarp?P.tarpFee:0;
+    // บวกเพิ่ม % ของค่าเที่ยว — คิดต่อจากน้ำมัน (toggle)
+    var subtotal=timeWage+loadWage+tarp+fuelAdj;
+    var bonus=T.bonus10?subtotal*P.bonusPct/100:0;
+    // ── ต้นทุนบริษัท (ตรงชีต DATA_Vehicle 3 ก้อน): แรง + น้ำมัน + คงที่(รวมค่าเสื่อม) + ผันแปร + ดำเนินงาน + รายเที่ยว ──
+    var wageNet=subtotal+bonus;
+    var fuelCostCo=actualL*P.costFuelPrice;            // น้ำมันต้นทุน (แยกจากคงที่/ผันแปร)
+    var fixedCost=fuelDist*P.fixedPerKm;               // คงที่/กม.: ค่าเสื่อม+ภาษี+ประกัน+GPS+ผ่อน (รวมค่าเสื่อมแล้ว)
+    var varCost=fuelDist*P.varPerKm;                   // ผันแปร/กม.: ซ่อม+ยาง+อื่นๆ (ไม่รวมน้ำมัน)
+    var extraCost=Number(s.extraCost||0);              // รายเที่ยว: ทางด่วน/ซ่อมนอก/ค่าลงของ (Log_Weight)
+    var opsCost=P.opsPerTrip;                          // ค่าดำเนินงาน/เที่ยว (ops_cost_trip)
+    var deprVal=fuelDist*P.deprPerKm;                  // ส่วนค่าเสื่อม (อยู่ในคงที่แล้ว — ไว้ทำมุมมอง "ไม่รวมเสื่อม")
+    var effFixed=T.depr?fixedCost:Math.max(0,fixedCost-deprVal); // ปิดเสื่อม = หักส่วนเสื่อมออกจากคงที่ (ไม่นับซ้ำ)
+    var costTotal=wageNet+fuelCostCo+effFixed+varCost+extraCost+opsCost;
+    var costNoDepr=wageNet+fuelCostCo+Math.max(0,fixedCost-deprVal)+varCost+extraCost+opsCost; // ไม่รวมค่าเสื่อมเสมอ
+    var qty=s.qty||0;
+    var unit=LEGS.some(function(l){return l.job==='Packing';})?'ชิ้น':'กก.';
+    // ── ทริปผสม (Packing ขาไป + ปาล์มขากลับ): แบ่งต้นทุนตามสัดส่วน % ปันส่วนของขาแต่ละสินค้า
+    //    แล้วคิดต่อหน่วยแยก: Packing = บ./ชิ้น (qtyPk) · ปาล์ม/Bulk = บ./กก. (qty)
+    var bkKg={w:0,label:''},bkPk={w:0};
+    legs.forEach(function(l,i){
+      var jb=LEGS[i].job||'สินค้า';
+      var w=T.weight?(l.pct||0):(l.dist||0);
+      if(jb==='Packing')bkPk.w+=w; else {bkKg.w+=w; if(!bkKg.label)bkKg.label=jb;}
+    });
+    var totW=(bkKg.w+bkPk.w)||1;
+    var products=[];
+    if(bkKg.w>0&&qty>0)products.push({label:bkKg.label||'สินค้า',unit:'กก.',qty:qty,share:bkKg.w/totW});
+    if(bkPk.w>0&&(s.qtyPk||0)>0)products.push({label:'Packing',unit:'ชิ้น',qty:s.qtyPk,share:bkPk.w/totW});
+    products.forEach(function(p){p.cost=costTotal*p.share;p.costN=costNoDepr*p.share;});
+    return {legs:legs,timeWage:timeWage,loadWage:loadWage,tarp:tarp,fullTime:fullTime,pctSum:pctSum,loadHours:loadHours,dist:totalDist,fuelDist:fuelDist,kmplA:kmplA,benchL:benchL,benchKmpl:benchKmpl,actualL:actualL,fuelAdj:fuelAdj,bonus:bonus,net:wageNet,
+      fuelCostCo:fuelCostCo,fixedCost:fixedCost,effFixed:effFixed,varCost:varCost,extraCost:extraCost,opsCost:opsCost,deprVal:deprVal,costTotal:costTotal,costNoDepr:costNoDepr,qty:qty,unit:unit,products:products};
+  }
+
+  // ── สรุปซ้าย ──
+  function row(l,v,c){return '<div class="row"><span class="l">'+l+'</span><span'+(c?' style="'+c+'"':'')+'>'+v+'</span></div>';}
+  function render(){
+    var s=src(),c=calc();var h='';
+    var bd=document.getElementById('benchDisp');if(bd)bd.textContent=(+P.benchmark).toFixed(2);
+    h+=row('คนขับ',s.driver);
+    h+=row('วันที่',s.date?fmtDMY(s.date):'—');
+    h+=row('รถ',s.brand+' '+s.model+' · '+(s.id||'—'));
+    h+='<div class="dash"></div>';
+    c.legs.forEach(function(l){
+      var wl2=l.weight==='heavy'?'หนัก':'เบา';
+      // ปิดถ่วง = ปันส่วน 100% ตามระยะแต่ละขา · เปิด = แยกตามเลทหนัก/เบา
+      h+=row(l.name.split('·')[0].trim()+' ('+(T.weight?wl2+' ':'')+l.dist.toFixed(1)+' กม.)',money(l.sum)+' บ.');
+    });
+    var driveTotal=c.legs.reduce(function(a,l){return a+l.driveMin;},0);
+    var t0=c.legs.length?c.legs[0].tOut:'',t9=c.legs.length?c.legs[c.legs.length-1].tIn:'';
+    if(t0&&t9){
+      var totalMin=durMin(t0,t9),parked=Math.max(0,totalMin-driveTotal);
+      h+=row('เวลางาน '+t0+'–'+t9,'รวม '+hm(totalMin),'color:var(--txt2)');
+      h+=row('วิ่งรวม '+hm(driveTotal),'จอดรวม '+hm(parked),'color:var(--txt2)');
+    }else{
+      h+=row('เวลาโดยประมาณ (เลท×ระยะ)','รวม '+hm(driveTotal+c.loadHours*60),'color:var(--txt2)');
+      h+=row('วิ่ง '+hm(driveTotal),'ขึ้น-ลง '+hm(c.loadHours*60),'color:var(--txt2)');
+    }
+    h+=row('ความเร็วที่ใช้คิด ('+(T.speedMode==='gps'?'GPS จริง':(T.speedCalc==='stair'?'ขั้นบันได·เฉลี่ย':'เหมาช่วง'))+')',c.legs.map(function(l){return Math.round(l.speed);}).join(' / ')+' กม./ชม.','color:var(--txt2)');
+    h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding:10px 0 4px;border-top:1.5px solid var(--line)"><span style="font-size:13.5px;font-weight:700">รวมค่าวิ่ง (ปันส่วนแล้ว)</span><span style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--txt)">'+money(c.timeWage)+' บ.</span></div>';
+    h+='<div style="font-size:11px;color:var(--txt2);margin:0 0 6px">'+(!T.weight?'ค่าวิ่งทุกขาตามระยะเต็ม':(T.groupAlloc==='leg2x'?('วิธี ระยะขา×2×% (เบา '+P.lightPct+' / หนัก '+P.heavyPct+')'):(T.groupAlloc==='half'?('วิธีครึ่งทริป: ยอด = ค่าวิ่ง '+(c.dist/2).toFixed(0)+' กม.×2 → ปันเข้าขาตาม ระยะ%ของลูป × หนัก/เบา'):('ฐานค่าวิ่งเต็ม '+money(c.fullTime)+' บ. × รวม '+c.pctSum+'% (เบา '+P.lightPct+' / หนัก '+P.heavyPct+')'))))+'</div>';
+    h+='<div class="dash"></div>';
+    h+=row('เติมจริง (= '+c.kmplA.toFixed(2)+' กม./ล.)',c.actualL.toFixed(1)+' ล.');
+    h+=row('เกณฑ์ ('+c.fuelDist.toFixed(0)+' ÷ '+c.benchKmpl.toFixed(2)+(T.fuelBench==='tier'?' ขั้นบันไดรายขา':(T.fuelBench==='tierWeight'?' ช่วง×หนัก/เบา':(T.fuelBench==='weight'?' หนัก/เบารายขา':' รุ่นรถ')))+')',c.benchL.toFixed(1)+' ล.');
+    var fa=c.fuelAdj;var lab=!T.fuelPenalty?'เพิ่ม/หักน้ำมัน (ปิด)':(fa>=0?'ได้คืนน้ำมัน ×'+P.fuelRate:'หักน้ำมัน ×'+P.fuelRate);
+    h+=row(lab,(fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.','color:'+(fa<0?'var(--danger)':'var(--success)')+';font-weight:600');
+    if(c.loadWage>0)h+=row('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.','color:var(--success);font-weight:600');
+    if(T.tarp)h+=row('ค่าคลุมผ้าใบ (เหมาต่อเที่ยว)','+'+money(c.tarp)+' บ.','color:var(--success);font-weight:600');
+    if(T.bonus10)h+=row('บวกเพิ่ม '+P.bonusPct+'% ของค่าเที่ยว','+'+money(c.bonus)+' บ.','color:var(--success);font-weight:600');
+    document.getElementById('bd').innerHTML=h;
+    var net=document.getElementById('net');net.textContent=money(c.net)+' บ.';net.className='amt '+(c.net>=0?'pos':'neg');
+    // ── แถบต้นทุนบริษัท (บนสุด) — ทุกราคามีเลขเล็กกำกับ = ราคาไม่รวมค่าเสื่อม ──
+    var cb=document.getElementById('costbar');
+    if(cb){
+      var ct=function(k,v,sub){return '<div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:5px 12px;min-width:120px"><div style="font-size:10.5px;color:var(--txt2)">'+k+'</div><div style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">'+v+'</div>'+(sub?'<div style="font-size:9.5px;color:var(--txt2)">'+sub+'</div>':'')+'</div>';};
+      var cargo=(function(){var hs=[];LEGS.forEach(function(l){if(l.weight==='heavy'&&hs.indexOf(l.job)<0)hs.push(l.job);});return hs.length?hs.join(' + '):(LEGS[0]?LEGS[0].job:'—');})();
+      var puBig='—',puSub='ไม่มีปริมาณ',cgBig='—',cgSub=cargo;
+      if(c.products.length){
+        puBig=c.products.map(function(p){return (p.cost/p.qty).toFixed(2)+' บ./'+p.unit;}).join(' · ');
+        puSub='ไม่รวมค่าเสื่อม '+c.products.map(function(p){return (p.costN/p.qty).toFixed(2)+' บ./'+p.unit;}).join(' · ');
+        cgBig=c.products.map(function(p){return p.qty.toLocaleString('th-TH')+' '+p.unit;}).join(' · ');
+        cgSub=c.products.map(function(p){return p.label;}).join(' + ');
+      }
+      cb.innerHTML=
+        '<div data-dopen="1" style="background:var(--card);border:1.5px solid var(--primary);border-radius:10px;padding:5px 12px;min-width:135px;cursor:pointer">'
+          +'<div style="font-size:10.5px;color:var(--txt2)">💰 ต้นทุนรวมเที่ยวนี้</div>'
+          +'<div style="font-size:16px;font-weight:800;font-variant-numeric:tabular-nums">'+money(c.costTotal)+' บ.</div>'
+          +'<div style="font-size:9.5px;color:var(--txt2)">ไม่รวมค่าเสื่อม '+money(c.costNoDepr)+' บ.</div></div>'
+        +ct('ต่อหน่วย'+(c.products.length>1?' (แยกสินค้า)':''),puBig,puSub)
+        +'<div style="background:var(--card);border:1px solid var(--line);border-radius:10px;padding:5px 12px;min-width:130px">'
+          +'<div style="font-size:10.5px;color:var(--txt2)">🚛 สินค้าที่บรรทุก</div>'
+          +'<div style="font-size:'+(c.products.length>1?13.5:16)+'px;font-weight:800;font-variant-numeric:tabular-nums">'+cgBig+'</div>'
+          +'<div style="font-size:9.5px;color:var(--txt2);text-align:right">'+cgSub+'</div></div>';
+      LASTC=c;LASTS=s;
+      if(document.getElementById('costDrawer').classList.contains('open'))fillDrawer();
+    }
+    renderAna(s,c);drawSlip(s,c);
+  }
+
+  // ── วิเคราะห์เที่ยว (rule-based) : เวลา/น้ำมัน/ความเร็ว/เลขไมล์ ผิดปกติไหม ──
+  function analyze(s,c){
+    var out=[];function add(lv,t,d){out.push({lv:lv,t:t,d:d});}
+    // ระยะจริง vs ค่ากลาง (จับวิ่งอ้อม/เลขไมล์เพี้ยน)
+    if(s.distCentral>0){
+      var dv=(s.distActual-s.distCentral)/s.distCentral*100;
+      add(Math.abs(dv)<=10?'ok':(Math.abs(dv)<=20?'warn':'bad'),'ระยะจริง vs ค่ากลาง',
+        s.distActual.toFixed(1)+' / '+s.distCentral+' กม. ('+(dv>=0?'+':'')+dv.toFixed(1)+'%)'+(Math.abs(dv)>10?' — เช็คเส้นทาง/เลขไมล์':' ปกติ'));
+    }
+    // อัตราสิ้นเปลือง vs เกณฑ์รุ่น
+    var fuelDev=(c.benchKmpl-c.kmplA)/c.benchKmpl*100; // + = เปลืองกว่าเกณฑ์
+    add(fuelDev<=0?'ok':(fuelDev<=8?'warn':'bad'),'อัตราสิ้นเปลือง',
+      c.kmplA.toFixed(2)+' กม./ล. (เกณฑ์ '+c.benchKmpl.toFixed(2)+') · '+(fuelDev<=0?'ประหยัดกว่าเกณฑ์ '+Math.abs(fuelDev).toFixed(1)+'%':'เปลืองกว่าเกณฑ์ '+fuelDev.toFixed(1)+'%'+(fuelDev>8?' — เช็คการเติม/พฤติกรรมขับ':'')));
+    // ความเร็วจริงต่อขา (เฉพาะที่มีเวลา GPS จริง)
+    c.legs.forEach(function(l){
+      if(!l.driveMin||!(l.tOut&&l.tIn))return;
+      var v=l.dist/(l.driveMin/60);
+      var lv=v>80?'bad':(v<25?'warn':'ok');
+      add(lv,'ความเร็วจริง · '+l.name.split('·')[0].trim(),
+        Math.round(v)+' กม./ชม. · วิ่ง '+hm(l.driveMin)+(v>80?' — เร็วเกิน อันตราย':(v<25?' — ช้าผิดปกติ/รถติด/จอดกลางทาง':' ปกติ')));
+    });
+    // เวลาจอดจริง vs เกณฑ์ขึ้น-ลง
+    var t0=c.legs.length?c.legs[0].tOut:'',t9=c.legs.length?c.legs[c.legs.length-1].tIn:'';
+    var drive=c.legs.reduce(function(a,l){return a+l.driveMin;},0);
+    if(t0&&t9){
+      var totalMin=durMin(t0,t9);
+      var parked=Math.max(0,totalMin-drive);var loadStd=c.loadHours*60;var over=parked-loadStd;
+      add(over<=10?'ok':(over<=45?'warn':'bad'),'เวลาจอด (ขึ้น-ลง/แวะ)',
+        'จอดจริง '+hm(parked)+' vs เกณฑ์ '+hm(loadStd)+(over>10?' — เกินเกณฑ์ '+hm(over)+' เช็คสาเหตุ':' ปกติ'));
+    }
+    // เลขไมล์: ผลรวมขา vs ระยะรวม
+    var legSum=c.legs.reduce(function(a,l){return a+l.dist;},0);
+    var base=T.distMode==='central'?s.distCentral:s.distActual;
+    if(Math.abs(legSum-base)>1)add('warn','เช็คระยะรายขา','ผลรวมขา '+legSum.toFixed(1)+' ≠ ระยะรวม '+base+' กม. — เช็คเลขไมล์/การกรอก');
+    else add('ok','เลขไมล์/ระยะรายขา','ผลรวมขาตรงกับระยะรวม');
+    // ── เทียบประวัติย้อนหลังของคนขับ (สูง/ต่ำกว่าค่าเฉลี่ยตัวเอง) ──
+    var hist=T.mode==='order'?HIST[s.driver]:null;
+    if(hist){
+      var d1=(c.kmplA-hist.kmpl)/hist.kmpl*100; // + = ประหยัดกว่าเฉลี่ย
+      add(Math.abs(d1)<=5?'ok':(Math.abs(d1)<=12?'warn':'bad'),'ประวัติ · อัตราสิ้นเปลือง ('+hist.trips+' เที่ยว)',
+        'เที่ยวนี้ '+c.kmplA.toFixed(2)+' vs เฉลี่ย '+hist.kmpl.toFixed(2)+' กม./ล. → '+(d1>=0?'ดีกว่าเฉลี่ย ':'แย่กว่าเฉลี่ย ')+Math.abs(d1).toFixed(1)+'%');
+      var d2=(drive-hist.driveMin)/hist.driveMin*100; // + = ช้ากว่าเฉลี่ย
+      add(Math.abs(d2)<=8?'ok':(Math.abs(d2)<=20?'warn':'bad'),'ประวัติ · เวลาวิ่ง',
+        'เที่ยวนี้ '+hm(drive)+' vs เฉลี่ย '+hm(hist.driveMin)+' → '+(d2>0?'ช้ากว่าเฉลี่ย ':'เร็วกว่าเฉลี่ย ')+Math.abs(d2).toFixed(1)+'%');
+      var d3=(s.distActual-hist.dist)/hist.dist*100;
+      add(Math.abs(d3)<=8?'ok':(Math.abs(d3)<=15?'warn':'bad'),'ประวัติ · ระยะทาง',
+        'เที่ยวนี้ '+s.distActual.toFixed(0)+' vs เฉลี่ย '+hist.dist+' กม. → '+(d3>=0?'สูงกว่าเฉลี่ย ':'ต่ำกว่าเฉลี่ย ')+Math.abs(d3).toFixed(1)+'%');
+    }else{
+      add('ok','เทียบประวัติ','โหมดจำลอง — ไม่มีประวัติให้เทียบ');
+    }
+    return out;
+  }
+  function renderAna(s,c){
+    var box=document.getElementById('ana');if(!box)return;
+    var items=analyze(s,c),h='';
+    var worst='ok';items.forEach(function(i){if(i.lv==='bad')worst='bad';else if(i.lv==='warn'&&worst!=='bad')worst='warn';});
+    var head={ok:['✅ เที่ยวนี้ปกติ','var(--success)'],warn:['⚠️ มีจุดควรเช็ค','#c9971a'],bad:['🔴 พบความผิดปกติ','var(--danger)']}[worst];
+    h+='<div style="font-size:13px;font-weight:700;margin-bottom:9px;color:'+head[1]+'">'+head[0]+'</div>';
+    var ic={ok:'✅',warn:'⚠️',bad:'🔴'},bc={ok:'var(--success)',warn:'#d9a520',bad:'var(--danger)'};
+    items.forEach(function(i){
+      h+='<div style="margin:7px 0;padding:8px 10px;background:var(--card2);border-radius:8px;border-left:3px solid '+bc[i.lv]+'">'
+        +'<div style="font-size:12px;font-weight:600">'+ic[i.lv]+' '+i.t+'</div>'
+        +'<div style="font-size:11.5px;color:var(--txt2);margin-top:1px">'+i.d+'</div></div>';
+    });
+    box.innerHTML=h;
+  }
+
+  // ── ใบสลิป (canvas → PNG) ──
+  function drawSlip(s,c){
+    var cv=document.getElementById('slip');if(!cv)return;
+    var legs=c.legs,W=460,PAD=22,dpr=window.devicePixelRatio||1;
+    var css=getComputedStyle(document.documentElement);
+    function C(n,d){var v=css.getPropertyValue(n);return (v&&v.trim())||d;}
+    var col={card:C('--card','#fff'),txt:C('--txt','#1a2530'),txt2:C('--txt2','#6b7785'),
+      line:C('--line2','#cfd5db'),primary:C('--primary','#1f8a52'),danger:C('--danger','#c8352f')};
+    var perLeg=legs.map(function(){return 80+23+32;});
+    var H=96+34+50+perLeg.reduce(function(a,b){return a+b;},0)+150+(T.bonus10?23:0)+(T.tarp?23:0)+(c.loadWage>0?23:0);
+    cv.width=W*dpr;cv.height=H*dpr;cv.style.height='auto';
+    var x=cv.getContext('2d');x.scale(dpr,dpr);
+    var F="'Segoe UI','Sarabun','Noto Sans Thai',sans-serif";
+    function TX(t,px,fx,c2,w,al){x.font=(w||'400')+' '+px+"px "+F;x.fillStyle=c2;x.textAlign=al||'left';x.fillText(t,fx,0);}
+    x.fillStyle=col.card;x.fillRect(0,0,W,H);
+    x.fillStyle=col.primary;x.fillRect(0,0,W,86);
+    x.save();x.translate(0,34);TX('ใบชี้แจงค่าแรงเที่ยว',18,PAD,'#fff','700');x.restore();
+    x.save();x.translate(0,58);TX(s.driver+'  ·  '+s.plate,13,PAD,'rgba(255,255,255,.92)','400');x.restore();
+    x.save();x.translate(0,76);TX((s.id||'—')+'  ·  '+s.brand+' '+s.model,12,PAD,'rgba(255,255,255,.85)','400');x.restore();
+    var y=120;
+    function R(label,val,c2,bold){x.save();x.translate(0,y);TX(label,13,PAD,col.txt2,'400','left');TX(val,13.5,W-PAD,(c2||col.txt),(bold?'700':'400'),'right');x.restore();y+=23;}
+    var driveTotal=legs.reduce(function(a,l){return a+l.driveMin;},0);
+    var t0=legs.length?legs[0].tOut:'',t9=legs.length?legs[legs.length-1].tIn:'';
+    if(t0&&t9){
+      var totalMin=durMin(t0,t9),parked=Math.max(0,totalMin-driveTotal);
+      R('เวลางาน '+t0+' – '+t9,'รวม '+hm(totalMin),col.txt,true);
+      R('วิ่งรวม '+hm(driveTotal),'จอดรวม '+hm(parked),col.txt2);y+=3;
+    }else{
+      R('เวลาโดยประมาณ (เลท×ระยะ)','รวม '+hm(driveTotal+c.loadHours*60),col.txt,true);
+      R('วิ่ง '+hm(driveTotal),'ขึ้น-ลง '+hm(c.loadHours*60),col.txt2);y+=3;
+    }
+    legs.forEach(function(l){
+      var wl=l.weight==='heavy'?'หนัก':'เบา';
+      x.save();x.translate(0,y);x.fillStyle=col.primary;x.beginPath();x.arc(PAD+3,-4,4,0,7);x.fill();
+      TX(l.name,13.5,PAD+16,col.txt,'700','left');x.restore();y+=19;
+      var tline=(l.tOut&&l.tIn)?('ออก '+l.tOut+' → ถึง '+l.tIn+' · วิ่ง '+hm(l.driveMin)):('เวลาวิ่งโดยประมาณ '+hm(l.driveMin)+' (คำนวณจากเลท)');
+      x.save();x.translate(0,y);TX(tline,11,PAD+16,col.txt2,'400','left');x.restore();y+=19;
+      var wtxt=T.weight?(wl+' ('+l.pct+'%)'):'คิดเต็ม (ไม่ถ่วง)';
+      x.save();x.translate(0,y);TX('ระยะ '+l.dist.toFixed(1)+' กม. · '+wtxt+' · ความเร็ว '+Math.round(l.speed)+' กม./ชม.',11.5,PAD+16,col.txt2,'400','left');x.restore();y+=20;
+      R('   ค่าวิ่ง (เต็มตามระยะ)',money(l.travelFull)+' บ.');
+      var allocLbl=!T.weight?'รวมช่วงนี้':(T.groupAlloc==='leg2x'?('ค่าวิ่ง ×2 × '+l.pct+'% ('+wl+')'):(T.groupAlloc==='half'?('ปันระยะ '+Math.round(l.dist/(c.dist||1)*100)+'% ของลูป × '+wl+' '+l.pct+'%'):('ปันส่วน '+wl+' = '+l.effPct+'% ของฐาน')));
+      x.save();x.translate(0,y-4);TX(allocLbl,12.5,W-PAD-72,col.txt2,'400','right');TX(money(l.sum)+' บ.',13.5,W-PAD,col.txt,'700','right');x.restore();y+=14;
+      x.strokeStyle=col.line;x.beginPath();x.moveTo(PAD,y);x.lineTo(W-PAD,y);x.stroke();y+=18;
+    });
+    y+=2;R('รวมค่าวิ่ง'+(!T.weight?'':(T.groupAlloc==='leg2x'?' (วิธี ระยะขา×2×%)':(T.groupAlloc==='half'?' (ครึ่งทริป '+(c.dist/2).toFixed(0)+' กม.×2)':' (ฐาน '+money(c.fullTime)+' × '+c.pctSum+'%)'))),money(c.timeWage)+' บ.',col.txt,true);y+=4;
+    var fa=c.fuelAdj;
+    R('น้ำมัน เติมจริง '+c.actualL.toFixed(1)+' / เกณฑ์ '+c.benchL.toFixed(1)+' ล.','');
+    R((fa<0?'หักน้ำมัน (เปลือง)':fa>0?'ได้คืนน้ำมัน (ประหยัด)':'น้ำมัน (เท่าเกณฑ์)')+' ×'+P.fuelRate,
+      (fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.',(fa<0?col.danger:col.primary),true);
+    if(c.loadWage>0)R('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.',col.primary,true);
+    if(T.tarp)R('ค่าคลุมผ้าใบ','+'+money(c.tarp)+' บ.',col.primary,true);
+    if(T.bonus10)R('บวกเพิ่ม '+P.bonusPct+'% ของค่าเที่ยว','+'+money(c.bonus)+' บ.',col.primary,true);
+    y+=6;x.strokeStyle=col.primary;x.lineWidth=1.5;x.beginPath();x.moveTo(PAD,y);x.lineTo(W-PAD,y);x.stroke();x.lineWidth=1;y+=30;
+    x.save();x.translate(0,y);TX('ค่าแรงสุทธิ',15,PAD,col.txt,'700','left');
+    TX(money(c.net)+' บาท',26,W-PAD,(c.net>=0?col.primary:col.danger),'800','right');x.restore();
+  }
+  // ── Drawer แจกแจงต้นทุน (จิ้มการ์ดต้นทุนรวม) ──
+  var LASTC=null,LASTS=null;
+  function fillDrawer(){
+    var c=LASTC,s=LASTS;if(!c)return;
+    function item(n,title,amt,lines,base){
+      return '<div style="margin:10px 0;padding:10px 12px;background:var(--card2);border-radius:10px">'
+        +'<div style="display:flex;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:700"><span>'+n+'. '+title+'</span><span style="white-space:nowrap">'+amt+'</span></div>'
+        +(lines?'<div style="font-size:11.5px;color:var(--txt2);margin-top:4px;line-height:1.7">'+lines+'</div>':'')
+        +(base?'<div style="font-size:10px;color:var(--primary);margin-top:4px">📊 ฐานข้อมูล: '+base+'</div>':'')+'</div>';
+    }
+    var h='<div style="font-size:11.5px;color:var(--txt2);margin-bottom:4px">'+(s.id||'จำลอง')+' · '+s.driver+' · '+s.brand+' '+s.model+' · '+c.fuelDist.toFixed(0)+' กม.</div>';
+    h+=item(1,'ค่าแรงคนขับ (สุทธิ)',money(c.net)+' บ.',
+      'ค่าวิ่ง (ปันส่วนหนัก/เบา) '+money(c.timeWage)+' บ.<br>ขึ้น-ลงของ '+money(c.loadWage)+' บ. · ผ้าใบ '+(T.tarp?money(c.tarp)+' บ.':'ปิด')+'<br>'
+      +(c.fuelAdj>=0?'ได้คืนน้ำมันคนขับ +':'หักน้ำมันคนขับ −')+money(Math.abs(c.fuelAdj))+' บ. (เลท '+P.fuelRate+') · บวก'+P.bonusPct+'% '+(T.bonus10?'+'+money(c.bonus)+' บ.':'ปิด'),
+      'สูตรค่าแรง + cost_params + job_types + rate_speed_tier');
+    h+=item(2,'น้ำมันต้นทุนบริษัท',money(c.fuelCostCo)+' บ.',
+      'เติมจริง '+c.actualL.toFixed(1)+' ล. × ราคาปัจจุบัน '+P.costFuelPrice+' บ./ล.',
+      'Log_Weight (ลิตรที่คนขับกรอก) × ราคาน้ำมันต้นทุน');
+    h+=item(3,'ต้นทุนคงที่'+(T.depr?' (รวมค่าเสื่อม)':' (ไม่รวมค่าเสื่อม)'),money(c.effFixed)+' บ.',
+      c.fuelDist.toFixed(0)+' กม. × '+(T.depr?P.fixedPerKm:(P.fixedPerKm-P.deprPerKm).toFixed(2))+' บ./กม.'
+       +' · ในนี้เป็นค่าเสื่อม '+money(c.deprVal)+' บ. ('+P.deprPerKm+'/กม.)'+(T.depr?'':' — ปิดอยู่ ไม่นับ'),
+      'DATA_Vehicle (fixed_cost_per_km = เสื่อม+ภาษี+ประกัน+GPS+ผ่อน) × ระยะจริง');
+    h+=item(4,'ต้นทุนผันแปร (ซ่อม/ยาง/อื่นๆ)',money(c.varCost)+' บ.',
+      c.fuelDist.toFixed(0)+' กม. × '+P.varPerKm+' บ./กม. (ไม่รวมน้ำมัน)',
+      'DATA_Vehicle (variable_cost_per_km ต่อคัน) × ระยะจริง');
+    h+=item(5,'ค่าดำเนินงาน (ops)',money(c.opsCost)+' บ.',
+      'เหมาต่อเที่ยว '+P.opsPerTrip+' บ.',
+      'DATA_Vehicle (ops_cost_trip)');
+    h+=item(6,'ค่าใช้จ่ายรายเที่ยว',money(c.extraCost)+' บ.',
+      'ทางด่วน / ซ่อมนอก / ค่าลงของ / เด็กช่วยลงสินค้า'+(c.extraCost>0?'':' — เที่ยวนี้ไม่มี'),
+      'Log_Weight (ค่าทางด่วน+ค่าซ่อมนอก+ค่าลงของ+ค่าจ้างเด็กลง ที่คนขับกรอก)');
+    h+='<div style="border-top:1.5px solid var(--primary);margin:12px 0 0;padding-top:10px">'
+      +'<div style="display:flex;justify-content:space-between;font-size:15px;font-weight:800"><span>รวมต้นทุนเที่ยวนี้</span><span>'+money(c.costTotal)+' บ.</span></div>'
+      +'<div style="display:flex;justify-content:space-between;font-size:11.5px;color:var(--txt2)"><span>ไม่รวมค่าเสื่อม</span><span>'+money(c.costNoDepr)+' บ.</span></div>'
+      +c.products.map(function(p){
+        return '<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-top:6px"><span>'+p.label
+          +(c.products.length>1?' <span style="font-size:10px;color:var(--txt2)">(แบ่ง '+Math.round(p.share*100)+'% = '+money(p.cost)+' บ.)</span>':'')
+          +' ÷ '+p.qty.toLocaleString('th-TH')+' '+p.unit+'</span><span><b>'+(p.cost/p.qty).toFixed(2)+'</b> บ./'+p.unit+'</span></div>'
+          +'<div style="display:flex;justify-content:space-between;font-size:10px;color:var(--txt2)"><span>ไม่รวมค่าเสื่อม</span><span>'+(p.costN/p.qty).toFixed(2)+' บ./'+p.unit+'</span></div>';
+      }).join('')
+      +'</div>';
+    // ── ตั้งค่าต้นทุน (อยู่ใน drawer): ราคาน้ำมันต้นทุน + ค่าเสื่อม + toggle รวมค่าเสื่อม ──
+    h+='<div style="margin-top:14px;padding-top:12px;border-top:1px dashed var(--line2)">'
+      +'<div style="font-size:11px;color:var(--txt2);margin-bottom:6px">⚙️ ตั้งค่าต้นทุน (แก้แล้วคำนวณใหม่ทันที)</div>'
+      +'<div style="display:flex;gap:10px">'
+        +'<label style="font-size:10.5px;color:var(--txt2);flex:1">ราคาน้ำมันต้นทุน (บ./ล.)<input type="number" step="any" data-dp="costFuelPrice" value="'+P.costFuelPrice+'" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"></label>'
+        +'<label style="font-size:10.5px;color:var(--txt2);flex:1">ค่าเสื่อม (บ./กม.)<input type="number" step="any" data-dp="deprPerKm" value="'+P.deprPerKm+'" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"></label>'
+      +'</div>'
+      +'<div style="display:flex;gap:10px;margin-top:8px">'
+        +'<label style="font-size:10.5px;color:var(--txt2);flex:1">คงที่ (บ./กม.)<input type="number" step="any" data-dp="fixedPerKm" value="'+P.fixedPerKm+'" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"></label>'
+        +'<label style="font-size:10.5px;color:var(--txt2);flex:1">ผันแปร (บ./กม.)<input type="number" step="any" data-dp="varPerKm" value="'+P.varPerKm+'" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"></label>'
+        +'<label style="font-size:10.5px;color:var(--txt2);flex:1">ดำเนินงาน (บ./เที่ยว)<input type="number" step="any" data-dp="opsPerTrip" value="'+P.opsPerTrip+'" style="width:100%;margin-top:3px;padding:6px 8px;border:1px solid var(--line2);border-radius:6px;background:var(--card2);font-size:13px;color:var(--txt)"></label>'
+      +'</div>'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px">'
+        +'<span style="font-size:12.5px;font-weight:600">รวมค่าเสื่อม (อยู่ในต้นทุนคงที่)</span>'
+        +'<span class="seg"><button data-ddepr="1" class="'+(T.depr?'on':'')+'">เปิด</button>'
+        +'<button data-ddepr="0" class="off '+(!T.depr?'on':'')+'">ปิด</button></span></div>'
+      +'</div>';
+    document.getElementById('dBody').innerHTML=h;
+  }
+  function openDrawer(){fillDrawer();document.getElementById('costDrawer').classList.add('open');document.getElementById('dOverlay').classList.add('open');}
+  function closeDrawer(){document.getElementById('costDrawer').classList.remove('open');document.getElementById('dOverlay').classList.remove('open');}
+  document.getElementById('costbar').addEventListener('click',function(e){if(e.target.closest('[data-dopen]'))openDrawer();});
+  document.getElementById('dOverlay').addEventListener('click',closeDrawer);
+  document.getElementById('dClose').addEventListener('click',closeDrawer);
+  document.getElementById('costDrawer').addEventListener('click',function(e){
+    var b=e.target.closest('button[data-ddepr]');if(!b)return;
+    T.depr=b.dataset.ddepr==='1';render(); // render → fillDrawer อัปเดตเอง (drawer เปิดอยู่)
+  });
+  // แก้ param ต้นทุนใน drawer — ใช้ change (ยืนยันค่าตอน blur/Enter) กัน rebuild แย่งโฟกัสตอนพิมพ์
+  document.getElementById('costDrawer').addEventListener('change',function(e){
+    var i=e.target.closest('input[data-dp]');if(!i)return;
+    P[i.dataset.dp]=parseFloat(i.value)||0;render();
+  });
+
+  var saveBtn=document.getElementById('save');
+  if(saveBtn)saveBtn.onclick=function(){
+    var cv=document.getElementById('slip'),s=src();
+    var a=document.createElement('a');a.download='wage-'+(s.id||'slip')+'.png';a.href=cv.toDataURL('image/png');a.click();
+  };
+
+  // ── รายงานค่าแรง HR (ดาวน์โหลด CSV เปิดใน Excel) ──
+  function orderWage(o){
+    var legs=computeLegs(o);
+    var timeWage=legs.reduce(function(a,l){return a+l.sum;},0);
+    var travel=legs.reduce(function(a,l){return a+l.travel;},0);
+    var updown=legs.reduce(function(a,l){return a+l.upWage+l.downWage;},0);
+    var bench=FUEL_BENCH[o.model]||P.benchmark;
+    var benchL=o.distActual/bench,actualL=o.litersFilled;
+    var fuelAdj=T.fuelPenalty?(benchL-actualL)*P.fuelRate:0;
+    return {travel:travel,updown:updown,fuel:fuelAdj,net:timeWage+fuelAdj};
+  }
+  function fmtDMY(iso){var p=String(iso).split('-');return p[2]+'-'+p[1]+'-'+p[0];}
+  function q(s){return '"'+String(s).replace(/"/g,'""')+'"';}
+  function dl(name,csv){var b=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8;'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();}
+  function filtered(){
+    var f=document.getElementById('rpFrom').value,t=document.getElementById('rpTo').value,d=document.getElementById('rpDriver').value;
+    return ORDERS.filter(function(o){return (!f||o.date>=f)&&(!t||o.date<=t)&&(d==='__all'||o.driver===d);});
+  }
+  var rpD=document.getElementById('rpDriver');
+  if(rpD){var seen={};rpD.innerHTML='<option value="__all">ทุกคน</option>';ORDERS.forEach(function(o){if(!seen[o.driver]){seen[o.driver]=1;rpD.innerHTML+='<option value="'+o.driver+'">'+o.driver+'</option>';}});}
+  var bDetail=document.getElementById('rpDetail');
+  if(bDetail)bDetail.onclick=function(){
+    var rows=[['วันที่','คนขับ','ทะเบียน','ออเดอร์','ระยะ(กม.)','ค่าวิ่ง','ค่าขึ้น-ลง','เพิ่ม/หักน้ำมัน','ค่าแรงสุทธิ'].map(q).join(',')];
+    var f=filtered();if(!f.length){alert('ไม่มีออเดอร์ในช่วงที่เลือก');return;}
+    f.forEach(function(o){var w=orderWage(o);rows.push([fmtDMY(o.date),o.driver,o.plate,o.id,o.distActual,Math.round(w.travel),Math.round(w.updown),Math.round(w.fuel),Math.round(w.net)].map(q).join(','));});
+    dl('รายงานค่าแรง-รายคน.csv',rows.join('\r\n'));
+  };
+  var bDaily=document.getElementById('rpDaily');
+  if(bDaily)bDaily.onclick=function(){
+    var g={},f=filtered();if(!f.length){alert('ไม่มีออเดอร์ในช่วงที่เลือก');return;}
+    f.forEach(function(o){var w=orderWage(o);var k=o.date+'|'+o.driver;if(!g[k])g[k]={date:o.date,driver:o.driver,trips:0,net:0};g[k].trips++;g[k].net+=w.net;});
+    var rows=[['วันที่','คนขับ','จำนวนเที่ยว','ค่าแรงรวม(บาท)'].map(q).join(',')];
+    Object.keys(g).sort().forEach(function(k){var r=g[k];rows.push([fmtDMY(r.date),r.driver,r.trips,Math.round(r.net)].map(q).join(','));});
+    dl('รายงานค่าแรง-สรุปรายวัน.csv',rows.join('\r\n'));
+  };
+
+  // ── toggle ธีม สว่าง/มืด (จำค่าไว้ · สลิป canvas วาดใหม่ตามสีธีม) ──
+  function _effDark_(){var a=document.documentElement.getAttribute('data-theme');if(a)return a==='dark';return !!(window.matchMedia&&window.matchMedia('(prefers-color-scheme: dark)').matches);}
+  function _applyTheme_(t){
+    if(t)document.documentElement.setAttribute('data-theme',t);else document.documentElement.removeAttribute('data-theme');
+    var b=document.getElementById('themeBtn');if(b)b.textContent=_effDark_()?'☀️ โหมดสว่าง':'🌙 โหมดมืด';
+    try{if(t)localStorage.setItem('wageTheme',t);}catch(e){}
+  }
+  (function(){var sv=null;try{sv=localStorage.getItem('wageTheme');}catch(e){}_applyTheme_(sv||null);})();
+  document.getElementById('themeBtn').addEventListener('click',function(){
+    _applyTheme_(_effDark_()?'light':'dark');render();
+  });
+
+  paintMode();buildSource();renderPattern();renderJobTimes();renderLegs();updateDeps();render();
 })();
 </script>
-</body>
-</html>
