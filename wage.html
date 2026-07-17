@@ -146,7 +146,38 @@ async function openDetail(orderId){
     h+=`<div class="big"><span style="font-weight:700">ต้นทุนรวม</span><span class="amt" style="color:var(--txt)">${money(c.total)} บ.</span></div>`;
     if(c.perUnit!=null)h+=row('ต่อหน่วย ('+money(c.qty)+' '+c.unit+')','<b>'+c.perUnit+'</b> บ./'+c.unit,'font-size:14px');
   }
+  // 📋 ข้อมูลดิบที่คนขับกรอก — ให้แอดมินตรวจ (เลขไมล์/ดุม/น้ำหนัก/น้ำมัน/ค่าใช้จ่าย/รูป)
+  if(res.raw && Object.keys(res.raw).length){
+    h+='<div class="sec" style="color:var(--txt);border-top:2px solid var(--line);margin-top:16px;padding-top:12px">📋 ข้อมูลที่คนขับกรอก <span style="font-weight:400;color:var(--txt2);font-size:11px">(ตรวจสอบ)</span></div>';
+    h+=renderRaw(res.raw,row);
+  }
   $('drBody').innerHTML=h;
+}
+
+// จัดกลุ่มข้อมูลดิบเป็นหมวด ให้แอดมินไล่ตรวจง่าย
+function renderRaw(raw,row){
+  const SKIP={'Order ID':1,'Ref ID':1,'Timestamp':1,'ประเภทงาน':1,'LINE UID':1,'LINE UID คนขับ':1,'userId':1,'สถานะ':1,'ชื่อคนขับ':1,'ทะเบียนรถ':1};
+  const isUrl=v=>/^https?:\/\//.test(String(v));
+  const fmtN=v=>{const s=String(v).replace(/,/g,'');return (s!==''&&/^\-?\d+(\.\d+)?$/.test(s))?Number(s).toLocaleString('th-TH'):v;};
+  const used={}; let h='';
+  const groups=[
+    {t:'🛞 เลขไมล์ / เลขดุม',      test:k=>/เลขไมล์|เลขดุม|ไมล์|ดุม/.test(k)},
+    {t:'⚖️ น้ำหนัก (กก.)',        test:k=>/น้ำหนัก|สุทธิ/.test(k)},
+    {t:'⛽ น้ำมัน',               test:k=>/น้ำมัน|ลิตร/.test(k)},
+    {t:'💸 ค่าใช้จ่ายรายเที่ยว',   test:k=>/^ค่า|ทางด่วน|ซ่อม|ลงของ|เด็ก/.test(k)},
+    {t:'🚗 สภาพรถ (เบา/หนัก)',    test:k=>/สภาพรถ/.test(k)}
+  ];
+  groups.forEach(g=>{
+    const ks=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k])&&g.test(k));
+    if(!ks.length)return;
+    h+='<div class="sec" style="color:var(--txt2)">'+g.t+'</div>';
+    ks.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});
+  });
+  const rest=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k]));
+  if(rest.length){h+='<div class="sec" style="color:var(--txt2)">📝 อื่นๆ</div>';rest.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});}
+  const photos=Object.keys(raw).filter(k=>!SKIP[k]&&isUrl(raw[k]));
+  if(photos.length){h+='<div class="sec" style="color:var(--txt2)">📷 รูปถ่าย</div>';photos.forEach(k=>h+=`<div class="drow"><span class="l">${k}</span><a href="${raw[k]}" target="_blank" style="color:var(--primary);font-weight:600">เปิดรูป ↗</a></div>`);}
+  return h;
 }
 function closeDr(){$('ov').classList.remove('on');$('dr').classList.remove('on');}
 $('ov').onclick=closeDr;
