@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ฐานต้นทุนรถ · SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--accent:#0d6efd;--warn:#b8860b;--danger:#c8352f;--radius:8px}
+  @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--accent:#4a9bff;--warn:#e0b84a;--danger:#e5645d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 90px}
+  .wrap{max-width:900px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 14px}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+  h1{font-size:17px;margin:0;font-weight:700}.sub{font-size:12px;color:var(--txt2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .ch{font-size:14px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:7px}
+  .note{font-size:11.5px;color:var(--txt2);margin-bottom:10px;line-height:1.6}
+  .formula{background:var(--card2);border-left:3px solid var(--primary);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--txt2);line-height:1.9;font-family:"IBM Plex Mono",monospace}
+  .formula b{color:var(--txt)}
+  .chip{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;margin:2px 3px 0 0}
+  .c1{background:rgba(46,165,103,.15);color:var(--primary)} .c2{background:rgba(184,134,11,.16);color:var(--warn)}
+  .c3{background:rgba(13,110,253,.14);color:var(--accent)} .c4{background:rgba(200,53,47,.13);color:var(--danger)}
+  label{font-size:11px;color:var(--txt2);display:block}
+  input{width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--card2);color:var(--txt);font:inherit;font-size:14px}
+  .veh{border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-bottom:11px;background:var(--card)}
+  .vhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:9px}
+  .plate{font-size:15px;font-weight:800;letter-spacing:.3px}
+  .vmodel{font-size:11px;color:var(--txt2)}
+  .tag{font-size:10px;padding:2px 8px;border-radius:999px;background:var(--card2);color:var(--txt2);border:1px solid var(--line)}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:9px 11px}
+  .g3{display:grid;grid-template-columns:repeat(3,1fr);gap:9px 11px}
+  .key input{border-color:var(--primary);background:rgba(46,165,103,.06);font-weight:700}
+  .key label{color:var(--primary);font-weight:600}
+  .foot{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:10px;padding-top:9px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--txt2)}
+  .foot b{color:var(--txt);font-weight:700}
+  .more{font-size:11.5px;color:var(--accent);cursor:pointer;user-select:none;margin-top:9px;display:inline-block}
+  .detail{display:none;margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+  .detail.on{display:block}
+  .search{width:100%;padding:9px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--txt);font:inherit;font-size:14px;margin-bottom:12px}
+  .save{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:12px;display:flex;gap:10px;justify-content:center;align-items:center;z-index:10}
+  .save .cnt{font-size:12px;color:var(--txt2);margin-right:auto;padding-left:6px}
+  .btn{padding:11px 24px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt2);font-weight:400}
+  .btn:disabled{opacity:.5}
+  .msg{text-align:center;color:var(--txt2);padding:30px}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:50;opacity:0;transition:.3s;pointer-events:none}
+  .toast.on{opacity:1}
+  .toast.err{background:var(--danger)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button onclick="goBack()" style="border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">←</button>
+    <div class="logo">🏭</div>
+    <div><h1>ฐานต้นทุนรถ</h1><div class="sub">ต้นทุนต่อคัน (คงที่ · ผันแปร · ดำเนินงาน · ค่าเสื่อม) — อ้างอิงจาก DATA_Vehicle</div></div>
+  </div>
+  <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
+</div>
+
+<div class="save" id="saveBar" style="display:none">
+  <span class="cnt" id="cnt"></span>
+  <button class="btn ghost" onclick="location.reload()">รีเซ็ต</button>
+  <button class="btn" id="saveBtn">💾 บันทึกเข้าฐาน</button>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID='2010274217-Ot7vGhri';
+let MY_UID='', DATA=null;
+const $=id=>document.getElementById(id);
+const nf=n=>{const x=parseFloat(n);return isNaN(x)?'–':x.toLocaleString('th-TH',{maximumFractionDigits:2});};
+function toast(t,err){const e=$('toast');e.textContent=t;e.className='toast on'+(err?' err':'');setTimeout(()=>e.className='toast',2400);}
+function goBack(){ if(history.length>1){history.back();} else {location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';} }
+
+// ช่องที่แก้ได้ (data column ↔ ป้าย ↔ หน่วย)  — 3 ตัวแรก = ตัวที่ใช้คิดต้นทุนเที่ยวตรงๆ
+const KEY=[
+  ['fixed_cost_per_km','คงที่/กม.','บ.'],
+  ['variable_cost_per_km','ผันแปร/กม.','บ.'],
+  ['ops_cost_trip','ดำเนินงาน/เที่ยว','บ.']
+];
+const CTX=[
+  ['depreciation_month','ค่าเสื่อม/เดือน','บ.'],
+  ['avg_km_month','กม.เฉลี่ย/เดือน','กม.'],
+  ['avg_km_trip','กม.เฉลี่ย/เที่ยว','กม.']
+];
+const DET=[
+  ['fixed_cost_month','ต้นทุนคงที่รวม/เดือน','บ.'],
+  ['fuel_efficiency','อัตราสิ้นเปลือง','กม./ล.'],
+  ['repair_cost_per_km','ค่าซ่อม/กม.','บ.'],
+  ['tire_cost_per_km','ยาง/กม.','บ.'],
+  ['other_cost_per_km','อื่นๆ/กม.','บ.'],
+  ['driver_allowance_trip','เบี้ยเลี้ยงคนขับ/เที่ยว','บ.'],
+  ['vehicle_price','ราคารถ','บ.']
+];
+
+async function load(){
+  const r=await fetch(GAS_URL+'?action=getCostBase&userId='+encodeURIComponent(MY_UID));
+  const d=await r.json();
+  if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
+  if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
+  DATA=d; render(); $('saveBar').style.display='flex'; $('cnt').textContent='🚚 '+d.count+' คัน';
+}
+
+function inp(cols,v,cls){
+  return cols.map(c=>`<label class="${cls||''}">${c[1]} ${c[2]?'('+c[2]+')':''}<input type="number" step="any" data-plate="${v.plate}" data-col="${c[0]}" value="${v[c[0]]==null?'':v[c[0]]}"></label>`).join('');
+}
+
+function render(){
+  const d=DATA;
+  let h='';
+
+  // อธิบายวิธีคิดต้นทุนเที่ยว
+  h+='<div class="card"><div class="ch">🧮 ต้นทุนบริษัทต่อเที่ยว คิดยังไง</div><div class="formula">'
+    +'<span class="chip c1">ค่าแรงคนขับ</span> (สูตรค่าแรง · ล็อกต่อเที่ยว)<br>'
+    +'<span class="chip c2">น้ำมันต้นทุน</span> = ลิตรเติมโรงงาน × <b>ราคากลางรายวัน</b> + ยอดเติมนอก(ใบเสร็จ)<br>'
+    +'<span class="chip c3">คงที่</span> = <b>คงที่/กม.</b> × ระยะ &nbsp;(รวมค่าเสื่อมแล้ว — ไม่คิดซ้ำ)<br>'
+    +'<span class="chip c3">ผันแปร</span> = <b>ผันแปร/กม.</b> × ระยะ &nbsp;(น้ำมัน+ซ่อม+ยาง+อื่นๆ)<br>'
+    +'<span class="chip c3">ดำเนินงาน</span> = <b>ดำเนินงาน/เที่ยว</b> (คงที่ต่อเที่ยว)<br>'
+    +'<span class="chip c4">รายเที่ยว</span> = ทางด่วน + ซ่อมนอก + ค่าลงของ (คนขับกรอก)<br>'
+    +'──────────────────<br>'
+    +'<b>รวมต้นทุน</b> ÷ ปริมาณ (กก./ชิ้น) = <b>ต้นทุนต่อหน่วย</b>'
+    +'</div>'
+    +'<div class="note" style="margin:10px 0 0">🟩 ช่องเขียว = ตัวที่ใช้คิดต้นทุนเที่ยวตรงๆ (แก้แล้วมีผลกับเที่ยวที่คิดใหม่ทันที) · ค่าอื่นเป็นข้อมูลอ้างอิง'
+    +(d.fuelToday?' · ⛽ ราคาน้ำมันกลางล่าสุด '+nf(d.fuelToday.price)+' บ./ล. ('+d.fuelToday.date+')':'')+'</div>'
+    +'</div>';
+
+  h+='<input class="search" id="q" placeholder="🔎 ค้นทะเบียน / รุ่น…" oninput="filt()">';
+
+  // การ์ดต่อคัน
+  h+='<div id="list">';
+  d.vehicles.forEach((v,i)=>{
+    const mdl=[v.brand,v.model].filter(Boolean).join(' ')||v.vehicle_type||'';
+    h+=`<div class="veh" data-key="${(v.plate+' '+mdl).toLowerCase()}">`
+      +`<div class="vhead"><div><div class="plate">🚚 ${v.plate||'-'}</div><div class="vmodel">${mdl}</div></div>`
+      +`<span class="tag">${v.status||'ใช้งาน'}</span></div>`
+      +`<div class="g3 key">${inp(KEY,v,'')}</div>`
+      +`<div class="g3" style="margin-top:9px">${inp(CTX,v)}</div>`
+      +`<span class="more" onclick="this.nextElementSibling.classList.toggle('on');this.textContent=this.nextElementSibling.classList.contains('on')?'▲ ซ่อนรายละเอียด':'▾ รายละเอียดต้นทุน'">▾ รายละเอียดต้นทุน</span>`
+      +`<div class="detail"><div class="grid">${inp(DET,v)}</div></div>`
+      +`<div class="foot"><span>รวม/เที่ยว <b>${nf(v.total_cost_per_trip)}</b></span>`
+      +`<span>ราคาขาย <b>${nf(v.customer_price)}</b></span>`
+      +`<span>กำไร/เที่ยว <b>${nf(v.profit_per_trip)}</b></span>`
+      +`<span>กำไร <b>${nf(v.profit_percent)}%</b></span></div>`
+      +`</div>`;
+  });
+  h+='</div>';
+
+  $('body').innerHTML=h;
+}
+
+function filt(){
+  const q=$('q').value.trim().toLowerCase();
+  document.querySelectorAll('#list .veh').forEach(el=>{
+    el.style.display = (!q || el.dataset.key.indexOf(q)>=0) ? '' : 'none';
+  });
+}
+
+async function save(){
+  // รวมค่าต่อ plate จากทุก input ที่ถูกแก้ (ส่งเฉพาะ plate ที่มี input)
+  const map={};
+  document.querySelectorAll('#list input[data-plate]').forEach(i=>{
+    const p=i.dataset.plate; if(!map[p])map[p]={plate:p};
+    if(i.value!=='') map[p][i.dataset.col]=parseFloat(i.value);
+  });
+  const vehicles=Object.values(map);
+  const payload={action:'saveCostBase',userId:MY_UID,vehicles};
+  const b=$('saveBtn'); b.textContent='กำลังบันทึก…'; b.disabled=true;
+  try{
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(d.ok) toast('✅ บันทึก '+d.saved+' คันเข้าฐานแล้ว');
+    else toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'ผิดพลาด')),true);
+  }catch(e){toast('❌ '+e,true);}
+  b.textContent='💾 บันทึกเข้าฐาน'; b.disabled=false;
+}
+
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
+    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(!MY_UID){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
+    $('saveBtn').onclick=save;
+    load();
+  }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+e+'</div>';}
+})();
+</script>
+</body>
+</html>
