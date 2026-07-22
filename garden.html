@@ -1,0 +1,447 @@
+<title>เจ้าของสวน · SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{
+    --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
+    --ink:#15241D; --ink-soft:#5B6B63; --ink-faint:#8A988F;
+    --line:#E1E7E0; --line-strong:#CDD6CD;
+    --pine:#0E7C66; --pine-deep:#0A5C4C; --gold:#B7892A;
+    --green:#157A40; --green-bg:#DCF3E3;
+    --slate:#6B7A70; --slate-bg:#EEF1EE;
+    --r-owner:#157A40; --r-owner-bg:#DCF3E3;
+    --gold-bg:#FBEED3;
+    --shadow:0 1px 2px rgba(21,36,29,.04), 0 8px 24px rgba(21,36,29,.06);
+    --shadow-lift:0 18px 50px rgba(10,40,28,.18);
+    --sans:'IBM Plex Sans Thai','Noto Sans Thai','Leelawadee UI',system-ui,-apple-system,'Segoe UI',sans-serif;
+    --mono:'IBM Plex Mono','Cascadia Mono',ui-monospace,'Consolas',monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#0D1512; --surface:#152019; --surface-2:#1B2721; --surface-3:#22302A;
+      --ink:#E4EDE7; --ink-soft:#A2B3A9; --ink-faint:#75887E;
+      --line:#25332C; --line-strong:#33443B;
+      --pine:#3FA98F; --pine-deep:#0A5C4C; --gold:#D7A845;
+      --green:#3FBE72; --green-bg:#123222;
+      --slate:#8A9B91; --slate-bg:#1E2A24;
+      --r-owner:#3FBE72; --r-owner-bg:#123222;
+      --gold-bg:#2E2413;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+      --shadow-lift:0 18px 50px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0D1512; --surface:#152019; --surface-2:#1B2721; --surface-3:#22302A;
+    --ink:#E4EDE7; --ink-soft:#A2B3A9; --ink-faint:#75887E;
+    --line:#25332C; --line-strong:#33443B;
+    --pine:#3FA98F; --pine-deep:#0A5C4C; --gold:#D7A845;
+    --green:#3FBE72; --green-bg:#123222;
+    --slate:#8A9B91; --slate-bg:#1E2A24;
+    --r-owner:#3FBE72; --r-owner-bg:#123222;
+    --gold-bg:#2E2413;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    --shadow-lift:0 18px 50px rgba(0,0,0,.6);
+  }
+  :root[data-theme="light"]{
+    --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
+    --ink:#15241D; --ink-soft:#5B6B63; --ink-faint:#8A988F;
+    --line:#E1E7E0; --line-strong:#CDD6CD;
+    --pine:#0E7C66; --gold:#B7892A;
+    --green:#157A40; --green-bg:#DCF3E3;
+    --slate:#6B7A70; --slate-bg:#EEF1EE;
+    --r-owner:#157A40; --r-owner-bg:#DCF3E3;
+    --gold-bg:#FBEED3;
+    --shadow:0 1px 2px rgba(21,36,29,.04), 0 8px 24px rgba(21,36,29,.06);
+    --shadow-lift:0 18px 50px rgba(10,40,28,.18);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--sans);background:var(--bg);color:var(--ink);line-height:1.5;-webkit-font-smoothing:antialiased}
+  .mono{font-family:var(--mono);font-feature-settings:"tnum";font-variant-numeric:tabular-nums}
+  :focus-visible{outline:2px solid var(--pine);outline-offset:2px;border-radius:6px}
+
+  header{background:var(--pine-deep);color:#EAF3EF;border-bottom:3px solid var(--gold)}
+  .bar{max-width:1080px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:#8FC9B9;font-weight:600}
+  .bar h1{font-size:20px;font-weight:700}
+  .spacer{flex:1}
+  .mocktag{font-size:11.5px;color:#0A5C4C;background:#F2D28C;font-weight:700;padding:5px 12px;border-radius:999px}
+
+  main{max-width:1080px;margin:0 auto;padding:20px}
+  .hint{display:flex;gap:10px;align-items:flex-start;background:var(--surface-2);border:1px solid var(--line);border-left:3px solid var(--gold);border-radius:10px;padding:11px 14px;font-size:13px;color:var(--ink-soft);margin-bottom:18px}
+  .hint b{color:var(--ink)}
+
+  .list{display:grid;grid-template-columns:repeat(2,1fr);gap:13px}
+  @media(max-width:680px){.list{grid-template-columns:1fr}}
+
+  .card{font-family:inherit;text-align:left;width:100%;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:15px 16px;display:flex;align-items:flex-start;gap:13px;position:relative;overflow:hidden;cursor:pointer;transition:border-color .14s,transform .14s,box-shadow .14s}
+  .card:hover{border-color:var(--pine);transform:translateY(-2px);box-shadow:var(--shadow-lift)}
+  .card .edge{position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--r-owner)}
+  .avatar{width:44px;height:44px;border-radius:12px;flex:none;display:grid;place-items:center;font-weight:700;font-size:16px;color:#fff;background:var(--r-owner)}
+  .who{flex:1;min-width:0}
+  .who .name{font-size:15px;font-weight:600;color:var(--ink)}
+  .who .ln{font-size:12px;color:var(--ink-faint);margin-top:2px}
+  .who .extra{font-size:12px;color:var(--ink-soft);margin-top:4px}
+  .rbadge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;margin-top:6px;background:var(--r-owner-bg);color:var(--r-owner)}
+  .rbadge .pip{width:6px;height:6px;border-radius:50%;background:currentColor}
+  .go{flex:none;align-self:center;color:var(--ink-faint);font-size:20px;transition:color .14s,transform .14s}
+  .card:hover .go{color:var(--pine);transform:translateX(3px)}
+  .pkcount{font-size:11px;font-weight:600;color:var(--pine);background:var(--surface-3);border:1px solid var(--line);padding:3px 9px;border-radius:999px;margin-top:6px;margin-left:6px;display:inline-block}
+
+  /* ── drawer ── */
+  #scrim{position:fixed;inset:0;background:rgba(9,22,17,.5);opacity:0;pointer-events:none;transition:opacity .22s;z-index:50}
+  #scrim.on{opacity:1;pointer-events:auto}
+  #dw{position:fixed;top:0;right:0;height:100%;width:520px;max-width:94vw;background:var(--bg);z-index:60;transform:translateX(102%);transition:transform .26s cubic-bezier(.32,.72,0,1);overflow-y:auto;box-shadow:var(--shadow-lift)}
+  #dw.on{transform:none}
+  @media(prefers-reduced-motion:reduce){#dw,#scrim,.card{transition:none}}
+
+  .dwhead{position:sticky;top:0;background:var(--pine-deep);color:#EAF3EF;padding:16px 20px 18px;border-bottom:3px solid var(--gold);z-index:2}
+  .dwhead .top{display:flex;align-items:flex-start;gap:12px}
+  .dwhead h2{font-size:18px;font-weight:700;line-height:1.35;flex:1}
+  .xbtn{font-family:inherit;background:rgba(255,255,255,.12);border:1px solid rgba(143,201,185,.4);color:#EAF3EF;width:32px;height:32px;border-radius:9px;font-size:17px;cursor:pointer;flex:none;line-height:1}
+  .xbtn:hover{background:rgba(255,255,255,.24)}
+  .dwhead .sub{font-size:12.5px;color:#BFE3D8;margin-top:5px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .chip-live{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:#0A5C4C;background:#8FE3C4;padding:3px 10px;border-radius:999px}
+
+  .sect{padding:18px 20px 0}
+  .sect h3{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+  .sect h3::after{content:"";flex:1;height:1px;background:var(--line)}
+
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+  .kpi .k{font-size:11px;color:var(--ink-faint)}
+  .kpi .v{font-size:19px;font-weight:700;margin-top:2px;color:var(--ink)}
+  .kpi .u{font-size:11px;color:var(--ink-soft);font-weight:400}
+
+  .rows{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .row{display:flex;gap:12px;padding:10px 13px;border-bottom:1px solid var(--line);font-size:13.5px;align-items:baseline}
+  .row:last-child{border-bottom:0}
+  .row .lb{color:var(--ink-soft);width:112px;flex:none;font-size:12.5px}
+  .row .vl{color:var(--ink);flex:1;font-weight:500}
+  .pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px}
+  .pill.ok{background:var(--green-bg);color:var(--green)}
+  .pill.no{background:var(--slate-bg);color:var(--slate)}
+  .pill.gold{background:var(--gold-bg);color:var(--gold)}
+
+  .pk{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 13px;display:flex;gap:11px;align-items:flex-start;margin-bottom:9px}
+  .pk .num{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--pine);background:var(--surface-3);border:1px solid var(--line);padding:3px 7px;border-radius:7px;flex:none}
+  .pk .body{flex:1;min-width:0}
+  .pk .nm{font-size:14px;font-weight:600}
+  .pk .co{font-size:11.5px;color:var(--ink-faint);margin-top:3px}
+  .maplink{font-size:11.5px;font-weight:600;color:var(--pine);text-decoration:none;border:1px solid var(--line-strong);padding:5px 10px;border-radius:8px;flex:none;white-space:nowrap}
+  .maplink:hover{border-color:var(--pine);background:var(--surface-2)}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;background:var(--surface)}
+  .tw{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .tscroll{overflow-x:auto}
+  th{text-align:left;font-size:11px;font-weight:600;color:var(--ink-faint);padding:9px 11px;background:var(--surface-2);border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:9px 11px;border-bottom:1px solid var(--line);white-space:nowrap}
+  tr:last-child td{border-bottom:0}
+  td.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums}
+  .st{font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--green-bg);color:var(--green)}
+  .st.w{background:var(--gold-bg);color:var(--gold)}
+
+  .foot{padding:16px 20px 30px;font-size:11.5px;color:var(--ink-faint)}
+
+  /* ── ชื่อในบิล ── */
+  .sect h3 .cnt{background:var(--surface-3);border:1px solid var(--line);color:var(--ink-soft);padding:1px 8px;border-radius:999px;font-size:11px;letter-spacing:0}
+  .addbtn{font-family:inherit;font-size:11.5px;font-weight:600;color:#fff;background:var(--pine);border:none;padding:5px 11px;border-radius:8px;cursor:pointer;letter-spacing:0;text-transform:none;order:3}
+  .addbtn:hover{background:var(--pine-deep)}
+  .sect h3::after{order:2}
+  .brow{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid var(--line)}
+  .brow:last-child{border-bottom:0}
+  .bnum{font-size:11px;color:var(--ink-faint);background:var(--surface-3);border:1px solid var(--line);width:22px;height:22px;border-radius:6px;display:grid;place-items:center;flex:none}
+  .bname{flex:1;font-size:14px;font-weight:500;min-width:0;overflow-wrap:anywhere}
+  .linkbtn{font-family:inherit;font-size:11px;font-weight:600;color:var(--pine);background:none;border:1px solid var(--line-strong);padding:3px 9px;border-radius:999px;cursor:pointer;flex:none}
+  .linkbtn:hover{border-color:var(--pine);background:var(--surface-2)}
+  .delbtn{font-family:inherit;font-size:13px;color:var(--ink-faint);background:none;border:1px solid var(--line);width:26px;height:26px;border-radius:7px;cursor:pointer;flex:none;line-height:1}
+  .delbtn:hover:not(:disabled){color:#A91F12;border-color:#A91F12}
+  .delbtn:disabled{opacity:.3;cursor:not-allowed}
+
+  /* ── ตัวอย่างฟอร์มฝั่งคนสวน ── */
+  .mini{margin-top:10px;background:var(--surface-2);border:1px dashed var(--line-strong);border-radius:11px;padding:11px 13px}
+  .mini-lb{font-size:11px;color:var(--ink-faint);margin-bottom:7px}
+  .mini-sel{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border:1px solid var(--line-strong);border-radius:9px;padding:9px 12px;font-size:13.5px;color:var(--ink)}
+  .mini-ar{color:var(--ink-faint);font-size:11px}
+  .mini-note{font-size:11px;color:var(--ink-soft);margin-top:6px}
+
+  /* ── KPI ที่จิ้มได้ + ประวัติ ── */
+  .kpi.tap{font-family:inherit;text-align:left;width:100%;cursor:pointer;transition:border-color .14s,background .14s}
+  .kpi.tap:hover:not(:disabled){border-color:var(--pine);background:var(--surface-2)}
+  .kpi.tap:disabled{cursor:default;opacity:.55}
+  .tapmark{font-size:9.5px;font-weight:600;color:var(--pine);background:var(--surface-3);border:1px solid var(--line);padding:1px 6px;border-radius:999px;margin-left:4px;white-space:nowrap}
+  .kpi.tap:disabled .tapmark{display:none}
+
+  .hist{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  .hist-top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 13px;background:var(--surface-2);border-bottom:1px solid var(--line);font-size:12.5px;color:var(--ink-soft)}
+  .hist-top b{color:var(--ink)}
+  .hist-scroll{max-height:300px;overflow-y:auto}
+  .hmonth{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 13px;background:var(--surface-3);font-size:11.5px;font-weight:600;color:var(--ink-soft);position:sticky;top:0}
+  .hrow{display:flex;align-items:center;gap:11px;padding:7px 13px;border-bottom:1px solid var(--line);font-size:12.5px}
+  .hrow:last-child{border-bottom:0}
+  .hd{width:64px;flex:none;color:var(--ink-soft)}
+  .hbar{flex:1;height:7px;background:var(--surface-3);border-radius:999px;overflow:hidden;min-width:40px}
+  .hbar i{display:block;height:100%;background:var(--pine);border-radius:999px}
+  .hkg{width:74px;flex:none;text-align:right;font-weight:600;color:var(--ink)}
+  .hu{font-size:10px;font-weight:400;color:var(--ink-faint)}
+
+  #toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--pine-deep);color:#fff;font-size:13px;font-weight:500;padding:11px 18px;border-radius:11px;box-shadow:0 10px 30px rgba(10,40,28,.35);opacity:0;pointer-events:none;transition:.22s;z-index:120;max-width:90vw}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+</style><style>
+  .backbtn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:600;color:#EAF3EF;background:rgba(255,255,255,.12);border:1px solid rgba(143,201,185,.4);border-radius:10px;padding:8px 13px;cursor:pointer}
+  .backbtn:hover{background:rgba(255,255,255,.22)}
+  .count{font-size:12.5px;color:#BFE3D8;white-space:nowrap}
+  .toolbar{margin-bottom:16px}
+  .search{position:relative}
+  .search input{width:100%;font-family:inherit;font-size:14px;border:1px solid var(--line-strong);background:var(--surface);border-radius:11px;padding:11px 14px;color:var(--ink);outline:none}
+  .search input:focus{border-color:var(--pine)}
+  .empty{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--ink-faint);font-size:14px}
+  #gate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;text-align:center;padding:30px}
+  #gate .ring{width:44px;height:44px;border:4px solid var(--line-strong);border-top-color:var(--pine);border-radius:50%;margin:0 auto 18px;animation:spin 1s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #gate h2{font-size:18px;font-weight:700;margin-bottom:6px}
+  #gate p{font-size:13.5px;color:var(--ink-soft)}
+  #gate .deny{font-size:38px;margin-bottom:10px}
+  #toast.err{background:#A91F12}
+</style>
+<header>
+  <div class="bar">
+    <button class="backbtn" onclick="goBack()">← กลับ</button>
+    <div>
+      <div class="eyebrow">SSB Smart Supply</div>
+      <h1>เจ้าของสวน</h1>
+    </div>
+    <div class="spacer"></div>
+    <span class="count" id="cnt"></span>
+  </div>
+</header>
+
+<main>
+  <div class="toolbar">
+    <div class="search">
+      <input id="q" placeholder="ค้นหา ชื่อสวน · รหัส · เบอร์ · ชื่อในบิล" oninput="render()">
+    </div>
+  </div>
+  <div class="list" id="list"><div class="empty">กำลังโหลด…</div></div>
+</main>
+
+<div id="scrim"></div>
+<aside id="dw" role="dialog" aria-modal="true" tabindex="-1"></aside>
+<div id="gate"><div class="box"><div class="ring"></div><h2>กำลังเข้าสู่ระบบ</h2><p>ตรวจสอบสิทธิ์ผู้ใช้…</p></div></div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID='2010274217-Ot7vGhri';
+let MY_UID='', LIST=[], CUR=null;
+
+const $  = s => document.querySelector(s);
+const esc= s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nf = n => Number(n||0).toLocaleString('th-TH');
+function goBack(){ if(history.length>1) history.back(); else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
+
+/* เวลาไทย "d/M/yyyy HH:mm:ss" — ห้ามใช้ new Date() ตรงๆ (JS อ่านวันเป็นเดือน) */
+function parseTH(v){
+  if(!v) return null;
+  const m = String(v).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,]+(\d{1,2}):(\d{2}))?/);
+  if(m) return new Date(+m[3], +m[2]-1, +m[1], +(m[4]||0), +(m[5]||0));
+  const d = new Date(v); return isNaN(d) ? null : d;
+}
+const TH_M=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function fmtD(v){ const d=parseTH(v); return d ? `${String(d.getDate()).padStart(2,'0')} ${TH_M[d.getMonth()]} ${String((d.getFullYear()+543)%100).padStart(2,'0')}` : '—'; }
+
+/* พิกัด: ลิงก์ Google Maps หรือ lat,long */
+const isLink = v => /^https?:\/\//i.test(String(v||''));
+const mapUrl = v => isLink(v) ? v : 'https://maps.google.com/?q='+encodeURIComponent(v||'');
+
+let _tt; function toast(m,err){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
+  t.textContent=m; t.className='show'+(err?' err':''); clearTimeout(_tt); _tt=setTimeout(()=>t.className='',2400); }
+
+async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
+  const r=await fetch(u); return r.json(); }
+
+/* ══════════ รายชื่อสวน ══════════ */
+async function load(){
+  const res = await api({action:'getGardenList', userId:MY_UID});
+  if(res.denied){ $('#gate').innerHTML='<div class="box"><div class="deny">🚫</div><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>หน้านี้สำหรับแอดมินเท่านั้น</p></div>'; return; }
+  $('#gate').style.display='none';
+  if(!res.ok){ $('#list').innerHTML=`<div class="empty">${esc(res.error||'โหลดข้อมูลไม่สำเร็จ')}</div>`; return; }
+  LIST = res.gardens||[]; render();
+  // เปิดสวนที่ระบุมาใน URL ทันที (ลิงก์จากหน้าสิทธิ์ผู้ใช้งาน)
+  const q = new URLSearchParams(location.search);
+  const key = q.get('code') || q.get('uid');
+  if(key){ const g = LIST.find(x=>x.code===key||x.uid===key); if(g) openG(g.code); }
+}
+
+function render(){
+  const kw = ($('#q').value||'').trim().toLowerCase();
+  const rows = LIST.filter(g => !kw ||
+    (g.name+' '+g.code+' '+g.owner+' '+g.phone+' '+(g.bills||[]).join(' ')).toLowerCase().includes(kw));
+  $('#cnt').textContent = `${rows.length} / ${LIST.length} สวน`;
+  $('#list').innerHTML = rows.length ? rows.map(g=>`
+    <button class="card" onclick="openG('${esc(g.code)}')">
+      <span class="edge"></span>
+      <span class="avatar">${esc((g.name||g.owner||'?').trim()[0]||'?')}</span>
+      <span class="who">
+        <span class="name">${esc(g.name||g.owner)}</span>
+        <span class="ln mono">${esc(g.phone||'—')}</span>
+        <span class="extra">🌳 <span class="mono">${esc(g.code)}</span>${g.bills&&g.bills.length>1?` · ${g.bills.length} ชื่อบิล`:''}</span>
+        <span class="rbadge"><span class="pip"></span>เจ้าของสวน</span>
+        <span class="pkcount">${g.pickups?g.pickups+' จุดรับ':'ยังไม่มีจุดรับ'}</span>
+        ${g.orders?`<span class="pkcount">${nf(g.orders)} ออเดอร์</span>`:''}
+      </span>
+      <span class="go">›</span>
+    </button>`).join('') : '<div class="empty">ไม่พบสวนที่ค้นหา</div>';
+}
+
+/* ══════════ รายละเอียดสวน ══════════ */
+async function openG(code){
+  $('#dw').classList.add('on'); $('#scrim').classList.add('on'); document.body.style.overflow='hidden';
+  $('#dw').innerHTML = '<div class="dwhead"><div class="top"><h2>กำลังโหลด…</h2><button class="xbtn" onclick="closeDr()">✕</button></div></div>';
+  const res = await api({action:'getGardenDetail', userId:MY_UID, code:code});
+  if(!res.ok){ $('#dw').innerHTML=`<div class="dwhead"><div class="top"><h2>ผิดพลาด</h2><button class="xbtn" onclick="closeDr()">✕</button></div></div><div class="sect"><div class="empty">${esc(res.error||'')}</div></div>`; return; }
+  CUR = res; drawDetail();
+}
+
+function drawDetail(){
+  const g=CUR.garden, pks=CUR.pickups||[], st=CUR.stats||{};
+  const rspoPill = v => String(v).indexOf('ไม่')<0 && v ? '<span class="pill ok">RSPO</span>' : '<span class="pill no">ไม่มี RSPO</span>';
+  $('#dw').innerHTML = `
+    <div class="dwhead">
+      <div class="top"><h2>${esc(g.name||g.owner)}</h2><button class="xbtn" onclick="closeDr()" aria-label="ปิด">✕</button></div>
+      <div class="sub"><span class="mono">${esc(g.code)}</span> · <span>${esc(g.phone||'—')}</span></div>
+    </div>
+
+    <div class="sect">
+      <h3>ภาพรวม</h3>
+      <div class="kpis">
+        <button class="kpi tap" onclick="toggleHist()" ${st.trips?'':'disabled'}>
+          <div class="k">ออเดอร์สะสม ${st.trips?'<span class="tapmark">จิ้มดูประวัติ</span>':''}</div>
+          <div class="v mono">${nf(st.trips)}<span class="u"> เที่ยว</span></div></button>
+        <div class="kpi"><div class="k">น้ำหนักรวม</div><div class="v mono">${st.kg?nf(Math.round(st.kg/1000)):0}<span class="u"> ตัน</span></div></div>
+        <div class="kpi"><div class="k">ออเดอร์ล่าสุด</div><div class="v" style="font-size:14px;padding-top:4px">${fmtD(st.last)}</div></div>
+      </div>
+      <div id="histWrap"></div>
+    </div>
+
+    <div class="sect">
+      <h3>ชื่อในบิล <span class="cnt mono">${g.bills.length}</span><button class="addbtn" onclick="addBill()">+ เพิ่มชื่อ</button></h3>
+      <div id="billBox">${billHTML()}</div>
+      <div class="mini">
+        <div class="mini-lb">คนสวนจะเห็นแบบนี้ตอนกรอกฟอร์มสั่งงาน</div>
+        <div class="mini-sel"><span>${esc(g.bills[0]||'— ยังไม่ได้ตั้งชื่อในบิล —')}</span><span class="mini-ar">▾</span></div>
+        <div class="mini-note">${g.bills.length>1?`มี ${g.bills.length} ชื่อให้เลือก — ชื่อแรกเป็นค่าตั้งต้น`:'มีชื่อเดียว ระบบจะเลือกให้อัตโนมัติ'}</div>
+      </div>
+    </div>
+
+    <div class="sect">
+      <h3>ข้อมูลสวน</h3>
+      <div class="rows">
+        <div class="row"><span class="lb">เจ้าของ</span><span class="vl">${esc(g.owner||'—')}</span></div>
+        <div class="row"><span class="lb">RSPO ตั้งต้น</span><span class="vl">${rspoPill(g.rspo)}</span></div>
+        <div class="row"><span class="lb">ทีมตัด</span><span class="vl">${esc(g.team||'—')}</span></div>
+        <div class="row"><span class="lb">ผ่านลานเท</span><span class="vl">${g.ramp?`<span class="pill gold">${esc(g.ramp)}</span>`:'—'}</span></div>
+        <div class="row"><span class="lb">พิกัดสวน</span><span class="vl">${g.loc?`${isLink(g.loc)?'🔗 ลิงก์ Google Maps':'<span class="mono" style="font-size:12px">📍 '+esc(g.loc)+'</span>'} <a class="maplink" style="margin-left:6px" href="${esc(mapUrl(g.loc))}" target="_blank" rel="noopener">ดูแผนที่</a>`:'—'}</span></div>
+        <div class="row"><span class="lb">LINE UID</span><span class="vl mono" style="font-size:11px;color:var(--ink-faint);word-break:break-all;font-weight:400">${esc(g.uid||'—')}</span></div>
+      </div>
+    </div>
+
+    <div class="sect">
+      <h3>จุดรับ (${pks.length})</h3>
+      ${pks.length ? pks.map(p=>`
+        <div class="pk">
+          <span class="num">${esc(p.id)}</span>
+          <div class="body">
+            <div class="nm">${esc(p.name)}</div>
+            <div class="co mono">${p.loc?(isLink(p.loc)?'🔗 ลิงก์ Google Maps':'📍 '+esc(p.loc)):'— ไม่มีพิกัด —'}</div>
+            <div style="margin-top:6px">${rspoPill(p.rspo)}${p.geo?'':'<span class="pill no" style="margin-left:5px" title="เช็คอินอัตโนมัติต้องใช้พิกัดตัวเลข">⚠ เช็คอินอัตโนมัติไม่ได้</span>'}</div>
+          </div>
+          ${p.loc?`<a class="maplink" href="${esc(mapUrl(p.loc))}" target="_blank" rel="noopener">ดูแผนที่</a>`:''}
+        </div>`).join('')
+      : '<div class="rows"><div class="row" style="color:var(--ink-soft);padding:18px 13px;display:block">ยังไม่มีจุดรับ</div></div>'}
+    </div>
+
+    <div class="foot">ข้อมูลจาก DATA_Garden · LOG_Pickup · STATUS · LOG_Weight</div>`;
+  $('#dw').focus();
+}
+
+/* ── ชื่อในบิล ── */
+function billHTML(){
+  const b=CUR.garden.bills;
+  return '<div class="rows">'+b.map((n,i)=>`
+    <div class="brow">
+      <span class="bnum mono">${i+1}</span>
+      <span class="bname">${esc(n)}</span>
+      ${i===0?'<span class="pill ok" style="flex:none">ค่าตั้งต้น</span>'
+             :`<button class="linkbtn" onclick="setDef(${i})">ตั้งเป็นค่าตั้งต้น</button>`}
+      <button class="delbtn" onclick="delBill(${i})" ${b.length===1?'disabled title="ต้องมีอย่างน้อย 1 ชื่อ"':''}>✕</button>
+    </div>`).join('')+'</div>';
+}
+function refreshBills(){ $('#billBox').innerHTML=billHTML(); const c=$('#dw .sect h3 .cnt'); if(c)c.textContent=CUR.garden.bills.length; }
+async function saveBills(msg){
+  const r = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveGardenBills',userId:MY_UID,code:CUR.garden.code,bills:CUR.garden.bills})});
+  const d = await r.json();
+  if(d.ok){ toast(msg); const g=LIST.find(x=>x.code===CUR.garden.code); if(g)g.bills=d.bills.slice(); render(); }
+  else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
+  return d.ok;
+}
+function addBill(){
+  const n=prompt('ชื่อในบิลที่จะเพิ่ม\n(ชื่อนี้จะไปเป็นตัวเลือกในฟอร์มของคนสวน)');
+  if(!n||!n.trim()) return;
+  const v=n.trim();
+  if(v.includes(',')){ toast('ชื่อในบิลห้ามมีคอมม่า',true); return; }
+  if(CUR.garden.bills.includes(v)){ toast('มีชื่อนี้อยู่แล้ว',true); return; }
+  CUR.garden.bills.push(v); refreshBills(); drawMini(); saveBills('เพิ่ม "'+v+'" แล้ว');
+}
+function delBill(i){
+  const b=CUR.garden.bills; if(b.length===1) return;
+  if(!confirm('ลบ "'+b[i]+'" ออกจากรายการ?')) return;
+  const [x]=b.splice(i,1); refreshBills(); drawMini(); saveBills('ลบ "'+x+'" แล้ว');
+}
+function setDef(i){
+  const b=CUR.garden.bills; const [x]=b.splice(i,1); b.unshift(x);
+  refreshBills(); drawMini(); saveBills('"'+x+'" เป็นค่าตั้งต้นแล้ว');
+}
+function drawMini(){
+  const b=CUR.garden.bills, m=$('#dw .mini-sel span'), n=$('#dw .mini-note');
+  if(m) m.textContent=b[0]||'— ยังไม่ได้ตั้งชื่อในบิล —';
+  if(n) n.textContent=b.length>1?`มี ${b.length} ชื่อให้เลือก — ชื่อแรกเป็นค่าตั้งต้น`:'มีชื่อเดียว ระบบจะเลือกให้อัตโนมัติ';
+}
+
+/* ── ประวัติออเดอร์ ── */
+function toggleHist(){
+  const box=$('#histWrap');
+  if(box.dataset.open==='1'){ box.dataset.open=''; box.innerHTML=''; return; }
+  box.dataset.open='1';
+  const rows=(CUR.orders||[]).filter(o=>o.kg>0||o.date);
+  const max=Math.max(1,...rows.map(r=>r.kg||0));
+  const months=[];
+  rows.forEach(r=>{ const d=parseTH(r.date); const key=d?d.getFullYear()+'-'+d.getMonth():'—';
+    let m=months.find(x=>x.key===key);
+    if(!m){ m={key,label:d?`${TH_M[d.getMonth()]} ${String((d.getFullYear()+543)%100).padStart(2,'0')}`:'ไม่ระบุวันที่',items:[],kg:0}; months.push(m); }
+    m.items.push(r); m.kg+=r.kg||0; });
+  const tot=rows.reduce((a,r)=>a+(r.kg||0),0);
+  box.innerHTML=`<div class="hist">
+    <div class="hist-top"><span>ประวัติทั้งหมด <b class="mono">${rows.length}</b> เที่ยว · รวม <b class="mono">${(tot/1000).toFixed(1)}</b> ตัน</span>
+      <button class="linkbtn" onclick="toggleHist()">ซ่อน</button></div>
+    <div class="hist-scroll">${months.map(m=>`
+      <div class="hmonth"><span>${m.label}</span><span class="mono">${(m.kg/1000).toFixed(1)} ตัน · ${m.items.length} เที่ยว</span></div>
+      ${m.items.map(r=>`<div class="hrow" title="${esc(r.id)} · ${esc(r.driver||'')} ${esc(r.plate||'')}">
+        <span class="hd mono">${fmtD(r.date).slice(0,6)}</span>
+        <span class="hbar"><i style="width:${Math.round((r.kg||0)/max*100)}%"></i></span>
+        <span class="hkg mono">${r.kg?(r.kg/1000).toFixed(2):'—'}<span class="hu"> ตัน</span></span></div>`).join('')}
+    `).join('')}</div></div>`;
+}
+
+function closeDr(){ $('#dw').classList.remove('on'); $('#scrim').classList.remove('on'); document.body.style.overflow=''; CUR=null; }
+$('#scrim').addEventListener('click', closeDr);
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDr(); });
+
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
+    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(!MY_UID){ $('#gate').innerHTML='<div class="box"><div class="deny">⚠️</div><h2>ไม่พบ LINE UID</h2><p>เปิดผ่านแอป LINE อีกครั้ง</p></div>'; return; }
+    load();
+  }catch(e){ $('#gate').innerHTML='<div class="box"><div class="deny">⚠️</div><h2>เชื่อมต่อ LINE ไม่สำเร็จ</h2><p>'+esc(e)+'</p></div>'; }
+})();
+</script>
