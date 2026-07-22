@@ -124,6 +124,48 @@
   .backbtn:hover{background:rgba(255,255,255,.22)}
   .count{font-size:12.5px;color:#BFE3D8;white-space:nowrap}
   .empty{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--ink-faint);font-size:14px}
+  /* ── สีประจำประเภทแอดมิน ── */
+  :root{
+    --t-ADMIN:#4F46E5;     --t-ADMIN-bg:#EEF0FE;
+    --t-MANAGER:#A97516;   --t-MANAGER-bg:#FBEED3;
+    --t-ADMIN_PK:#0E7490;  --t-ADMIN_PK-bg:#DEF2F6;
+    --t-EXECUTIVE:#9F1239; --t-EXECUTIVE-bg:#FCE7EC;
+    --t-none:#6B7A70;      --t-none-bg:#EEF1EE;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --t-ADMIN:#8B85F0;     --t-ADMIN-bg:#1E1C3A;
+    --t-MANAGER:#D7A845;   --t-MANAGER-bg:#2E2413;
+    --t-ADMIN_PK:#4FB6CE;  --t-ADMIN_PK-bg:#102A31;
+    --t-EXECUTIVE:#EE6B8B; --t-EXECUTIVE-bg:#351019;
+    --t-none:#8A9B91;      --t-none-bg:#1E2A24;}}
+  :root[data-theme="dark"]{
+    --t-ADMIN:#8B85F0;     --t-ADMIN-bg:#1E1C3A;
+    --t-MANAGER:#D7A845;   --t-MANAGER-bg:#2E2413;
+    --t-ADMIN_PK:#4FB6CE;  --t-ADMIN_PK-bg:#102A31;
+    --t-EXECUTIVE:#EE6B8B; --t-EXECUTIVE-bg:#351019;
+    --t-none:#8A9B91;      --t-none-bg:#1E2A24;}
+  :root[data-theme="light"]{
+    --t-ADMIN:#4F46E5;     --t-ADMIN-bg:#EEF0FE;
+    --t-MANAGER:#A97516;   --t-MANAGER-bg:#FBEED3;
+    --t-ADMIN_PK:#0E7490;  --t-ADMIN_PK-bg:#DEF2F6;
+    --t-EXECUTIVE:#9F1239; --t-EXECUTIVE-bg:#FCE7EC;
+    --t-none:#6B7A70;      --t-none-bg:#EEF1EE;}
+
+  /* การ์ด/แบดจ์รับสีจากตัวแปร --tc / --tbg ที่ JS ใส่ให้ตามประเภท */
+  .card .edge{background:var(--tc,var(--admin))}
+  .avatar{background:var(--tc,var(--admin))}
+  .tybadge{background:var(--tbg,var(--admin-bg));color:var(--tc,var(--admin))}
+  .opt .code{background:var(--tbg,var(--admin-bg));color:var(--tc,var(--admin))}
+  .opt.sel{box-shadow:inset 3px 0 0 var(--tc,var(--pine));border-color:var(--tc,var(--pine))}
+  .opt.sel .radio{border-color:var(--tc,var(--pine))}
+  .opt.sel .radio::after{background:var(--tc,var(--pine))}
+
+  /* คำอธิบายสี */
+  .legend{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .lg{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
+  .lg .dot{width:9px;height:9px;border-radius:50%;flex:none}
+  .lg .n{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400}
+
   .cap.off{background:var(--slate-bg);color:var(--slate)}
   .cap.inact{background:var(--red-bg);color:var(--red);border-color:transparent}
   #gate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;text-align:center;padding:30px}
@@ -149,6 +191,7 @@
   <div class="hint"><span style="font-size:15px">👆</span>
     <div><b>จิ้มการ์ดแอดมินเพื่อตั้งค่าสิทธิ์</b> — บันทึกลงตาราง <span class="mono">admins</span> ทันที<br>
     ช่อง <b>“สิทธิ์ที่ได้จริง”</b> คำนวณตามเงื่อนไขในโค้ดจริง ปรับแล้วเห็นผลก่อนบันทึก</div></div>
+  <div class="legend" id="legend"></div>
   <div class="list" id="list"><div class="empty">กำลังโหลด…</div></div>
 </main>
 
@@ -174,6 +217,10 @@ const TYPES=[
   {v:'EXECUTIVE', t:'ผู้บริหาร',        d:'ดูภาพรวม · ไม่ได้รับงาน Packing ให้อนุมัติ'}
 ];
 const packOK=(ty,mg)=> ty==='ADMIN' ? true : ty==='MANAGER' ? !!mg : false;
+/* สีประจำประเภท — ถ้าประเภทไม่รู้จักใช้สีกลาง */
+const TKEYS=['ADMIN','MANAGER','ADMIN_PK','EXECUTIVE'];
+const tkey=t=>TKEYS.indexOf(t)>=0?t:'none';
+const tstyle=t=>`--tc:var(--t-${tkey(t)});--tbg:var(--t-${tkey(t)}-bg)`;
 
 async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
   const r=await fetch(u); return r.json(); }
@@ -191,11 +238,17 @@ function render(){
   $('#alertBox').innerHTML = NOTIFY_N===0
     ? `<div class="banner"><span style="font-size:15px">⚠️</span><div><b>ไม่มีแอดมินที่รับแจ้งเตือนเลย</b><br>
         ระบบจะส่งแจ้งเตือนออเดอร์ใหม่ · ชั่งเสร็จ · ขอลา · แจ้งซ่อม ไม่ได้ — เปิดให้อย่างน้อย 1 คน</div></div>` : '';
+  const used = TYPES.filter(t=>ADMINS.some(a=>a.type===t.v));
+  $('#legend').innerHTML = used.map(t=>{
+    const n = ADMINS.filter(a=>a.type===t.v).length;
+    return `<span class="lg" style="${tstyle(t.v)}"><span class="dot" style="background:var(--tc)"></span>
+      ${esc(t.t)} <span class="n">${t.v} · ${n}</span></span>`;
+  }).join('');
   $('#list').innerHTML = ADMINS.length ? ADMINS.map((a,i)=>card(a,i)).join('')
     : '<div class="empty">ยังไม่มีแอดมินในระบบ</div>';
 }
 function card(a,i){
-  return `<button class="card" onclick="open_(${i})">
+  return `<button class="card" style="${tstyle(a.type)}" onclick="open_(${i})">
     <span class="edge"></span><span class="avatar">${esc((a.name||'?').trim()[0]||'?')}</span>
     <span class="who">
       <span class="name">${esc(a.name||'—')}</span>
@@ -238,7 +291,7 @@ function draw(){
       ${D.active?'':' · <b style="color:#F2D28C">บัญชีถูกปิดใช้งาน</b>'}</div></div>
 
     <div class="sect"><h3>ประเภทแอดมิน</h3>
-      ${TYPES.map(t=>`<div class="opt ${D.type===t.v?'sel':''}" onclick="setType('${t.v}')" role="button" tabindex="0">
+      ${TYPES.map(t=>`<div class="opt ${D.type===t.v?'sel':''}" style="${tstyle(t.v)}" onclick="setType('${t.v}')" role="button" tabindex="0">
         <span class="radio"></span><span style="flex:1">
         <span class="t">${esc(t.t)} <span class="code">${t.v}</span></span>
         <span class="d">${esc(t.d)}</span></span></div>`).join('')}
