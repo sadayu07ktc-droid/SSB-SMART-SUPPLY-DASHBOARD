@@ -358,7 +358,12 @@ function drawDetail(){
           </div>
           ${p.loc?`<a class="maplink" href="${esc(mapUrl(p.loc))}" target="_blank" rel="noopener">ดูแผนที่</a>`:''}
         </div>`).join('')
-      : '<div class="rows"><div class="row" style="color:var(--ink-soft);padding:18px 13px;display:block">ยังไม่มีจุดรับ</div></div>'}
+      : `<div class="rows"><div class="row" style="color:var(--ink-soft);padding:16px 13px;display:block;line-height:1.7">
+           <b style="color:var(--ink)">ยังไม่มีจุดรับแยก</b><br>
+           ระบบจะใช้ <b>พิกัดสวน</b> เป็นจุดรับแทนโดยอัตโนมัติ
+           ${g.geo?'<span class="pill ok" style="margin-left:5px">เช็คอินอัตโนมัติได้</span>'
+                  :'<span class="pill no" style="margin-left:5px">⚠ พิกัดสวนใช้เช็คอินอัตโนมัติไม่ได้</span>'}
+         </div></div>`}
     </div>
 
     <div class="foot">ข้อมูลจาก DATA_Garden · LOG_Pickup · STATUS · LOG_Weight</div>`;
