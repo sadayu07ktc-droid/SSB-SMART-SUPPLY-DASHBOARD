@@ -337,8 +337,10 @@ function drawDetail(){
       <div class="rows">
         <div class="row"><span class="lb">เจ้าของ</span><span class="vl">${esc(g.owner||'—')}</span></div>
         <div class="row"><span class="lb">RSPO ตั้งต้น</span><span class="vl">${rspoPill(g.rspo)}</span></div>
-        <div class="row"><span class="lb">ทีมตัด</span><span class="vl">${esc(g.team||'—')}</span></div>
-        <div class="row"><span class="lb">ผ่านลานเท</span><span class="vl">${g.ramp?`<span class="pill gold">${esc(g.ramp)}</span>`:'—'}</span></div>
+        <div class="row"><span class="lb">ทีมตัด</span><span class="vl" id="teamCell">${teamHTML()}</span>
+          <button class="linkbtn" onclick="editTeam()">แก้ไข</button></div>
+        <div class="row"><span class="lb">ผ่านลานเท</span><span class="vl" id="rampCell">${rampHTML()}</span>
+          <button class="linkbtn" onclick="editRamps()">แก้ไข</button></div>
         <div class="row"><span class="lb">พิกัดสวน</span><span class="vl">${g.loc?`${isLink(g.loc)?'🔗 ลิงก์ Google Maps':'<span class="mono" style="font-size:12px">📍 '+esc(g.loc)+'</span>'} <a class="maplink" style="margin-left:6px" href="${esc(mapUrl(g.loc))}" target="_blank" rel="noopener">ดูแผนที่</a>`:'—'}</span></div>
         <div class="row"><span class="lb">LINE UID</span><span class="vl mono" style="font-size:11px;color:var(--ink-faint);word-break:break-all;font-weight:400">${esc(g.uid||'—')}</span></div>
       </div>
@@ -361,6 +363,56 @@ function drawDetail(){
 
     <div class="foot">ข้อมูลจาก DATA_Garden · LOG_Pickup · STATUS · LOG_Weight</div>`;
   $('#dw').focus();
+}
+
+/* ── ทีมตัด / ผ่านลานเท : เลือกจากฐาน ไม่พิมพ์เอง ── */
+const mTeams = () => (CUR.masters&&CUR.masters.teams)||[];
+const mRamps = () => (CUR.masters&&CUR.masters.ramps)||[];
+const teamName = c => { const t=mTeams().find(x=>x.code===c); return t?(t.name||t.code):c; };
+const rampName = c => { const r=mRamps().find(x=>x.code===c); return r?(r.name||r.code):c; };
+
+function teamHTML(){
+  const t=CUR.garden.team;
+  if(!t || t==='ไม่มี') return '<span style="color:var(--ink-faint)">— ไม่ใช้ทีมตัด —</span>';
+  return `${esc(teamName(t))} <span class="mono" style="font-size:11px;color:var(--ink-faint)">${esc(t)}</span>`;
+}
+function rampHTML(){
+  const r=CUR.garden.ramps||[];
+  if(!r.length) return '<span style="color:var(--ink-faint)">— ส่งตรงโรงงาน —</span>';
+  return r.map(c=>`<span class="pill gold" style="margin-right:4px">${esc(rampName(c))}</span>`).join('');
+}
+async function saveFields(patch,msg){
+  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({action:'saveGardenFields',userId:MY_UID,code:CUR.garden.code},patch))});
+  const d=await r.json();
+  if(d.ok){ toast(msg); return true; }
+  toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); return false;
+}
+function editTeam(){
+  const list=mTeams();
+  if(!list.length){ toast('ยังไม่มีทีมตัดในฐานข้อมูล',true); return; }
+  const cur=CUR.garden.team;
+  const menu=['0 = ไม่ใช้ทีมตัด'].concat(list.map((t,i)=>`${i+1} = ${t.name||t.code} (${t.code})`)).join('\n');
+  const ans=prompt('เลือกทีมตัด — พิมพ์ตัวเลข\n\n'+menu, cur&&cur!=='ไม่มี'?String(list.findIndex(t=>t.code===cur)+1):'0');
+  if(ans===null) return;
+  const n=parseInt(ans,10);
+  if(isNaN(n)||n<0||n>list.length){ toast('เลขไม่ถูกต้อง',true); return; }
+  const val=n===0?'ไม่มี':list[n-1].code;
+  CUR.garden.team=val; document.getElementById('teamCell').innerHTML=teamHTML();
+  saveFields({team:val}, n===0?'ตั้งเป็นไม่ใช้ทีมตัดแล้ว':'ตั้งทีมตัดเป็น '+(list[n-1].name||val)+' แล้ว');
+}
+function editRamps(){
+  const list=mRamps();
+  if(!list.length){ toast('ยังไม่มีลานเทในฐานข้อมูล',true); return; }
+  const cur=CUR.garden.ramps||[];
+  const menu=list.map((r,i)=>`${i+1} = ${r.name||r.code} (${r.code})${cur.includes(r.code)?'  ← เลือกอยู่':''}`).join('\n');
+  const ans=prompt('เลือกลานเทที่ผ่าน — พิมพ์ตัวเลขคั่นคอมม่า (เช่น 1,3)\nเว้นว่าง = ส่งตรงโรงงาน\n\n'+menu,
+    cur.map(c=>list.findIndex(r=>r.code===c)+1).filter(n=>n>0).join(','));
+  if(ans===null) return;
+  const picks=String(ans).split(',').map(s=>parseInt(s.trim(),10)).filter(n=>!isNaN(n));
+  for(const n of picks){ if(n<1||n>list.length){ toast('เลข '+n+' ไม่มีในรายการ',true); return; } }
+  const codes=picks.map(n=>list[n-1].code);
+  CUR.garden.ramps=codes; document.getElementById('rampCell').innerHTML=rampHTML();
+  saveFields({ramps:codes}, codes.length?'ตั้งลานเท '+codes.length+' แห่งแล้ว':'ตั้งเป็นส่งตรงโรงงานแล้ว');
 }
 
 /* ── ชื่อในบิล ── */
