@@ -98,6 +98,7 @@
     <div class="spacer"></div>
     <div class="controls">
       <div class="seg" id="rangeSeg">
+        <button data-r="1">วันนี้</button>
         <button data-r="7">7 วัน</button>
         <button data-r="30" class="on">30 วัน</button>
         <button data-r="90">90 วัน</button>
@@ -191,7 +192,7 @@ function buildShell(){
 function sliceDates(dates,ramps){
   return dates.map(dt=>{
     let o={day:toMs(dt),buy:0,send:0,stock:0,lost:0,trips:0,rawCull:0,rspo:0};
-    ramps.forEach(rn=>{const r=BY[rn]&&BY[rn][dt];if(r){o.buy+=r.buy/TON;o.send+=r.send/TON;o.stock+=r.stock/TON;o.lost+=r.lost/TON;o.trips+=r.trips;o.rawCull+=r.rawCull;o.rspo+=r.rspo/TON;}});
+    ramps.forEach(rn=>{const r=BY[rn]&&BY[rn][dt];if(r){o.buy+=r.buy/TON;o.send+=r.send/TON;o.stock+=r.stock/TON;o.lost+=(r.lost+(r.roundLoss||0))/TON;o.trips+=r.trips;o.rawCull+=r.rawCull;o.rspo+=r.rspo/TON;}});
     return o;
   });
 }
@@ -259,7 +260,7 @@ function bindHover(svg){
   function leave(){cross.setAttribute('opacity','0');tt.style.opacity='0';}
   hit.addEventListener('mousemove',move);hit.addEventListener('mouseleave',leave);hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('touchend',leave);
 }
-function rampAgg(ramp,dates){let send=0,buy=0,lost=0,stock=0,last=null;dates.forEach(dt=>{const r=BY[ramp]&&BY[ramp][dt];if(r){send+=r.send/TON;buy+=r.buy/TON;lost+=r.lost/TON;last=r;}});if(last)stock=last.stock/TON;return {name:ramp,send,buy,lost,stock,lossPct:buy?lost/buy*100:0};}
+function rampAgg(ramp,dates){let send=0,buy=0,lost=0,stock=0,last=null;dates.forEach(dt=>{const r=BY[ramp]&&BY[ramp][dt];if(r){send+=r.send/TON;buy+=r.buy/TON;lost+=(r.lost+(r.roundLoss||0))/TON;last=r;}});if(last)stock=last.stock/TON;return {name:ramp,send,buy,lost,stock,lossPct:buy?lost/buy*100:0};}
 function drawRank(){
   const dts=curDates();
   const data=RAMPS.map(r=>rampAgg(r,dts)).filter(d=>d.buy>0||d.send>0).sort((a,b)=>b.send-a.send);
