@@ -89,6 +89,19 @@
   #tt .r i{width:9px;height:9px;border-radius:3px}
   #tt .r b{font-weight:800}
   svg{display:block;width:100%;height:auto}
+  #ov{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:40;display:none}
+  #ov.on{display:block}
+  #dr{position:fixed;top:0;right:0;width:440px;max-width:94vw;height:100%;background:var(--card);box-shadow:-8px 0 30px rgba(0,0,0,.28);z-index:41;transform:translateX(105%);transition:transform .25s;overflow-y:auto}
+  #dr.on{transform:translateX(0)}
+  .drhead{position:sticky;top:0;background:var(--card);display:flex;justify-content:space-between;align-items:center;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line);z-index:2}
+  .drhead b{font-size:15px;font-weight:800}
+  .ordrow{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:10px 0;border-bottom:1px solid var(--line)}
+  .ordrow .id{font-size:13px;font-weight:700}
+  .ordrow .meta{font-size:11.5px;color:var(--ink2)}
+  .ordrow .w{font-size:14px;font-weight:800;text-align:right;font-variant-numeric:tabular-nums}
+  .ordrow .st{font-size:11px;font-weight:700;text-align:right}
+  .rrow{cursor:pointer;border-radius:8px;transition:background .12s}
+  .rrow:hover{background:var(--panel)}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -119,6 +132,8 @@
   <div class="foot" id="foot"></div>
 </div>
 <div id="tt"></div>
+<div id="ov" onclick="closeDrawer()"></div>
+<aside id="dr"><div class="drhead"><b id="drTitle">ออเดอร์</b><button onclick="closeDrawer()" style="border:0;background:transparent;color:var(--ink2);font-size:19px;cursor:pointer">✕</button></div><div id="drBody" style="padding:14px 18px 40px"></div></aside>
 
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
@@ -137,7 +152,7 @@ function applyTheme(t){document.documentElement.setAttribute('data-theme',t);try
 $('#themeSeg').onclick=e=>{const b=e.target.closest('button');if(b)applyTheme(b.dataset.t);};
 
 // ── ข้อมูลจริง ──
-let RECORDS=[], RAMPS=[], DATES=[], BY={};
+let RECORDS=[], RAMPS=[], DATES=[], BY={}, ORD_BY_RAMP={};
 let RANGE=30, SCOPE='all', CHARTTYPE='line', MODE='preset', FROM='', TO='';
 const TON=1000; // kg → ตัน
 const TON_PER_BIN=15; // ตัน/กระบะ · 2 กระบะ = 1 พ่วง (สั่งออเดอร์เป็นกระบะ)
@@ -159,6 +174,10 @@ async function boot(){
     if(!RECORDS.length){$('#app').innerHTML='<div class="msg">ยังไม่มีข้อมูลลานปาล์มรายวัน</div>';return;}
     DATES=[...new Set(RECORDS.map(r=>r.date))].sort();
     BY={}; RAMPS.forEach(rn=>BY[rn]={}); RECORDS.forEach(rec=>{BY[rec.ramp][rec.date]=rec;});
+    // ออเดอร์จริง (reconcile เที่ยว/รถนอก) — degrade ได้ถ้ายังไม่ deploy
+    try{ const or=await fetch(GAS_URL+'?action=getRampOrders&userId='+encodeURIComponent(MY_UID)); const od=await or.json();
+      if(od.ok){ ORD_BY_RAMP={}; (od.orders||[]).forEach(o=>{(ORD_BY_RAMP[o.ramp]=ORD_BY_RAMP[o.ramp]||[]).push(o);}); Object.keys(ORD_BY_RAMP).forEach(k=>ORD_BY_RAMP[k].sort((x,y)=>x.date<y.date?1:-1)); }
+    }catch(e){}
     buildShell();
     window._rendered=true; render();
   }catch(e){$('#app').innerHTML='<div class="msg">ผิดพลาด: '+e+'</div>';}
@@ -228,15 +247,16 @@ function render(){ try{
   const prev=sliceDates(prevDates(),rampsInScope());
   const tSend=sum(rows,'send'),tBuy=sum(rows,'buy'),tLost=sum(rows,'lost'),tTrips=sum(rows,'trips'),tRaw=sum(rows,'rawCull'),tRspo=sum(rows,'rspo');
   const stockEnd=rows.length?rows[rows.length-1].stock:0;
-  const lossPct=tBuy?tLost/tBuy*100:0, kgTrip=tTrips?tSend/tTrips:0, rspoPct=tBuy?tRspo/tBuy*100:0;
+  const lossPct=tBuy?tLost/tBuy*100:0, rspoPct=tBuy?tRspo/tBuy*100:0;
+  const ordTotal=RAMPS.reduce((s,r)=>s+rampOrderStats(r).count,0), tripsShown=ordTotal>0?ordTotal:tTrips, kgTrip=tripsShown?tSend/tripsShown:0;
   const dl=(c,p,goodUp=true)=>{if(!p)return '<span class="delta" style="color:var(--muted)">รวมช่วง</span>';const d=(c-p)/p*100,good=goodUp?d>=0:d<0;return `<span class="delta ${good?'up':'down'}">${d>=0?'▲':'▼'} ${fmt(Math.abs(d),1)}%<span style="color:var(--muted);font-weight:600"> vs ก่อนหน้า</span></span>`;};
   const kpi=[
     {lbl:'ส่งโรงงาน',dot:'var(--send)',val:fmt(tSend),u:'ตัน',d:dl(tSend,sum(prev,'send'))},
     {lbl:'ซื้อเข้า',dot:'var(--buy)',val:fmt(tBuy),u:'ตัน',d:dl(tBuy,sum(prev,'buy'))},
     {lbl:'สต็อกค้างที่ลาน',dot:'var(--stock)',val:fmt(stockEnd),u:'ตัน',d:`<span class="delta" style="color:var(--stock)">≈ ${binsFor(stockEnd)} กระบะที่ต้องรับ</span>`},
     {lbl:'น้ำหนักหาย',dot:'var(--loss)',val:tLost>0?fmt(lossPct,2):'—',u:tLost>0?'%':'',d:tLost>0?`<span class="delta down">${fmt(tLost)} ตัน</span>`:'<span class="delta" style="color:var(--muted)">รอปิดรอบล้างลาน</span>',warn:tLost>0&&lossPct>1.5},
-    {lbl:'เที่ยวส่งโรงงาน',dot:'var(--accent)',val:fmt(tTrips),u:'เที่ยว',d:'<span class="delta" style="color:var(--muted)">รวมช่วง</span>'},
-    {lbl:'เฉลี่ย/เที่ยว',dot:'var(--accent)',val:fmt(kgTrip,1),u:'ตัน',d:'<span class="delta" style="color:var(--muted)">ประสิทธิภาพขน</span>'},
+    {lbl:'เที่ยวส่งโรงงาน',dot:'var(--accent)',val:fmt(tripsShown),u:'เที่ยว',d:`<span class="delta" style="color:var(--muted)">${ordTotal>0?'จากออเดอร์จริง':'กรอกมือ'}</span>`},
+    {lbl:'เฉลี่ย/เที่ยว',dot:'var(--accent)',val:fmt(kgTrip,1),u:'ตัน',d:'<span class="delta" style="color:var(--muted)">ต่อเที่ยว</span>'},
   ];
   $('#kpis').innerHTML=kpi.map(k=>`<div class="kpi ${k.warn?'warn':''}"><div class="lbl"><span class="dot" style="background:${k.dot}"></span>${k.lbl}</div><div class="val num">${k.val}<small>${k.u}</small></div>${k.d}</div>`).join('');
   const useBar = CHARTTYPE==='bar' || rows.length<2;
@@ -293,10 +313,11 @@ function drawBar(){
   svg.innerHTML=g;
   svg.querySelectorAll('.bhit').forEach(el=>{
     const show=ev=>{const d=data[+el.dataset.i],cx=ev.touches?ev.touches[0].clientX:ev.clientX,cy=ev.touches?ev.touches[0].clientY:ev.clientY;
-      tt.innerHTML=`<div class="d">${d.full}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(d.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r"><span><i style="background:var(--stock)"></i>ค้างลาน</span><b class="num">${fmt(d.stock)} ตัน</b></div><div class="r"><span style="color:var(--muted)">ต้องเรียกรับ</span><b class="num" style="color:var(--stock)">${dispatchText(d.stock)}</b></div>${d.send>0?`<div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:5px">${d.ord?`<span style="color:var(--muted)">${d.ord}${d.drv?' · '+d.drv:''}</span><b style="color:${d.taken?'var(--good)':'var(--loss)'}">${d.taken?'✓ รับแล้ว':'⏳ ยังไม่รับ'}</b>`:`<span style="color:var(--muted)">รถส่งโรงงาน</span><b style="color:var(--buy)">🚛 รถนอก</b>`}</div>`:''}`;
+      tt.innerHTML=`<div class="d">${d.full}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(d.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r"><span><i style="background:var(--stock)"></i>ค้างลาน</span><b class="num">${fmt(d.stock)} ตัน</b></div><div class="r"><span style="color:var(--muted)">ต้องเรียกรับ</span><b class="num" style="color:var(--stock)">${dispatchText(d.stock)}</b></div><div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:5px;justify-content:center"><span style="color:var(--accent);font-weight:700">👆 แตะดูออเดอร์ที่ขน</span></div>`;
       tt.style.opacity='1';let tx=cx+14;if(tx+185>innerWidth)tx=cx-195;tt.style.left=tx+'px';tt.style.top=(cy-10)+'px';};
     el.addEventListener('mousemove',show);el.addEventListener('mouseleave',()=>tt.style.opacity='0');
     el.addEventListener('touchstart',show,{passive:true});el.addEventListener('touchend',()=>tt.style.opacity='0');
+    el.style.cursor='pointer'; el.addEventListener('click',()=>{tt.style.opacity='0';openRampDrawer(perDay?SCOPE:data[+el.dataset.i].full);});
   });
 }
 function drawChart(rows){
@@ -337,14 +358,33 @@ function bindHover(svg){
 function rampAgg(ramp,dates){let send=0,buy=0,lost=0,stock=0,last=null,storedPct=0,ord='',taken=false,bins=0,drv='';dates.forEach(dt=>{const r=BY[ramp]&&BY[ramp][dt];if(r){send+=r.send/TON;buy+=r.buy/TON;lost+=(r.lost+(r.roundLoss||0))/TON;storedPct=Math.max(storedPct,r.roundLossPct||0,r.lossPct||0);if(r.orderId){ord=r.orderId;taken=!!r.taken;bins=r.bins||0;drv=r.ordDriver||'';}last=r;}});if(last)stock=last.stock/TON;
   let lossPct=buy?lost/buy*100:0, hasLoss=lost>0.0001; if(!hasLoss&&storedPct>0){lossPct=storedPct;hasLoss=true;}
   return {name:ramp,send,buy,lost,stock,lossPct,hasLoss,ord,taken,bins,drv};}
+// ออเดอร์จริงของลานในช่วงที่เลือก (reconcile รถบริษัท vs รถนอก)
+function rampOrdersInRange(ramp){const dts=curDates();if(!dts.length)return [];const a=dts[0],b=dts[dts.length-1];return (ORD_BY_RAMP[ramp]||[]).filter(o=>o.date>=a&&o.date<=b);}
+function rampOrderStats(ramp){const os=rampOrdersInRange(ramp);const tons=os.reduce((s,o)=>s+(o.weight||0),0)/TON;return {count:os.length,tons:tons,orders:os,last:os[0]||null};}
+function sumTile(k,v,c){return `<div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink2);font-weight:600">${k}</div><div style="font-size:14px;font-weight:800;color:${c};margin-top:2px">${v}</div></div>`;}
+function closeDrawer(){$('#ov').classList.remove('on');$('#dr').classList.remove('on');}
+function openRampDrawer(ramp){
+  const dts=curDates(), stats=rampOrderStats(ramp), agg=rampAgg(ramp,dts);
+  const sendTons=agg.send, ordTons=stats.tons, extTons=Math.max(0,sendTons-ordTons);
+  $('#drTitle').textContent=ramp;
+  let h=`<div style="font-size:12px;color:var(--ink2);margin-bottom:12px">${dts[0]||'-'} → ${dts[dts.length-1]||'-'}</div>`;
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">${sumTile('ส่งโรงงาน',fmt(sendTons)+' ตัน','var(--send)')}${sumTile('ออเดอร์บริษัท',stats.count+' เที่ยว · '+fmt(ordTons)+' ต','var(--good)')}${sumTile('รถนอก (ประเมิน)',fmt(extTons)+' ต · ~'+binsFor(extTons)+' กระบะ','var(--buy)')}${sumTile('ค้างลาน',dispatchText(agg.stock),'var(--stock)')}</div>`;
+  h+=`<div class="eyebrow" style="margin-bottom:6px">รายการออเดอร์ (${stats.count})</div>`;
+  if(!stats.orders.length)h+='<div style="color:var(--muted);font-size:13px;padding:8px 0">ไม่มีออเดอร์บริษัทในช่วงนี้ — น่าจะส่งด้วยรถนอกทั้งหมด 🚛</div>';
+  else stats.orders.forEach(o=>{const dd=o.date?o.date.slice(5).replace('-','/'):'';h+=`<div class="ordrow"><div><div class="id">${o.orderId}</div><div class="meta">${dd} · ${o.driver||'—'}${o.plate?' · '+o.plate:''}</div></div><div><div class="w">${o.weight?fmt(o.weight/TON,1)+' ต':'—'}</div><div class="st" style="color:${o.taken?'var(--good)':'var(--loss)'}">${o.taken?'✓ รับแล้ว':'⏳ ยังไม่รับ'}</div></div></div>`;});
+  if(extTons>0.5)h+=`<div class="ordrow" style="border-bottom:0"><div><div class="id" style="color:var(--buy)">🚛 รถนอก</div><div class="meta">ส่วนที่ส่งเกินออเดอร์บริษัท</div></div><div><div class="w" style="color:var(--buy)">${fmt(extTons,1)} ต</div><div class="st" style="color:var(--buy)">~${binsFor(extTons)} กระบะ</div></div></div>`;
+  $('#drBody').innerHTML=h;
+  $('#ov').classList.add('on');$('#dr').classList.add('on');
+}
 function drawRank(){
   const dts=curDates();
   const data=RAMPS.map(r=>rampAgg(r,dts)).filter(d=>d.buy>0||d.send>0).sort((a,b)=>b.send-a.send);
   const max=Math.max(...data.map(d=>d.send),1);
   $('#rank').innerHTML=data.map(d=>{const bad=d.hasLoss&&d.lossPct>1.5,hl=SCOPE!=='all'&&d.name===SCOPE?'style="font-weight:800;color:var(--accent)"':'';
     const chip=d.hasLoss?`<span class="chip ${bad?'bad':'ok'}" title="น้ำหนักหาย (ตอนล้างลาน)">${fmt(d.lossPct,1)}%</span>`:`<span class="chip" style="background:var(--panel);color:var(--muted)" title="ยังไม่มีข้อมูลหาย — คิดตอนล้างลาน">—</span>`;
-    const ordLine=d.ord?`<div style="font-size:9.5px;font-weight:700;color:${d.taken?'var(--good)':'var(--loss)'};white-space:nowrap" title="${d.ord}${d.drv?' · '+d.drv:''}">${d.taken?'✓ '+(d.drv||'คนขับรับแล้ว'):'⏳ ยังไม่รับงาน'}</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก (ไม่มีออเดอร์)</div>`:'');
-    return `<div class="rrow"><div class="rname" ${hl}>${d.name}${ordLine}</div><div class="bartrack"><div class="barfill" style="width:${(d.send/max*100).toFixed(1)}%"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(d.send)}</span>${chip}</div></div>`;}).join('')||'<div class="pnote" style="padding:10px 0">ไม่มีข้อมูลในช่วงนี้</div>';
+    const st=rampOrderStats(d.name);
+    const ordLine=st.count>0?`<div style="font-size:9.5px;font-weight:700;color:var(--good);white-space:nowrap">🚚 ${st.count} ออเดอร์ · แตะดู</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก · แตะดู</div>`:'');
+    return `<div class="rrow" onclick="openRampDrawer('${d.name}')"><div class="rname" ${hl}>${d.name}${ordLine}</div><div class="bartrack"><div class="barfill" style="width:${(d.send/max*100).toFixed(1)}%"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(d.send)}</span>${chip}</div></div>`;}).join('')||'<div class="pnote" style="padding:10px 0">ไม่มีข้อมูลในช่วงนี้</div>';
 }
 function drawInsights(rows,tot,lossPct,rspoPct){
   const dts=curDates(),n=rows.length||1;
