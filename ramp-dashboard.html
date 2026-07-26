@@ -374,8 +374,9 @@ function openRampDrawer(ramp){
   const list=rampDrawerOrders(ramp);
   const ordRow=o=>{const dd=o.date?o.date.slice(5).replace('-','/'):'';const bb=o.done?['✓ จบงาน','var(--good)']:(o.taken?['🚚 '+(o.driver||'รับแล้ว'),'var(--send)']:['⏳ รอคนขับรับ','var(--loss)']);return `<div class="ordrow"><div><div class="id">${o.orderId}</div><div class="meta">เข้ารับ ${dd} · ${o.driver||'—'}${o.plate?' · '+o.plate:''}</div></div><div><div class="w">${o.weight?fmt(o.weight/TON,1)+' ต':'—'}</div><div class="st" style="color:${bb[1]}">${bb[0]}</div></div></div>`;};
   const doneL=list.filter(o=>o.done).sort((a,b)=>a.date<b.date?1:-1), newL=list.filter(o=>!o.done).sort((a,b)=>a.date<b.date?1:-1);
-  if(newL.length)h+=`<div class="eyebrow" style="margin:2px 0 4px;color:var(--send)">🆕 งานใหม่ / กำลังทำ (${newL.length})</div>`+newL.map(ordRow).join('');
-  if(doneL.length)h+=`<div class="eyebrow" style="margin:${newL.length?'14px':'2px'} 0 4px">✓ จบงานแล้ว (${doneL.length})</div>`+doneL.map(ordRow).join('');
+  const secHead=(txt,c,mt)=>`<div style="font-size:13.5px;font-weight:800;color:${c};margin:${mt}px 0 6px;padding:5px 0 5px 9px;border-left:3px solid ${c};background:${c==='var(--send)'?'var(--sendSoft)':'var(--panel)'};border-radius:0 6px 6px 0">${txt}</div>`;
+  if(newL.length)h+=secHead('🆕 ออเดอร์ใหม่ / กำลังทำ ('+newL.length+')','var(--send)',2)+newL.map(ordRow).join('');
+  if(doneL.length)h+=secHead('✓ ออเดอร์วันนี้ที่จบแล้ว ('+doneL.length+')','var(--ink2)',newL.length?16:2)+doneL.map(ordRow).join('');
   if(!list.length)h+='<div style="color:var(--muted);font-size:13px;padding:8px 0">ยังไม่มีออเดอร์แจ้งขอรถ — ส่งรถนอก หรือยังไม่ได้ขอรถ 🚛</div>';
   if(extTons>0.5)h+=`<div class="ordrow" style="border-bottom:0;margin-top:8px"><div><div class="id" style="color:var(--buy)">🚛 รถนอก</div><div class="meta">ส่วนที่ส่งเกินออเดอร์บริษัท</div></div><div><div class="w" style="color:var(--buy)">${fmt(extTons,1)} ต</div><div class="st" style="color:var(--buy)">~${binsFor(extTons)} กระบะ</div></div></div>`;
   $('#drBody').innerHTML=h;
