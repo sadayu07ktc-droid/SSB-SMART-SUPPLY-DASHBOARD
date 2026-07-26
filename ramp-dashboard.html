@@ -264,11 +264,11 @@ function drawBar(){
   const dts=curDates(), perDay=(SCOPE!=='all');
   let data;
   if(!perDay){
-    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,ord:a.ord,taken:a.taken};})
+    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,ord:a.ord,taken:a.taken,drv:a.drv};})
       .filter(d=>d.buy>0||d.send>0||d.stock>0).sort((a,b)=>b.stock-a.stock);
   }else{
     data=dts.map(dt=>{const r=BY[SCOPE]&&BY[SCOPE][dt],dd=new Date(toMs(dt)),dl=dd.getUTCDate()+'/'+(dd.getUTCMonth()+1);
-      return {full:SCOPE+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,ord:r?r.orderId:'',taken:r?!!r.taken:false};})
+      return {full:SCOPE+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,ord:r?r.orderId:'',taken:r?!!r.taken:false,drv:r?(r.ordDriver||''):''};})
       .filter(d=>d.buy>0||d.send>0||d.stock>0);
   }
   if(!data.length){svg.innerHTML='<text x="450" y="150" text-anchor="middle" font-size="13" fill="var(--muted)">ไม่มีข้อมูลในช่วงนี้</text>';tt.style.opacity='0';return;}
@@ -293,7 +293,7 @@ function drawBar(){
   svg.innerHTML=g;
   svg.querySelectorAll('.bhit').forEach(el=>{
     const show=ev=>{const d=data[+el.dataset.i],cx=ev.touches?ev.touches[0].clientX:ev.clientX,cy=ev.touches?ev.touches[0].clientY:ev.clientY;
-      tt.innerHTML=`<div class="d">${d.full}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(d.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r"><span><i style="background:var(--stock)"></i>ค้างลาน</span><b class="num">${fmt(d.stock)} ตัน</b></div><div class="r"><span style="color:var(--muted)">ต้องเรียกรับ</span><b class="num" style="color:var(--stock)">${dispatchText(d.stock)}</b></div>${d.ord?`<div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:5px"><span style="color:var(--muted)">${d.ord}</span><b class="num" style="color:${d.taken?'var(--good)':'var(--loss)'}">${d.taken?'✓ คนขับรับแล้ว':'⏳ ยังไม่รับ'}</b></div>`:''}`;
+      tt.innerHTML=`<div class="d">${d.full}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(d.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r"><span><i style="background:var(--stock)"></i>ค้างลาน</span><b class="num">${fmt(d.stock)} ตัน</b></div><div class="r"><span style="color:var(--muted)">ต้องเรียกรับ</span><b class="num" style="color:var(--stock)">${dispatchText(d.stock)}</b></div>${d.send>0?`<div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:5px">${d.ord?`<span style="color:var(--muted)">${d.ord}${d.drv?' · '+d.drv:''}</span><b style="color:${d.taken?'var(--good)':'var(--loss)'}">${d.taken?'✓ รับแล้ว':'⏳ ยังไม่รับ'}</b>`:`<span style="color:var(--muted)">รถส่งโรงงาน</span><b style="color:var(--buy)">🚛 รถนอก</b>`}</div>`:''}`;
       tt.style.opacity='1';let tx=cx+14;if(tx+185>innerWidth)tx=cx-195;tt.style.left=tx+'px';tt.style.top=(cy-10)+'px';};
     el.addEventListener('mousemove',show);el.addEventListener('mouseleave',()=>tt.style.opacity='0');
     el.addEventListener('touchstart',show,{passive:true});el.addEventListener('touchend',()=>tt.style.opacity='0');
@@ -334,16 +334,16 @@ function bindHover(svg){
   function leave(){cross.setAttribute('opacity','0');tt.style.opacity='0';}
   hit.addEventListener('mousemove',move);hit.addEventListener('mouseleave',leave);hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('touchend',leave);
 }
-function rampAgg(ramp,dates){let send=0,buy=0,lost=0,stock=0,last=null,storedPct=0,ord='',taken=false,bins=0;dates.forEach(dt=>{const r=BY[ramp]&&BY[ramp][dt];if(r){send+=r.send/TON;buy+=r.buy/TON;lost+=(r.lost+(r.roundLoss||0))/TON;storedPct=Math.max(storedPct,r.roundLossPct||0,r.lossPct||0);if(r.orderId){ord=r.orderId;taken=!!r.taken;bins=r.bins||0;}last=r;}});if(last)stock=last.stock/TON;
+function rampAgg(ramp,dates){let send=0,buy=0,lost=0,stock=0,last=null,storedPct=0,ord='',taken=false,bins=0,drv='';dates.forEach(dt=>{const r=BY[ramp]&&BY[ramp][dt];if(r){send+=r.send/TON;buy+=r.buy/TON;lost+=(r.lost+(r.roundLoss||0))/TON;storedPct=Math.max(storedPct,r.roundLossPct||0,r.lossPct||0);if(r.orderId){ord=r.orderId;taken=!!r.taken;bins=r.bins||0;drv=r.ordDriver||'';}last=r;}});if(last)stock=last.stock/TON;
   let lossPct=buy?lost/buy*100:0, hasLoss=lost>0.0001; if(!hasLoss&&storedPct>0){lossPct=storedPct;hasLoss=true;}
-  return {name:ramp,send,buy,lost,stock,lossPct,hasLoss,ord,taken,bins};}
+  return {name:ramp,send,buy,lost,stock,lossPct,hasLoss,ord,taken,bins,drv};}
 function drawRank(){
   const dts=curDates();
   const data=RAMPS.map(r=>rampAgg(r,dts)).filter(d=>d.buy>0||d.send>0).sort((a,b)=>b.send-a.send);
   const max=Math.max(...data.map(d=>d.send),1);
   $('#rank').innerHTML=data.map(d=>{const bad=d.hasLoss&&d.lossPct>1.5,hl=SCOPE!=='all'&&d.name===SCOPE?'style="font-weight:800;color:var(--accent)"':'';
     const chip=d.hasLoss?`<span class="chip ${bad?'bad':'ok'}" title="น้ำหนักหาย (ตอนล้างลาน)">${fmt(d.lossPct,1)}%</span>`:`<span class="chip" style="background:var(--panel);color:var(--muted)" title="ยังไม่มีข้อมูลหาย — คิดตอนล้างลาน">—</span>`;
-    const ordLine=d.ord?`<div style="font-size:9.5px;font-weight:700;color:${d.taken?'var(--good)':'var(--loss)'};white-space:nowrap" title="${d.ord}">${d.taken?'✓ คนขับรับแล้ว':'⏳ ยังไม่รับงาน'}</div>`:'';
+    const ordLine=d.ord?`<div style="font-size:9.5px;font-weight:700;color:${d.taken?'var(--good)':'var(--loss)'};white-space:nowrap" title="${d.ord}${d.drv?' · '+d.drv:''}">${d.taken?'✓ '+(d.drv||'คนขับรับแล้ว'):'⏳ ยังไม่รับงาน'}</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก (ไม่มีออเดอร์)</div>`:'');
     return `<div class="rrow"><div class="rname" ${hl}>${d.name}${ordLine}</div><div class="bartrack"><div class="barfill" style="width:${(d.send/max*100).toFixed(1)}%"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(d.send)}</span>${chip}</div></div>`;}).join('')||'<div class="pnote" style="padding:10px 0">ไม่มีข้อมูลในช่วงนี้</div>';
 }
 function drawInsights(rows,tot,lossPct,rspoPct){
