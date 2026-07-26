@@ -94,8 +94,21 @@ const DET=[
   ['tire_cost_per_km','ยาง/กม.','บ.'],
   ['other_cost_per_km','อื่นๆ/กม.','บ.'],
   ['driver_allowance_trip','เบี้ยเลี้ยงคนขับ/เที่ยว','บ.'],
-  ['vehicle_price','ราคารถ','บ.']
+  ['vehicle_price','ราคารถ','บ.'],
+  ['usage_years','อายุใช้งาน (ปี)','ปี'],
+  ['salvage_value','ราคาซาก','บ.']
 ];
+// อายุรถ (ปี) จาก start_date — รองรับ d/m/y, y-m-d, และปี พ.ศ.
+function vehAge(sd){
+  if(!sd)return null; let s=String(sd).trim();
+  let m=s.match(/(\d{1,4})[\/\-.](\d{1,2})[\/\-.](\d{1,4})/); let y,mo,day;
+  if(m){ if(m[1].length===4){y=+m[1];mo=+m[2];day=+m[3];} else {day=+m[1];mo=+m[2];y=+m[3];} }
+  else { const d0=new Date(s); if(isNaN(d0))return null; return (Date.now()-d0.getTime())/3.15576e10; }
+  if(y>2400)y-=543; // พ.ศ.→ค.ศ.
+  const d=new Date(y,(mo||1)-1,day||1); if(isNaN(d))return null;
+  const yr=(Date.now()-d.getTime())/3.15576e10; return yr>=0?yr:null;
+}
+const fmtAge=y=>{const yy=Math.floor(y);const mm=Math.round((y-yy)*12);return yy+' ปี'+(mm?' '+mm+' ด.':'');};
 
 async function load(){
   const r=await fetch(GAS_URL+'?action=getCostBase&userId='+encodeURIComponent(MY_UID));
@@ -105,8 +118,9 @@ async function load(){
   DATA=d; render(); $('saveBar').style.display='flex'; $('cnt').textContent='🚚 '+d.count+' คัน';
 }
 
+const r4=v=>{const n=parseFloat(v);return isNaN(n)?(v==null?'':v):Math.round(n*10000)/10000;};
 function inp(cols,v,cls){
-  return cols.map(c=>`<label class="${cls||''}">${c[1]} ${c[2]?'('+c[2]+')':''}<input type="number" step="any" data-plate="${v.plate}" data-col="${c[0]}" value="${v[c[0]]==null?'':v[c[0]]}"></label>`).join('');
+  return cols.map(c=>`<label class="${cls||''}">${c[1]} ${c[2]?'('+c[2]+')':''}<input type="number" step="any" data-plate="${v.plate}" data-col="${c[0]}" value="${r4(v[c[0]])}"></label>`).join('');
 }
 
 function render(){
@@ -134,9 +148,19 @@ function render(){
   h+='<div id="list">';
   d.vehicles.forEach((v,i)=>{
     const mdl=[v.brand,v.model].filter(Boolean).join(' ')||v.vehicle_type||'';
+    const age=vehAge(v.start_date), uy=parseFloat(v.usage_years)||0;
+    let ageChip='', depNote='';
+    if(age!=null){
+      ageChip=`<span class="tag" title="เริ่มใช้ ${v.start_date||''}">🗓️ ${fmtAge(age)}</span>`;
+      if(uy>0){ const rem=uy-age;
+        depNote = rem>0
+          ? `<span class="tag" style="color:var(--warn)">ตัดค่าเสื่อมอีก ${rem.toFixed(1)} ปี</span>`
+          : `<span class="tag" style="color:var(--primary)">✓ ตัดค่าเสื่อมครบแล้ว</span>`;
+      }
+    }
     h+=`<div class="veh" data-key="${(v.plate+' '+mdl).toLowerCase()}">`
       +`<div class="vhead"><div><div class="plate">🚚 ${v.plate||'-'}</div><div class="vmodel">${mdl}</div></div>`
-      +`<span class="tag">${v.status||'ใช้งาน'}</span></div>`
+      +`<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end">${ageChip}${depNote}<span class="tag">${v.status||'ใช้งาน'}</span></div></div>`
       +`<div class="g3 key">${inp(KEY,v,'')}</div>`
       +`<div class="g3" style="margin-top:9px">${inp(CTX,v)}</div>`
       +`<span class="more" onclick="this.nextElementSibling.classList.toggle('on');this.textContent=this.nextElementSibling.classList.contains('on')?'▲ ซ่อนรายละเอียด':'▾ รายละเอียดต้นทุน'">▾ รายละเอียดต้นทุน</span>`

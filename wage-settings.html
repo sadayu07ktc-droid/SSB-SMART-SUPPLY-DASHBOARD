@@ -61,15 +61,30 @@ function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');setTi
 function goBack(){ if(history.length>1){history.back();} else {location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';} }
 
 // ป้ายชื่อ param กลาง
-const PLBL={run_rate_per_hr:'เลทค่าวิ่ง (บ./ชม.)',load_rate_per_hr:'ค่าขึ้น-ลง (บ./ชม.)',fuel_rate_wage:'เลทน้ำมันคิดค่าแรง (บ./ล.)',heavy_pct:'ถ่วงหนัก (%)',light_pct:'ถ่วงเบา (%)',bonus_pct:'โบนัส % ค่าเที่ยว',tarp_fee:'ค่าคลุมผ้าใบ (บ.)'};
-const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct','light_pct','bonus_pct','tarp_fee'];
+const PLBL={run_rate_per_hr:'เลทค่าวิ่ง (บ./ชม.)',load_rate_per_hr:'ค่าขึ้น-ลง (บ./ชม.)',fuel_rate_wage:'เลทน้ำมันคิดค่าแรง (บ./ล.)',heavy_pct:'ถ่วงหนัก (%)',light_pct:'ถ่วงเบา (%)',bonus_pct:'โบนัส % ค่าเที่ยว',tarp_fee:'ค่าคลุมผ้าใบ (บ.)',hooklift_fee:'ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง)',overnight_fee:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'};
+const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct','light_pct','bonus_pct','tarp_fee','hooklift_fee','overnight_fee'];
+
+// นิยาม toggle: [key, ป้าย, [[ค่า,ป้ายตัวเลือก],...], คำอธิบาย]
+const TOGDEF=[
+  ['weight_on','ถ่วงหนัก/เบา',[[1,'เปิด'],[0,'ปิด']],'ปิด = ทุกขาคิดเต็ม 100% ไม่แบ่ง 70/30'],
+  ['time_mode','วิธีคิดเวลาวิ่ง',[[0,'ขั้นบันได'],[1,'เหมาช่วงเดียว']],'ขั้นบันได = หั่นระยะตามช่วง (แนะนำ)'],
+  ['dist_source','ระยะที่ใช้คิด',[[0,'จริง'],[1,'ค่ากลาง']],'⚠️ ค่ากลางยังไม่พร้อม (รอ mapping สถานี) ใช้จริงไปก่อน'],
+  ['fuel_bench','เกณฑ์น้ำมัน',[[0,'หนัก-เบา'],[1,'ตามช่วงระยะ'],[2,'ค่าเดียว']],'ใช้ กม./ล. แบบไหนคิดลิตรตามเกณฑ์'],
+  ['fuel_adj_on','เพิ่ม/หักน้ำมัน',[[1,'เปิด'],[0,'ปิด']],'ปิด = ไม่คิดเพิ่ม/หักน้ำมันเลย'],
+  ['tarp_on','ค่าคลุมผ้าใบ',[[1,'เปิด'],[0,'ปิด']],'เปิดแล้วยังดูต่อประเภทงาน (ตารางล่าง) ว่าคิดไหม'],
+  ['bonus_on','โบนัส',[[1,'เปิด'],[0,'ปิด']],'ปิด = ไม่คิดโบนัส %'],
+  ['bonus_base','ฐานคิดโบนัส',[[0,'หลังน้ำมัน'],[1,'ก่อน (ค่าวิ่ง+ขึ้นลง)']],'ก่อน = คิด % จากค่าวิ่ง+ขึ้นลงเท่านั้น']
+];
+let TOG={};
 
 async function load(){
   const r=await fetch(GAS_URL+'?action=getWageSettings&userId='+encodeURIComponent(MY_UID));
   const d=await r.json();
   if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
   if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
-  DATA=d; render(); $('saveBar').style.display='flex';
+  DATA=d;
+  TOG=Object.assign({weight_on:1,time_mode:0,dist_source:0,fuel_bench:0,fuel_adj_on:1,tarp_on:1,bonus_on:1,bonus_base:0}, d.toggles||{});
+  render(); $('saveBar').style.display='flex';
 }
 
 function render(){
@@ -86,8 +101,21 @@ function render(){
 
   // param กลาง
   h+='<div class="card"><div class="ch">💵 ค่าตั้งกลาง (cost_params)</div><div class="grid">';
-  PORDER.forEach(k=>{ if(d.params[k]) h+=`<label>${PLBL[k]||k}<input type="number" step="any" data-p="${k}" value="${d.params[k].value}"></label>`; });
+  PORDER.forEach(k=>{ const val=d.params[k]?d.params[k].value:0; h+=`<label>${PLBL[k]||k}<input type="number" step="any" data-p="${k}" value="${val}"></label>`; });
   h+='</div></div>';
+
+  // ⑥ สวิตช์วิธีคิด (toggle) — คุมทั้งสูตรจริง + เครื่องคิดเลข
+  h+='<style>.seg{display:inline-flex;flex-wrap:wrap;gap:6px}.seg button{border:1px solid var(--line2);background:transparent;color:var(--txt2);border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}.seg button.on{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700}</style>';
+  h+='<div class="card"><div class="ch">🔀 สวิตช์วิธีคิด (มีผลกับเที่ยวที่คิดใหม่)</div>';
+  h+='<div class="note">ค่าเหล่านี้คุมทั้ง<b>ระบบจ่ายจริง</b>และ<b>เครื่องคิดเลข</b> — เปลี่ยนที่นี่ที่เดียว</div>';
+  TOGDEF.forEach(t=>{
+    const [key,label,opts,desc]=t;
+    const cur=TOG[key];
+    h+=`<div style="margin-bottom:11px"><div style="font-size:12.5px;font-weight:600;margin-bottom:4px">${label}</div><div class="seg">`;
+    opts.forEach(o=>{ h+=`<button type="button" data-tog="${key}" data-val="${o[0]}" class="${Number(cur)===o[0]?'on':''}">${o[1]}</button>`; });
+    h+=`</div><div class="note" style="margin:3px 0 0">${desc}</div></div>`;
+  });
+  h+='</div>';
 
   // เกณฑ์น้ำมัน + ความเร็ว ตามช่วง×รุ่น
   ['360','240'].forEach(m=>{
@@ -97,13 +125,13 @@ function render(){
     h+='<table><thead><tr><th>ช่วง (เพดาน กม.)</th><th>ความเร็ว</th><th>กม./ล.</th></tr></thead><tbody>';
     tiers.forEach(t=>{ h+=`<tr><td><input type="number" data-st="${m}|${t.seq}|max_km" value="${t.max_km==null?'':t.max_km}" placeholder="∞"> กม.</td><td><input type="number" data-st="${m}|${t.seq}|speed_kmph" value="${t.speed_kmph}"></td><td><input type="number" step="0.05" data-st="${m}|${t.seq}|kmpl" value="${t.kmpl}"></td></tr>`; });
     h+='</tbody></table>';
-    h+=`<div class="grid" style="margin-top:10px"><label>เกณฑ์รถหนัก (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_heavy" value="${fw.kmpl_heavy||''}"></label><label>เกณฑ์รถเบา (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_light" value="${fw.kmpl_light||''}"></label></div>`;
+    h+=`<div class="grid" style="margin-top:10px"><label>เกณฑ์รถหนัก (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_heavy" value="${fw.kmpl_heavy||''}"></label><label>เกณฑ์รถเบา (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_light" value="${fw.kmpl_light||''}"></label><label>เกณฑ์ค่าเดียว (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_single" value="${fw.kmpl_single||''}"></label></div>`;
     h+='</div>';
   });
 
-  // เวลาขึ้น-ลง ต่องาน
-  h+='<div class="card"><div class="ch">⏱️ เวลาขึ้น-ลง ต่อประเภทงาน (นาที)</div><table><thead><tr><th>งาน</th><th>ขึ้น</th><th>ลง</th></tr></thead><tbody>';
-  d.jobTypes.forEach(j=>{ h+=`<tr><td>${j.job_type}</td><td><input type="number" data-jt="${j.job_type}|up_min" value="${j.up_min}"></td><td><input type="number" data-jt="${j.job_type}|down_min" value="${j.down_min}"></td></tr>`; });
+  // เวลาขึ้น-ลง ต่องาน + คิดผ้าใบ?
+  h+='<div class="card"><div class="ch">⏱️ เวลาขึ้น-ลง + ค่าผ้าใบ ต่อประเภทงาน</div><div class="note">ขึ้น/ลง = นาที · ผ้าใบ = งานนี้คิดค่าคลุมผ้าใบไหม (ต้องเปิดสวิตช์ผ้าใบด้วย)</div><table><thead><tr><th>งาน</th><th>ขึ้น</th><th>ลง</th><th>ผ้าใบ</th></tr></thead><tbody>';
+  d.jobTypes.forEach(j=>{ const tp=(j.tarp===true||j.tarp==='t'||j.tarp==='true'); h+=`<tr><td>${j.job_type}</td><td><input type="number" data-jt="${j.job_type}|up_min" value="${j.up_min}"></td><td><input type="number" data-jt="${j.job_type}|down_min" value="${j.down_min}"></td><td><input type="checkbox" data-jtt="${j.job_type}" ${tp?'checked':''} style="width:20px;height:20px"></td></tr>`; });
   h+='</tbody></table></div>';
 
   // ราคาน้ำมันกลางวันนี้
@@ -119,12 +147,14 @@ function render(){
 
 async function save(){
   const params={}; document.querySelectorAll('[data-p]').forEach(i=>params[i.dataset.p]=parseFloat(i.value)||0);
+  Object.keys(TOG).forEach(k=>params[k]=Number(TOG[k]));   // toggle → cost_params (เข้ารหัสเลข)
   const stMap={};
   document.querySelectorAll('[data-st]').forEach(i=>{const[m,seq,f]=i.dataset.st.split('|');const k=m+'|'+seq;stMap[k]=stMap[k]||{model:m,seq:+seq};stMap[k][f]=(i.value===''?null:parseFloat(i.value));});
   const speedTier=Object.values(stMap);
   const fwMap={}; document.querySelectorAll('[data-fw]').forEach(i=>{const[m,f]=i.dataset.fw.split('|');fwMap[m]=fwMap[m]||{model:m};fwMap[m][f]=parseFloat(i.value)||0;});
   const fuelWeight=Object.values(fwMap);
   const jtMap={}; document.querySelectorAll('[data-jt]').forEach(i=>{const[j,f]=i.dataset.jt.split('|');jtMap[j]=jtMap[j]||{job_type:j};jtMap[j][f]=parseInt(i.value)||0;});
+  document.querySelectorAll('[data-jtt]').forEach(i=>{const j=i.dataset.jtt;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].tarp=i.checked;});
   const jobTypes=Object.values(jtMap);
   const fuelDaily=$('fpPrice').value?{date:$('fpDate').value,price:parseFloat($('fpPrice').value)}:null;
 
@@ -139,6 +169,8 @@ async function save(){
   $('saveBtn').textContent='💾 บันทึกเข้าฐาน';$('saveBtn').disabled=false;
 }
 $('saveBtn').onclick=save;
+// สลับ toggle (delegated — #body คงอยู่ถึง innerHTML เปลี่ยน)
+$('body').addEventListener('click',e=>{const b=e.target.closest('[data-tog]');if(!b)return;TOG[b.dataset.tog]=Number(b.dataset.val);render();});
 
 (async function(){
   try{
