@@ -190,7 +190,8 @@ async function save(){
     const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
     const d=await r.json();
     if(d.ok){toast('✅ บันทึกเข้าฐานแล้ว');}
-    else toast('❌ '+(d.error||d.denied?'ไม่มีสิทธิ์':'ผิดพลาด'));
+    else if(d.denied)toast('❌ ไม่มีสิทธิ์ (เฉพาะแอดมิน)');
+    else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'));
   }catch(e){toast('❌ '+e);}
   $('saveBtn').textContent='💾 บันทึกเข้าฐาน';$('saveBtn').disabled=false;
 }
