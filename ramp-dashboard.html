@@ -10,18 +10,18 @@
     --bg:#eef0ea; --panel:#f8f8f4; --card:#ffffff; --line:#dfe3da; --line2:#cdd3c6;
     --ink:#17201b; --ink2:#5c6b60; --muted:#8a978c;
     --accent:#1e7a4d; --send:#1e7a4d; --buy:#c98a1e; --loss:#c0492f; --good:#1e7a4d;
-    --sendSoft:rgba(30,122,77,.14); --buySoft:rgba(201,138,30,.14);
+    --sendSoft:rgba(30,122,77,.14); --buySoft:rgba(201,138,30,.14);--stock:#2f6ca8;--stockSoft:rgba(47,108,168,.14);
     --shadow:0 1px 2px rgba(20,40,25,.05),0 8px 24px -12px rgba(20,40,25,.12); --r:16px;
   }
   @media (prefers-color-scheme:dark){:root{
     --bg:#0e1512; --panel:#121b16; --card:#16211c; --line:#243029; --line2:#324034;
     --ink:#e7ece7; --ink2:#9fb0a3; --muted:#718476;
     --accent:#43b982; --send:#33a166; --buy:#bd8722; --loss:#e0705a; --good:#43b982;
-    --sendSoft:rgba(51,161,102,.16); --buySoft:rgba(189,135,34,.15);
+    --sendSoft:rgba(51,161,102,.16); --buySoft:rgba(189,135,34,.15);--stock:#3d92c4;--stockSoft:rgba(61,146,196,.16);
     --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
   }}
-  :root[data-theme="light"]{--bg:#eef0ea;--panel:#f8f8f4;--card:#fff;--line:#dfe3da;--line2:#cdd3c6;--ink:#17201b;--ink2:#5c6b60;--muted:#8a978c;--accent:#1e7a4d;--send:#1e7a4d;--buy:#c98a1e;--loss:#c0492f;--good:#1e7a4d;--sendSoft:rgba(30,122,77,.14);--buySoft:rgba(201,138,30,.14);--shadow:0 1px 2px rgba(20,40,25,.05),0 8px 24px -12px rgba(20,40,25,.12)}
-  :root[data-theme="dark"]{--bg:#0e1512;--panel:#121b16;--card:#16211c;--line:#243029;--line2:#324034;--ink:#e7ece7;--ink2:#9fb0a3;--muted:#718476;--accent:#43b982;--send:#33a166;--buy:#bd8722;--loss:#e0705a;--good:#43b982;--sendSoft:rgba(51,161,102,.16);--buySoft:rgba(189,135,34,.15);--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
+  :root[data-theme="light"]{--bg:#eef0ea;--panel:#f8f8f4;--card:#fff;--line:#dfe3da;--line2:#cdd3c6;--ink:#17201b;--ink2:#5c6b60;--muted:#8a978c;--accent:#1e7a4d;--send:#1e7a4d;--buy:#c98a1e;--loss:#c0492f;--good:#1e7a4d;--sendSoft:rgba(30,122,77,.14);--buySoft:rgba(201,138,30,.14);--stock:#2f6ca8;--stockSoft:rgba(47,108,168,.14);--shadow:0 1px 2px rgba(20,40,25,.05),0 8px 24px -12px rgba(20,40,25,.12)}
+  :root[data-theme="dark"]{--bg:#0e1512;--panel:#121b16;--card:#16211c;--line:#243029;--line2:#324034;--ink:#e7ece7;--ink2:#9fb0a3;--muted:#718476;--accent:#43b982;--send:#33a166;--buy:#bd8722;--loss:#e0705a;--good:#43b982;--sendSoft:rgba(51,161,102,.16);--buySoft:rgba(189,135,34,.15);--stock:#3d92c4;--stockSoft:rgba(61,146,196,.16);--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Thai","Sarabun",-apple-system,"Segoe UI",system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1160px;margin:0 auto;padding:22px 18px 60px}
@@ -133,8 +133,9 @@ $('#themeSeg').onclick=e=>{const b=e.target.closest('button');if(b)applyTheme(b.
 
 // ── ข้อมูลจริง ──
 let RECORDS=[], RAMPS=[], DATES=[], BY={};
-let RANGE=30, SCOPE='all';
+let RANGE=30, SCOPE='all', CHARTTYPE='line';
 const TON=1000; // kg → ตัน
+const CAP_TRAILER=25; // ตัน/พ่วง (โดยประมาณ — แก้ได้)
 const toMs=d=>{const p=d.split('-');return Date.UTC(+p[0],+p[1]-1,+p[2]);};
 
 async function boot(){
@@ -162,14 +163,14 @@ function buildShell(){
     <div class="panel">
       <div class="phead">
         <div><div class="eyebrow">แนวโน้มรายวัน</div><div class="ptitle" id="trendTitle">ซื้อเข้า เทียบ ส่งโรงงาน</div></div>
-        <div class="pnote" id="trendNote"></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="seg" id="chartSeg" style="padding:2px"><button data-c="line" class="on">📈 เส้น</button><button data-c="bar">📊 แท่ง</button></div>
+          <div class="pnote" id="trendNote"></div>
+        </div>
       </div>
-      <div class="legend">
-        <span class="lg"><i style="background:var(--buy)"></i>ซื้อเข้า</span>
-        <span class="lg"><i style="background:var(--send)"></i>ส่งโรงงาน</span>
-        <span class="lg" style="color:var(--muted)">พื้นที่ระหว่างเส้น = สะสมเข้าสต็อก</span>
-      </div>
-      <div class="chartwrap"><svg id="chart" viewBox="0 0 900 300" role="img" aria-label="แนวโน้มปาล์มซื้อเข้าและส่งโรงงานรายวัน"></svg></div>
+      <div class="legend" id="legend"></div>
+      <div id="stockBanner" style="margin:2px 18px 8px;padding:9px 13px;border-radius:11px;background:var(--stockSoft);display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13px"></div>
+      <div class="chartwrap"><svg id="chart" viewBox="0 0 900 300" role="img" aria-label="กราฟปาล์มซื้อเข้า ส่งโรงงาน ค้างลาน"></svg></div>
     </div>
     <div class="grid2">
       <div class="panel">
@@ -185,6 +186,7 @@ function buildShell(){
   sel.innerHTML='<option value="all">🌐 ภาพรวมทุกลาน</option>'+RAMPS.map(r=>`<option value="${r}">${r}</option>`).join('');
   sel.onchange=e=>{SCOPE=e.target.value;render();};
   $('#rangeSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('#rangeSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');RANGE=+b.dataset.r;render();};
+  $('#chartSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;CHARTTYPE=b.dataset.c;render();};
   $('#foot').textContent='ข้อมูลจริงจาก Log Ramp รายวัน · หน่วยตัน (แปลงจาก กก.) · '+DATES.length+' วันในระบบ';
 }
 
@@ -211,20 +213,45 @@ function render(){
   const kpi=[
     {lbl:'ส่งโรงงาน',dot:'var(--send)',val:fmt(tSend),u:'ตัน',d:dl(tSend,sum(prev,'send'))},
     {lbl:'ซื้อเข้า',dot:'var(--buy)',val:fmt(tBuy),u:'ตัน',d:dl(tBuy,sum(prev,'buy'))},
-    {lbl:'สต็อกค้างที่ลาน',dot:'var(--muted)',val:fmt(stockEnd),u:'ตัน',d:'<span class="delta" style="color:var(--muted)">ณ วันล่าสุด</span>'},
+    {lbl:'สต็อกค้างที่ลาน',dot:'var(--stock)',val:fmt(stockEnd),u:'ตัน',d:`<span class="delta" style="color:var(--stock)">≈ ${Math.max(0,Math.ceil(stockEnd/CAP_TRAILER))} พ่วงที่ต้องรับ</span>`},
     {lbl:'น้ำหนักหาย',dot:'var(--loss)',val:fmt(lossPct,2),u:'%',d:`<span class="delta down">${fmt(tLost)} ตัน</span>`,warn:lossPct>1.5},
     {lbl:'เที่ยวส่งโรงงาน',dot:'var(--accent)',val:fmt(tTrips),u:'เที่ยว',d:'<span class="delta" style="color:var(--muted)">รวมช่วง</span>'},
     {lbl:'เฉลี่ย/เที่ยว',dot:'var(--accent)',val:fmt(kgTrip,1),u:'ตัน',d:'<span class="delta" style="color:var(--muted)">ประสิทธิภาพขน</span>'},
   ];
   $('#kpis').innerHTML=kpi.map(k=>`<div class="kpi ${k.warn?'warn':''}"><div class="lbl"><span class="dot" style="background:${k.dot}"></span>${k.lbl}</div><div class="val num">${k.val}<small>${k.u}</small></div>${k.d}</div>`).join('');
-  $('#trendTitle').textContent=(SCOPE==='all'?'ทุกลาน':SCOPE)+' · ซื้อเข้า เทียบ ส่งโรงงาน';
-  $('#trendNote').textContent=rows.length+' วันล่าสุด · หน่วยตัน/วัน';
-  drawChart(rows); drawRank(); drawInsights(rows,{tSend,tBuy,tRaw,tRspo},lossPct,rspoPct);
+  const useBar = CHARTTYPE==='bar' || rows.length<2;
+  $('#trendTitle').textContent=(SCOPE==='all'?'ทุกลาน':SCOPE)+(useBar?' · สรุป ซื้อ/ส่ง/ค้างลาน':' · ซื้อเข้า เทียบ ส่งโรงงาน');
+  $('#trendNote').textContent=(RANGE===1?'วันนี้':rows.length+' วันล่าสุด')+' · หน่วยตัน';
+  $('#legend').innerHTML = useBar
+    ? '<span class="lg"><i style="background:var(--buy)"></i>ซื้อเข้า</span><span class="lg"><i style="background:var(--send)"></i>ส่งโรงงาน</span><span class="lg"><i style="background:var(--stock)"></i>ค้างลาน</span>'
+    : '<span class="lg"><i style="background:var(--buy)"></i>ซื้อเข้า</span><span class="lg"><i style="background:var(--send)"></i>ส่งโรงงาน</span><span class="lg" style="color:var(--muted)">พื้นที่ระหว่างเส้น = สะสมเข้าสต็อก</span>';
+  $('#chartSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===(useBar?'bar':'line')));
+  const trailers=Math.max(0,Math.ceil(stockEnd/CAP_TRAILER));
+  $('#stockBanner').innerHTML = stockEnd>0
+    ? `<span style="font-weight:700;color:var(--stock)">📦 ค้างลาน ${fmt(stockEnd)} ตัน</span><span style="font-weight:800;background:var(--stock);color:#fff;padding:2px 11px;border-radius:999px">≈ ${trailers} พ่วง</span><span style="color:var(--ink2)">ควรเรียกรถเข้ารับ · ประมาณ ${CAP_TRAILER} ตัน/พ่วง</span>`
+    : '<span style="color:var(--ink2)">✓ ไม่มีปาล์มค้างลาน</span>';
+  if(useBar) drawBar({buy:tBuy,send:tSend,stock:stockEnd}); else drawChart(rows);
+  drawRank(); drawInsights(rows,{tSend,tBuy,tRaw,tRspo},lossPct,rspoPct);
 }
 
 const W=900,H=300,PAD={l:44,r:54,t:16,b:26};
 function smooth(pts){if(pts.length<2)return pts.length?`M${pts[0].x},${pts[0].y}`:'';let d=`M${pts[0].x},${pts[0].y}`;for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;const c1x=p1.x+(p2.x-p0.x)/6,c1y=p1.y+(p2.y-p0.y)/6,c2x=p2.x-(p3.x-p1.x)/6,c2y=p2.y-(p3.y-p1.y)/6;d+=` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;}return d;}
 let CH={};
+// กราฟแท่ง 3 สี: ซื้อเข้า / ส่งโรงงาน / ค้างลาน (ใช้ตอน "วันนี้" หรือกดโหมดแท่ง)
+function drawBar(v){
+  const svg=$('#chart');
+  const items=[{k:'ซื้อเข้า',v:v.buy,c:'var(--buy)'},{k:'ส่งโรงงาน',v:v.send,c:'var(--send)'},{k:'ค้างลาน',v:v.stock,c:'var(--stock)'}];
+  const max=Math.max(...items.map(i=>i.v),1)*1.15, n=items.length, bw=120;
+  const gap=(W-PAD.l-PAD.r-n*bw)/(n+1), y=val=>PAD.t+(H-PAD.t-PAD.b)*(1-val/max), y0=y(0);
+  let g='';const ticks=4;
+  for(let t=0;t<=ticks;t++){const val=max*t/ticks,yy=y(val);g+=`<line x1="${PAD.l}" y1="${yy.toFixed(1)}" x2="${W-PAD.r}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${PAD.l-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(val)}</text>`;}
+  items.forEach((it,i)=>{const bx=PAD.l+gap+(bw+gap)*i,by=y(it.v),bh=Math.max(0,y0-by);
+    g+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="7" fill="${it.c}"/>`;
+    g+=`<text x="${(bx+bw/2).toFixed(1)}" y="${(by-9).toFixed(1)}" text-anchor="middle" font-size="16" font-weight="800" fill="var(--ink)">${fmt(it.v)}</text>`;
+    g+=`<text x="${(bx+bw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--ink2)">${it.k}</text>`;});
+  svg.innerHTML=g;
+  $('#tt').style.opacity='0';
+}
 function drawChart(rows){
   const svg=$('#chart');
   if(rows.length<2){svg.innerHTML='<text x="450" y="150" text-anchor="middle" font-size="13" fill="var(--muted)">ข้อมูลไม่พอวาดกราฟ</text>';return;}
