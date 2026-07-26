@@ -371,7 +371,9 @@ function openRampDrawer(ramp){
   h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">${sumTile('ส่งโรงงาน',fmt(sendTons)+' ตัน','var(--send)')}${sumTile('ออเดอร์บริษัท',stats.count+' เที่ยว · '+fmt(ordTons)+' ต','var(--good)')}${sumTile('รถนอก (ประเมิน)',fmt(extTons)+' ต · ~'+binsFor(extTons)+' กระบะ','var(--buy)')}${sumTile('ค้างลาน',dispatchText(agg.stock),'var(--stock)')}</div>`;
   h+=`<div class="eyebrow" style="margin-bottom:6px">รายการออเดอร์ (${stats.count})</div>`;
   if(!stats.orders.length)h+='<div style="color:var(--muted);font-size:13px;padding:8px 0">ไม่มีออเดอร์บริษัทในช่วงนี้ — น่าจะส่งด้วยรถนอกทั้งหมด 🚛</div>';
-  else stats.orders.forEach(o=>{const dd=o.date?o.date.slice(5).replace('-','/'):'';h+=`<div class="ordrow"><div><div class="id">${o.orderId}</div><div class="meta">${dd} · ${o.driver||'—'}${o.plate?' · '+o.plate:''}</div></div><div><div class="w">${o.weight?fmt(o.weight/TON,1)+' ต':'—'}</div><div class="st" style="color:${o.taken?'var(--good)':'var(--loss)'}">${o.taken?'✓ รับแล้ว':'⏳ ยังไม่รับ'}</div></div></div>`;});
+  else stats.orders.slice().sort((a,b)=>(a.done===b.done)?(a.date<b.date?1:-1):(a.done?-1:1)).forEach(o=>{const dd=o.date?o.date.slice(5).replace('-','/'):'';
+    const b=o.done?['✓ จบงาน','var(--good)']:(o.taken?['🚚 กำลังส่ง','var(--send)']:['⏳ รอคนขับรับ','var(--loss)']);
+    h+=`<div class="ordrow"><div><div class="id">${o.orderId}</div><div class="meta">เข้ารับ ${dd} · ${o.driver||'—'}${o.plate?' · '+o.plate:''}</div></div><div><div class="w">${o.weight?fmt(o.weight/TON,1)+' ต':'—'}</div><div class="st" style="color:${b[1]}">${b[0]}</div></div></div>`;});
   if(extTons>0.5)h+=`<div class="ordrow" style="border-bottom:0"><div><div class="id" style="color:var(--buy)">🚛 รถนอก</div><div class="meta">ส่วนที่ส่งเกินออเดอร์บริษัท</div></div><div><div class="w" style="color:var(--buy)">${fmt(extTons,1)} ต</div><div class="st" style="color:var(--buy)">~${binsFor(extTons)} กระบะ</div></div></div>`;
   $('#drBody').innerHTML=h;
   $('#ov').classList.add('on');$('#dr').classList.add('on');
