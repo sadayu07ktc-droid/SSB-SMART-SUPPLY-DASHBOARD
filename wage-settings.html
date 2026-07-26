@@ -105,14 +105,14 @@ function render(){
   h+='</div></div>';
 
   // ⑥ สวิตช์วิธีคิด (toggle) — คุมทั้งสูตรจริง + เครื่องคิดเลข
-  h+='<style>.seg{display:inline-flex;flex-wrap:wrap;gap:6px}.seg button{border:1px solid var(--line2);background:transparent;color:var(--txt2);border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}.seg button.on{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700}</style>';
+  h+='<style>.seg{display:inline-flex;flex-wrap:wrap;gap:6px}.seg button{border:1px solid var(--line2);background:transparent;color:var(--txt2);border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}.seg button.on{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700}.seg button.on.off{background:var(--danger);border-color:var(--danger)}</style>';
   h+='<div class="card"><div class="ch">🔀 สวิตช์วิธีคิด (มีผลกับเที่ยวที่คิดใหม่)</div>';
   h+='<div class="note">ค่าเหล่านี้คุมทั้ง<b>ระบบจ่ายจริง</b>และ<b>เครื่องคิดเลข</b> — เปลี่ยนที่นี่ที่เดียว</div>';
   TOGDEF.forEach(t=>{
     const [key,label,opts,desc]=t;
     const cur=TOG[key];
     h+=`<div style="margin-bottom:11px"><div style="font-size:12.5px;font-weight:600;margin-bottom:4px">${label}</div><div class="seg">`;
-    opts.forEach(o=>{ h+=`<button type="button" data-tog="${key}" data-val="${o[0]}" class="${Number(cur)===o[0]?'on':''}">${o[1]}</button>`; });
+    opts.forEach(o=>{ const off=(o[1]==='ปิด'); h+=`<button type="button" data-tog="${key}" data-val="${o[0]}" class="${Number(cur)===o[0]?'on':''} ${off?'off':''}">${o[1]}</button>`; });
     h+=`</div><div class="note" style="margin:3px 0 0">${desc}</div></div>`;
   });
   h+='</div>';
