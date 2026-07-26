@@ -203,7 +203,8 @@ function prevDates(){const n=RANGE;return DATES.slice(Math.max(0,DATES.length-2*
 function rampsInScope(){return SCOPE==='all'?RAMPS:[SCOPE];}
 function sum(rows,k){return rows.reduce((a,r)=>a+r[k],0);}
 
-function render(){
+function render(){ try{
+  $('#tt').style.opacity='0';   // กัน tooltip ค้างตอนสลับลาน
   const rows=sliceDates(curDates(),rampsInScope());
   const prev=sliceDates(prevDates(),rampsInScope());
   const tSend=sum(rows,'send'),tBuy=sum(rows,'buy'),tLost=sum(rows,'lost'),tTrips=sum(rows,'trips'),tRaw=sum(rows,'rawCull'),tRspo=sum(rows,'rspo');
@@ -230,27 +231,45 @@ function render(){
   $('#stockBanner').innerHTML = stockEnd>0
     ? `<span style="font-weight:700;color:var(--stock)">📦 ค้างลาน ${fmt(stockEnd)} ตัน</span><span style="font-weight:800;background:var(--stock);color:#fff;padding:2px 11px;border-radius:999px">≈ ${trailers} พ่วง</span><span style="color:var(--ink2)">ควรเรียกรถเข้ารับ · ประมาณ ${CAP_TRAILER} ตัน/พ่วง</span>`
     : '<span style="color:var(--ink2)">✓ ไม่มีปาล์มค้างลาน</span>';
-  if(useBar) drawBar({buy:tBuy,send:tSend,stock:stockEnd}); else drawChart(rows);
+  if(useBar) drawBar(); else drawChart(rows);
   drawRank(); drawInsights(rows,{tSend,tBuy,tRaw,tRspo},lossPct,rspoPct);
-}
+}catch(e){console.error('render error',e);} }
 
 const W=900,H=300,PAD={l:44,r:54,t:16,b:26};
 function smooth(pts){if(pts.length<2)return pts.length?`M${pts[0].x},${pts[0].y}`:'';let d=`M${pts[0].x},${pts[0].y}`;for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;const c1x=p1.x+(p2.x-p0.x)/6,c1y=p1.y+(p2.y-p0.y)/6,c2x=p2.x-(p3.x-p1.x)/6,c2y=p2.y-(p3.y-p1.y)/6;d+=` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;}return d;}
 let CH={};
-// กราฟแท่ง 3 สี: ซื้อเข้า / ส่งโรงงาน / ค้างลาน (ใช้ตอน "วันนี้" หรือกดโหมดแท่ง)
-function drawBar(v){
-  const svg=$('#chart');
-  const items=[{k:'ซื้อเข้า',v:v.buy,c:'var(--buy)'},{k:'ส่งโรงงาน',v:v.send,c:'var(--send)'},{k:'ค้างลาน',v:v.stock,c:'var(--stock)'}];
-  const max=Math.max(...items.map(i=>i.v),1)*1.15, n=items.length, bw=120;
-  const gap=(W-PAD.l-PAD.r-n*bw)/(n+1), y=val=>PAD.t+(H-PAD.t-PAD.b)*(1-val/max), y0=y(0);
+// กราฟแท่งต่อลาน — 1 ลาน = 1 แท่ง stacked 3 สี (ซื้อ/ส่ง/ค้างลาน) · เลขค้างลานเหนือแท่ง
+function drawBar(){
+  const svg=$('#chart'), tt=$('#tt');
+  const dts=curDates(), ramps=(SCOPE==='all'?RAMPS:[SCOPE]);
+  let data=ramps.map(r=>rampAgg(r,dts)).filter(d=>d.buy>0||d.send>0||d.stock>0);
+  if(!data.length){svg.innerHTML='<text x="450" y="150" text-anchor="middle" font-size="13" fill="var(--muted)">ไม่มีข้อมูลในช่วงนี้</text>';tt.style.opacity='0';return;}
+  data.sort((a,b)=>b.stock-a.stock);   // ค้างเยอะขึ้นก่อน (จัดรถง่าย)
+  const segs=[['buy','var(--buy)'],['send','var(--send)'],['stock','var(--stock)']];
+  const max=Math.max(...data.map(d=>d.buy+d.send+d.stock),1)*1.16;
+  const inner=W-PAD.l-PAD.r, n=data.length;
+  const bw=Math.max(24,Math.min(84,inner/n*0.6)), gap=(inner-n*bw)/(n+1);
+  const y=v=>PAD.t+(H-PAD.t-PAD.b)*(1-v/max);
   let g='';const ticks=4;
-  for(let t=0;t<=ticks;t++){const val=max*t/ticks,yy=y(val);g+=`<line x1="${PAD.l}" y1="${yy.toFixed(1)}" x2="${W-PAD.r}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${PAD.l-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(val)}</text>`;}
-  items.forEach((it,i)=>{const bx=PAD.l+gap+(bw+gap)*i,by=y(it.v),bh=Math.max(0,y0-by);
-    g+=`<rect x="${bx.toFixed(1)}" y="${by.toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="7" fill="${it.c}"/>`;
-    g+=`<text x="${(bx+bw/2).toFixed(1)}" y="${(by-9).toFixed(1)}" text-anchor="middle" font-size="16" font-weight="800" fill="var(--ink)">${fmt(it.v)}</text>`;
-    g+=`<text x="${(bx+bw/2).toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="12.5" font-weight="600" fill="var(--ink2)">${it.k}</text>`;});
+  for(let t=0;t<=ticks;t++){const v=max*t/ticks,yy=y(v);g+=`<line x1="${PAD.l}" y1="${yy.toFixed(1)}" x2="${W-PAD.r}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${PAD.l-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`;}
+  data.forEach((d,i)=>{
+    const bx=PAD.l+gap+(bw+gap)*i, cx=bx+bw/2; let acc=0;
+    segs.forEach(([k,c])=>{const val=d[k]; if(val<=0){acc+=val;return;} const top=y(acc+val), bot=y(acc), h=Math.max(0,bot-top-2);
+      g+=`<rect x="${bx.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="4" fill="${c}"/>`; acc+=val;});
+    const topY=y(acc);
+    g+=`<text x="${cx.toFixed(1)}" y="${(topY-7).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--stock)">${fmt(d.stock)}</text>`;
+    const nm=d.name.replace(/^ลาน\s?(ปาล์ม)?\s?/,'')||d.name, short=nm.length>9?nm.slice(0,8)+'…':nm;
+    g+=`<text x="${cx.toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="11" font-weight="600" fill="var(--ink2)">${short}</text>`;
+    g+=`<rect class="bhit" data-i="${i}" x="${bx.toFixed(1)}" y="${PAD.t}" width="${bw.toFixed(1)}" height="${(H-PAD.b-PAD.t).toFixed(1)}" fill="transparent"/>`;
+  });
   svg.innerHTML=g;
-  $('#tt').style.opacity='0';
+  svg.querySelectorAll('.bhit').forEach(el=>{
+    const show=ev=>{const d=data[+el.dataset.i],tr=Math.max(0,Math.ceil(d.stock/CAP_TRAILER)),cx=ev.touches?ev.touches[0].clientX:ev.clientX,cy=ev.touches?ev.touches[0].clientY:ev.clientY;
+      tt.innerHTML=`<div class="d">${d.name}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(d.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r"><span><i style="background:var(--stock)"></i>ค้างลาน</span><b class="num">${fmt(d.stock)} ตัน</b></div><div class="r"><span style="color:var(--muted)">ต้องเรียกรับ</span><b class="num" style="color:var(--stock)">≈ ${tr} พ่วง</b></div>`;
+      tt.style.opacity='1';let tx=cx+14;if(tx+185>innerWidth)tx=cx-195;tt.style.left=tx+'px';tt.style.top=(cy-10)+'px';};
+    el.addEventListener('mousemove',show);el.addEventListener('mouseleave',()=>tt.style.opacity='0');
+    el.addEventListener('touchstart',show,{passive:true});el.addEventListener('touchend',()=>tt.style.opacity='0');
+  });
 }
 function drawChart(rows){
   const svg=$('#chart');
