@@ -87,6 +87,26 @@ async function load(){
   render(); $('saveBar').style.display='flex';
 }
 
+// สรุปเกณฑ์ที่ใช้ตอนนี้ (อ่านจาก TOG + params) — chip สี: เขียว=เปิด แดง=ปิด น้ำเงิน=โหมด เทา=ไม่คิด
+function summaryHtml(){
+  const T=TOG, pv=(k,dd)=>DATA.params[k]?DATA.params[k].value:dd, on=n=>Number(T[n])!==0;
+  const chip=(val,tone)=>{const bg=tone==='off'?'var(--danger)':tone==='on'?'var(--primary)':tone==='none'?'#8a97a3':'#3b6fb0';
+    return `<span style="font-size:12px;font-weight:600;color:#fff;background:${bg};padding:2px 10px;border-radius:999px;white-space:nowrap">${val}</span>`;};
+  const row=(label,val,tone)=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;color:var(--txt2)">${label}</span>${chip(val,tone)}</div>`;
+  let r='';
+  r+=row('ถ่วงหนัก/เบา', on('weight_on')?`เปิด · หนัก ${pv('heavy_pct',70)}% / เบา ${pv('light_pct',30)}%`:'ปิด · ทุกขาเต็ม 100%', on('weight_on')?'on':'off');
+  r+=row('วิธีคิดเวลาวิ่ง', Number(T.time_mode)===1?'เหมาช่วงเดียว':'ขั้นบันไดตามระยะ', 'mode');
+  r+=row('ระยะที่ใช้คิด', Number(T.dist_source)===1?'ค่ากลาง':'ระยะจริง (เลขไมล์)', 'mode');
+  r+=row('เกณฑ์น้ำมัน', ({0:'ตามหนัก-เบา',1:'ตามช่วงระยะ',2:'ค่าเดียวต่อรุ่น'})[Number(T.fuel_bench)]||'ตามหนัก-เบา', 'mode');
+  r+=row('เพิ่ม/หักน้ำมัน', on('fuel_adj_on')?`เปิด · เลท ${pv('fuel_rate_wage',28)} บ./ล.`:'ปิด (ไม่คิดน้ำมัน)', on('fuel_adj_on')?'on':'off');
+  r+=row('ค่าคลุมผ้าใบ', on('tarp_on')?`เปิด · ${pv('tarp_fee',100)} บ. (เฉพาะงานที่ติ๊ก)`:'ปิด', on('tarp_on')?'on':'off');
+  r+=row('โบนัส', on('bonus_on')?`เปิด · ${pv('bonus_pct',10)}% · ฐาน${Number(T.bonus_base)===1?'ค่าวิ่ง+ขึ้นลง':'หลังน้ำมัน'}`:'ปิด', on('bonus_on')?'on':'off');
+  const hf=pv('hooklift_fee',0), ov=pv('overnight_fee',0);
+  r+=row('ค่ายกกระบะ (ฮุคลิฟท์)', hf>0?`${hf} บ./ครั้ง`:'ไม่คิด (0)', hf>0?'on':'none');
+  r+=row('ค่ารอขึ้นของข้ามคืน', ov>0?`${ov} บ./คืน`:'ไม่คิด (0)', ov>0?'on':'none');
+  return `<div class="card"><div class="ch">📋 สรุปเกณฑ์ที่ใช้คิดตอนนี้</div><div class="note">อัปเดตสดตามสวิตช์ด้านล่าง — คือเกณฑ์ที่<b>ระบบจ่ายจริง</b>ใช้คิดค่าแรงเที่ยวใหม่</div>${r}</div>`;
+}
+
 function render(){
   const d=DATA;
   let h='';
@@ -98,6 +118,9 @@ function render(){
     +'± น้ำมันคนขับ = (ลิตรตามเกณฑ์ − เติมจริง) × เลทน้ำมัน<br>'
     +'+ โบนัส % → <b>ค่าแรงสุทธิ</b> (ล็อก+snapshot ตอนจบงาน)'
     +'</div></div>';
+
+  // 📋 สรุปเกณฑ์ที่ใช้ตอนนี้ (อัปเดตสดตามสวิตช์ด้านล่าง)
+  h+=summaryHtml();
 
   // param กลาง
   h+='<div class="card"><div class="ch">💵 ค่าตั้งกลาง (cost_params)</div><div class="grid">';
