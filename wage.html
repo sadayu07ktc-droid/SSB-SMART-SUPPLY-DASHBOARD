@@ -56,6 +56,7 @@
       <label>ถึง<br><input type="date" id="to"></label>
       <label>คนขับ<br><select id="driver"><option value="">ทุกคน</option></select></label>
       <button class="btn" id="load">ค้นหา</button>
+      <button class="btn ghost" id="recalc" title="คิดค่าแรงใหม่ตามเงื่อนไขปัจจุบัน เฉพาะเที่ยวที่ยังไม่จ่าย">🔄 คำนวณใหม่</button>
       <button class="btn ghost" id="csv">⬇️ Excel</button>
     </div>
     <div class="kpis">
@@ -107,10 +108,10 @@ async function loadReport(){
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
   $('driver').innerHTML='<option value="">ทุกคน</option>'+ds.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
   if(!ROWS.length){$('tbl').innerHTML='<div class="msg">ไม่มีเที่ยวในช่วงที่เลือก</div>';return;}
-  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>สวน / ปลายทาง</th><th class="num">ค่าแรง</th><th>สถานะ</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>สวน / ปลายทาง</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
   ROWS.forEach((r,i)=>{
     const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
-    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${place}</td><td class="num"><b>${money(r.wage)}</b></td><td><span class="pill${r.locked?' lock':''}">${r.locked?'🔒 จ่ายแล้ว':'คำนวณ'}</span></td></tr>`;
+    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${place}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(ROWS[+tr.dataset.i].orderId));
@@ -194,7 +195,34 @@ function exportCsv(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
 }
 
+// คิดค่าแรงใหม่ตามเงื่อนไขปัจจุบัน — เฉพาะเที่ยวที่ยังไม่จ่าย (ล็อกแล้วข้าม)
+async function recomputeUnpaid(){
+  const ids=ROWS.filter(r=>!r.locked).map(r=>r.orderId);
+  if(!ids.length){alert('ไม่มีเที่ยวที่ยังไม่จ่ายให้คิดใหม่ (ที่จ่ายแล้วจะไม่ถูกแตะ)');return;}
+  if(!confirm('คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว (เฉพาะที่ยังไม่จ่าย) ตามเงื่อนไขปัจจุบัน?\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน'))return;
+  const b=$('recalc');b.textContent='กำลังคิด…';b.disabled=true;
+  try{
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:ids})});
+    const d=await r.json();
+    if(d.ok){await loadReport();alert('✅ คิดใหม่ '+d.done+' เที่ยว'+(d.skipped?' · ข้าม(จ่ายแล้ว) '+d.skipped:'')+(d.failed?' · ล้มเหลว '+d.failed:''));}
+    else alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
+  }catch(e){alert('❌ '+e);}
+  b.textContent='🔄 คำนวณใหม่';b.disabled=false;
+}
+// ติ๊ก "จ่ายแล้ว" = ล็อกค่าแรง (คำนวณใหม่จะไม่ทับ) · เอาติ๊กออก = ปลดล็อก
+async function togglePaid(orderId,checked,el){
+  el.disabled=true;
+  try{
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaid',userId:MY_UID,orderId,paid:checked})});
+    const d=await r.json();
+    if(d.ok){const row=ROWS.find(x=>x.orderId===orderId);if(row)row.locked=checked;const sp=el.parentNode.querySelector('span');if(sp){sp.textContent=checked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย';sp.style.color=checked?'var(--primary)':'var(--txt2)';}}
+    else{el.checked=!checked;alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));}
+  }catch(e){el.checked=!checked;alert('❌ '+e);}
+  el.disabled=false;
+}
+
 $('load').onclick=loadReport;
+$('recalc').onclick=recomputeUnpaid;
 $('csv').onclick=exportCsv;
 
 (function initDates(){
