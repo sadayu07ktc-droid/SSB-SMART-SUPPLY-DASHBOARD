@@ -284,7 +284,7 @@ function drawBar(){
   const dts=curDates(), perDay=(SCOPE!=='all');
   let data;
   if(!perDay){
-    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,hasOrd:rampOrderStats(a.name).count>0};})
+    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,hasOrd:rampDrawerOrders(a.name).length>0};})
       .filter(d=>d.buy>0||d.send>0||d.stock>0).sort((a,b)=>b.stock-a.stock);
   }else{
     data=dts.map(dt=>{const r=BY[SCOPE]&&BY[SCOPE][dt],dd=new Date(toMs(dt)),dl=dd.getUTCDate()+'/'+(dd.getUTCMonth()+1);
@@ -388,8 +388,8 @@ function drawRank(){
   const max=Math.max(...data.map(d=>d.send),1);
   $('#rank').innerHTML=data.map(d=>{const bad=d.hasLoss&&d.lossPct>1.5,hl=SCOPE!=='all'&&d.name===SCOPE?'style="font-weight:800;color:var(--accent)"':'';
     const chip=d.hasLoss?`<span class="chip ${bad?'bad':'ok'}" title="น้ำหนักหาย (ตอนล้างลาน)">${fmt(d.lossPct,1)}%</span>`:`<span class="chip" style="background:var(--panel);color:var(--muted)" title="ยังไม่มีข้อมูลหาย — คิดตอนล้างลาน">—</span>`;
-    const st=rampOrderStats(d.name);
-    const ordLine=st.count>0?`<div style="font-size:9.5px;font-weight:700;color:var(--good);white-space:nowrap">🚚 ${st.count} ออเดอร์ · แตะดู</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก · แตะดู</div>`:'');
+    const oc=rampDrawerOrders(d.name).length;
+    const ordLine=oc>0?`<div style="font-size:9.5px;font-weight:700;color:var(--good);white-space:nowrap">🔔 ${oc} ออเดอร์ · แตะดู</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก · แตะดู</div>`:'');
     return `<div class="rrow" onclick="openRampDrawer('${d.name}')"><div class="rname" ${hl}>${d.name}${ordLine}</div><div class="bartrack"><div class="barfill" style="width:${(d.send/max*100).toFixed(1)}%"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(d.send)}</span>${chip}</div></div>`;}).join('')||'<div class="pnote" style="padding:10px 0">ไม่มีข้อมูลในช่วงนี้</div>';
 }
 function drawInsights(rows,tot,lossPct,rspoPct){
