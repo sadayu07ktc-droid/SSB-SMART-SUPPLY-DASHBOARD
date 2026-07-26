@@ -102,8 +102,8 @@ function summaryHtml(){
   r+=row('ค่าคลุมผ้าใบ', on('tarp_on')?`เปิด · ${pv('tarp_fee',100)} บ. (เฉพาะงานที่ติ๊ก)`:'ปิด', on('tarp_on')?'on':'off');
   r+=row('โบนัส', on('bonus_on')?`เปิด · ${pv('bonus_pct',10)}% · ฐาน${Number(T.bonus_base)===1?'ค่าวิ่ง+ขึ้นลง':'หลังน้ำมัน'}`:'ปิด', on('bonus_on')?'on':'off');
   const hf=pv('hooklift_fee',0), ov=pv('overnight_fee',0);
-  r+=row('ค่ายกกระบะ (ฮุคลิฟท์)', hf>0?`${hf} บ./ครั้ง`:'ไม่คิด (0)', hf>0?'on':'none');
-  r+=row('ค่ารอขึ้นของข้ามคืน', ov>0?`${ov} บ./คืน`:'ไม่คิด (0)', ov>0?'on':'none');
+  r+=row('ค่ายกกระบะ (ฮุคลิฟท์)', hf>0?`${hf} บ./ครั้ง · เฉพาะงานที่ติ๊ก`:'ไม่คิด (0)', hf>0?'on':'none');
+  r+=row('ค่ารอขึ้นของข้ามคืน', ov>0?`${ov} บ./คืน · เฉพาะงานที่ติ๊ก`:'ไม่คิด (0)', ov>0?'on':'none');
   return `<div class="card"><div class="ch">📋 สรุปเกณฑ์ที่ใช้คิดตอนนี้</div><div class="note">อัปเดตสดตามสวิตช์ด้านล่าง — คือเกณฑ์ที่<b>ระบบจ่ายจริง</b>ใช้คิดค่าแรงเที่ยวใหม่</div>${r}</div>`;
 }
 
@@ -152,9 +152,10 @@ function render(){
     h+='</div>';
   });
 
-  // เวลาขึ้น-ลง ต่องาน + คิดผ้าใบ?
-  h+='<div class="card"><div class="ch">⏱️ เวลาขึ้น-ลง + ค่าผ้าใบ ต่อประเภทงาน</div><div class="note">ขึ้น/ลง = นาที · ผ้าใบ = งานนี้คิดค่าคลุมผ้าใบไหม (ต้องเปิดสวิตช์ผ้าใบด้วย)</div><table><thead><tr><th>งาน</th><th>ขึ้น</th><th>ลง</th><th>ผ้าใบ</th></tr></thead><tbody>';
-  d.jobTypes.forEach(j=>{ const tp=(j.tarp===true||j.tarp==='t'||j.tarp==='true'); h+=`<tr><td>${j.job_type}</td><td><input type="number" data-jt="${j.job_type}|up_min" value="${j.up_min}"></td><td><input type="number" data-jt="${j.job_type}|down_min" value="${j.down_min}"></td><td><input type="checkbox" data-jtt="${j.job_type}" ${tp?'checked':''} style="width:20px;height:20px"></td></tr>`; });
+  // เวลาขึ้น-ลง + รายการบวกต่อประเภทงาน (ผ้าใบ/ฮุคลิฟท์/ค้างคืน)
+  const jbool=v=>(v===true||v==='t'||v==='true');
+  h+='<div class="card"><div class="ch">⏱️ เวลาขึ้น-ลง + รายการบวก ต่อประเภทงาน</div><div class="note">ขึ้น/ลง = นาที · ติ๊ก = งานนี้คิดรายการนั้นไหม (ต้องเปิดสวิตช์/ตั้งค่าเงินด้วย) · ฮุคลิฟท์=งานปาล์ม · ค้างคืน=งาน Packing</div><table><thead><tr><th>งาน</th><th>ขึ้น</th><th>ลง</th><th>ผ้าใบ</th><th>ฮุคลิฟท์</th><th>ค้างคืน</th></tr></thead><tbody>';
+  d.jobTypes.forEach(j=>{ h+=`<tr><td>${j.job_type}</td><td><input type="number" data-jt="${j.job_type}|up_min" value="${j.up_min}"></td><td><input type="number" data-jt="${j.job_type}|down_min" value="${j.down_min}"></td><td><input type="checkbox" data-jtt="${j.job_type}" ${jbool(j.tarp)?'checked':''} style="width:20px;height:20px"></td><td><input type="checkbox" data-jth="${j.job_type}" ${jbool(j.hooklift)?'checked':''} style="width:20px;height:20px"></td><td><input type="checkbox" data-jto="${j.job_type}" ${jbool(j.overnight)?'checked':''} style="width:20px;height:20px"></td></tr>`; });
   h+='</tbody></table></div>';
 
   // ราคาน้ำมันกลางวันนี้
@@ -178,6 +179,8 @@ async function save(){
   const fuelWeight=Object.values(fwMap);
   const jtMap={}; document.querySelectorAll('[data-jt]').forEach(i=>{const[j,f]=i.dataset.jt.split('|');jtMap[j]=jtMap[j]||{job_type:j};jtMap[j][f]=parseInt(i.value)||0;});
   document.querySelectorAll('[data-jtt]').forEach(i=>{const j=i.dataset.jtt;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].tarp=i.checked;});
+  document.querySelectorAll('[data-jth]').forEach(i=>{const j=i.dataset.jth;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].hooklift=i.checked;});
+  document.querySelectorAll('[data-jto]').forEach(i=>{const j=i.dataset.jto;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].overnight=i.checked;});
   const jobTypes=Object.values(jtMap);
   const fuelDaily=$('fpPrice').value?{date:$('fpDate').value,price:parseFloat($('fpPrice').value)}:null;
 

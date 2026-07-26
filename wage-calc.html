@@ -201,6 +201,8 @@
   var GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
   var FUEL_BENCH={'360':3.2,'240':4.0};   // เกณฑ์ "ค่าเดียว" ต่อรุ่น (kmpl_single จาก DB)
   var JOB_TARP={'ปาล์ม':false,'Packing':true,'Bulk':true,'อื่นๆ':false}; // งานไหนคิดผ้าใบ (จาก DB)
+  var JOB_HOOKLIFT={'ปาล์ม':true};     // งานไหนคิดค่ายกกระบะ ฮุคลิฟท์ (จาก DB)
+  var JOB_OVERNIGHT={'Packing':true};  // งานไหนคิดค่าค้างคืน (จาก DB)
   var OFFICIAL=null;                       // ค่าทางการ (snapshot) สำหรับปุ่มรีเซ็ต
   var ORDERS=[
     {id:'ORD-260714-8454',driver:'ธนกร เริงไทสงค์',plate:'86-1685',brand:'ISUZU',model:'360',dest:'ลานวัฒนานคร',date:'2026-07-14',distActual:359,distCentral:350,heavyKm:179.1,lightKm:179.9,yardKm:100,yardHomeKm:79.1,litersFilled:113,qty:30360,extraCost:0,nights:0,lifts:2},
@@ -521,9 +523,8 @@
     {k:'groupAlloc',label:'วิธีปันส่วนหนัก/เบา',opts:[['leg2x','ระยะขา×2×% ✓ (มติ)']]},
     {k:'bonus10',label:'บวก % ค่าเที่ยว (หลังคิดน้ำมัน)',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'bonusBase',label:'ฐานคิดโบนัส',opts:[['base','ก่อน (ค่าวิ่ง+ขึ้นลง)'],['total','หลัง (ยอดรวมทั้งหมด)']]},
-    {k:'tarp',label:'ค่าคลุมผ้าใบ',opts:[[true,'เปิด'],[false,'ปิด']]},
-    {k:'overnight',label:'ค่ารอขึ้นของข้ามคืน',opts:[[true,'เปิด'],[false,'ปิด']]},
-    {k:'hooklift',label:'ค่ายกกระบะ (ฮุคลิฟท์)',opts:[[true,'เปิด'],[false,'ปิด']]}
+    {k:'tarp',label:'ค่าคลุมผ้าใบ',opts:[[true,'เปิด'],[false,'ปิด']]}
+    // ฮุคลิฟท์/ค้างคืน = ผูกต่อประเภทงาน (ปาล์ม/Packing) ไม่ใช่สวิตช์ — คิดอัตโนมัติเมื่อตั้งค่าเงิน
   ]; // toggle ค่าเสื่อม → ย้ายไปอยู่ท้าย drawer ต้นทุน
   var togBox=document.getElementById('tog');
   toggles.forEach(function(t){
@@ -650,8 +651,12 @@
     // ── รายการบวกโซนท้าย (เหมา/ตามจำนวน, toggle แยกตัว) ──
     var tripHasTarp=LEGS.some(function(l){return JOB_TARP[l.job];});      // งานในทริปนี้มีคิดผ้าใบไหม (ต่อประเภทงาน)
     var tarp=(T.tarp&&tripHasTarp)?P.tarpFee:0;                           // ค่าคลุมผ้าใบ = สวิตช์ × ต่อประเภทงาน
-    var overnight=T.overnight?Number(s.nights||0)*P.overnightFee:0;       // ค่ารอขึ้นของข้ามคืน = บ./คืน × จำนวนคืน
-    var hooklift=T.hooklift?Number(s.lifts||0)*P.hookliftFee:0;           // ค่ายกกระบะ (ฮุคลิฟท์) = บ./ครั้ง × จำนวนครั้ง (ขึ้น+ลง)
+    // ฮุคลิฟท์/ค้างคืน = ต่อประเภทงาน (ปาล์ม/Packing) · เหมา 1 ครั้ง-คืน/เที่ยว หรือ ×จำนวนที่กรอก — ให้ตรง backend
+    var jobHook=LEGS.some(function(l){return JOB_HOOKLIFT[l.job];});
+    var jobOv=LEGS.some(function(l){return JOB_OVERNIGHT[l.job];});
+    var nightsN=Number(s.nights)>0?Number(s.nights):1, liftsN=Number(s.lifts)>0?Number(s.lifts):1;
+    var overnight=(T.overnight&&jobOv)?nightsN*P.overnightFee:0;          // ค่ารอขึ้นของข้ามคืน = บ./คืน × จำนวนคืน
+    var hooklift=(T.hooklift&&jobHook)?liftsN*P.hookliftFee:0;            // ค่ายกกระบะ (ฮุคลิฟท์) = บ./ครั้ง × จำนวนครั้ง
     var extrasAll=tarp+overnight+hooklift;
     // บวกเพิ่ม % ของค่าเที่ยว — toggle ฐานคิด: 'base' = ก่อน (ค่าวิ่ง+ขึ้นลง) · 'total' = หลัง (ยอดรวมทั้งหมด)
     var wageBase=timeWage+loadWage;
@@ -722,8 +727,8 @@
     h+=row(lab,(fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.','color:'+(fa<0?'var(--danger)':'var(--success)')+';font-weight:600');
     if(c.loadWage>0)h+=row('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.','color:var(--success);font-weight:600');
     if(T.tarp)h+=row('ค่าคลุมผ้าใบ (เหมาต่อเที่ยว)','+'+money(c.tarp)+' บ.','color:var(--success);font-weight:600');
-    if(T.overnight)h+=row('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||0)+' คืน × '+P.overnightFee+')','+'+money(c.overnight)+' บ.','color:var(--success);font-weight:600');
-    if(T.hooklift)h+=row('ค่ายกกระบะ ฮุคลิฟท์ ('+Number(s.lifts||0)+' ครั้ง × '+P.hookliftFee+')','+'+money(c.hooklift)+' บ.','color:var(--success);font-weight:600');
+    if(c.overnight>0)h+=row('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||1)+' คืน × '+P.overnightFee+')','+'+money(c.overnight)+' บ.','color:var(--success);font-weight:600');
+    if(c.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์ ('+Number(s.lifts||1)+' ครั้ง × '+P.hookliftFee+')','+'+money(c.hooklift)+' บ.','color:var(--success);font-weight:600');
     if(T.bonus10)h+=row('บวกเพิ่ม '+P.bonusPct+'% '+(T.bonusBase==='base'?'(ฐาน: ค่าวิ่ง+ขึ้นลง '+money(c.bonusOn)+')':'(ฐาน: ยอดรวม '+money(c.bonusOn)+')'),'+'+money(c.bonus)+' บ.','color:var(--success);font-weight:600');
     document.getElementById('bd').innerHTML=h;
     var net=document.getElementById('net');net.textContent=money(c.net)+' บ.';net.className='amt '+(c.net>=0?'pos':'neg');
@@ -831,7 +836,7 @@
     var col={card:C('--card','#fff'),txt:C('--txt','#1a2530'),txt2:C('--txt2','#6b7785'),
       line:C('--line2','#cfd5db'),primary:C('--primary','#1f8a52'),danger:C('--danger','#c8352f')};
     var perLeg=legs.map(function(){return 80+23+32;});
-    var H=96+34+50+perLeg.reduce(function(a,b){return a+b;},0)+150+(T.bonus10?23:0)+(T.tarp?23:0)+(T.overnight?23:0)+(T.hooklift?23:0)+(c.loadWage>0?23:0);
+    var H=96+34+50+perLeg.reduce(function(a,b){return a+b;},0)+150+(T.bonus10?23:0)+(c.tarp>0?23:0)+(c.overnight>0?23:0)+(c.hooklift>0?23:0)+(c.loadWage>0?23:0);
     cv.width=W*dpr;cv.height=H*dpr;cv.style.height='auto';
     var x=cv.getContext('2d');x.scale(dpr,dpr);
     var F="'Segoe UI','Sarabun','Noto Sans Thai',sans-serif";
@@ -873,8 +878,8 @@
       (fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.',(fa<0?col.danger:col.primary),true);
     if(c.loadWage>0)R('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.',col.primary,true);
     if(T.tarp)R('ค่าคลุมผ้าใบ','+'+money(c.tarp)+' บ.',col.primary,true);
-    if(T.overnight)R('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||0)+' คืน)','+'+money(c.overnight)+' บ.',col.primary,true);
-    if(T.hooklift)R('ค่ายกกระบะ ฮุคลิฟท์ ('+Number(s.lifts||0)+' ครั้ง)','+'+money(c.hooklift)+' บ.',col.primary,true);
+    if(c.overnight>0)R('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||1)+' คืน)','+'+money(c.overnight)+' บ.',col.primary,true);
+    if(c.hooklift>0)R('ค่ายกกระบะ ฮุคลิฟท์ ('+Number(s.lifts||1)+' ครั้ง)','+'+money(c.hooklift)+' บ.',col.primary,true);
     if(T.bonus10)R('บวกเพิ่ม '+P.bonusPct+'% ของค่าเที่ยว','+'+money(c.bonus)+' บ.',col.primary,true);
     y+=6;x.strokeStyle=col.primary;x.lineWidth=1.5;x.beginPath();x.moveTo(PAD,y);x.lineTo(W-PAD,y);x.stroke();x.lineWidth=1;y+=30;
     x.save();x.translate(0,y);TX('ค่าแรงสุทธิ',15,PAD,col.txt,'700','left');
@@ -1029,7 +1034,8 @@
       SPEED_TIERS=Object.keys(bySeq).sort(function(a,b){return a-b;}).map(function(s){return bySeq[s];});
     }
     if(cfg.fuelWeight&&cfg.fuelWeight.length) cfg.fuelWeight.forEach(function(f){FUEL_WEIGHT[String(f.model)]={heavy:+f.kmpl_heavy,light:+f.kmpl_light};if(f.kmpl_single!=null)FUEL_BENCH[String(f.model)]=+f.kmpl_single;});
-    if(cfg.jobTypes&&cfg.jobTypes.length){JOB_TYPES={};cfg.jobTypes.forEach(function(j){JOB_TYPES[j.job_type]={up:+j.up_min,down:+j.down_min};JOB_TARP[j.job_type]=(j.tarp===true||j.tarp==='t'||j.tarp==='true');});}
+    if(cfg.jobTypes&&cfg.jobTypes.length){JOB_TYPES={};JOB_HOOKLIFT={};JOB_OVERNIGHT={};cfg.jobTypes.forEach(function(j){var b=function(v){return v===true||v==='t'||v==='true';};JOB_TYPES[j.job_type]={up:+j.up_min,down:+j.down_min};JOB_TARP[j.job_type]=b(j.tarp);JOB_HOOKLIFT[j.job_type]=b(j.hooklift);JOB_OVERNIGHT[j.job_type]=b(j.overnight);});}
+    T.hooklift=true; T.overnight=true;   // ฮุคลิฟท์/ค้างคืน = ผูกต่อประเภทงาน (ไม่ใช่สวิตช์) ให้ตรง backend
     P.benchmark=FUEL_BENCH[src().model]||FUEL_BENCH['360']||3.2;
   }
   function snapOfficial(){OFFICIAL={P:JSON.parse(JSON.stringify(P)),T:JSON.parse(JSON.stringify(T))};}
