@@ -57,6 +57,7 @@
       <label>คนขับ<br><select id="driver"><option value="">ทุกคน</option></select></label>
       <button class="btn" id="load">ค้นหา</button>
       <button class="btn ghost" id="recalc" title="คิดค่าแรงใหม่ตามเงื่อนไขปัจจุบัน เฉพาะเที่ยวที่ยังไม่จ่าย">🔄 คำนวณใหม่</button>
+      <button class="btn ghost" id="paidAll" title="ทำเครื่องหมายจ่ายแล้ว/ยกเลิก ทุกเที่ยวที่แสดงอยู่">☑️ จ่ายแล้วทั้งหมด</button>
       <button class="btn ghost" id="csv">⬇️ Excel</button>
     </div>
     <div class="kpis">
@@ -221,8 +222,33 @@ async function togglePaid(orderId,checked,el){
   el.disabled=false;
 }
 
+// จ่ายแล้ว/ยกเลิก ทุกเที่ยวที่แสดงอยู่ (ยิงครั้งเดียว)
+function updatePaidAllBtn(){
+  const b=$('paidAll'); if(!b)return;
+  const allLocked=ROWS.length>0&&ROWS.every(r=>r.locked);
+  b.textContent=allLocked?'☐ ยกเลิกจ่ายทั้งหมด':'☑️ จ่ายแล้วทั้งหมด';
+  b.disabled=!ROWS.length;
+}
+async function togglePaidAll(){
+  if(!ROWS.length)return;
+  const paid=!ROWS.every(r=>r.locked);   // ยังไม่ครบ → จ่ายทั้งหมด · ครบแล้ว → ยกเลิกทั้งหมด
+  const ids=ROWS.map(r=>r.orderId);
+  if(!confirm((paid?'ทำเครื่องหมาย "จ่ายแล้ว" ':'ยกเลิก "จ่ายแล้ว" ')+ids.length+' เที่ยวที่แสดงอยู่?'))return;
+  const b=$('paidAll');b.textContent='กำลังบันทึก…';b.disabled=true;
+  try{
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaidBulk',userId:MY_UID,orderIds:ids,paid})});
+    const d=await r.json();
+    if(d.ok){
+      ROWS.forEach(r=>r.locked=paid);
+      document.querySelectorAll('#tbl tbody input[type=checkbox]').forEach(cb=>{cb.checked=paid;const sp=cb.parentNode.querySelector('span');if(sp){sp.textContent=paid?'จ่ายแล้ว 🔒':'ยังไม่จ่าย';sp.style.color=paid?'var(--primary)':'var(--txt2)';}});
+    } else alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
+  }catch(e){alert('❌ '+e);}
+  updatePaidAllBtn();
+}
+
 $('load').onclick=loadReport;
 $('recalc').onclick=recomputeUnpaid;
+$('paidAll').onclick=togglePaidAll;
 $('csv').onclick=exportCsv;
 
 (function initDates(){
