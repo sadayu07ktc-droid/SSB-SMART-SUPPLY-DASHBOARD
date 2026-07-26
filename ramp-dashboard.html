@@ -284,11 +284,11 @@ function drawBar(){
   const dts=curDates(), perDay=(SCOPE!=='all');
   let data;
   if(!perDay){
-    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,hasOrd:rampDrawerOrders(a.name).length>0};})
+    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,hasOrd:rampDrawerOrders(a.name).some(o=>!o.done)};})
       .filter(d=>d.buy>0||d.send>0||d.stock>0).sort((a,b)=>b.stock-a.stock);
   }else{
     data=dts.map(dt=>{const r=BY[SCOPE]&&BY[SCOPE][dt],dd=new Date(toMs(dt)),dl=dd.getUTCDate()+'/'+(dd.getUTCMonth()+1);
-      return {full:SCOPE+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,hasOrd:(ORD_BY_RAMP[SCOPE]||[]).some(o=>o.date===dt)};})
+      return {full:SCOPE+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,hasOrd:(ORD_BY_RAMP[SCOPE]||[]).some(o=>o.date===dt&&!o.done)};})
       .filter(d=>d.buy>0||d.send>0||d.stock>0);
   }
   if(!data.length){svg.innerHTML='<text x="450" y="150" text-anchor="middle" font-size="13" fill="var(--muted)">ไม่มีข้อมูลในช่วงนี้</text>';tt.style.opacity='0';return;}
@@ -388,8 +388,8 @@ function drawRank(){
   const max=Math.max(...data.map(d=>d.send),1);
   $('#rank').innerHTML=data.map(d=>{const bad=d.hasLoss&&d.lossPct>1.5,hl=SCOPE!=='all'&&d.name===SCOPE?'style="font-weight:800;color:var(--accent)"':'';
     const chip=d.hasLoss?`<span class="chip ${bad?'bad':'ok'}" title="น้ำหนักหาย (ตอนล้างลาน)">${fmt(d.lossPct,1)}%</span>`:`<span class="chip" style="background:var(--panel);color:var(--muted)" title="ยังไม่มีข้อมูลหาย — คิดตอนล้างลาน">—</span>`;
-    const oc=rampDrawerOrders(d.name).length;
-    const ordLine=oc>0?`<div style="font-size:9.5px;font-weight:700;color:var(--good);white-space:nowrap">🔔 ${oc} ออเดอร์ · แตะดู</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก · แตะดู</div>`:'');
+    const os=rampDrawerOrders(d.name),pend=os.filter(o=>!o.done).length,dn=os.length-pend;
+    const ordLine=pend>0?`<div style="font-size:9.5px;font-weight:700;color:var(--send);white-space:nowrap">🔔 มีรถกำลังมา ${pend} · แตะดู</div>`:(dn>0?`<div style="font-size:9.5px;font-weight:700;color:var(--ink2);white-space:nowrap">✓ จบแล้ว ${dn} · แตะดู</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก · แตะดู</div>`:''));
     return `<div class="rrow" onclick="openRampDrawer('${d.name}')"><div class="rname" ${hl}>${d.name}${ordLine}</div><div class="bartrack"><div class="barfill" style="width:${(d.send/max*100).toFixed(1)}%"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(d.send)}</span>${chip}</div></div>`;}).join('')||'<div class="pnote" style="padding:10px 0">ไม่มีข้อมูลในช่วงนี้</div>';
 }
 function drawInsights(rows,tot,lossPct,rspoPct){
