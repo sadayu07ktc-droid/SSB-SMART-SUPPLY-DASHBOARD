@@ -188,10 +188,10 @@ $('ov').onclick=closeDr;
 
 function exportCsv(){
   if(!ROWS.length)return;
-  const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','สวน','ปลายทาง','ค่าแรง','ค่าวิ่ง','ขึ้น-ลง','น้ำมัน','สถานะ'];
+  const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','สวน','ปลายทาง','ค่าวิ่ง','ขึ้น-ลง','ผ้าใบ','ฮุคลิฟท์','ค้างคืน','น้ำมัน','โบนัส','ค่าแรงสุทธิ','สถานะ'];
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
   const lines=[head.map(q).join(',')];
-  ROWS.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,r.garden,r.dest,Math.round(r.wage),Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.fuelAdj),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
+  ROWS.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,r.garden,r.dest,Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
 }
