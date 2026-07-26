@@ -361,6 +361,8 @@ function rampAgg(ramp,dates){let send=0,buy=0,lost=0,stock=0,last=null,storedPct
 // ออเดอร์จริงของลานในช่วงที่เลือก (reconcile รถบริษัท vs รถนอก)
 function rampOrdersInRange(ramp){const dts=curDates();if(!dts.length)return [];const a=dts[0],b=dts[dts.length-1];return (ORD_BY_RAMP[ramp]||[]).filter(o=>o.date>=a&&o.date<=b);}
 function rampOrderStats(ramp){const os=rampOrdersInRange(ramp);const tons=os.reduce((s,o)=>s+(o.weight||0),0)/TON;return {count:os.length,tons:tons,orders:os,last:os[0]||null};}
+// ออเดอร์สำหรับ drawer = อยู่ในช่วง (จบงาน) + งานใหม่/ค้างที่ยังไม่จบ (แม้ pickup วันหน้า)
+function rampDrawerOrders(ramp){const dts=curDates();if(!dts.length)return ORD_BY_RAMP[ramp]||[];const a=dts[0],b=dts[dts.length-1];return (ORD_BY_RAMP[ramp]||[]).filter(o=>(o.date>=a&&o.date<=b)||(!o.done&&o.date>=a));}
 function sumTile(k,v,c){return `<div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink2);font-weight:600">${k}</div><div style="font-size:14px;font-weight:800;color:${c};margin-top:2px">${v}</div></div>`;}
 function closeDrawer(){$('#ov').classList.remove('on');$('#dr').classList.remove('on');}
 function openRampDrawer(ramp){
@@ -369,12 +371,13 @@ function openRampDrawer(ramp){
   $('#drTitle').textContent=ramp;
   let h=`<div style="font-size:12px;color:var(--ink2);margin-bottom:12px">${dts[0]||'-'} → ${dts[dts.length-1]||'-'}</div>`;
   h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">${sumTile('ส่งโรงงาน',fmt(sendTons)+' ตัน','var(--send)')}${sumTile('ออเดอร์บริษัท',stats.count+' เที่ยว · '+fmt(ordTons)+' ต','var(--good)')}${sumTile('รถนอก (ประเมิน)',fmt(extTons)+' ต · ~'+binsFor(extTons)+' กระบะ','var(--buy)')}${sumTile('ค้างลาน',dispatchText(agg.stock),'var(--stock)')}</div>`;
-  h+=`<div class="eyebrow" style="margin-bottom:6px">รายการออเดอร์ (${stats.count})</div>`;
-  if(!stats.orders.length)h+='<div style="color:var(--muted);font-size:13px;padding:8px 0">ไม่มีออเดอร์บริษัทในช่วงนี้ — น่าจะส่งด้วยรถนอกทั้งหมด 🚛</div>';
-  else stats.orders.slice().sort((a,b)=>(a.done===b.done)?(a.date<b.date?1:-1):(a.done?-1:1)).forEach(o=>{const dd=o.date?o.date.slice(5).replace('-','/'):'';
-    const b=o.done?['✓ จบงาน','var(--good)']:(o.taken?['🚚 กำลังส่ง','var(--send)']:['⏳ รอคนขับรับ','var(--loss)']);
-    h+=`<div class="ordrow"><div><div class="id">${o.orderId}</div><div class="meta">เข้ารับ ${dd} · ${o.driver||'—'}${o.plate?' · '+o.plate:''}</div></div><div><div class="w">${o.weight?fmt(o.weight/TON,1)+' ต':'—'}</div><div class="st" style="color:${b[1]}">${b[0]}</div></div></div>`;});
-  if(extTons>0.5)h+=`<div class="ordrow" style="border-bottom:0"><div><div class="id" style="color:var(--buy)">🚛 รถนอก</div><div class="meta">ส่วนที่ส่งเกินออเดอร์บริษัท</div></div><div><div class="w" style="color:var(--buy)">${fmt(extTons,1)} ต</div><div class="st" style="color:var(--buy)">~${binsFor(extTons)} กระบะ</div></div></div>`;
+  const list=rampDrawerOrders(ramp);
+  const ordRow=o=>{const dd=o.date?o.date.slice(5).replace('-','/'):'';const bb=o.done?['✓ จบงาน','var(--good)']:(o.taken?['🚚 '+(o.driver||'รับแล้ว'),'var(--send)']:['⏳ รอคนขับรับ','var(--loss)']);return `<div class="ordrow"><div><div class="id">${o.orderId}</div><div class="meta">เข้ารับ ${dd} · ${o.driver||'—'}${o.plate?' · '+o.plate:''}</div></div><div><div class="w">${o.weight?fmt(o.weight/TON,1)+' ต':'—'}</div><div class="st" style="color:${bb[1]}">${bb[0]}</div></div></div>`;};
+  const doneL=list.filter(o=>o.done).sort((a,b)=>a.date<b.date?1:-1), newL=list.filter(o=>!o.done).sort((a,b)=>a.date<b.date?1:-1);
+  if(newL.length)h+=`<div class="eyebrow" style="margin:2px 0 4px;color:var(--send)">🆕 งานใหม่ / กำลังทำ (${newL.length})</div>`+newL.map(ordRow).join('');
+  if(doneL.length)h+=`<div class="eyebrow" style="margin:${newL.length?'14px':'2px'} 0 4px">✓ จบงานแล้ว (${doneL.length})</div>`+doneL.map(ordRow).join('');
+  if(!list.length)h+='<div style="color:var(--muted);font-size:13px;padding:8px 0">ยังไม่มีออเดอร์แจ้งขอรถ — ส่งรถนอก หรือยังไม่ได้ขอรถ 🚛</div>';
+  if(extTons>0.5)h+=`<div class="ordrow" style="border-bottom:0;margin-top:8px"><div><div class="id" style="color:var(--buy)">🚛 รถนอก</div><div class="meta">ส่วนที่ส่งเกินออเดอร์บริษัท</div></div><div><div class="w" style="color:var(--buy)">${fmt(extTons,1)} ต</div><div class="st" style="color:var(--buy)">~${binsFor(extTons)} กระบะ</div></div></div>`;
   $('#drBody').innerHTML=h;
   $('#ov').classList.add('on');$('#dr').classList.add('on');
 }
