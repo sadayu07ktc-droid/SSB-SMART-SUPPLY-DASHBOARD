@@ -284,11 +284,11 @@ function drawBar(){
   const dts=curDates(), perDay=(SCOPE!=='all');
   let data;
   if(!perDay){
-    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,ord:a.ord,taken:a.taken,drv:a.drv};})
+    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,hasOrd:rampOrderStats(a.name).count>0};})
       .filter(d=>d.buy>0||d.send>0||d.stock>0).sort((a,b)=>b.stock-a.stock);
   }else{
     data=dts.map(dt=>{const r=BY[SCOPE]&&BY[SCOPE][dt],dd=new Date(toMs(dt)),dl=dd.getUTCDate()+'/'+(dd.getUTCMonth()+1);
-      return {full:SCOPE+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,ord:r?r.orderId:'',taken:r?!!r.taken:false,drv:r?(r.ordDriver||''):''};})
+      return {full:SCOPE+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,hasOrd:(ORD_BY_RAMP[SCOPE]||[]).some(o=>o.date===dt)};})
       .filter(d=>d.buy>0||d.send>0||d.stock>0);
   }
   if(!data.length){svg.innerHTML='<text x="450" y="150" text-anchor="middle" font-size="13" fill="var(--muted)">ไม่มีข้อมูลในช่วงนี้</text>';tt.style.opacity='0';return;}
@@ -305,7 +305,7 @@ function drawBar(){
     segs.forEach(([k,c])=>{const val=d[k]; if(val<=0){acc+=val;return;} const top=y(acc+val), bot=y(acc), h=Math.max(0,bot-top-2);
       g+=`<rect x="${bx.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(4,bw/2).toFixed(1)}" fill="${c}"/>`; acc+=val;});
     if(showNum&&d.stock>0)g+=`<text x="${cx.toFixed(1)}" y="${(y(acc)-7).toFixed(1)}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--stock)">${fmt(d.stock)}</text>`;
-    if(d.ord)g+=`<circle cx="${cx.toFixed(1)}" cy="${(y(acc)-(showNum?24:8)).toFixed(1)}" r="4" fill="${d.taken?'var(--good)':'var(--loss)'}"><title>${d.ord} — ${d.taken?'คนขับรับแล้ว':'ยังไม่รับ'}</title></circle>`;
+    if(d.hasOrd)g+=`<text x="${cx.toFixed(1)}" y="${(y(acc)-(showNum?25:9)).toFixed(1)}" text-anchor="middle" font-size="14">🔔<title>มีออเดอร์แจ้งขอรถแล้ว</title></text>`;
     let lbl=d.label; if(!perDay){lbl=(lbl.replace(/^ลาน\s?(ปาล์ม)?\s?/,'')||lbl);lbl=lbl.length>9?lbl.slice(0,8)+'…':lbl;}
     if(perDay?(i%lblStep===0):true)g+=`<text x="${cx.toFixed(1)}" y="${H-6}" text-anchor="middle" font-size="${perDay?'10':'11'}" font-weight="600" fill="var(--ink2)">${lbl}</text>`;
     g+=`<rect class="bhit" data-i="${i}" x="${bx.toFixed(1)}" y="${PAD.t}" width="${bw.toFixed(1)}" height="${(H-PAD.b-PAD.t).toFixed(1)}" fill="transparent"/>`;
