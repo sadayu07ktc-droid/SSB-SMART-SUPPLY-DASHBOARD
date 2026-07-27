@@ -43,8 +43,28 @@
     <div class="logo">⚙️</div>
     <div><h1>ตั้งค่าต้นทุน / ค่าแรง</h1><div class="sub">แก้แล้วบันทึกกลับฐานข้อมูล — มีผลกับเที่ยว<b>ที่คิดใหม่</b>เท่านั้น</div></div>
   </div>
+  <div id="tplbar"></div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
+<style>
+#tplbar{margin:14px 0 2px}
+.tplwrap{background:var(--card);border:1px solid var(--line2);border-radius:14px;padding:13px 15px}
+.tplhead{font-size:14px;font-weight:800;color:var(--txt);margin-bottom:10px}
+.tplsub{font-size:11.5px;font-weight:400;color:var(--txt2);margin-left:6px}
+.tplnote{font-size:12px;color:var(--txt2);line-height:1.6}
+.tchips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:11px}
+.tchip{display:inline-flex;align-items:center;border:1.5px solid var(--line2);border-radius:999px;overflow:hidden;background:var(--card)}
+.tchip.on{border-color:var(--primary)}
+.tchipname{font-family:inherit;font-size:12.5px;font-weight:700;color:var(--txt);background:none;border:0;padding:7px 13px;cursor:pointer}
+.tchip.on .tchipname{color:var(--primary);cursor:default}
+.tchipbadge{font-size:10px;font-weight:700;color:#fff;background:var(--primary);padding:2px 9px;border-radius:999px;margin-right:5px}
+.tchipx{font-family:inherit;font-size:12px;color:var(--txt2);background:none;border:0;padding:6px 10px 6px 3px;cursor:pointer}
+.tchipx:hover{color:var(--danger)}
+.tacts{display:flex;flex-wrap:wrap;gap:8px}
+.tbtn{font-family:inherit;font-size:12px;font-weight:600;color:var(--txt);background:var(--card);border:1px solid var(--line2);border-radius:9px;padding:7px 12px;cursor:pointer}
+.tbtn.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+.tbtn:hover{filter:brightness(.97)}
+</style>
 
 <div class="save" id="saveBar" style="display:none">
   <button class="btn ghost" onclick="location.reload()">ยกเลิก</button>
@@ -188,7 +208,8 @@ function render(){
   $('body').innerHTML=h;
 }
 
-async function save(){
+// รวบรวมค่าตั้งค่าปัจจุบันจากฟอร์ม → config 1 ชุด (ใช้ทั้ง save() และ template)
+function gatherConfig(){
   const params={}; document.querySelectorAll('[data-p]').forEach(i=>params[i.dataset.p]=parseFloat(i.value)||0);
   Object.keys(TOG).forEach(k=>params[k]=Number(TOG[k]));   // toggle → cost_params (เข้ารหัสเลข)
   WBITEMS.forEach(it=>params['wb_'+it[0]]=WB[it[0]]?1:0);  // drag-drop ฐานถ่วง → cost_params
@@ -205,9 +226,12 @@ async function save(){
   document.querySelectorAll('[data-jth]').forEach(i=>{const j=i.dataset.jth;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].hooklift=i.checked;});
   document.querySelectorAll('[data-jto]').forEach(i=>{const j=i.dataset.jto;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].overnight=i.checked;});
   const jobTypes=Object.values(jtMap);
+  return {params,speedTier,fuelWeight,jobTypes};
+}
+async function save(){
+  const cfg=gatherConfig();
   const fuelDaily=$('fpPrice').value?{date:$('fpDate').value,price:parseFloat($('fpPrice').value)}:null;
-
-  const payload={action:'saveWageSettings',userId:MY_UID,params,speedTier,fuelWeight,jobTypes,fuelDaily};
+  const payload=Object.assign({action:'saveWageSettings',userId:MY_UID,fuelDaily},cfg);
   $('saveBtn').textContent='กำลังบันทึก…';$('saveBtn').disabled=true;
   try{
     const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
@@ -217,6 +241,83 @@ async function save(){
     else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'));
   }catch(e){toast('❌ '+e);}
   $('saveBtn').textContent='💾 บันทึกเข้าฐาน';$('saveBtn').disabled=false;
+  loadTemplates();   // เผื่อ save ทับ config ที่ผูกกับชุด
+}
+
+// ═══════ 🧮 ชุดคำนวณค่าแรง (template) — เปิดใช้ทีละ 1 ชุด สลับได้ ═══════
+let TEMPLATES=[], ACTIVE_ID='';
+const escT=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function loadTemplates(){
+  try{const r=await fetch(GAS_URL+'?action=getWageTemplates&userId='+encodeURIComponent(MY_UID));const d=await r.json();
+    if(d&&d.ok){TEMPLATES=d.templates||[];ACTIVE_ID=d.activeId||'';}}catch(e){}
+  renderTemplates();
+}
+function renderTemplates(){
+  const bar=$('tplbar'); if(!bar)return;
+  if(!TEMPLATES.length){
+    bar.innerHTML=`<div class="tplwrap"><div class="tplhead">🧮 ชุดคำนวณค่าแรง</div>
+      <div class="tplnote">ยังไม่มีชุด — ตั้งค่าด้านล่างให้เรียบร้อย แล้วกด <b>➕ บันทึกเป็นชุดใหม่</b> เพื่อเก็บเป็นชุดที่ 1<br>
+      ต่อไปสร้างได้หลายชุด (ปกติ / หน้าฝน / ลูกค้า A) แล้วสลับ "เปิดใช้" ได้ — ระบบคิดค่าแรงเที่ยวใหม่ตามชุดที่เปิดใช้</div>
+      <div style="margin-top:10px"><button class="tbtn primary" onclick="saveAsTpl()">➕ บันทึกเป็นชุดใหม่ (จากค่าปัจจุบัน)</button></div></div>`;
+    return;
+  }
+  const active=TEMPLATES.find(t=>t.id===ACTIVE_ID)||TEMPLATES[0];
+  const chips=TEMPLATES.map(t=>{const on=t.id===ACTIVE_ID;
+    return `<span class="tchip ${on?'on':''}">
+      <button class="tchipname" onclick="activateTpl('${t.id}')" ${on?'disabled':''}>${on?'✓ ':''}${escT(t.name)}</button>
+      ${on?'<span class="tchipbadge">ใช้อยู่</span>':`<button class="tchipx" title="ลบชุดนี้" onclick="deleteTpl('${t.id}')">✕</button>`}
+    </span>`;}).join('');
+  bar.innerHTML=`<div class="tplwrap">
+    <div class="tplhead">🧮 ชุดคำนวณค่าแรง <span class="tplsub">คิดค่าแรงเที่ยวใหม่ตามชุดที่เปิดใช้</span></div>
+    <div class="tchips">${chips}</div>
+    <div class="tacts">
+      <button class="tbtn" onclick="saveAsTpl()">➕ เพิ่มชุดใหม่</button>
+      <button class="tbtn primary" onclick="overwriteTpl()">💾 บันทึกลงชุด “${escT(active.name)}”</button>
+      <button class="tbtn" onclick="renameTpl('${active.id}')">✏️ เปลี่ยนชื่อ</button>
+    </div>
+    <div class="tplnote" style="margin-top:9px">แก้ตั้งค่าด้านล่าง → กด <b>💾 บันทึกลงชุด</b> เพื่อเก็บเข้าชุดที่ใช้อยู่ · กดชิปชุดอื่นเพื่อสลับ</div>
+  </div>`;
+}
+async function activateTpl(id){
+  const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
+  if(!confirm('เปิดใช้ชุด "'+t.name+'"?\n\nระบบจะคิดค่าแรง "เที่ยวที่คิดใหม่" ตามชุดนี้\n(เที่ยวที่จ่าย/ล็อกแล้วไม่เปลี่ยน)'))return;
+  toast('กำลังเปิดใช้…');
+  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'activateWageTemplate',userId:MY_UID,id})});const d=await r.json();
+    if(d&&d.ok){ACTIVE_ID=id;toast('✅ เปิดใช้ชุด "'+t.name+'" แล้ว');await load();await loadTemplates();}
+    else toast('❌ '+((d&&d.error)||'เปิดใช้ไม่สำเร็จ'));
+  }catch(e){toast('❌ '+e);}
+}
+async function saveAsTpl(){
+  const name=prompt('ตั้งชื่อชุดใหม่ (เช่น สูตรปกติ / หน้าฝน / ลูกค้า A):','ชุดที่ '+(TEMPLATES.length+1));
+  if(name===null)return;
+  toast('กำลังบันทึก…');
+  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,name,config:gatherConfig()})});const d=await r.json();
+    if(d&&d.ok){toast('✅ บันทึกชุดใหม่แล้ว');await loadTemplates();}
+    else toast('❌ '+((d&&d.error)||'บันทึกไม่สำเร็จ'));
+  }catch(e){toast('❌ '+e);}
+}
+async function overwriteTpl(){
+  const t=TEMPLATES.find(x=>x.id===ACTIVE_ID); if(!t)return saveAsTpl();
+  if(!confirm('บันทึกค่าปัจจุบันลงชุด "'+t.name+'"?\n(ชุดนี้กำลังใช้อยู่ → ค่าแรงเที่ยวใหม่จะใช้ค่านี้ทันที)'))return;
+  toast('กำลังบันทึก…');
+  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:t.name,config:gatherConfig()})});const d=await r.json();
+    if(d&&d.ok){toast('✅ บันทึกลงชุด "'+t.name+'" แล้ว');await loadTemplates();}
+    else toast('❌ '+((d&&d.error)||'บันทึกไม่สำเร็จ'));
+  }catch(e){toast('❌ '+e);}
+}
+async function renameTpl(id){
+  const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
+  const name=prompt('เปลี่ยนชื่อชุด:',t.name); if(name===null||!name.trim())return;
+  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:name.trim(),config:t.config||gatherConfig()})});const d=await r.json();
+    if(d&&d.ok){toast('✅ เปลี่ยนชื่อแล้ว');await loadTemplates();}else toast('❌ '+((d&&d.error)||''));
+  }catch(e){toast('❌ '+e);}
+}
+async function deleteTpl(id){
+  const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
+  if(!confirm('ลบชุด "'+t.name+'"? ลบแล้วกู้คืนไม่ได้'))return;
+  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'deleteWageTemplate',userId:MY_UID,id})});const d=await r.json();
+    if(d&&d.ok){toast('ลบแล้ว');await loadTemplates();}else toast('❌ '+((d&&d.error)||''));
+  }catch(e){toast('❌ '+e);}
 }
 // เพิ่ม/ลบ ช่วงความเร็ว (sync ค่าปัจจุบันเข้า DATA ก่อน render ใหม่ กันค่าที่แก้หาย)
 function syncTiers(){document.querySelectorAll('[data-st]').forEach(i=>{const[m,seq,f]=i.dataset.st.split('|');const t=DATA.speedTier.find(x=>x.model===m&&String(x.seq)===seq);if(t)t[f]=(i.value===''?null:parseFloat(i.value));});}
@@ -239,7 +340,7 @@ $('body').addEventListener('click',e=>{const c=e.target.closest('[data-wb]');if(
     if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
     const p=await liff.getProfile(); MY_UID=p.userId||'';
     if(!MY_UID){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
-    load();
+    load(); loadTemplates();
   }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+e+'</div>';}
 })();
 </script>
