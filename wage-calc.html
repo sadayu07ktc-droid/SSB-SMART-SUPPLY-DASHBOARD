@@ -659,6 +659,13 @@
     var nightsN=Number(s.nights)>0?Number(s.nights):1, liftsN=Number(s.lifts)>0?Number(s.lifts):1;
     var overnight=(T.overnight&&jobOv)?nightsN*P.overnightFee:0;          // ค่ารอขึ้นของข้ามคืน = บ./คืน × จำนวนคืน
     var hooklift=(T.hooklift&&jobHook)?liftsN*P.hookliftFee:0;            // ค่ายกกระบะ (ฮุคลิฟท์) = บ./ครั้ง × จำนวนครั้ง
+    // ── ก้อนที่ลากเข้า "ฐานถ่วง 70/30" → × pctSum (ผลรวมสัดส่วนขา) แบบบอส · ตรงกับ backend ──
+    var wpctSum=T.weight?legs.reduce(function(a,l){return a+(l.pct||0)/100;},0):1;
+    loadWage=T.wbLoad?loadWage*wpctSum:loadWage;
+    tarp=T.wbTarp?tarp*wpctSum:tarp;
+    fuelAdj=T.wbFuel?fuelAdj*wpctSum:fuelAdj;
+    hooklift=T.wbHooklift?hooklift*wpctSum:hooklift;
+    overnight=T.wbOvernight?overnight*wpctSum:overnight;
     var extrasAll=tarp+overnight+hooklift;
     // บวกเพิ่ม % ของค่าเที่ยว — toggle ฐานคิด: 'base' = ก่อน (ค่าวิ่ง+ขึ้นลง) · 'total' = หลัง (ยอดรวมทั้งหมด)
     var wageBase=timeWage+loadWage;
@@ -1027,6 +1034,7 @@
     T.weight=_n(tg.weight_on,1)!==0;
     T.speedCalc=_n(tg.time_mode,0)===1?'flat':'stair';
     T.speedMode=_n(tg.speed_mode,0)===1?'gps':'tier';
+    T.wbLoad=_n(tg.wb_load,0)!==0; T.wbTarp=_n(tg.wb_tarp,0)!==0; T.wbFuel=_n(tg.wb_fuel,0)!==0; T.wbHooklift=_n(tg.wb_hooklift,0)!==0; T.wbOvernight=_n(tg.wb_overnight,0)!==0;
     T.distMode=_n(tg.dist_source,0)===1?'central':'actual';
     T.fuelBench=(function(v){return v===2?'single':(v===1?'tier':'weight');})(_n(tg.fuel_bench,0));
     T.fuelPenalty=_n(tg.fuel_adj_on,1)!==0; T.tarp=_n(tg.tarp_on,1)!==0;
