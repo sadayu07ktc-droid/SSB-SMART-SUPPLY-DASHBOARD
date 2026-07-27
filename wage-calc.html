@@ -196,9 +196,11 @@
   <div id="dBody"></div>
 </aside>
 
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script>
 (function(){
   var GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+  var LIFF_ID='2010274217-Ot7vGhri';
   var FUEL_BENCH={'360':3.2,'240':4.0};   // เกณฑ์ "ค่าเดียว" ต่อรุ่น (kmpl_single จาก DB)
   var JOB_TARP={'ปาล์ม':false,'Packing':true,'Bulk':true,'อื่นๆ':false}; // งานไหนคิดผ้าใบ (จาก DB)
   var JOB_HOOKLIFT={'ปาล์ม':true};     // งานไหนคิดค่ายกกระบะ ฮุคลิฟท์ (จาก DB)
@@ -1064,5 +1066,21 @@
   paintMode();buildSource();renderPattern();renderJobTimes();renderLegs();updateDeps();render();
   snapOfficial();      // สำรองค่า default ไว้ก่อน (เผื่อโหลด DB ไม่ได้ → รีเซ็ตยังทำงาน)
   loadConfig();        // แล้วดึงค่าทางการจริงมาทับ + รีเฟรช UI
+
+  // ── ดึงออเดอร์จริงมาแทนตัวอย่าง (โหมด "ดึงจากออเดอร์") — ต้อง login LINE (แอดมิน) ──
+  function loadRealOrders(){
+    if(typeof liff==='undefined')return;
+    liff.init({liffId:LIFF_ID}).then(function(){
+      if(!liff.isLoggedIn())return;   // ไม่บังคับ login — ใช้ตัวอย่างไปก่อน
+      return liff.getProfile().then(function(p){
+        return fetch(GAS_URL+'?action=getWageOrders&userId='+encodeURIComponent(p.userId||'')+'&limit=60').then(function(r){return r.json();}).then(function(d){
+          if(!d||!d.ok||!d.orders||!d.orders.length)return;
+          ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'ISUZU',model:String(o.model||'360'),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.distActual||0,heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0};});
+          T.ordIdx=0; if(T.mode==='order'){buildSource();renderLegs();render();}
+        });
+      });
+    }).catch(function(){});
+  }
+  loadRealOrders();
 })();
 </script>
