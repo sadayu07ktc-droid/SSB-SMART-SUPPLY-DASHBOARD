@@ -123,6 +123,19 @@
   .backbtn{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:13px;font-weight:600;color:#EAF3EF;background:rgba(255,255,255,.12);border:1px solid rgba(143,201,185,.4);border-radius:10px;padding:8px 13px;cursor:pointer}
   .backbtn:hover{background:rgba(255,255,255,.22)}
   .count{font-size:12.5px;color:#BFE3D8;white-space:nowrap}
+  /* 👁️ สวิตช์ตรวจสอบสิทธิ์เข้าดูแดชบอร์ด (ในหัวข้อ) */
+  .authtog{display:inline-flex;align-items:center;gap:9px;font-family:inherit;cursor:pointer;
+    border-radius:999px;padding:7px 13px 7px 11px;font-size:12.5px;font-weight:600;white-space:nowrap;
+    border:1px solid rgba(143,201,185,.4);background:rgba(255,255,255,.10);color:#EAF3EF;transition:.15s}
+  .authtog:hover{background:rgba(255,255,255,.2)}
+  .authtog[disabled]{opacity:.5;cursor:wait}
+  .authtog .sw{width:34px;height:19px;border-radius:999px;background:rgba(255,255,255,.25);position:relative;flex:none;transition:background .18s}
+  .authtog .sw::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;border-radius:50%;background:#fff;transition:left .18s}
+  .authtog.on  .sw{background:#3FBE72}       .authtog.on  .sw::after{left:17px}
+  .authtog.off .sw{background:#F2C14E}       .authtog.off .sw::after{left:2px}
+  .authtog .txt{display:flex;flex-direction:column;line-height:1.15;text-align:left}
+  .authtog .txt small{font-size:10px;font-weight:500;opacity:.8}
+  .authtog.off{border-color:#F2C14E;background:rgba(242,193,78,.16)}
   .empty{grid-column:1/-1;padding:40px 20px;text-align:center;color:var(--ink-faint);font-size:14px}
   /* ── สีประจำประเภทแอดมิน ── */
   :root{
@@ -183,7 +196,9 @@
 <header><div class="bar">
   <button class="backbtn" onclick="goBack()">← กลับ</button>
   <div><div class="eyebrow">SSB Smart Supply · Users &amp; Roles</div><h1>ตั้งค่าสิทธิ์แอดมิน</h1></div>
-  <div class="spacer"></div><span class="count" id="cnt"></span>
+  <div class="spacer"></div>
+  <button class="authtog" id="authTog" onclick="toggleDashAuth()" style="display:none"></button>
+  <span class="count" id="cnt"></span>
 </div></header>
 
 <main>
@@ -203,6 +218,7 @@
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
 let MY_UID='', ADMINS=[], NOTIFY_N=0, IDX=-1, D=null, BUSY=false;
+let DASH_AUTH=true, AUTH_BUSY=false;   // 👁️ สวิตช์ตรวจสอบสิทธิ์เข้าดูแดชบอร์ด
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -231,6 +247,43 @@ async function load(){
   $('#gate').style.display='none';
   if(!res.ok){ $('#list').innerHTML=`<div class="empty">${esc(res.error||'โหลดข้อมูลไม่สำเร็จ')}</div>`; return; }
   ADMINS=res.admins||[]; NOTIFY_N=res.notifyCount||0; render();
+  loadDashAuth();
+}
+
+/* 👁️ สวิตช์ตรวจสอบสิทธิ์เข้าดูแดชบอร์ด — ปิด=คนล็อกอิน LINE ดูได้ (อ่านอย่างเดียว) */
+function renderAuthTog(){
+  const b=$('#authTog'); if(!b) return;
+  b.style.display='inline-flex';
+  const on=DASH_AUTH;
+  b.className='authtog '+(on?'on':'off');
+  b.disabled=AUTH_BUSY;
+  b.innerHTML=`<span style="font-size:14px">${on?'🔒':'🔓'}</span><span class="sw"></span>
+    <span class="txt"><span>${on?'ตรวจสิทธิ์เข้าดู: เปิด':'เปิดให้ดู: ทุกคนล็อกอิน'}</span>
+    <small>${on?'เฉพาะแอดมินเข้าดูแดชบอร์ด':'คนล็อกอิน LINE ดูได้ · จัดการยังล็อก'}</small></span>`;
+  b.title=on?'ตอนนี้ต้องเป็นแอดมินถึงจะเข้าดูแดชบอร์ดได้ — กดเพื่อเปิดให้คนล็อกอิน LINE เข้าดู (อ่านอย่างเดียว)'
+            :'ตอนนี้ใครล็อกอิน LINE ก็เข้าดูแดชบอร์ดได้ — กดเพื่อจำกัดเฉพาะแอดมิน';
+}
+async function loadDashAuth(){
+  try{ const r=await api({action:'getDashAuth'}); if(r&&r.ok){ DASH_AUTH=!!r.dashAuthOn; } }
+  catch(e){}
+  renderAuthTog();
+}
+async function toggleDashAuth(){
+  if(AUTH_BUSY) return;
+  const next=!DASH_AUTH;
+  if(!next && !confirm('ปิดการตรวจสอบสิทธิ์เข้าดูแดชบอร์ด?\n\n'+
+      '• ทุกคนที่ล็อกอิน LINE จะเปิดดูแดชบอร์ดได้ (อ่านอย่างเดียว)\n'+
+      '• ปุ่มแก้ไข/อนุมัติ/ลบ/ค่าแรง/ตั้งค่าสิทธิ์ ยังล็อกเฉพาะแอดมินเสมอ\n\nยืนยันเปิดให้ดู?')) return;
+  AUTH_BUSY=true; renderAuthTog();
+  try{
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setDashAuth',userId:MY_UID,on:next})});
+    const d=await r.json();
+    if(d&&d.ok){ DASH_AUTH=!!d.dashAuthOn;
+      toast(DASH_AUTH?'🔒 จำกัดเฉพาะแอดมินแล้ว':'🔓 เปิดให้คนล็อกอิน LINE เข้าดูได้แล้ว'); }
+    else if(d&&d.denied) toast('❌ ต้องเป็นแอดมินเท่านั้น',true);
+    else toast('❌ '+((d&&d.error)||'สลับไม่สำเร็จ'),true);
+  }catch(e){ toast('❌ '+e,true); }
+  AUTH_BUSY=false; renderAuthTog();
 }
 
 function render(){
