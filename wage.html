@@ -177,6 +177,15 @@ function renderRaw(raw,row){
     h+='<div class="sec" style="color:var(--txt2)">'+g.t+'</div>';
     ks.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});
   });
+  // 📏 ระยะทาง — จับ ระยะเบา/ระยะหนัก/%วิ่งหนัก + คำนวณ "รวมระยะทาง"
+  const distKeys=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k])&&/ระยะเบา|ระยะหนัก|%วิ่งหนัก/.test(k));
+  if(distKeys.length){
+    h+='<div class="sec" style="color:var(--txt2)">📏 ระยะทาง (กม.)</div>';
+    let sum=0,hasDist=false;
+    distKeys.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));
+      if(/ระยะ/.test(k)&&/เบา|หนัก/.test(k)){const n=parseFloat(String(raw[k]).replace(/,/g,''));if(!isNaN(n)){sum+=n;hasDist=true;}}});
+    if(hasDist)h+=row('รวมระยะทาง (กม.)','<b>'+sum.toLocaleString('th-TH',{maximumFractionDigits:1})+'</b>','font-weight:700;color:var(--txt)');
+  }
   const rest=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k]));
   if(rest.length){h+='<div class="sec" style="color:var(--txt2)">📝 อื่นๆ</div>';rest.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});}
   const photos=Object.keys(raw).filter(k=>!SKIP[k]&&isUrl(raw[k]));
