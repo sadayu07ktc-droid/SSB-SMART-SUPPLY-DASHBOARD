@@ -369,20 +369,57 @@ function closeDrawer(){$('#ov').classList.remove('on');$('#dr').classList.remove
 const _THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
 const _THDOW=['อา','จ','อ','พ','พฤ','ศ','ส'];
 function billDate(iso){const p=String(iso||'').split('-');if(p.length<3)return iso||'-';const y=+p[0],m=+p[1],d=+p[2];const dt=new Date(y,m-1,d);const dow=isNaN(dt)?'':_THDOW[dt.getDay()]+'. ';return dow+d+' '+(_THMON[m-1]||'')+' '+y;}
-// 🧾 การ์ดบิลรายวันของลาน (เหมือนรายการบิลใน Flex แจ้งแอดมิน)
-function billCard(r){
+// 🧾 การ์ดบิลรายวันของลาน — จิ้มเพื่อกางรายละเอียดแบบ Flex ในไลน์
+function toggleBill(id,el){const d=document.getElementById(id);if(!d)return;const open=d.style.display==='none';d.style.display=open?'block':'none';const c=el.querySelector('.bcaret');if(c)c.textContent=open?'▾':'▸';}
+function billCard(r,ramp){
+  const id='bill_'+String(r.date).replace(/-/g,'');
   const buy=r.buy/TON,send=r.send/TON,stock=r.stock/TON,lost=(r.lost+(r.roundLoss||0))/TON;
   const lp=r.roundLossPct||r.lossPct||0;
   const cell=(lbl,val,c)=>`<div style="text-align:center"><div style="font-size:10px;color:var(--ink2)">${lbl}</div><div class="num" style="font-size:14.5px;font-weight:800;color:${c}">${val}</div></div>`;
-  return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--card)">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <div style="font-weight:800;font-size:13px">🗓️ ${billDate(r.date)}</div>
-      ${lost>0.01?`<span style="font-size:10px;font-weight:700;color:var(--loss);background:var(--panel);padding:2px 8px;border-radius:999px">หาย ${fmt(lost,2)} ต · ${fmt(lp,1)}%</span>`:'<span style="font-size:10px;color:var(--muted)">ยังไม่ปิดยอด</span>'}
+  return `<div style="margin-bottom:8px">
+    <div onclick="toggleBill('${id}',this)" style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);cursor:pointer">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-weight:800;font-size:13px"><span class="bcaret" style="color:var(--muted);margin-right:5px">▸</span>🗓️ ${billDate(r.date)}</div>
+        ${lost>0.01?`<span style="font-size:10px;font-weight:700;color:var(--loss);background:var(--panel);padding:2px 8px;border-radius:999px">หาย ${fmt(lost,2)} ต · ${fmt(lp,1)}%</span>`:'<span style="font-size:10px;color:var(--muted)">ยังไม่ปิดยอด</span>'}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        ${cell('ซื้อเข้า',fmt(buy)+' ต','var(--buy)')}
+        ${cell('ส่งโรงงาน',fmt(send)+' ต','var(--send)')}
+        ${cell('ค้างลาน',fmt(stock)+' ต','var(--stock)')}
+      </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-      ${cell('ซื้อเข้า',fmt(buy)+' ต','var(--buy)')}
-      ${cell('ส่งโรงงาน',fmt(send)+' ต','var(--send)')}
-      ${cell('ค้างลาน',fmt(stock)+' ต','var(--stock)')}
+    <div id="${id}" style="display:none;margin-top:6px">${billDetailFlex(r,ramp)}</div>
+  </div>`;
+}
+// 🧾 รายละเอียดบิล = เลย์เอาต์เหมือน Flex "รายงานผลปาล์มประจำวัน" (หน่วย กก.)
+function billDetailFlex(r,ramp){
+  const kg=v=>fmt(v||0)+' กก.';
+  const carry=r.carryOver||0, bA=r.buyA||0, bB=r.buyB||0, bC=r.buyCompany||0, buy=r.buy||0;
+  const sendF=r.sendFactory||0, sendB=r.sendBorai||0, send=r.send||0, tripsF=r.tripsFactory||0, tripsB=r.tripsBorai||0;
+  const remain=r.stock||0, totalIn=carry+buy;
+  const line=(l,v,strong)=>`<div style="display:flex;justify-content:space-between;padding:5px 2px;font-size:12.5px;${strong?'border-top:1px solid var(--line)':''}"><span style="color:var(--ink2)">${l}</span><span class="num" style="font-weight:${strong?800:600};color:var(--ink)">${v}</span></div>`;
+  const sec=t=>`<div style="background:var(--sendSoft);color:var(--send);font-weight:800;font-size:11.5px;letter-spacing:.02em;padding:5px 9px;border-radius:7px;margin:9px 0 3px">${t}</div>`;
+  return `<div style="border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--card)">
+    <div style="background:#1c3b2e;color:#fff;padding:12px 14px">
+      <div style="font-size:11.5px;opacity:.85">🏭 รายงานผลปาล์มประจำวัน</div>
+      <div style="font-weight:800;font-size:15px;line-height:1.3">${ramp}</div>
+      <div style="font-size:11.5px;opacity:.82">${billDate(r.date)}</div>
+    </div>
+    <div style="padding:8px 14px 12px">
+      ${sec('รับเข้า')}
+      ${line('ค้างลาน (ยกมา)',kg(carry))}
+      ${bA?line('ซื้อ A',kg(bA)):''}
+      ${bB?line('ซื้อ B',kg(bB)):''}
+      ${bC?line('ซื้อบริษัท',kg(bC)):''}
+      ${line('ซื้อรวม',kg(buy))}
+      ${line('รวม (ค้าง+ซื้อ)',kg(totalIn),1)}
+      ${sec('ส่งออก')}
+      ${line('ส่งโรงงาน (หนองใหญ่)',kg(sendF))}
+      ${sendB?line('ส่งบ่อไร่',kg(sendB)):''}
+      ${line('เที่ยว (โรงงาน)',fmt(tripsF)+(tripsB?(' + บ่อไร่ '+fmt(tripsB)):'')+' เที่ยว')}
+      ${line('ส่งรวม',kg(send),1)}
+      ${sec('ปิดยอด')}
+      ${line('คงค้าง',kg(remain),1)}
     </div>
   </div>`;
 }
@@ -404,7 +441,7 @@ function openRampDrawer(ramp){
   const bills=dts.map(dt=>BY[ramp]&&BY[ramp][dt]).filter(Boolean)
     .filter(r=>r.buy>0||r.send>0||r.stock>0||(r.lost+(r.roundLoss||0))>0)
     .sort((a,b)=>a.date<b.date?1:-1);
-  if(bills.length)h+=secHead('🧾 บิลรายวัน ('+bills.length+' วัน · ล่าสุดก่อน)','var(--accent)',16)+bills.map(billCard).join('');
+  if(bills.length)h+=secHead('🧾 บิลรายวัน ('+bills.length+' วัน · จิ้มดูรายละเอียด)','var(--accent)',16)+bills.map(r=>billCard(r,ramp)).join('');
   $('#drBody').innerHTML=h;
   $('#ov').classList.add('on');$('#dr').classList.add('on');
 }
