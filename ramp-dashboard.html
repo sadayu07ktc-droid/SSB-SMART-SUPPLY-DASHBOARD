@@ -248,7 +248,9 @@ function render(){ try{
   const tSend=sum(rows,'send'),tBuy=sum(rows,'buy'),tLost=sum(rows,'lost'),tTrips=sum(rows,'trips'),tRaw=sum(rows,'rawCull'),tRspo=sum(rows,'rspo');
   const stockEnd=rows.length?rows[rows.length-1].stock:0;
   const lossPct=tBuy?tLost/tBuy*100:0, rspoPct=tBuy?tRspo/tBuy*100:0;
-  const ordTotal=RAMPS.reduce((s,r)=>s+rampOrderStats(r).count,0), tripsShown=ordTotal>0?ordTotal:tTrips, kgTrip=tripsShown?tSend/tripsShown:0;
+  const ordTotal=RAMPS.reduce((s,r)=>s+rampOrderStats(r).count,0), ordTons=RAMPS.reduce((s,r)=>s+rampOrderStats(r).tons,0), tripsShown=ordTotal>0?ordTotal:tTrips;
+  // เฉลี่ย/เที่ยว = ตันของ "เที่ยวที่นับ" ÷ เที่ยวนั้น (คู่กัน) — เดิมเอาส่งรวม(มีรถนอก)÷เที่ยวบริษัท เลยเพี้ยน
+  const kgTrip=ordTotal>0 ? (ordTons/ordTotal) : (tTrips? tSend/tTrips : 0);
   const dl=(c,p,goodUp=true)=>{if(!p)return '<span class="delta" style="color:var(--muted)">รวมช่วง</span>';const d=(c-p)/p*100,good=goodUp?d>=0:d<0;return `<span class="delta ${good?'up':'down'}">${d>=0?'▲':'▼'} ${fmt(Math.abs(d),1)}%<span style="color:var(--muted);font-weight:600"> vs ก่อนหน้า</span></span>`;};
   const kpi=[
     {lbl:'ส่งโรงงาน',dot:'var(--send)',val:fmt(tSend),u:'ตัน',d:dl(tSend,sum(prev,'send'))},
@@ -256,7 +258,7 @@ function render(){ try{
     {lbl:'สต็อกค้างที่ลาน',dot:'var(--stock)',val:fmt(stockEnd),u:'ตัน',d:`<span class="delta" style="color:var(--stock)">≈ ${binsFor(stockEnd)} กระบะที่ต้องรับ</span>`},
     {lbl:'น้ำหนักหาย',dot:'var(--loss)',val:tLost>0?fmt(lossPct,2):'—',u:tLost>0?'%':'',d:tLost>0?`<span class="delta down">${fmt(tLost)} ตัน</span>`:'<span class="delta" style="color:var(--muted)">รอปิดรอบล้างลาน</span>',warn:tLost>0&&lossPct>1.5},
     {lbl:'เที่ยวส่งโรงงาน',dot:'var(--accent)',val:fmt(tripsShown),u:'เที่ยว',d:`<span class="delta" style="color:var(--muted)">${ordTotal>0?'จากออเดอร์จริง':'กรอกมือ'}</span>`},
-    {lbl:'เฉลี่ย/เที่ยว',dot:'var(--accent)',val:fmt(kgTrip,1),u:'ตัน',d:'<span class="delta" style="color:var(--muted)">ต่อเที่ยว</span>'},
+    {lbl:'เฉลี่ย/เที่ยว',dot:'var(--accent)',val:fmt(kgTrip,1),u:'ตัน',d:`<span class="delta" style="color:var(--muted)">${ordTotal>0?'ต่อเที่ยว (ออเดอร์บริษัท)':'ต่อเที่ยว'}</span>`},
   ];
   $('#kpis').innerHTML=kpi.map(k=>`<div class="kpi ${k.warn?'warn':''}"><div class="lbl"><span class="dot" style="background:${k.dot}"></span>${k.lbl}</div><div class="val num">${k.val}<small>${k.u}</small></div>${k.d}</div>`).join('');
   const useBar = CHARTTYPE==='bar' || rows.length<2;
