@@ -1024,6 +1024,7 @@
     P.tarpFee=_n(p.tarp_fee,P.tarpFee); P.hookliftFee=_n(p.hooklift_fee,P.hookliftFee); P.overnightFee=_n(p.overnight_fee,P.overnightFee);
     T.weight=_n(tg.weight_on,1)!==0;
     T.speedCalc=_n(tg.time_mode,0)===1?'flat':'stair';
+    T.speedMode=_n(tg.speed_mode,0)===1?'gps':'tier';
     T.distMode=_n(tg.dist_source,0)===1?'central':'actual';
     T.fuelBench=(function(v){return v===2?'single':(v===1?'tier':'weight');})(_n(tg.fuel_bench,0));
     T.fuelPenalty=_n(tg.fuel_adj_on,1)!==0; T.tarp=_n(tg.tarp_on,1)!==0;

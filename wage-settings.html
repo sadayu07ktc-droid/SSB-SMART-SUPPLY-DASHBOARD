@@ -68,6 +68,7 @@ const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct',
 const TOGDEF=[
   ['weight_on','ถ่วงหนัก/เบา',[[1,'เปิด'],[0,'ปิด']],'ปิด = ทุกขาคิดเต็ม 100% ไม่แบ่ง 70/30'],
   ['time_mode','วิธีคิดเวลาวิ่ง',[[0,'ขั้นบันได'],[1,'เหมาช่วงเดียว']],'ขั้นบันได = หั่นระยะตามช่วง (แนะนำ)'],
+  ['speed_mode','ความเร็วที่ใช้',[[0,'เลทตามช่วง'],[1,'GPS จริง']],'เลทตามช่วง = ใช้ตารางความเร็วนี้ · GPS จริง = ใช้เวลาวิ่งจริงจาก timeline (เมื่อมีข้อมูล)'],
   ['dist_source','ระยะที่ใช้คิด',[[0,'จริง'],[1,'ค่ากลาง']],'⚠️ ค่ากลางยังไม่พร้อม (รอ mapping สถานี) ใช้จริงไปก่อน'],
   ['fuel_bench','เกณฑ์น้ำมัน',[[0,'หนัก-เบา'],[1,'ตามช่วงระยะ'],[2,'ค่าเดียว']],'ใช้ กม./ล. แบบไหนคิดลิตรตามเกณฑ์'],
   ['fuel_adj_on','เพิ่ม/หักน้ำมัน',[[1,'เปิด'],[0,'ปิด']],'ปิด = ไม่คิดเพิ่ม/หักน้ำมันเลย'],
@@ -83,7 +84,7 @@ async function load(){
   if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
   if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
   DATA=d;
-  TOG=Object.assign({weight_on:1,time_mode:0,dist_source:0,fuel_bench:0,fuel_adj_on:1,tarp_on:1,bonus_on:1,bonus_base:0}, d.toggles||{});
+  TOG=Object.assign({weight_on:1,time_mode:0,speed_mode:0,dist_source:0,fuel_bench:0,fuel_adj_on:1,tarp_on:1,bonus_on:1,bonus_base:0}, d.toggles||{});
   render(); $('saveBar').style.display='flex';
 }
 
