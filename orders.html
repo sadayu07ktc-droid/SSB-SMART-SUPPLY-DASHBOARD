@@ -156,6 +156,7 @@
   .mini.del:hover{border-color:var(--red);color:var(--red)}
   .mini:disabled{opacity:.35;cursor:not-allowed}
   .wtag{font-size:10px;font-weight:600;color:var(--gold);background:var(--gold-bg,#FBEED3);padding:2px 7px;border-radius:999px}
+  .wtag.done{color:var(--green);background:var(--green-bg)}
 
   .empty{padding:40px 20px;text-align:center;color:var(--ink-faint);font-size:14px}
   #gate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;text-align:center;padding:30px}
@@ -257,7 +258,9 @@ function render(){
           <span>ต้องการ <b>${fmtD(o.wantDate)}${o.wantTime?' '+esc(o.wantTime):''}</b></span>
           ${o.driver?`<span>คนขับ <b>${esc(o.driver)}</b></span>`:'<span style="color:var(--gold)">ยังไม่มีคนรับ</span>'}
           ${o.bins?`<span>${esc(o.bins)} กระบะ</span>`:''}
-          ${o.hasWeight?'<span class="wtag">มีใบชั่งแล้ว</span>':''}
+          ${o.hasWeight?(o.status==='เสร็จงาน'
+            ?'<span class="wtag done">✓ ชั่งครบ จบงาน</span>'
+            :'<span class="wtag" title="มีใบชั่งใน Log_Weight แล้ว แต่สถานะออเดอร์ยังไม่ถึงเสร็จงาน">⚖️ ชั่งแล้ว · ยังไม่จบงาน</span>'):''}
         </div>
       </div>
       <div class="oact">
