@@ -365,6 +365,27 @@ function rampOrderStats(ramp){const os=rampOrdersInRange(ramp);const tons=os.red
 function rampDrawerOrders(ramp){const dts=curDates();if(!dts.length)return ORD_BY_RAMP[ramp]||[];const a=dts[0],b=dts[dts.length-1];return (ORD_BY_RAMP[ramp]||[]).filter(o=>(o.date>=a&&o.date<=b)||(!o.done&&o.date>=a));}
 function sumTile(k,v,c){return `<div style="background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px"><div style="font-size:10.5px;color:var(--ink2);font-weight:600">${k}</div><div style="font-size:14px;font-weight:800;color:${c};margin-top:2px">${v}</div></div>`;}
 function closeDrawer(){$('#ov').classList.remove('on');$('#dr').classList.remove('on');}
+// 🗓️ วันที่แบบไทย ชัดเจน + วันในสัปดาห์ (yyyy-mm-dd → "ส. 26 ก.ค. 2026")
+const _THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const _THDOW=['อา','จ','อ','พ','พฤ','ศ','ส'];
+function billDate(iso){const p=String(iso||'').split('-');if(p.length<3)return iso||'-';const y=+p[0],m=+p[1],d=+p[2];const dt=new Date(y,m-1,d);const dow=isNaN(dt)?'':_THDOW[dt.getDay()]+'. ';return dow+d+' '+(_THMON[m-1]||'')+' '+y;}
+// 🧾 การ์ดบิลรายวันของลาน (เหมือนรายการบิลใน Flex แจ้งแอดมิน)
+function billCard(r){
+  const buy=r.buy/TON,send=r.send/TON,stock=r.stock/TON,lost=(r.lost+(r.roundLoss||0))/TON;
+  const lp=r.roundLossPct||r.lossPct||0;
+  const cell=(lbl,val,c)=>`<div style="text-align:center"><div style="font-size:10px;color:var(--ink2)">${lbl}</div><div class="num" style="font-size:14.5px;font-weight:800;color:${c}">${val}</div></div>`;
+  return `<div style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px;background:var(--card)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:800;font-size:13px">🗓️ ${billDate(r.date)}</div>
+      ${lost>0.01?`<span style="font-size:10px;font-weight:700;color:var(--loss);background:var(--panel);padding:2px 8px;border-radius:999px">หาย ${fmt(lost,2)} ต · ${fmt(lp,1)}%</span>`:'<span style="font-size:10px;color:var(--muted)">ยังไม่ปิดยอด</span>'}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      ${cell('ซื้อเข้า',fmt(buy)+' ต','var(--buy)')}
+      ${cell('ส่งโรงงาน',fmt(send)+' ต','var(--send)')}
+      ${cell('ค้างลาน',fmt(stock)+' ต','var(--stock)')}
+    </div>
+  </div>`;
+}
 function openRampDrawer(ramp){
   const dts=curDates(), stats=rampOrderStats(ramp), agg=rampAgg(ramp,dts);
   const sendTons=agg.send, ordTons=stats.tons, extTons=Math.max(0,sendTons-ordTons);
@@ -379,6 +400,11 @@ function openRampDrawer(ramp){
   if(doneL.length)h+=secHead('✓ ออเดอร์วันนี้ที่จบแล้ว ('+doneL.length+')','var(--ink2)',newL.length?16:2)+doneL.map(ordRow).join('');
   if(!list.length)h+='<div style="color:var(--muted);font-size:13px;padding:8px 0">ยังไม่มีออเดอร์แจ้งขอรถ — ส่งรถนอก หรือยังไม่ได้ขอรถ 🚛</div>';
   if(extTons>0.5)h+=`<div class="ordrow" style="border-bottom:0;margin-top:8px"><div><div class="id" style="color:var(--buy)">🚛 รถนอก</div><div class="meta">ส่วนที่ส่งเกินออเดอร์บริษัท</div></div><div><div class="w" style="color:var(--buy)">${fmt(extTons,1)} ต</div><div class="st" style="color:var(--buy)">~${binsFor(extTons)} กระบะ</div></div></div>`;
+  // 🧾 บิลรายวันของลานนี้ (ล่าสุดก่อน) — เหมือนรายการบิลใน Flex แจ้งแอดมินรายวัน
+  const bills=dts.map(dt=>BY[ramp]&&BY[ramp][dt]).filter(Boolean)
+    .filter(r=>r.buy>0||r.send>0||r.stock>0||(r.lost+(r.roundLoss||0))>0)
+    .sort((a,b)=>a.date<b.date?1:-1);
+  if(bills.length)h+=secHead('🧾 บิลรายวัน ('+bills.length+' วัน · ล่าสุดก่อน)','var(--accent)',16)+bills.map(billCard).join('');
   $('#drBody').innerHTML=h;
   $('#ov').classList.add('on');$('#dr').classList.add('on');
 }
