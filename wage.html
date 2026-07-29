@@ -157,8 +157,9 @@ function renderTable(rows){
   rows.forEach((r,i)=>{
     const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
     const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Number(r.distActual)/Number(r.liters)):0;
-    const vt=r.vehicleType||(r.model?('รุ่น '+r.model):'—');
-    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${vt}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
+    const vtMain=r.model?('รุ่น '+r.model):(r.vehicleType||'—');
+    const vtSub=(r.model&&r.vehicleType)?`<div style="font-size:10px;color:var(--txt2)">${r.vehicleType}</div>`:'';
+    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i].orderId));
@@ -284,7 +285,7 @@ function exportCsv(){
   const r1=v=>Math.round((Number(v)||0)*10)/10;
   const lines=[head.map(q).join(',')];
   VIEW.forEach(r=>{const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Math.round(Number(r.distActual)/Number(r.liters)*100)/100):'';
-    const vt=r.vehicleType||(r.model?('รุ่น '+r.model):'');
+    const vt=(r.model?('รุ่น '+r.model):'')+(r.vehicleType?((r.model?' · ':'')+r.vehicleType):'');
     lines.push([fmtD(r.date),r.orderId,r.driver,vt,r.plate,r.garden,r.dest,r1(r.distActual),r1(r.liters),kmpl,Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(','));});
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
