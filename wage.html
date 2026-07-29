@@ -138,7 +138,7 @@ const _gkey=r=>{const g=(r.garden||'').toString().trim(),d=(r.dest||'').toString
 /* กรอง (ค้นหา + ปลายทางที่เลือก) → เรนเดอร์ ตาราง + KPI + สรุป */
 function applyView(){
   const q=SEARCH.trim().toLowerCase();
-  const hit=r=>!q||[r.dest,r.garden,r.rampCode,r.gardenCode,r.driver,r.orderId,r.plate].some(x=>String(x||'').toLowerCase().includes(q));
+  const hit=r=>!q||[r.dest,r.garden,r.rampCode,r.gardenCode,r.pickupCode,r.driver,r.orderId,r.plate,r.jobType].some(x=>String(x||'').toLowerCase().includes(q));
   const searchRows=ROWS.filter(hit);
   VIEW=ACTIVE_DEST?searchRows.filter(r=>_gkey(r)===ACTIVE_DEST):searchRows;
   renderTable(VIEW);
