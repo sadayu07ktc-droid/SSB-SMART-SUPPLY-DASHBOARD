@@ -81,6 +81,8 @@
       <div class="kpi"><div class="k">จำนวนเที่ยว</div><div class="v" id="kTrips">—</div></div>
       <div class="kpi"><div class="k">ค่าแรงรวม</div><div class="v" id="kWage">—</div></div>
       <div class="kpi"><div class="k">เฉลี่ย/เที่ยว</div><div class="v" id="kAvg">—</div></div>
+      <div class="kpi"><div class="k">ระยะทางรวม</div><div class="v" id="kDist">—</div></div>
+      <div class="kpi"><div class="k">น้ำมันรวม</div><div class="v" id="kFuel">—</div></div>
     </div>
   </div>
 
@@ -143,9 +145,13 @@ function applyView(){
   VIEW=ACTIVE_DEST?searchRows.filter(r=>_gkey(r)===ACTIVE_DEST):searchRows;
   renderTable(VIEW);
   const tot=VIEW.reduce((s,r)=>s+(r.wage||0),0);
+  const totDist=VIEW.reduce((s,r)=>s+(Number(r.distActual)||0),0);
+  const totFuel=VIEW.reduce((s,r)=>s+(Number(r.liters)||0),0);
   $('kTrips').textContent=VIEW.length;
   $('kWage').textContent=money(tot)+' บ.';
   $('kAvg').textContent=(VIEW.length?money(tot/VIEW.length):0)+' บ.';
+  $('kDist').textContent=totDist.toLocaleString('th-TH',{maximumFractionDigits:1})+' กม.';
+  $('kFuel').textContent=totFuel.toLocaleString('th-TH',{maximumFractionDigits:1})+' ล.';
   renderSummary(searchRows);
   updatePaidAllBtn();
 }
