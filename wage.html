@@ -15,7 +15,14 @@
   @media(min-width:1000px){.maincols{grid-template-columns:minmax(0,1fr) 330px;align-items:start}}
   .sumwrap{position:sticky;top:16px}
   .sumhead{font-size:14px;font-weight:800;color:var(--primary);margin-bottom:10px}
-  .sumcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .sumsearch{margin-bottom:10px}
+  .sumsearch input{width:100%;box-sizing:border-box;padding:9px 12px;border:1px solid var(--line2);border-radius:10px;font-family:inherit;font-size:13px;background:var(--card);color:var(--txt)}
+  .sumfilter{font-size:12px;font-weight:700;color:var(--primary);background:var(--card);border:1px dashed var(--primary);border-radius:9px;padding:6px 11px;margin-bottom:9px;cursor:pointer;display:flex;justify-content:space-between;align-items:center}
+  .sumcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(20,40,60,.05);cursor:pointer;transition:.12s}
+  .sumcard:hover{border-color:var(--primary)}
+  .sumcard.on{border-color:var(--primary);box-shadow:0 0 0 2px rgba(30,122,63,.18)}
+  .sumcode{font-family:'Cascadia Mono',monospace;font-size:10px;font-weight:700;background:var(--bg);border:1px solid var(--line);color:var(--txt2);padding:1px 6px;border-radius:5px;margin-right:5px;white-space:nowrap}
+  .sumdetail{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
   .sumtitle{font-size:13px;font-weight:800;color:var(--txt);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;gap:8px}
   .sumn{font-size:11px;font-weight:700;color:#fff;background:var(--primary);padding:2px 9px;border-radius:999px;white-space:nowrap;flex:none}
   .sumline{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:11.5px;border-top:1px dashed var(--line)}
@@ -81,7 +88,10 @@
     <div class="card" style="margin-bottom:0">
       <div id="tbl"><div class="msg" id="msg">กำลังเข้าสู่ระบบ…</div></div>
     </div>
-    <div class="sumwrap"><div id="summary"></div></div>
+    <div class="sumwrap">
+      <div class="sumsearch"><input id="sumSearch" placeholder="🔎 ค้นหา ปลายทาง / สวน / รหัส / คนขับ / ออเดอร์"></div>
+      <div id="summary"></div>
+    </div>
   </div>
 </div>
 
@@ -97,7 +107,7 @@
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
-let MY_UID='', ROWS=[];
+let MY_UID='', ROWS=[], VIEW=[], SEARCH='', ACTIVE_DEST='';
 const money=n=>Math.round(n||0).toLocaleString('th-TH');
 const $=id=>document.getElementById(id);
 function goBack(){ if(history.length>1){history.back();} else {location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';} }
@@ -114,49 +124,71 @@ async function loadReport(){
   const res=await api({action:'getWageReport',userId:MY_UID,from:$('from').value,to:$('to').value,driver:$('driver').value});
   if(res.denied){deny('ไม่มีสิทธิ์เข้าถึง (เฉพาะแอดมิน)');return;}
   if(!res.ok){$('tbl').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
-  ROWS=res.rows||[];
-  $('kTrips').textContent=res.count;
-  $('kWage').textContent=money(res.totalWage)+' บ.';
-  $('kAvg').textContent=(res.count?money(res.totalWage/res.count):0)+' บ.';
+  ROWS=res.rows||[]; ACTIVE_DEST='';
   // driver options (คงค่าเดิม)
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
   $('driver').innerHTML='<option value="">ทุกคน</option>'+ds.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
-  if(!ROWS.length){$('tbl').innerHTML='<div class="msg">ไม่มีเที่ยวในช่วงที่เลือก</div>';$('summary').innerHTML='';return;}
+  applyView();
+}
+
+const _escS=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const _gkey=r=>(r.dest||r.garden||'—').toString().trim()||'—';
+
+/* กรอง (ค้นหา + ปลายทางที่เลือก) → เรนเดอร์ ตาราง + KPI + สรุป */
+function applyView(){
+  const q=SEARCH.trim().toLowerCase();
+  const hit=r=>!q||[r.dest,r.garden,r.rampCode,r.gardenCode,r.driver,r.orderId,r.plate].some(x=>String(x||'').toLowerCase().includes(q));
+  const searchRows=ROWS.filter(hit);
+  VIEW=ACTIVE_DEST?searchRows.filter(r=>_gkey(r)===ACTIVE_DEST):searchRows;
+  renderTable(VIEW);
+  const tot=VIEW.reduce((s,r)=>s+(r.wage||0),0);
+  $('kTrips').textContent=VIEW.length;
+  $('kWage').textContent=money(tot)+' บ.';
+  $('kAvg').textContent=(VIEW.length?money(tot/VIEW.length):0)+' บ.';
+  renderSummary(searchRows);
+  updatePaidAllBtn();
+}
+function renderTable(rows){
+  if(!rows.length){$('tbl').innerHTML='<div class="msg">'+((SEARCH||ACTIVE_DEST)?'ไม่มีเที่ยวที่ตรงเงื่อนไข':'ไม่มีเที่ยวในช่วงที่เลือก')+'</div>';return;}
   let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>สวน / ปลายทาง</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
-  ROWS.forEach((r,i)=>{
+  rows.forEach((r,i)=>{
     const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
     h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${place}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
-  $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(ROWS[+tr.dataset.i].orderId));
-  renderSummary();
+  $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i].orderId));
 }
 
-/* 📊 สรุปตามปลายทาง — เที่ยว/ค่าเที่ยว/ระยะจริง/น้ำมัน (สูงสุด·ต่ำสุด·เฉลี่ย) */
-const _escS=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+/* 📊 สรุปตามปลายทาง — รหัส+ชื่อ+เที่ยว · กดกาง+กรองตาราง */
 function _stat(arr,f){const v=arr.map(f).filter(x=>x!=null&&!isNaN(x)&&x!==0);if(!v.length)return null;const sum=v.reduce((a,b)=>a+b,0);return{max:Math.max(...v),min:Math.min(...v),avg:sum/v.length};}
 function _sline(label,s,unit,dec){
   const f=x=>Number(x||0).toLocaleString('th-TH',{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0});
   if(!s)return `<div class="sumline"><span class="sl">${label}</span><span class="sv" style="color:var(--txt2)">—</span></div>`;
   return `<div class="sumline"><span class="sl">${label}</span><span class="sv">สูง <b>${f(s.max)}</b> · ต่ำ <b>${f(s.min)}</b> · เฉลี่ย <b>${f(s.avg)}</b> ${unit}</span></div>`;
 }
-function renderSummary(){
+function renderSummary(rows){
   const box=$('summary'); if(!box)return;
-  if(!ROWS.length){box.innerHTML='';return;}
+  if(!rows.length){box.innerHTML='<div class="sumhead" style="color:var(--txt2)">ไม่มีข้อมูล</div>';return;}
   const g={};
-  ROWS.forEach(r=>{const key=(r.dest||r.garden||'—').toString().trim()||'—';(g[key]=g[key]||[]).push(r);});
-  const groups=Object.keys(g).map(k=>({name:k,rows:g[k]})).sort((a,b)=>b.rows.length-a.rows.length);
+  rows.forEach(r=>{const k=_gkey(r);if(!g[k])g[k]={code:'',rows:[]};g[k].rows.push(r);if(!g[k].code)g[k].code=(r.rampCode||r.gardenCode||'');});
+  const groups=Object.keys(g).map(k=>({name:k,code:g[k].code,rows:g[k].rows})).sort((a,b)=>b.rows.length-a.rows.length);
   let h='<div class="sumhead">📊 สรุปตามปลายทาง ('+groups.length+' แห่ง)</div>';
+  if(ACTIVE_DEST)h+=`<div class="sumfilter">📍 กรอง: ${_escS(ACTIVE_DEST)} <b>✕</b></div>`;
   groups.forEach(gr=>{
-    h+=`<div class="sumcard">
-      <div class="sumtitle"><span>🏭 ${_escS(gr.name)}</span><span class="sumn">${gr.rows.length} เที่ยว</span></div>
-      ${_sline('ค่าเที่ยว',_stat(gr.rows,r=>r.wage),'บ.',0)}
-      ${_sline('ระยะจริง',_stat(gr.rows,r=>r.distActual),'กม.',1)}
-      ${_sline('น้ำมัน',_stat(gr.rows,r=>r.liters),'ล.',1)}
+    const on=ACTIVE_DEST===gr.name;
+    const code=gr.code?`<span class="sumcode">${_escS(gr.code)}</span>`:'';
+    h+=`<div class="sumcard ${on?'on':''}" data-dest="${_escS(gr.name)}">
+      <div class="sumtitle"><span>${code}${_escS(gr.name)}</span><span class="sumn">${gr.rows.length} เที่ยว</span></div>
+      ${on?`<div class="sumdetail">
+        ${_sline('ค่าเที่ยว',_stat(gr.rows,r=>r.wage),'บ.',0)}
+        ${_sline('ระยะจริง',_stat(gr.rows,r=>r.distActual),'กม.',1)}
+        ${_sline('น้ำมัน',_stat(gr.rows,r=>r.liters),'ล.',1)}
+      </div>`:''}
     </div>`;
   });
   box.innerHTML=h;
 }
+function pickDest(name){ ACTIVE_DEST=(ACTIVE_DEST===name)?'':name; applyView(); }
 
 function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
 
@@ -236,18 +268,18 @@ function closeDr(){$('ov').classList.remove('on');$('dr').classList.remove('on')
 $('ov').onclick=closeDr;
 
 function exportCsv(){
-  if(!ROWS.length)return;
+  if(!VIEW.length)return;
   const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','สวน','ปลายทาง','ค่าวิ่ง','ขึ้น-ลง','ผ้าใบ','ฮุคลิฟท์','ค้างคืน','น้ำมัน','โบนัส','ค่าแรงสุทธิ','สถานะ'];
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
   const lines=[head.map(q).join(',')];
-  ROWS.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,r.garden,r.dest,Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
+  VIEW.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,r.garden,r.dest,Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
 }
 
 // คิดค่าแรงใหม่ตามเงื่อนไขปัจจุบัน — เฉพาะเที่ยวที่ยังไม่จ่าย (ล็อกแล้วข้าม)
 async function recomputeUnpaid(){
-  const ids=ROWS.filter(r=>!r.locked).map(r=>r.orderId);
+  const ids=VIEW.filter(r=>!r.locked).map(r=>r.orderId);   // เฉพาะที่แสดงอยู่ (ตามค้นหา/กรอง)
   if(!ids.length){alert('ไม่มีเที่ยวที่ยังไม่จ่ายให้คิดใหม่ (ที่จ่ายแล้วจะไม่ถูกแตะ)');return;}
   if(!confirm('คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว (เฉพาะที่ยังไม่จ่าย) ตามเงื่อนไขปัจจุบัน?\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน'))return;
   const b=$('recalc');b.textContent='กำลังคิด…';b.disabled=true;
@@ -265,7 +297,7 @@ async function togglePaid(orderId,checked,el){
   try{
     const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaid',userId:MY_UID,orderId,paid:checked})});
     const d=await r.json();
-    if(d.ok){const row=ROWS.find(x=>x.orderId===orderId);if(row)row.locked=checked;const sp=el.parentNode.querySelector('span');if(sp){sp.textContent=checked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย';sp.style.color=checked?'var(--primary)':'var(--txt2)';}}
+    if(d.ok){const row=ROWS.find(x=>x.orderId===orderId);if(row)row.locked=checked;const sp=el.parentNode.querySelector('span');if(sp){sp.textContent=checked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย';sp.style.color=checked?'var(--primary)':'var(--txt2)';}updatePaidAllBtn();}
     else{el.checked=!checked;alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));}
   }catch(e){el.checked=!checked;alert('❌ '+e);}
   el.disabled=false;
@@ -274,31 +306,37 @@ async function togglePaid(orderId,checked,el){
 // จ่ายแล้ว/ยกเลิก ทุกเที่ยวที่แสดงอยู่ (ยิงครั้งเดียว)
 function updatePaidAllBtn(){
   const b=$('paidAll'); if(!b)return;
-  const allLocked=ROWS.length>0&&ROWS.every(r=>r.locked);
+  const allLocked=VIEW.length>0&&VIEW.every(r=>r.locked);
   b.textContent=allLocked?'☐ ยกเลิกจ่ายทั้งหมด':'☑️ จ่ายแล้วทั้งหมด';
-  b.disabled=!ROWS.length;
+  b.disabled=!VIEW.length;
 }
 async function togglePaidAll(){
-  if(!ROWS.length)return;
-  const paid=!ROWS.every(r=>r.locked);   // ยังไม่ครบ → จ่ายทั้งหมด · ครบแล้ว → ยกเลิกทั้งหมด
-  const ids=ROWS.map(r=>r.orderId);
+  if(!VIEW.length)return;
+  const paid=!VIEW.every(r=>r.locked);   // ยังไม่ครบ → จ่ายทั้งหมด · ครบแล้ว → ยกเลิกทั้งหมด
+  const ids=VIEW.map(r=>r.orderId);
   if(!confirm((paid?'ทำเครื่องหมาย "จ่ายแล้ว" ':'ยกเลิก "จ่ายแล้ว" ')+ids.length+' เที่ยวที่แสดงอยู่?'))return;
   const b=$('paidAll');b.textContent='กำลังบันทึก…';b.disabled=true;
   try{
     const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaidBulk',userId:MY_UID,orderIds:ids,paid})});
     const d=await r.json();
-    if(d.ok){
-      ROWS.forEach(r=>r.locked=paid);
-      document.querySelectorAll('#tbl tbody input[type=checkbox]').forEach(cb=>{cb.checked=paid;const sp=cb.parentNode.querySelector('span');if(sp){sp.textContent=paid?'จ่ายแล้ว 🔒':'ยังไม่จ่าย';sp.style.color=paid?'var(--primary)':'var(--txt2)';}});
-    } else alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
+    if(d.ok){ VIEW.forEach(r=>r.locked=paid); applyView(); }
+    else alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
   }catch(e){alert('❌ '+e);}
-  updatePaidAllBtn();
+  b.disabled=false;
 }
 
 $('load').onclick=loadReport;
 $('recalc').onclick=recomputeUnpaid;
 $('paidAll').onclick=togglePaidAll;
 $('csv').onclick=exportCsv;
+// 🔎 ค้นหา (กรองตาราง+สรุป) · เริ่มพิมพ์ = ล้างการเลือกปลายทาง
+$('sumSearch').addEventListener('input',e=>{SEARCH=e.target.value;ACTIVE_DEST='';applyView();});
+// จิ้มการ์ดสรุป = กางรายละเอียด + กรองตารางเฉพาะปลายทางนั้น (จิ้มชิป/การ์ดที่เลือกอยู่ = ล้าง)
+$('summary').addEventListener('click',e=>{
+  if(e.target.closest('.sumfilter')){ pickDest(ACTIVE_DEST); return; }
+  const c=e.target.closest('.sumcard');
+  if(c&&c.dataset.dest) pickDest(c.dataset.dest);
+});
 
 (function initDates(){
   const t=new Date(), y=new Date(t.getFullYear(),t.getMonth()-1,t.getDate());
