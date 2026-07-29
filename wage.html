@@ -151,10 +151,11 @@ function applyView(){
 }
 function renderTable(rows){
   if(!rows.length){$('tbl').innerHTML='<div class="msg">'+((SEARCH||ACTIVE_DEST)?'ไม่มีเที่ยวที่ตรงเงื่อนไข':'ไม่มีเที่ยวในช่วงที่เลือก')+'</div>';return;}
-  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>สวน / ปลายทาง</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
+  const n1=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{maximumFractionDigits:1}):'—';};
+  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>สวน / ปลายทาง</th><th class="num">ระยะ (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
   rows.forEach((r,i)=>{
     const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
-    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${place}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
+    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}</td><td class="num">${n1(r.liters)}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i].orderId));
@@ -171,16 +172,19 @@ function renderSummary(rows){
   const box=$('summary'); if(!box)return;
   if(!rows.length){box.innerHTML='<div class="sumhead" style="color:var(--txt2)">ไม่มีข้อมูล</div>';return;}
   const g={};
-  rows.forEach(r=>{const k=_gkey(r);if(!g[k])g[k]={code:'',rows:[]};g[k].rows.push(r);
-    if(!g[k].code){const gg=(r.garden||'').trim(),dd=(r.dest||'').trim();g[k].code=(dd&&gg&&dd!==gg)?(r.gardenCode||''):(r.rampCode||r.gardenCode||'');}});
-  const groups=Object.keys(g).map(k=>({name:k,code:g[k].code,rows:g[k].rows})).sort((a,b)=>b.rows.length-a.rows.length);
+  rows.forEach(r=>{const k=_gkey(r);if(!g[k])g[k]={rows:[],r0:r};g[k].rows.push(r);});
+  const groups=Object.keys(g).map(k=>({name:k,r0:g[k].r0,rows:g[k].rows})).sort((a,b)=>b.rows.length-a.rows.length);
   let h='<div class="sumhead">📊 สรุปตามปลายทาง ('+groups.length+' แห่ง)</div>';
   if(ACTIVE_DEST)h+=`<div class="sumfilter">📍 กรอง: ${_escS(ACTIVE_DEST)} <b>✕</b></div>`;
+  const chip=c=>c?`<span class="sumcode">${_escS(c)}</span>`:'';
   groups.forEach(gr=>{
-    const on=ACTIVE_DEST===gr.name;
-    const code=gr.code?`<span class="sumcode">${_escS(gr.code)}</span>`:'';
+    const on=ACTIVE_DEST===gr.name, r0=gr.r0, gg=(r0.garden||'').trim(), dd=(r0.dest||'').trim();
+    // สวน (มีจุดรับ): [รหัสสวน] ชื่อสวน · [รหัสจุดรับ] จุดรับ · ลาน: [รหัสลาน] ชื่อลาน
+    const label=(dd&&gg&&dd!==gg)
+      ? chip(r0.gardenCode)+_escS(gg)+' · '+chip(r0.pickupCode)+_escS(dd)
+      : chip(r0.rampCode||r0.gardenCode||r0.pickupCode)+_escS(dd||gg||'—');
     h+=`<div class="sumcard ${on?'on':''}" data-dest="${_escS(gr.name)}">
-      <div class="sumtitle"><span>${code}${_escS(gr.name)}</span><span class="sumn">${gr.rows.length} เที่ยว</span></div>
+      <div class="sumtitle"><span>${label}</span><span class="sumn">${gr.rows.length} เที่ยว</span></div>
       ${on?`<div class="sumdetail">
         ${_sline('ค่าเที่ยว',_stat(gr.rows,r=>r.wage),'บ.',0)}
         ${_sline('ระยะจริง',_stat(gr.rows,r=>r.distActual),'กม.',1)}
@@ -271,10 +275,11 @@ $('ov').onclick=closeDr;
 
 function exportCsv(){
   if(!VIEW.length)return;
-  const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','สวน','ปลายทาง','ค่าวิ่ง','ขึ้น-ลง','ผ้าใบ','ฮุคลิฟท์','ค้างคืน','น้ำมัน','โบนัส','ค่าแรงสุทธิ','สถานะ'];
+  const head=['วันที่','ออเดอร์','คนขับ','ทะเบียน','สวน','ปลายทาง','ระยะทาง(กม.)','น้ำมันเติม(ล.)','ค่าวิ่ง','ขึ้น-ลง','ผ้าใบ','ฮุคลิฟท์','ค้างคืน','น้ำมัน(บ.)','โบนัส','ค่าแรงสุทธิ','สถานะ'];
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const r1=v=>Math.round((Number(v)||0)*10)/10;
   const lines=[head.map(q).join(',')];
-  VIEW.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,r.garden,r.dest,Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
+  VIEW.forEach(r=>lines.push([fmtD(r.date),r.orderId,r.driver,r.plate,r.garden,r.dest,r1(r.distActual),r1(r.liters),Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(',')));
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
 }
