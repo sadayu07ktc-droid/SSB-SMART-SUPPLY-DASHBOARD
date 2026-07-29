@@ -132,7 +132,8 @@ async function loadReport(){
 }
 
 const _escS=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const _gkey=r=>(r.dest||r.garden||'—').toString().trim()||'—';
+// ชื่อกลุ่ม: ถ้าจุดรับ (dest) ต่างจากชื่อสวน = ออเดอร์สวน → "ชื่อสวน · จุดรับ" · ถ้าเหมือนกัน = ลาน → ชื่อเดียว
+const _gkey=r=>{const g=(r.garden||'').toString().trim(),d=(r.dest||'').toString().trim();return (d&&g&&d!==g)?(g+' · '+d):(d||g||'—');};
 
 /* กรอง (ค้นหา + ปลายทางที่เลือก) → เรนเดอร์ ตาราง + KPI + สรุป */
 function applyView(){
@@ -170,7 +171,8 @@ function renderSummary(rows){
   const box=$('summary'); if(!box)return;
   if(!rows.length){box.innerHTML='<div class="sumhead" style="color:var(--txt2)">ไม่มีข้อมูล</div>';return;}
   const g={};
-  rows.forEach(r=>{const k=_gkey(r);if(!g[k])g[k]={code:'',rows:[]};g[k].rows.push(r);if(!g[k].code)g[k].code=(r.rampCode||r.gardenCode||'');});
+  rows.forEach(r=>{const k=_gkey(r);if(!g[k])g[k]={code:'',rows:[]};g[k].rows.push(r);
+    if(!g[k].code){const gg=(r.garden||'').trim(),dd=(r.dest||'').trim();g[k].code=(dd&&gg&&dd!==gg)?(r.gardenCode||''):(r.rampCode||r.gardenCode||'');}});
   const groups=Object.keys(g).map(k=>({name:k,code:g[k].code,rows:g[k].rows})).sort((a,b)=>b.rows.length-a.rows.length);
   let h='<div class="sumhead">📊 สรุปตามปลายทาง ('+groups.length+' แห่ง)</div>';
   if(ACTIVE_DEST)h+=`<div class="sumfilter">📍 กรอง: ${_escS(ACTIVE_DEST)} <b>✕</b></div>`;
