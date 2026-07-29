@@ -10,7 +10,17 @@
   @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 60px}
-  .wrap{max-width:960px;margin:0 auto}
+  .wrap{max-width:1240px;margin:0 auto}
+  .maincols{display:grid;grid-template-columns:1fr;gap:14px}
+  @media(min-width:1000px){.maincols{grid-template-columns:minmax(0,1fr) 330px;align-items:start}}
+  .sumwrap{position:sticky;top:16px}
+  .sumhead{font-size:14px;font-weight:800;color:var(--primary);margin-bottom:10px}
+  .sumcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:11px 13px;margin-bottom:10px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .sumtitle{font-size:13px;font-weight:800;color:var(--txt);margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .sumn{font-size:11px;font-weight:700;color:#fff;background:var(--primary);padding:2px 9px;border-radius:999px;white-space:nowrap;flex:none}
+  .sumline{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:11.5px;border-top:1px dashed var(--line)}
+  .sumline .sl{color:var(--txt2);flex:none}
+  .sumline .sv{text-align:right}
   .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 16px}
   .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
   h1{font-size:17px;margin:0;font-weight:700}.sub{font-size:12px;color:var(--txt2)}
@@ -67,8 +77,11 @@
     </div>
   </div>
 
-  <div class="card">
-    <div id="tbl"><div class="msg" id="msg">กำลังเข้าสู่ระบบ…</div></div>
+  <div class="maincols">
+    <div class="card" style="margin-bottom:0">
+      <div id="tbl"><div class="msg" id="msg">กำลังเข้าสู่ระบบ…</div></div>
+    </div>
+    <div class="sumwrap"><div id="summary"></div></div>
   </div>
 </div>
 
@@ -108,7 +121,7 @@ async function loadReport(){
   // driver options (คงค่าเดิม)
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
   $('driver').innerHTML='<option value="">ทุกคน</option>'+ds.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
-  if(!ROWS.length){$('tbl').innerHTML='<div class="msg">ไม่มีเที่ยวในช่วงที่เลือก</div>';return;}
+  if(!ROWS.length){$('tbl').innerHTML='<div class="msg">ไม่มีเที่ยวในช่วงที่เลือก</div>';$('summary').innerHTML='';return;}
   let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>สวน / ปลายทาง</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
   ROWS.forEach((r,i)=>{
     const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
@@ -116,6 +129,33 @@ async function loadReport(){
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(ROWS[+tr.dataset.i].orderId));
+  renderSummary();
+}
+
+/* 📊 สรุปตามปลายทาง — เที่ยว/ค่าเที่ยว/ระยะจริง/น้ำมัน (สูงสุด·ต่ำสุด·เฉลี่ย) */
+const _escS=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function _stat(arr,f){const v=arr.map(f).filter(x=>x!=null&&!isNaN(x)&&x!==0);if(!v.length)return null;const sum=v.reduce((a,b)=>a+b,0);return{max:Math.max(...v),min:Math.min(...v),avg:sum/v.length};}
+function _sline(label,s,unit,dec){
+  const f=x=>Number(x||0).toLocaleString('th-TH',{minimumFractionDigits:dec||0,maximumFractionDigits:dec||0});
+  if(!s)return `<div class="sumline"><span class="sl">${label}</span><span class="sv" style="color:var(--txt2)">—</span></div>`;
+  return `<div class="sumline"><span class="sl">${label}</span><span class="sv">สูง <b>${f(s.max)}</b> · ต่ำ <b>${f(s.min)}</b> · เฉลี่ย <b>${f(s.avg)}</b> ${unit}</span></div>`;
+}
+function renderSummary(){
+  const box=$('summary'); if(!box)return;
+  if(!ROWS.length){box.innerHTML='';return;}
+  const g={};
+  ROWS.forEach(r=>{const key=(r.dest||r.garden||'—').toString().trim()||'—';(g[key]=g[key]||[]).push(r);});
+  const groups=Object.keys(g).map(k=>({name:k,rows:g[k]})).sort((a,b)=>b.rows.length-a.rows.length);
+  let h='<div class="sumhead">📊 สรุปตามปลายทาง ('+groups.length+' แห่ง)</div>';
+  groups.forEach(gr=>{
+    h+=`<div class="sumcard">
+      <div class="sumtitle"><span>🏭 ${_escS(gr.name)}</span><span class="sumn">${gr.rows.length} เที่ยว</span></div>
+      ${_sline('ค่าเที่ยว',_stat(gr.rows,r=>r.wage),'บ.',0)}
+      ${_sline('ระยะจริง',_stat(gr.rows,r=>r.distActual),'กม.',1)}
+      ${_sline('น้ำมัน',_stat(gr.rows,r=>r.liters),'ล.',1)}
+    </div>`;
+  });
+  box.innerHTML=h;
 }
 
 function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
