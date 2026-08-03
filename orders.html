@@ -258,9 +258,9 @@ function render(){
           <span>ต้องการ <b>${fmtD(o.wantDate)}${o.wantTime?' '+esc(o.wantTime):''}</b></span>
           ${o.driver?`<span>คนขับ <b>${esc(o.driver)}</b></span>`:'<span style="color:var(--gold)">ยังไม่มีคนรับ</span>'}
           ${o.bins?`<span>${esc(o.bins)} กระบะ</span>`:''}
-          ${o.hasWeight?(o.status==='เสร็จงาน'
+          ${o.status==='เสร็จงาน'
             ?'<span class="wtag done">✓ ชั่งครบ จบงาน</span>'
-            :'<span class="wtag" title="มีใบชั่งใน Log_Weight แล้ว แต่สถานะออเดอร์ยังไม่ถึงเสร็จงาน">⚖️ ชั่งแล้ว · ยังไม่จบงาน</span>'):''}
+            :(o.hasWeight?'<span class="wtag" title="มีใบชั่งจริง (สุทธิ/รูปใบชั่ง) แล้ว แต่ออเดอร์ยังไม่เสร็จงาน — ปาล์มจะขึ้นก็ต่อเมื่อแวะชั่งที่ลานขากลับ">⚖️ ชั่งแล้ว · ยังไม่จบงาน</span>':'')}
         </div>
       </div>
       <div class="oact">
