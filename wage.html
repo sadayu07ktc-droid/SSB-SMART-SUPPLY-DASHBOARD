@@ -308,18 +308,29 @@ function exportCsv(){
 }
 
 // คิดค่าแรงใหม่ตามเงื่อนไขปัจจุบัน — เฉพาะเที่ยวที่ยังไม่จ่าย (ล็อกแล้วข้าม)
+//   ⚠️ แบ่งส่งเป็นก้อน (chunk) กัน request เดียวนานเกินจน Google คืนหน้า HTML error
 async function recomputeUnpaid(){
   const ids=VIEW.filter(r=>!r.locked).map(r=>r.orderId);   // เฉพาะที่แสดงอยู่ (ตามค้นหา/กรอง)
   if(!ids.length){alert('ไม่มีเที่ยวที่ยังไม่จ่ายให้คิดใหม่ (ที่จ่ายแล้วจะไม่ถูกแตะ)');return;}
   if(!confirm('คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว (เฉพาะที่ยังไม่จ่าย) ตามเงื่อนไขปัจจุบัน?\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน'))return;
-  const b=$('recalc');b.textContent='กำลังคิด…';b.disabled=true;
+  const b=$('recalc');b.disabled=true;
+  const CHUNK=8;
+  let done=0,skipped=0,failed=0,ok=true,err='';
   try{
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:ids})});
-    const d=await r.json();
-    if(d.ok){await loadReport();alert('✅ คิดใหม่ '+d.done+' เที่ยว'+(d.skipped?' · ข้าม(จ่ายแล้ว) '+d.skipped:'')+(d.failed?' · ล้มเหลว '+d.failed:''));}
-    else alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
-  }catch(e){alert('❌ '+e);}
+    for(let i=0;i<ids.length;i+=CHUNK){
+      const part=ids.slice(i,i+CHUNK);
+      b.textContent=`กำลังคิด… ${Math.min(i+CHUNK,ids.length)}/${ids.length}`;
+      const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:part})});
+      const txt=await r.text();
+      let d; try{ d=JSON.parse(txt); }catch(_){ ok=false; err='backend ตอบผิดรูปแบบ (อาจช้า/หลุด) — ลองใหม่อีกครั้ง'; break; }
+      if(!d.ok){ ok=false; err=d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด'); break; }
+      done+=d.done||0; skipped+=d.skipped||0; failed+=d.failed||0;
+    }
+  }catch(e){ ok=false; err=String(e); }
   b.textContent='🔄 คำนวณใหม่';b.disabled=false;
+  if(!ok){ alert('❌ '+err+(done?'\n(คิดสำเร็จไปแล้ว '+done+' เที่ยวก่อนหยุด)':'')); if(done)await loadReport(); return; }
+  await loadReport();
+  alert('✅ คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:''));
 }
 // ติ๊ก "จ่ายแล้ว" = ล็อกค่าแรง (คำนวณใหม่จะไม่ทับ) · เอาติ๊กออก = ปลดล็อก
 async function togglePaid(orderId,checked,el){
