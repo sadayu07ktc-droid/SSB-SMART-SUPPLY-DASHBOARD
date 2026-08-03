@@ -118,14 +118,24 @@ function deny(t){$('msg').textContent=t;$('msg').style.color='var(--danger)';}
 
 async function api(params){
   const u=GAS_URL+'?'+Object.entries(params).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-  const r=await fetch(u); return r.json();
+  const ctrl=new AbortController();
+  const t=setTimeout(()=>ctrl.abort(), 90000);   // กัน hang ตลอดกาล (ครั้งแรกหลัง deploy อาจช้า)
+  try{ const r=await fetch(u,{signal:ctrl.signal}); return await r.json(); }
+  finally{ clearTimeout(t); }
 }
 
 async function loadReport(){
-  $('tbl').innerHTML='<div class="msg">กำลังโหลด…</div>';
-  const res=await api({action:'getWageReport',userId:MY_UID,from:$('from').value,to:$('to').value,driver:$('driver').value});
+  $('tbl').innerHTML='<div class="msg">กำลังโหลด… <span style="color:var(--txt2);font-size:12px">(ครั้งแรกหลังพักงานอาจช้า ~20-30 วิ)</span></div>';
+  let res;
+  try{
+    res=await api({action:'getWageReport',userId:MY_UID,from:$('from').value,to:$('to').value,driver:$('driver').value});
+  }catch(e){
+    const why=(e&&e.name==='AbortError')?'หมดเวลา (backend ตอบช้า)':'เชื่อมต่อไม่ได้';
+    $('tbl').innerHTML='<div class="msg">โหลดไม่สำเร็จ — '+why+' <button class="btn" style="margin-left:8px" onclick="loadReport()">ลองใหม่</button></div>';
+    return;
+  }
   if(res.denied){deny('ไม่มีสิทธิ์เข้าถึง (เฉพาะแอดมิน)');return;}
-  if(!res.ok){$('tbl').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
+  if(!res.ok){$('tbl').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+' <button class="btn" style="margin-left:8px" onclick="loadReport()">ลองใหม่</button></div>';return;}
   ROWS=res.rows||[]; ACTIVE_DEST='';
   // driver options (คงค่าเดิม)
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
