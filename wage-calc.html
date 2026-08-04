@@ -238,7 +238,7 @@
   // ต้นทุนบริษัท (ค่าจริงจาก vehicles รุ่น 360): fixed_cost_per_km รวมค่าเสื่อมแล้ว · variable_cost_per_km รวมน้ำมัน · ops_cost_trip
   // overnightFee = ค่ารอขึ้นของข้ามคืน (บ./คืน) · hookliftFee = ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง ขึ้น+ลง) — ⚠️ ค่า placeholder รอ management เคาะ
   var P={runRate:100,loadRate:100,fuelRate:25,benchmark:3.2,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
-    overnightFee:500,hookliftFee:100,hookliftLiters:4,
+    overnightFee:500,hookliftFee:100,hookliftLiters:4,givePerHr:10.4166666667,
     fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};
   // ความเร็วเลทตามช่วงระยะ — ระยะขาไหนเข้าช่วงไหน ใช้ความเร็วช่วงนั้น (master ใน DB, ค่า mock)
   // แต่ละช่วงระยะมีทั้ง ความเร็ว (กม./ชม.) และ เกณฑ์น้ำมัน (กม./ล.) — ตามที่ user กำหนด 1-25 = 20 กม./ชม. · 2.2 กม./ล.
@@ -259,12 +259,15 @@
   var FUEL_WEIGHT={'360':{heavy:2.75,light:4},'240':{heavy:3.75,light:5}};
   function tierIdx(d){for(var i=0;i<SPEED_TIERS.length;i++){if(d<=SPEED_TIERS[i].max)return i;}return SPEED_TIERS.length-1;}
   function speedFor(d){return SPEED_TIERS[tierIdx(d)].speed;}
+  // 🆕 V.2 "ให้เพิ่มตามเวลาวิ่ง" — ตารางความเร็วตามระยะ (interpolate) ตรง Mastersheet ชีต ความเร็ววตามระยะทาง · คนละตารางกับ SPEED_TIERS
+  var BONUS_SPD=[[25,30],[40,38],[60,42],[80,45],[700,47],[800,50]];
+  function bonusSpeed(d){if(d<=BONUS_SPD[0][0])return BONUS_SPD[0][1];for(var i=1;i<BONUS_SPD.length;i++){if(d<=BONUS_SPD[i][0]){var a=BONUS_SPD[i-1],b=BONUS_SPD[i];return a[1]+(d-a[0])*(b[1]-a[1])/(b[0]-a[0]);}}return BONUS_SPD[BONUS_SPD.length-1][1];}
   // ขั้นบันได: หั่นระยะตามช่วงสะสม แต่ละท่อนใช้ความเร็วช่วงตัวเอง (เหมือนขั้นภาษี) → คืนชั่วโมงรวม
   function stairHours(d){var h=0,prev=0;for(var i=0;i<SPEED_TIERS.length;i++){var top=Math.min(d,SPEED_TIERS[i].max);if(top>prev)h+=(top-prev)/(SPEED_TIERS[i].speed||1);prev=SPEED_TIERS[i].max;if(d<=prev)break;}return h;}
   function kmplFor(d){return kmplTier(SPEED_TIERS[tierIdx(d)]);}
   function stairLiters(d,mult){mult=mult||1;var L=0,prev=0;for(var i=0;i<SPEED_TIERS.length;i++){var top=Math.min(d,SPEED_TIERS[i].max);if(top>prev)L+=(top-prev)/((kmplTier(SPEED_TIERS[i])*mult)||1);prev=SPEED_TIERS[i].max;if(d<=prev)break;}return L;}
   // bonusBase: 'total' = คิดโบนัสหลัง (จากยอดรวมทั้งหมด) · 'base' = คิดก่อน (จากค่าวิ่ง+ขึ้นลง เท่านั้น)
-  var T={mode:'order',ordIdx:0,distMode:'actual',speedMode:'tier',speedCalc:'stair',fuelBench:'tier',fuelPenalty:true,weight:true,bonus10:true,bonusBase:'total',tarp:true,overnight:false,hooklift:false,depr:true,groupAlloc:'leg2x'};
+  var T={mode:'order',ordIdx:0,distMode:'actual',speedMode:'tier',speedCalc:'stair',fuelBench:'tier',fuelPenalty:true,weight:true,bonus10:true,bonusBase:'total',tarp:true,overnight:false,hooklift:false,depr:true,groupAlloc:'leg2x',giveOn:true};
   var M={brand:'ISUZU',model:'360',distActual:200,distCentral:200,heavyKm:100,lightKm:100,yardKm:100,yardHomeKm:100,litersFilled:62.5,qty:30000,qtyPk:500,extraCost:0,nights:1,lifts:2,dest:'—',driver:'(จำลอง)',plate:'—',id:'จำลอง'};
   function mSum(){return PATTERN==='viaYard'?(M.lightKm+M.yardKm+M.yardHomeKm):(M.lightKm+M.heavyKm);}
   var money=function(n){return Math.round(n).toLocaleString('th-TH');};
@@ -652,6 +655,9 @@
     benchL+=(P.hookliftLiters||0)*((T.hooklift&&_jobHook0)?_liftsN0:0);
     var benchKmpl=benchL>0?fuelDist/benchL:P.benchmark;
     var fuelAdj=T.fuelPenalty?(benchL-actualL)*P.fuelRate:0;
+    // 🆕 V.2 ให้เพิ่มตามเวลาวิ่ง = givePerHr × ชม.วิ่งไป-กลับ (ระยะรวม ÷ ความเร็วตามระยะ interpolate) · ตรง backend
+    var giveHrs=totalDist>0?(totalDist/bonusSpeed(totalDist)):0;
+    var fuelTimeBonus=T.giveOn?(P.givePerHr||0)*giveHrs:0;
     // ค่าขึ้น-ลงของ (รวมทุกขา) — แยกออกจากฐานปันส่วน เป็นรายการบวกท้าย
     var loadWage=legs.reduce(function(a,l){return a+l.upWage+l.downWage;},0);
     // ── รายการบวกโซนท้าย (เหมา/ตามจำนวน, toggle แยกตัว) ──
@@ -673,7 +679,7 @@
     var extrasAll=tarp+overnight+hooklift;
     // บวกเพิ่ม % ของค่าเที่ยว — toggle ฐานคิด: 'base' = ก่อน (ค่าวิ่ง+ขึ้นลง) · 'total' = หลัง (ยอดรวมทั้งหมด)
     var wageBase=timeWage+loadWage;
-    var subtotal=wageBase+extrasAll+fuelAdj;
+    var subtotal=wageBase+extrasAll+fuelAdj+fuelTimeBonus;   // 🆕 + ให้เพิ่มตามเวลาวิ่ง
     var bonusOn=(T.bonusBase==='base')?wageBase:subtotal;
     var bonus=T.bonus10?bonusOn*P.bonusPct/100:0;
     // ── ต้นทุนบริษัท (ตรงชีต DATA_Vehicle 3 ก้อน): แรง + น้ำมัน + คงที่(รวมค่าเสื่อม) + ผันแปร + ดำเนินงาน + รายเที่ยว ──
@@ -702,7 +708,7 @@
     if(bkKg.w>0&&qty>0)products.push({label:bkKg.label||'สินค้า',unit:'กก.',qty:qty,share:bkKg.w/totW});
     if(bkPk.w>0&&(s.qtyPk||0)>0)products.push({label:'Packing',unit:'ชิ้น',qty:s.qtyPk,share:bkPk.w/totW});
     products.forEach(function(p){p.cost=costTotal*p.share;p.costN=costNoDepr*p.share;});
-    return {legs:legs,timeWage:timeWage,loadWage:loadWage,tarp:tarp,overnight:overnight,hooklift:hooklift,bonusOn:bonusOn,fullTime:fullTime,pctSum:pctSum,loadHours:loadHours,dist:totalDist,fuelDist:fuelDist,kmplA:kmplA,benchL:benchL,benchKmpl:benchKmpl,actualL:actualL,fuelAdj:fuelAdj,bonus:bonus,net:wageNet,
+    return {legs:legs,timeWage:timeWage,loadWage:loadWage,tarp:tarp,overnight:overnight,hooklift:hooklift,bonusOn:bonusOn,fullTime:fullTime,pctSum:pctSum,loadHours:loadHours,dist:totalDist,fuelDist:fuelDist,kmplA:kmplA,benchL:benchL,benchKmpl:benchKmpl,actualL:actualL,fuelAdj:fuelAdj,fuelTimeBonus:fuelTimeBonus,giveHrs:giveHrs,bonus:bonus,net:wageNet,
       fuelCostCo:fuelCostCo,fixedCost:fixedCost,effFixed:effFixed,varCost:varCost,extraCost:extraCost,opsCost:opsCost,deprVal:deprVal,costTotal:costTotal,costNoDepr:costNoDepr,qty:qty,unit:unit,products:products};
   }
 
@@ -738,6 +744,7 @@
     h+=row('เกณฑ์ ('+c.fuelDist.toFixed(0)+' ÷ '+c.benchKmpl.toFixed(2)+(T.fuelBench==='tier'?' ขั้นบันไดรายขา':(T.fuelBench==='tierWeight'?' ช่วง×หนัก/เบา':(T.fuelBench==='weight'?' หนัก/เบารายขา':' รุ่นรถ')))+')',c.benchL.toFixed(1)+' ล.');
     var fa=c.fuelAdj;var lab=!T.fuelPenalty?'เพิ่ม/หักน้ำมัน (ปิด)':(fa>=0?'ได้คืนน้ำมัน ×'+P.fuelRate:'หักน้ำมัน ×'+P.fuelRate);
     h+=row(lab,(fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.','color:'+(fa<0?'var(--danger)':'var(--success)')+';font-weight:600');
+    if(T.giveOn&&c.fuelTimeBonus>0)h+=row('ให้เพิ่มตามเวลาวิ่ง ('+c.giveHrs.toFixed(1)+' ชม. × '+P.givePerHr.toFixed(2)+')','+'+money(c.fuelTimeBonus)+' บ.','color:var(--success);font-weight:600');
     if(c.loadWage>0)h+=row('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.','color:var(--success);font-weight:600');
     if(T.tarp)h+=row('ค่าคลุมผ้าใบ (เหมาต่อเที่ยว)','+'+money(c.tarp)+' บ.','color:var(--success);font-weight:600');
     if(c.overnight>0)h+=row('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||1)+' คืน × '+P.overnightFee+')','+'+money(c.overnight)+' บ.','color:var(--success);font-weight:600');
@@ -889,6 +896,7 @@
     R('น้ำมัน เติมจริง '+c.actualL.toFixed(1)+' / เกณฑ์ '+c.benchL.toFixed(1)+' ล.','');
     R((fa<0?'หักน้ำมัน (เปลือง)':fa>0?'ได้คืนน้ำมัน (ประหยัด)':'น้ำมัน (เท่าเกณฑ์)')+' ×'+P.fuelRate,
       (fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.',(fa<0?col.danger:col.primary),true);
+    if(T.giveOn&&c.fuelTimeBonus>0)R('ให้เพิ่มตามเวลาวิ่ง ('+c.giveHrs.toFixed(1)+' ชม.)','+'+money(c.fuelTimeBonus)+' บ.',col.primary,true);
     if(c.loadWage>0)R('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.',col.primary,true);
     if(T.tarp)R('ค่าคลุมผ้าใบ','+'+money(c.tarp)+' บ.',col.primary,true);
     if(c.overnight>0)R('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||1)+' คืน)','+'+money(c.overnight)+' บ.',col.primary,true);
@@ -988,7 +996,9 @@
     var bench=FUEL_BENCH[o.model]||P.benchmark;
     var benchL=o.distActual/bench,actualL=o.litersFilled;
     var fuelAdj=T.fuelPenalty?(benchL-actualL)*P.fuelRate:0;
-    return {travel:travel,updown:updown,fuel:fuelAdj,net:timeWage+fuelAdj};
+    var tDist=legs.reduce(function(a,l){return a+l.dist;},0);
+    var give=T.giveOn?(P.givePerHr||0)*(tDist>0?tDist/bonusSpeed(tDist):0):0;   // 🆕 ให้เพิ่มตามเวลาวิ่ง
+    return {travel:travel,updown:updown,fuel:fuelAdj,give:give,net:timeWage+fuelAdj+give};
   }
   function fmtDMY(iso){var p=String(iso).split('-');return p[2]+'-'+p[1]+'-'+p[0];}
   function q(s){return '"'+String(s).replace(/"/g,'""')+'"';}
@@ -1035,6 +1045,8 @@
     P.fuelRate=_n(p.fuel_rate_wage,P.fuelRate); P.heavyPct=_n(p.heavy_pct,P.heavyPct);
     P.lightPct=_n(p.light_pct,P.lightPct); P.bonusPct=_n(p.bonus_pct,P.bonusPct);
     P.tarpFee=_n(p.tarp_fee,P.tarpFee); P.hookliftFee=_n(p.hooklift_fee,P.hookliftFee); P.overnightFee=_n(p.overnight_fee,P.overnightFee);
+    P.hookliftLiters=_n(p.hooklift_liters,P.hookliftLiters); P.givePerHr=_n(p.give_per_hr,P.givePerHr);   // 🆕 V.2
+    T.giveOn=_n(p.give_on,1)!==0;                                                                          // 🆕 ให้เพิ่มตามเวลาวิ่ง (default เปิด)
     T.weight=_n(tg.weight_on,1)!==0;
     T.speedCalc=_n(tg.time_mode,0)===1?'flat':'stair';
     T.speedMode=_n(tg.speed_mode,0)===1?'gps':'tier';
