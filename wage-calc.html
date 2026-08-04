@@ -237,7 +237,7 @@
   // runRate = เลทค่าวิ่ง (บ./ชม.) · loadRate = ค่าขึ้น-ลงของ (บ./ชม.) — แยกกัน แก้ตัวไหนกระทบเฉพาะส่วนนั้น
   // ต้นทุนบริษัท (ค่าจริงจาก vehicles รุ่น 360): fixed_cost_per_km รวมค่าเสื่อมแล้ว · variable_cost_per_km รวมน้ำมัน · ops_cost_trip
   // overnightFee = ค่ารอขึ้นของข้ามคืน (บ./คืน) · hookliftFee = ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง ขึ้น+ลง) — ⚠️ ค่า placeholder รอ management เคาะ
-  var P={runRate:100,loadRate:100,fuelRate:28,benchmark:3.2,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
+  var P={runRate:100,loadRate:100,fuelRate:25,benchmark:3.2,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
     overnightFee:500,hookliftFee:100,hookliftLiters:4,
     fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};
   // ความเร็วเลทตามช่วงระยะ — ระยะขาไหนเข้าช่วงไหน ใช้ความเร็วช่วงนั้น (master ใน DB, ค่า mock)
