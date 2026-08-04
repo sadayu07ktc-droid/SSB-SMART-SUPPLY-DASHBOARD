@@ -524,6 +524,7 @@
     {k:'speedCalc',label:'วิธีคิดเลทความเร็ว',opts:[['stair','ขั้นบันได'],['flat','เหมาช่วงเดียว']]},
     {k:'fuelBench',label:'เกณฑ์น้ำมันอิงจาก',opts:[['tier','ช่วงระยะ'],['tierWeight','ช่วง×หนัก/เบา'],['weight','หนัก/เบา'],['model','รุ่นรถ']]},
     {k:'fuelPenalty',label:'เพิ่ม/หักน้ำมัน',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'giveOn',label:'ให้เพิ่มตามเวลาวิ่ง',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'weight',label:'ถ่วงหนัก/เบา',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'groupAlloc',label:'วิธีปันส่วนหนัก/เบา',opts:[['leg2x','ระยะขา×2×% ✓ (มติ)']]},
     {k:'bonus10',label:'บวก % ค่าเที่ยว (หลังคิดน้ำมัน)',opts:[[true,'เปิด'],[false,'ปิด']]},
@@ -557,7 +558,7 @@
       if(inp){inp.disabled=dis;var lab=inp.closest('label');if(lab)lab.style.opacity=dis?0.35:1;}
     });
     // ปิด toggle ไหน → เบลอ param ของตัวนั้น (และเบลอ "ฐานคิดโบนัส" เมื่อปิดโบนัส)
-    [['tarpFee',!T.tarp],['overnightFee',!T.overnight],['hookliftFee',!T.hooklift],['bonusPct',!T.bonus10]].forEach(function(p){
+    [['tarpFee',!T.tarp],['overnightFee',!T.overnight],['hookliftFee',!T.hooklift],['bonusPct',!T.bonus10],['givePerHr',!T.giveOn]].forEach(function(p){
       var inp=pBox.querySelector('input[data-p="'+p[0]+'"]');
       if(inp){inp.disabled=p[1];var lab=inp.closest('label');if(lab)lab.style.opacity=p[1]?0.35:1;}
     });
@@ -568,7 +569,7 @@
     b.parentNode.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');updateDeps();renderSpeedTiers();renderLegs();render();updateBadge();};
 
   // ── param ──
-  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์รุ่นนี้'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'% บวกเพิ่มค่าเที่ยว'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'overnightFee',label:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'},{k:'hookliftLiters',label:'ฮุคลิฟท์ +น้ำมัน (ลิตร/ครั้ง เทปาล์ม)'}]; // param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer · hookliftFee เลิกใช้ (ย้ายเป็นลิตร)
+  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์รุ่นนี้'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'% บวกเพิ่มค่าเที่ยว'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'overnightFee',label:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'},{k:'hookliftLiters',label:'ฮุคลิฟท์ +น้ำมัน (ลิตร/ครั้ง เทปาล์ม)'},{k:'givePerHr',label:'ให้เพิ่มตามเวลาวิ่ง (บ./ชม.)'}]; // param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer · hookliftFee เลิกใช้ (ย้ายเป็นลิตร)
   var pBox=document.getElementById('params');
   params.forEach(function(p){var l=document.createElement('label');l.innerHTML=p.label+'<input type="number" step="any" data-p="'+p.k+'" value="'+P[p.k]+'">';pBox.appendChild(l);});
   pBox.oninput=function(e){var i=e.target.closest('input[data-p]');if(!i)return;P[i.dataset.p]=parseFloat(i.value)||0;renderLegs();render();updateBadge();};
@@ -1074,8 +1075,8 @@
   function resetOfficial(){ if(!OFFICIAL)return; Object.keys(OFFICIAL.P).forEach(function(k){P[k]=OFFICIAL.P[k];}); Object.keys(OFFICIAL.T).forEach(function(k){T[k]=OFFICIAL.T[k];}); refreshUI(); }
   function updateBadge(){
     var b=document.getElementById('offBadge'); if(!b||!OFFICIAL)return;
-    var kp=['runRate','loadRate','fuelRate','heavyPct','lightPct','bonusPct','tarpFee','hookliftFee','overnightFee'];
-    var kt=['weight','speedCalc','distMode','fuelBench','fuelPenalty','tarp','bonus10','bonusBase'];
+    var kp=['runRate','loadRate','fuelRate','heavyPct','lightPct','bonusPct','tarpFee','hookliftFee','overnightFee','givePerHr'];
+    var kt=['weight','speedCalc','distMode','fuelBench','fuelPenalty','tarp','bonus10','bonusBase','giveOn'];
     var dirty=kp.some(function(k){return +P[k]!==+OFFICIAL.P[k];})||kt.some(function(k){return String(T[k])!==String(OFFICIAL.T[k]);});
     b.textContent=dirty?'⚠️ กำลังจำลอง (ไม่ใช่ค่าจริงระบบ)':'✓ ค่าทางการ';
     b.style.background=dirty?'#c8352f':'var(--primary,#1f8a52)';
