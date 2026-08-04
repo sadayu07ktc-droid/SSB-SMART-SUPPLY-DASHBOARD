@@ -238,7 +238,7 @@
   // ต้นทุนบริษัท (ค่าจริงจาก vehicles รุ่น 360): fixed_cost_per_km รวมค่าเสื่อมแล้ว · variable_cost_per_km รวมน้ำมัน · ops_cost_trip
   // overnightFee = ค่ารอขึ้นของข้ามคืน (บ./คืน) · hookliftFee = ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง ขึ้น+ลง) — ⚠️ ค่า placeholder รอ management เคาะ
   var P={runRate:100,loadRate:100,fuelRate:25,benchmark:3.2,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
-    overnightFee:500,hookliftFee:100,hookliftLiters:4,givePerHr:10.4166666667,
+    overnightFee:500,hookliftFee:100,hookliftLiters:4,givePerHr:10.42,
     fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};
   // ความเร็วเลทตามช่วงระยะ — ระยะขาไหนเข้าช่วงไหน ใช้ความเร็วช่วงนั้น (master ใน DB, ค่า mock)
   // แต่ละช่วงระยะมีทั้ง ความเร็ว (กม./ชม.) และ เกณฑ์น้ำมัน (กม./ล.) — ตามที่ user กำหนด 1-25 = 20 กม./ชม. · 2.2 กม./ล.
@@ -1046,7 +1046,7 @@
     P.fuelRate=_n(p.fuel_rate_wage,P.fuelRate); P.heavyPct=_n(p.heavy_pct,P.heavyPct);
     P.lightPct=_n(p.light_pct,P.lightPct); P.bonusPct=_n(p.bonus_pct,P.bonusPct);
     P.tarpFee=_n(p.tarp_fee,P.tarpFee); P.hookliftFee=_n(p.hooklift_fee,P.hookliftFee); P.overnightFee=_n(p.overnight_fee,P.overnightFee);
-    P.hookliftLiters=_n(p.hooklift_liters,P.hookliftLiters); P.givePerHr=_n(p.give_per_hr,P.givePerHr);   // 🆕 V.2
+    P.hookliftLiters=_n(p.hooklift_liters,P.hookliftLiters); P.givePerHr=Math.round(_n(p.give_per_hr,P.givePerHr)*100)/100;   // 🆕 V.2 (ปัด 2 ตำแหน่ง กันทศนิยมยาว 125/12)
     T.giveOn=_n(p.give_on,1)!==0;                                                                          // 🆕 ให้เพิ่มตามเวลาวิ่ง (default เปิด)
     T.weight=_n(tg.weight_on,1)!==0;
     T.speedCalc=_n(tg.time_mode,0)===1?'flat':'stair';
