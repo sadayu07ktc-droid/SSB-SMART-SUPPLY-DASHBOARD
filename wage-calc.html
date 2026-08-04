@@ -295,7 +295,7 @@
       picker.innerHTML=h+'</select>';
       document.getElementById('ordSel').onchange=function(e){T.ordIdx=+e.target.value;P.benchmark=FUEL_BENCH[src().model]||3.2;syncBench();buildSource();render();};
       body.innerHTML=tile('คนขับ',s.driver)+tile('ทะเบียน',s.plate)+tile('ยี่ห้อ/รุ่น',s.brand+' '+s.model)+tile('ปลายทาง',s.dest)+
-        tile('ระยะจริง',s.distActual,'กม.')+tile('ขาไป/ขากลับ',s.lightKm.toFixed(1)+'/'+s.heavyKm.toFixed(1),'กม.')+
+        tile('ระยะจริง',Number(s.distActual||0).toFixed(1),'กม.')+tile('ขาไป/ขากลับ',s.lightKm.toFixed(1)+'/'+s.heavyKm.toFixed(1),'กม.')+
         tile('น้ำมันเติม',s.litersFilled.toFixed(1),'ล.')+tile('อัตราจริง',(s.distActual/s.litersFilled).toFixed(2),'กม./ล.')+
         tile('ปริมาณ',(s.qty||0).toLocaleString('th-TH'),'กก.')+
         '<div class="tile"><div class="k">เกณฑ์รุ่น</div><div class="v"><span id="benchDisp">'+P.benchmark+'</span> <span class="u">กม./ล.</span></div></div>';
