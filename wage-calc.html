@@ -238,7 +238,7 @@
   // ต้นทุนบริษัท (ค่าจริงจาก vehicles รุ่น 360): fixed_cost_per_km รวมค่าเสื่อมแล้ว · variable_cost_per_km รวมน้ำมัน · ops_cost_trip
   // overnightFee = ค่ารอขึ้นของข้ามคืน (บ./คืน) · hookliftFee = ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง ขึ้น+ลง) — ⚠️ ค่า placeholder รอ management เคาะ
   var P={runRate:100,loadRate:100,fuelRate:28,benchmark:3.2,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
-    overnightFee:500,hookliftFee:100,
+    overnightFee:500,hookliftFee:100,hookliftLiters:4,
     fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};
   // ความเร็วเลทตามช่วงระยะ — ระยะขาไหนเข้าช่วงไหน ใช้ความเร็วช่วงนั้น (master ใน DB, ค่า mock)
   // แต่ละช่วงระยะมีทั้ง ความเร็ว (กม./ชม.) และ เกณฑ์น้ำมัน (กม./ล.) — ตามที่ user กำหนด 1-25 = 20 กม./ชม. · 2.2 กม./ล.
@@ -565,7 +565,7 @@
     b.parentNode.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');updateDeps();renderSpeedTiers();renderLegs();render();updateBadge();};
 
   // ── param ──
-  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์รุ่นนี้'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'% บวกเพิ่มค่าเที่ยว'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'overnightFee',label:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'},{k:'hookliftFee',label:'ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง)'}]; // param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer
+  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์รุ่นนี้'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'% บวกเพิ่มค่าเที่ยว'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'overnightFee',label:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'},{k:'hookliftLiters',label:'ฮุคลิฟท์ +น้ำมัน (ลิตร/ครั้ง เทปาล์ม)'}]; // param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer · hookliftFee เลิกใช้ (ย้ายเป็นลิตร)
   var pBox=document.getElementById('params');
   params.forEach(function(p){var l=document.createElement('label');l.innerHTML=p.label+'<input type="number" step="any" data-p="'+p.k+'" value="'+P[p.k]+'">';pBox.appendChild(l);});
   pBox.oninput=function(e){var i=e.target.closest('input[data-p]');if(!i)return;P[i.dataset.p]=parseFloat(i.value)||0;renderLegs();render();updateBadge();};
@@ -646,6 +646,10 @@
       var fw=FUEL_WEIGHT[s.model]||FUEL_WEIGHT['360'];
       benchL=LEGS.reduce(function(a,l){var d=l.distKey?(s[l.distKey]||0):(l.dist||0);return a+d/((l.weight==='heavy'?fw.heavy:fw.light)||1);},0);
     }else benchL=fuelDist/P.benchmark;
+    // 🆕 V.2: ฮุคลิฟท์(เทปาล์ม) → บวก N ลิตรเข้าเกณฑ์น้ำมัน (แทนเหมาบาท) · ตรง backend
+    var _jobHook0=LEGS.some(function(l){return JOB_HOOKLIFT[l.job];});
+    var _liftsN0=Number(s.lifts)>0?Number(s.lifts):1;
+    benchL+=(P.hookliftLiters||0)*((T.hooklift&&_jobHook0)?_liftsN0:0);
     var benchKmpl=benchL>0?fuelDist/benchL:P.benchmark;
     var fuelAdj=T.fuelPenalty?(benchL-actualL)*P.fuelRate:0;
     // ค่าขึ้น-ลงของ (รวมทุกขา) — แยกออกจากฐานปันส่วน เป็นรายการบวกท้าย
@@ -658,7 +662,7 @@
     var jobOv=LEGS.some(function(l){return JOB_OVERNIGHT[l.job];});
     var nightsN=Number(s.nights)>0?Number(s.nights):1, liftsN=Number(s.lifts)>0?Number(s.lifts):1;
     var overnight=(T.overnight&&jobOv)?nightsN*P.overnightFee:0;          // ค่ารอขึ้นของข้ามคืน = บ./คืน × จำนวนคืน
-    var hooklift=(T.hooklift&&jobHook)?liftsN*P.hookliftFee:0;            // ค่ายกกระบะ (ฮุคลิฟท์) = บ./ครั้ง × จำนวนครั้ง
+    var hooklift=0;                                                       // 🆕 ฮุคลิฟท์ย้ายไปคิดเป็นน้ำมันแล้ว (บวกลิตรเข้าเกณฑ์ด้านบน)
     // ── ก้อนที่ลากเข้า "ฐานถ่วง 70/30" → × pctSum (ผลรวมสัดส่วนขา) แบบบอส · ตรงกับ backend ──
     var wpctSum=T.weight?legs.reduce(function(a,l){return a+(l.pct||0)/100;},0):1;
     loadWage=T.wbLoad?loadWage*wpctSum:loadWage;

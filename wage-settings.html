@@ -81,8 +81,8 @@ function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');setTi
 function goBack(){ if(history.length>1){history.back();} else {location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';} }
 
 // ป้ายชื่อ param กลาง
-const PLBL={run_rate_per_hr:'เลทค่าวิ่ง (บ./ชม.)',load_rate_per_hr:'ค่าขึ้น-ลง (บ./ชม.)',fuel_rate_wage:'เลทน้ำมันคิดค่าแรง (บ./ล.)',heavy_pct:'ถ่วงหนัก (%)',light_pct:'ถ่วงเบา (%)',bonus_pct:'โบนัส % ค่าเที่ยว',tarp_fee:'ค่าคลุมผ้าใบ (บ.)',hooklift_fee:'ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง)',overnight_fee:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'};
-const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct','light_pct','bonus_pct','tarp_fee','hooklift_fee','overnight_fee'];
+const PLBL={run_rate_per_hr:'เลทค่าวิ่ง (บ./ชม.)',load_rate_per_hr:'ค่าขึ้น-ลง (บ./ชม.)',fuel_rate_wage:'เลทน้ำมันคิดค่าแรง (บ./ล.)',heavy_pct:'ถ่วงหนัก (%)',light_pct:'ถ่วงเบา (%)',bonus_pct:'โบนัส % ค่าเที่ยว',tarp_fee:'ค่าคลุมผ้าใบ (บ.)',hooklift_fee:'ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง)',hooklift_liters:'ฮุคลิฟท์ +น้ำมัน (ลิตร/ครั้ง · เทปาล์ม)',overnight_fee:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'};
+const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct','light_pct','bonus_pct','tarp_fee','hooklift_liters','overnight_fee'];
 
 // นิยาม toggle: [key, ป้าย, [[ค่า,ป้ายตัวเลือก],...], คำอธิบาย]
 const TOGDEF=[
@@ -136,8 +136,8 @@ function summaryHtml(){
   r+=row('เพิ่ม/หักน้ำมัน', on('fuel_adj_on')?`เปิด · เลท ${pv('fuel_rate_wage',28)} บ./ล.`:'ปิด (ไม่คิดน้ำมัน)', on('fuel_adj_on')?'on':'off');
   r+=row('ค่าคลุมผ้าใบ', on('tarp_on')?`เปิด · ${pv('tarp_fee',100)} บ. (เฉพาะงานที่ติ๊ก)`:'ปิด', on('tarp_on')?'on':'off');
   r+=row('โบนัส', on('bonus_on')?`เปิด · ${pv('bonus_pct',10)}% · ฐาน${Number(T.bonus_base)===1?'ค่าวิ่ง+ขึ้นลง':'หลังน้ำมัน'}`:'ปิด', on('bonus_on')?'on':'off');
-  const hf=pv('hooklift_fee',0), ov=pv('overnight_fee',0);
-  r+=row('ค่ายกกระบะ (ฮุคลิฟท์)', hf>0?`${hf} บ./ครั้ง · เฉพาะงานที่ติ๊ก`:'ไม่คิด (0)', hf>0?'on':'none');
+  const hf=pv('hooklift_liters',0), ov=pv('overnight_fee',0);
+  r+=row('ฮุคลิฟท์ (เทปาล์ม)', hf>0?`+${hf} ลิตรน้ำมัน/ครั้ง · เฉพาะปาล์มที่ติ๊ก`:'ไม่คิด (0)', hf>0?'on':'none');
   r+=row('ค่ารอขึ้นของข้ามคืน', ov>0?`${ov} บ./คืน · เฉพาะงานที่ติ๊ก`:'ไม่คิด (0)', ov>0?'on':'none');
   return `<div class="card"><div class="ch">📋 สรุปเกณฑ์ที่ใช้คิดตอนนี้</div><div class="note">อัปเดตสดตามสวิตช์ด้านล่าง — คือเกณฑ์ที่<b>ระบบจ่ายจริง</b>ใช้คิดค่าแรงเที่ยวใหม่</div>${r}</div>`;
 }
