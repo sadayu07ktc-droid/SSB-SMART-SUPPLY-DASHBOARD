@@ -747,7 +747,7 @@
     h+=row(lab,(fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.','color:'+(fa<0?'var(--danger)':'var(--success)')+';font-weight:600');
     if(T.giveOn&&c.fuelTimeBonus>0)h+=row('ให้เพิ่มตามเวลาวิ่ง ('+c.giveHrs.toFixed(1)+' ชม. × '+P.givePerHr.toFixed(2)+')','+'+money(c.fuelTimeBonus)+' บ.','color:var(--success);font-weight:600');
     if(c.loadWage>0)h+=row('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.','color:var(--success);font-weight:600');
-    if(T.tarp)h+=row('ค่าคลุมผ้าใบ (เหมาต่อเที่ยว)','+'+money(c.tarp)+' บ.','color:var(--success);font-weight:600');
+    h+=row('ค่าคลุมผ้าใบ'+(!T.tarp?' (ปิด)':(c.tarp>0?' (เหมาต่อเที่ยว)':' — งานนี้ไม่คิด')),(c.tarp>0?'+'+money(c.tarp):'0')+' บ.','color:'+(c.tarp>0?'var(--success)':'var(--txt2)')+';font-weight:600');
     if(c.overnight>0)h+=row('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||1)+' คืน × '+P.overnightFee+')','+'+money(c.overnight)+' บ.','color:var(--success);font-weight:600');
     if(c.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์ ('+Number(s.lifts||1)+' ครั้ง × '+P.hookliftFee+')','+'+money(c.hooklift)+' บ.','color:var(--success);font-weight:600');
     if(T.bonus10)h+=row('บวกเพิ่ม '+P.bonusPct+'% '+(T.bonusBase==='base'?'(ฐาน: ค่าวิ่ง+ขึ้นลง '+money(c.bonusOn)+')':'(ฐาน: ยอดรวม '+money(c.bonusOn)+')'),'+'+money(c.bonus)+' บ.','color:var(--success);font-weight:600');
