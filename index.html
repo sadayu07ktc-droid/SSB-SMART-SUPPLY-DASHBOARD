@@ -480,6 +480,7 @@
      LIFF (LIFF_ID_ADMIN) → userId → GAS action=getDrivers → นับ online จาก drivers[].gps
      ไม่ต้องมี action ใหม่ฝั่ง GAS · getDrivers ตอบ drivers[] ที่มีฟิลด์ gps อยู่แล้ว */
   const LIFF_ID = '2010274217-Ot7vGhri';   // LIFF_ID_ADMIN (หน้า SSB Dashboard)
+  const DEV_OPEN = true;   // 🔓 ชั่วคราว(ช่วงพัฒนา): ปิดการเช็คสิทธิ์แอดมิน/ผู้บริหาร → ใครล็อกอิน LINE ก็เข้าได้ · ⚠️ ตั้ง false เพื่อเปิดจำกัดสิทธิ์กลับตอนระบบเสร็จ
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
   const REFRESH_MS = 60000;                 // 1 นาที
   let MY_UID = '';
@@ -814,7 +815,7 @@ async function bootstrapStatus(){
       
       const role = String(u.role || '').toLowerCase();
 
-      if(!(role === 'admin' || role === 'ผู้บริหาร' || role === 'executive')){
+      if(!DEV_OPEN && !(role === 'admin' || role === 'ผู้บริหาร' || role === 'executive')){
         deny('บัญชีนี้ไม่ใช่สิทธิ์แอดมิน / ผู้บริหาร');
         return;
       }
@@ -825,6 +826,7 @@ async function bootstrapStatus(){
 
     }catch(e){
       console.error('AUTH_ERROR:', e);
+      if(DEV_OPEN){ document.body.classList.remove('auth-lock'); if(authScreen) authScreen.style.display='none'; return; }  // 🔓 ช่วงพัฒนา: error ก็ให้เข้าได้
       deny('ตรวจสอบสิทธิ์ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
       return;
     }
