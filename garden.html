@@ -392,30 +392,128 @@ async function saveFields(patch,msg){
   if(d.ok){ toast(msg); return true; }
   toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); return false;
 }
-function editTeam(){
+/* ══════════ Modal สวย แทน prompt()/confirm() เก่า ══════════ */
+function _pmEl(){
+  let d=document.getElementById('pickModal'); if(d) return d;
+  const st=document.createElement('style'); st.textContent=`
+.pm{position:fixed;inset:0;z-index:80;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(9,22,17,.5);opacity:0;pointer-events:none;transition:opacity .18s}
+.pm.on{opacity:1;pointer-events:auto}
+.pm-card{width:420px;max-width:100%;max-height:86vh;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow-lift,0 20px 50px rgba(0,0,0,.3));transform:translateY(12px) scale(.98);transition:transform .2s cubic-bezier(.32,.72,0,1);overflow:hidden}
+.pm.on .pm-card{transform:none}
+.pm-head{display:flex;align-items:center;gap:10px;padding:14px 18px;background:var(--pine-deep);color:#EAF3EF;border-bottom:3px solid var(--gold)}
+.pm-head h3{font-size:15px;font-weight:700;flex:1;margin:0}
+.pm-x{background:rgba(255,255,255,.15);color:#EAF3EF;border:none;width:28px;height:28px;border-radius:8px;font-size:13px;cursor:pointer;flex:none}
+.pm-x:hover{background:rgba(255,255,255,.3)}
+.pm-sub{padding:11px 18px 0;font-size:12.5px;color:var(--ink-soft);line-height:1.45}
+.pm-sub:empty{display:none}
+.pm-body{padding:12px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:7px}
+.pm-opt{display:flex;align-items:center;gap:11px;padding:11px 13px;border:1.5px solid var(--line);border-radius:11px;cursor:pointer;font-size:14px;color:var(--ink);background:var(--surface-2);transition:border-color .12s,background .12s}
+.pm-opt:hover{border-color:var(--line-strong)}
+.pm-opt.sel{border-color:var(--pine);background:var(--surface-3)}
+.pm-opt .tick{flex:none;width:20px;height:20px;border-radius:6px;border:1.5px solid var(--line-strong);display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;background:transparent;transition:background .12s,border-color .12s}
+.pm-opt .tick.rad{border-radius:999px}
+.pm-opt.sel .tick{background:var(--pine);border-color:var(--pine)}
+.pm-opt .nm{flex:1}
+.pm-opt .cd{font-size:11px;color:var(--ink-faint);font-family:ui-monospace,monospace}
+.pm-input{width:100%;padding:11px 13px;border:1.5px solid var(--line-strong);border-radius:11px;font-size:14px;background:var(--surface-2);color:var(--ink);font-family:inherit;box-sizing:border-box}
+.pm-input:focus{outline:none;border-color:var(--pine)}
+.pm-foot{display:flex;gap:9px;padding:13px 18px;border-top:1px solid var(--line);background:var(--surface)}
+.pm-btn{flex:1;padding:11px;border-radius:11px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid transparent;font-family:inherit}
+.pm-btn.ghost{background:var(--surface-2);border-color:var(--line-strong);color:var(--ink-soft)}
+.pm-btn.ghost:hover{background:var(--surface-3)}
+.pm-btn.go{background:var(--pine);color:#fff}
+.pm-btn.go:hover{background:var(--pine-deep)}
+.pm-btn.danger{background:#C0392B;color:#fff}
+.pm-btn.danger:hover{background:#A5352A}`;
+  document.head.appendChild(st);
+  d=document.createElement('div'); d.id='pickModal'; d.className='pm';
+  d.innerHTML=`<div class="pm-card" role="dialog" aria-modal="true">
+    <div class="pm-head"><h3 id="pmTitle"></h3><button class="pm-x" id="pmX" aria-label="ปิด">✕</button></div>
+    <div class="pm-sub" id="pmSub"></div>
+    <div class="pm-body" id="pmBody"></div>
+    <div class="pm-foot"><button class="pm-btn ghost" id="pmCancel">ยกเลิก</button><button class="pm-btn go" id="pmOk">ยืนยัน</button></div>
+  </div>`;
+  document.body.appendChild(d);
+  d.addEventListener('keydown',e=>{ if(e.key==='Escape') _pmClose(null); });
+  return d;
+}
+let _pmResolve=null;
+function _pmClose(v){ const d=document.getElementById('pickModal'); if(d) d.classList.remove('on'); const r=_pmResolve; _pmResolve=null; if(r) r(v); }
+function _pmOpen(title,sub){
+  const d=_pmEl();
+  d.querySelector('#pmTitle').textContent=title;
+  d.querySelector('#pmSub').textContent=sub||'';
+  const ok=d.querySelector('#pmOk'); ok.textContent='ยืนยัน'; ok.className='pm-btn go';
+  d.querySelector('#pmX').onclick=()=>_pmClose(null);
+  d.querySelector('#pmCancel').onclick=()=>_pmClose(null);
+  d.onclick=e=>{ if(e.target===d) _pmClose(null); };
+  requestAnimationFrame(()=>d.classList.add('on'));
+  return d;
+}
+/* เลือกอันเดียว — options=[{value,name,code}] · คืน value หรือ null(ยกเลิก) */
+function pickOne(title,sub,options,current){
+  return new Promise(res=>{ _pmResolve=res;
+    const d=_pmOpen(title,sub); let sel=current;
+    const body=d.querySelector('#pmBody'); body.innerHTML='';
+    options.forEach(o=>{
+      const row=document.createElement('div'); row.className='pm-opt'+(o.value===sel?' sel':'');
+      row.innerHTML=`<span class="tick rad">${o.value===sel?'●':''}</span><span class="nm">${esc(o.name)}</span>${o.code?`<span class="cd">${esc(o.code)}</span>`:''}`;
+      row.onclick=()=>{ sel=o.value; body.querySelectorAll('.pm-opt').forEach(x=>{x.classList.remove('sel');x.querySelector('.tick').textContent='';}); row.classList.add('sel'); row.querySelector('.tick').textContent='●'; };
+      body.appendChild(row);
+    });
+    d.querySelector('#pmOk').onclick=()=>_pmClose(sel);
+  });
+}
+/* เลือกหลายอัน — คืน array หรือ null(ยกเลิก) */
+function pickMany(title,sub,options,current){
+  return new Promise(res=>{ _pmResolve=res;
+    const d=_pmOpen(title,sub); const sel=new Set(current||[]);
+    const body=d.querySelector('#pmBody'); body.innerHTML='';
+    options.forEach(o=>{
+      const row=document.createElement('div'); row.className='pm-opt'+(sel.has(o.value)?' sel':'');
+      row.innerHTML=`<span class="tick">${sel.has(o.value)?'✓':''}</span><span class="nm">${esc(o.name)}</span>${o.code?`<span class="cd">${esc(o.code)}</span>`:''}`;
+      row.onclick=()=>{ if(sel.has(o.value)){sel.delete(o.value);row.classList.remove('sel');row.querySelector('.tick').textContent='';}else{sel.add(o.value);row.classList.add('sel');row.querySelector('.tick').textContent='✓';} };
+      body.appendChild(row);
+    });
+    d.querySelector('#pmOk').onclick=()=>_pmClose(options.filter(o=>sel.has(o.value)).map(o=>o.value));
+  });
+}
+/* พิมพ์ข้อความ — คืน string หรือ null(ยกเลิก) */
+function askText(title,sub,placeholder){
+  return new Promise(res=>{ _pmResolve=res;
+    const d=_pmOpen(title,sub);
+    d.querySelector('#pmBody').innerHTML=`<input class="pm-input" id="pmInput" placeholder="${placeholder?esc(placeholder):''}" autocomplete="off">`;
+    const inp=d.querySelector('#pmInput'); setTimeout(()=>inp.focus(),60);
+    inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();_pmClose(inp.value);} };
+    d.querySelector('#pmOk').onclick=()=>_pmClose(inp.value);
+  });
+}
+/* ยืนยัน — คืน true/false */
+function confirmBox(title,sub,okLabel,danger){
+  return new Promise(res=>{ _pmResolve=res;
+    const d=_pmOpen(title,sub); d.querySelector('#pmBody').innerHTML='';
+    const ok=d.querySelector('#pmOk'); ok.textContent=okLabel||'ยืนยัน'; ok.className='pm-btn '+(danger?'danger':'go');
+    ok.onclick=()=>_pmClose(true);
+  });
+}
+
+async function editTeam(){
   const list=mTeams();
   if(!list.length){ toast('ยังไม่มีทีมตัดในฐานข้อมูล',true); return; }
   const cur=CUR.garden.team;
-  const menu=['0 = ไม่ใช้ทีมตัด'].concat(list.map((t,i)=>`${i+1} = ${t.name||t.code} (${t.code})`)).join('\n');
-  const ans=prompt('เลือกทีมตัด — พิมพ์ตัวเลข\n\n'+menu, cur&&cur!=='ไม่มี'?String(list.findIndex(t=>t.code===cur)+1):'0');
-  if(ans===null) return;
-  const n=parseInt(ans,10);
-  if(isNaN(n)||n<0||n>list.length){ toast('เลขไม่ถูกต้อง',true); return; }
-  const val=n===0?'ไม่มี':list[n-1].code;
+  const options=[{value:'ไม่มี',name:'ไม่ใช้ทีมตัด',code:''}].concat(list.map(t=>({value:t.code,name:t.name||t.code,code:t.code})));
+  const val=await pickOne('เลือกทีมตัด','ทีมตัดประจำสวนนี้ — ใช้เป็นค่าตั้งต้นเวลาสร้างออเดอร์',options,(cur&&cur!=='ไม่มี')?cur:'ไม่มี');
+  if(val===null) return;
   CUR.garden.team=val; document.getElementById('teamCell').innerHTML=teamHTML();
-  saveFields({team:val}, n===0?'ตั้งเป็นไม่ใช้ทีมตัดแล้ว':'ตั้งทีมตัดเป็น '+(list[n-1].name||val)+' แล้ว');
+  saveFields({team:val}, val==='ไม่มี'?'ตั้งเป็นไม่ใช้ทีมตัดแล้ว':'ตั้งทีมตัดเป็น '+teamName(val)+' แล้ว');
 }
-function editRamps(){
+async function editRamps(){
   const list=mRamps();
   if(!list.length){ toast('ยังไม่มีลานเทในฐานข้อมูล',true); return; }
   const cur=CUR.garden.ramps||[];
-  const menu=list.map((r,i)=>`${i+1} = ${r.name||r.code} (${r.code})${cur.includes(r.code)?'  ← เลือกอยู่':''}`).join('\n');
-  const ans=prompt('เลือกลานเทที่ผ่าน — พิมพ์ตัวเลขคั่นคอมม่า (เช่น 1,3)\nเว้นว่าง = ส่งตรงโรงงาน\n\n'+menu,
-    cur.map(c=>list.findIndex(r=>r.code===c)+1).filter(n=>n>0).join(','));
-  if(ans===null) return;
-  const picks=String(ans).split(',').map(s=>parseInt(s.trim(),10)).filter(n=>!isNaN(n));
-  for(const n of picks){ if(n<1||n>list.length){ toast('เลข '+n+' ไม่มีในรายการ',true); return; } }
-  const codes=picks.map(n=>list[n-1].code);
+  const options=list.map(r=>({value:r.code,name:r.name||r.code,code:r.code}));
+  const codes=await pickMany('เลือกลานเทที่ผ่าน','เลือกได้หลายแห่ง · ไม่เลือกเลย = ส่งตรงโรงงาน',options,cur);
+  if(codes===null) return;
   CUR.garden.ramps=codes; document.getElementById('rampCell').innerHTML=rampHTML();
   saveFields({ramps:codes}, codes.length?'ตั้งลานเท '+codes.length+' แห่งแล้ว':'ตั้งเป็นส่งตรงโรงงานแล้ว');
 }
@@ -440,17 +538,18 @@ async function saveBills(msg){
   else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
   return d.ok;
 }
-function addBill(){
-  const n=prompt('ชื่อในบิลที่จะเพิ่ม\n(ชื่อนี้จะไปเป็นตัวเลือกในฟอร์มของคนสวน)');
-  if(!n||!n.trim()) return;
+async function addBill(){
+  const n=await askText('เพิ่มชื่อในบิล','ชื่อนี้จะไปเป็นตัวเลือกในฟอร์มของคนสวน','เช่น ชื่อบริษัท / ชื่อ-นามสกุล');
+  if(n===null||!n.trim()) return;
   const v=n.trim();
   if(v.includes(',')){ toast('ชื่อในบิลห้ามมีคอมม่า',true); return; }
   if(CUR.garden.bills.includes(v)){ toast('มีชื่อนี้อยู่แล้ว',true); return; }
   CUR.garden.bills.push(v); refreshBills(); drawMini(); saveBills('เพิ่ม "'+v+'" แล้ว');
 }
-function delBill(i){
+async function delBill(i){
   const b=CUR.garden.bills; if(b.length===1) return;
-  if(!confirm('ลบ "'+b[i]+'" ออกจากรายการ?')) return;
+  const ok=await confirmBox('ลบชื่อในบิล','ลบ "'+b[i]+'" ออกจากรายการ?','ลบ',true);
+  if(!ok) return;
   const [x]=b.splice(i,1); refreshBills(); drawMini(); saveBills('ลบ "'+x+'" แล้ว');
 }
 function setDef(i){
