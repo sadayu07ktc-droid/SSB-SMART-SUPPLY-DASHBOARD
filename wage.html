@@ -234,7 +234,7 @@ async function openDetail(orderId){
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
   if(w.tarp>0)h+=row('ค่าคลุมผ้าใบ',money(w.tarp)+' บ.');
   if(w.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์ ('+(w.lifts||0)+' ครั้ง)',money(w.hooklift)+' บ.');
-  if(w.overnight>0)h+=row('ค่ารอขึ้นของข้ามคืน ('+(w.nights||0)+' คืน)',money(w.overnight)+' บ.');
+  if(w.overnight>0)h+=row('ค่ารอลงของ ('+(w.waitHrs||0)+' ชม.)',money(w.overnight)+' บ.');
   h+=row((w.fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+' ×'+w.snapshot.fuelRate,(w.fuelAdj>=0?'+':'−')+money(Math.abs(w.fuelAdj))+' บ.',(w.fuelAdj<0?'color:var(--danger)':'color:var(--primary)'));
   if(w.snapshot.bonusPct>0)h+=row('โบนัส '+w.snapshot.bonusPct+'%','+'+money(w.bonus)+' บ.');
   h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt">${money(w.wage)} บ.</span></div>`;

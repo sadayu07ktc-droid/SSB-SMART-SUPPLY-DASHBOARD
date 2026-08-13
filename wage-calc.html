@@ -201,18 +201,19 @@
 (function(){
   var GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
   var LIFF_ID='2010274217-Ot7vGhri';
-  var FUEL_BENCH={'360':3.2,'240':4.0};   // เกณฑ์ "ค่าเดียว" ต่อรุ่น (kmpl_single จาก DB)
-  var JOB_TARP={'ปาล์ม':false,'Packing':true,'Bulk':true,'อื่นๆ':false}; // งานไหนคิดผ้าใบ (จาก DB)
-  var JOB_HOOKLIFT={'ปาล์ม':true};     // งานไหนคิดค่ายกกระบะ ฮุคลิฟท์ (จาก DB)
-  var JOB_OVERNIGHT={'Packing':true};  // งานไหนคิดค่าค้างคืน (จาก DB)
+  var FUEL_BENCH={'พ่วง':3.5,'เดี่ยว':5.95,'4ล้อ':0,'6ล้อ':0};   // R.5 kmpl_single ต่อประเภทรถ (จาก DB)
+  var JOB_TARP={'Packing':true};                       // R.5 งานไหนคิดผ้าใบ (จาก DB)
+  var JOB_HOOKLIFT={'งานสวน':true,'ลาน':true,'ปาล์ม':true}; // R.5 งานไหนคิดฮุคลิฟท์ (จาก DB)
+  var JOB_HARDSHIP={'งานสวน':true};    // R.5 งานไหนคิด Hardship (เฉพาะงานสวน · จาก DB)
+  var JOB_OVERNIGHT={};                // R.5 เลิกใช้ค่าค้างคืน (แทนด้วยค่ารอ) — เก็บ empty กัน error
   var OFFICIAL=null;                       // ค่าทางการ (snapshot) สำหรับปุ่มรีเซ็ต
   var ORDERS=[
-    {id:'ORD-260714-8454',driver:'ธนกร เริงไทสงค์',plate:'86-1685',brand:'ISUZU',model:'360',dest:'ลานวัฒนานคร',date:'2026-07-14',distActual:359,distCentral:350,heavyKm:179.1,lightKm:179.9,yardKm:100,yardHomeKm:79.1,litersFilled:113,qty:30360,extraCost:0,nights:0,lifts:2},
-    {id:'ORD-260715-8461',driver:'สมชาย ใจดี',plate:'87-3639',brand:'ISUZU',model:'240',dest:'โรงงานสระแก้ว',date:'2026-07-15',distActual:118,distCentral:120,heavyKm:59,lightKm:59,yardKm:30,yardHomeKm:29,litersFilled:27,qty:15000,extraCost:60,nights:1,lifts:2},
-    {id:'ORD-260715-8470',driver:'วิรัช พงษ์ไทย',plate:'86-1685',brand:'ISUZU',model:'360',dest:'ท่าเรือ',date:'2026-07-15',distActual:86,distCentral:90,heavyKm:43,lightKm:43,yardKm:25,yardHomeKm:18,litersFilled:29,qty:12000}
+    {id:'ORD-260714-8454',driver:'ธนกร เริงไทสงค์',plate:'86-1685',brand:'ISUZU',model:'พ่วง',dest:'ลานวัฒนานคร',date:'2026-07-14',distActual:359,distCentral:0,heavyKm:179.1,lightKm:179.9,yardKm:100,yardHomeKm:79.1,litersFilled:113,qty:30360,extraCost:0,nights:0,lifts:2,waitHrs:0},
+    {id:'ORD-260715-8461',driver:'สมชาย ใจดี',plate:'87-3639',brand:'ISUZU',model:'เดี่ยว',dest:'โรงงานสระแก้ว',date:'2026-07-15',distActual:118,distCentral:0,heavyKm:59,lightKm:59,yardKm:30,yardHomeKm:29,litersFilled:27,qty:15000,extraCost:60,nights:1,lifts:2,waitHrs:0},
+    {id:'ORD-260715-8470',driver:'วิรัช พงษ์ไทย',plate:'86-1685',brand:'ISUZU',model:'พ่วง',dest:'ท่าเรือ',date:'2026-07-15',distActual:86,distCentral:0,heavyKm:43,lightKm:43,yardKm:25,yardHomeKm:18,litersFilled:29,qty:12000,waitHrs:0}
   ];
   // เวลามาตรฐานต่อประเภทงาน (นาที) — master (แก้ที่เดียว มีผลทุกขาที่ใช้งานนั้น)
-  var JOB_TYPES={'ปาล์ม':{up:30,down:30},'Packing':{up:120,down:120},'Bulk':{up:60,down:60},'อื่นๆ':{up:30,down:30}};
+  var JOB_TYPES={'งานสวน':{up:30,down:30},'ลาน':{up:30,down:30},'ปาล์ม':{up:30,down:30},'Packing':{up:30,down:30},'Bulk':{up:30,down:30},'กาก':{up:30,down:30},'ส่งน้ำ':{up:30,down:30},'งานทอย':{up:30,down:30},'อื่นๆ':{up:30,down:30}};
   // แต่ละขา: weight(เบา/หนัก) + job(ประเภทงาน) + doUp/doDown(มีขึ้น/ลงไหม) + distKey
   // รูปแบบทริป — งานตรง (2 ขา) vs ผ่านลานเท (3 ขา, ช่วงหนักแบ่ง 2 ท่อน group เดียว = แชร์ 70% ร่วมกัน)
   var PATTERNS={
@@ -237,26 +238,27 @@
   // runRate = เลทค่าวิ่ง (บ./ชม.) · loadRate = ค่าขึ้น-ลงของ (บ./ชม.) — แยกกัน แก้ตัวไหนกระทบเฉพาะส่วนนั้น
   // ต้นทุนบริษัท (ค่าจริงจาก vehicles รุ่น 360): fixed_cost_per_km รวมค่าเสื่อมแล้ว · variable_cost_per_km รวมน้ำมัน · ops_cost_trip
   // overnightFee = ค่ารอขึ้นของข้ามคืน (บ./คืน) · hookliftFee = ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง ขึ้น+ลง) — ⚠️ ค่า placeholder รอ management เคาะ
-  var P={runRate:100,loadRate:100,fuelRate:25,benchmark:3.2,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
-    overnightFee:500,hookliftFee:100,hookliftLiters:0,givePerHr:10.42,
-    fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};
+  var P={runRate:120,loadRate:100,fuelRate:25,benchmark:5.95,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
+    hookliftFee:100,givePerHr:12.5,waitRate:50,hardshipFee:50,
+    fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};   // R.5 defaults
   // ความเร็วเลทตามช่วงระยะ — ระยะขาไหนเข้าช่วงไหน ใช้ความเร็วช่วงนั้น (master ใน DB, ค่า mock)
   // แต่ละช่วงระยะมีทั้ง ความเร็ว (กม./ชม.) และ เกณฑ์น้ำมัน (กม./ล.) — ตามที่ user กำหนด 1-25 = 20 กม./ชม. · 2.2 กม./ล.
   // เกณฑ์น้ำมัน (กม./ล.) แยกตามรุ่นรถ — 360 ตัวใหญ่กินเยอะกว่า 240 (ค่า 240 เป็น placeholder ~×1.25)
   // อิงข้อมูลจริง: Isuzu 240 (FTR) เฉลี่ย 4.0–5.0 กม./ล. · Isuzu 360 (GXZ/FXZ) เฉลี่ย 3.2–3.8 (ทดสอบจริง 3.56 @50ตัน)
   // default ตามที่ user เคาะ 17/7: 1-30=20·2 / 31-75=30·2.25 / 76-150=45·3 / 151-400=55·3.75 / >400=60·4 (รุ่น 360)
   // default user เคาะ 2026-07-17: 360 = 2/2.25/3/3.75/4 · 240 = 2.5/3/3.8/4.7/5 · ความเร็ว 20/30/45/55/60
-  var SPEED_TIERS=[
-    {label:'',max:30,speed:20,kmplBy:{'360':2,'240':2.5}},
-    {label:'',max:75,speed:30,kmplBy:{'360':2.25,'240':3}},
-    {label:'',max:150,speed:45,kmplBy:{'360':3,'240':3.8}},
-    {label:'',max:400,speed:55,kmplBy:{'360':3.75,'240':4.7}},
-    {label:'',max:Infinity,speed:60,kmplBy:{'360':4,'240':5}}
+  var SPEED_TIERS=[   // R.5 ② 6 ช่วง · ความเร็วร่วม · กม./ล.ต่อประเภทรถ
+    {label:'',max:25,speed:30,kmplBy:{'พ่วง':2,'เดี่ยว':2.5,'4ล้อ':0,'6ล้อ':0}},
+    {label:'',max:40,speed:38,kmplBy:{'พ่วง':2.25,'เดี่ยว':3,'4ล้อ':0,'6ล้อ':0}},
+    {label:'',max:60,speed:42,kmplBy:{'พ่วง':3,'เดี่ยว':3.8,'4ล้อ':0,'6ล้อ':0}},
+    {label:'',max:80,speed:45,kmplBy:{'พ่วง':3.75,'เดี่ยว':4.7,'4ล้อ':0,'6ล้อ':0}},
+    {label:'',max:700,speed:47,kmplBy:{'พ่วง':4,'เดี่ยว':5,'4ล้อ':0,'6ล้อ':0}},
+    {label:'',max:Infinity,speed:50,kmplBy:{'พ่วง':4,'เดี่ยว':5,'4ล้อ':0,'6ล้อ':0}}
   ];
   function kmplTier(t){var m=src().model;return (t.kmplBy&&(t.kmplBy[m]||t.kmplBy['360']))||P.benchmark;}
   // เกณฑ์น้ำมันแยกหนัก/เบา ต่อรุ่น (ข้อมูลจริง: 360 หนัก 3.0-3.4 เบา 4.5-5.2 · 240 หนัก 3.8-4.2 เบา 5.0-5.5)
   // เกณฑ์หนัก/เบา ต่อรุ่น (user เคาะ 2026-07-17): 360 หนัก2.75 เบา4 · 240 หนัก3.75 เบา5
-  var FUEL_WEIGHT={'360':{heavy:2.75,light:4},'240':{heavy:3.75,light:5}};
+  var FUEL_WEIGHT={'พ่วง':{heavy:2.75,light:4},'เดี่ยว':{heavy:3.75,light:5},'4ล้อ':{heavy:0,light:0},'6ล้อ':{heavy:0,light:0}};
   function tierIdx(d){for(var i=0;i<SPEED_TIERS.length;i++){if(d<=SPEED_TIERS[i].max)return i;}return SPEED_TIERS.length-1;}
   function speedFor(d){return SPEED_TIERS[tierIdx(d)].speed;}
   // 🆕 V.2 "ให้เพิ่มตามเวลาวิ่ง" — ตารางความเร็วตามระยะ (interpolate) ตรง Mastersheet ชีต ความเร็ววตามระยะทาง · คนละตารางกับ SPEED_TIERS
@@ -267,8 +269,9 @@
   function kmplFor(d){return kmplTier(SPEED_TIERS[tierIdx(d)]);}
   function stairLiters(d,mult){mult=mult||1;var L=0,prev=0;for(var i=0;i<SPEED_TIERS.length;i++){var top=Math.min(d,SPEED_TIERS[i].max);if(top>prev)L+=(top-prev)/((kmplTier(SPEED_TIERS[i])*mult)||1);prev=SPEED_TIERS[i].max;if(d<=prev)break;}return L;}
   // bonusBase: 'total' = คิดโบนัสหลัง (จากยอดรวมทั้งหมด) · 'base' = คิดก่อน (จากค่าวิ่ง+ขึ้นลง เท่านั้น)
-  var T={mode:'order',ordIdx:0,distMode:'actual',speedMode:'tier',speedCalc:'stair',fuelBench:'tier',fuelPenalty:true,weight:true,bonus10:true,bonusBase:'total',tarp:true,overnight:false,hooklift:false,depr:true,groupAlloc:'leg2x',giveOn:true};
-  var M={brand:'ISUZU',model:'360',distActual:200,distCentral:200,heavyKm:100,lightKm:100,yardKm:100,yardHomeKm:100,litersFilled:62.5,qty:30000,qtyPk:500,extraCost:0,nights:1,lifts:2,dest:'—',driver:'(จำลอง)',plate:'—',id:'จำลอง'};
+  // R.5 toggle defaults · speedCalc: interp/stair/flat · distMode: central/actual · fuelBench: single/tier/weight
+  var T={mode:'order',ordIdx:0,distMode:'central',speedMode:'tier',speedCalc:'interp',fuelBench:'single',fuelPenalty:true,weight:true,bonus10:false,bonusBase:'total',tarp:true,overnight:false,hooklift:true,depr:true,groupAlloc:'leg2x',giveOn:true,load:true,hardship:true,wait:true,via:true};
+  var M={brand:'ISUZU',model:'เดี่ยว',distActual:200,distCentral:0,heavyKm:100,lightKm:100,yardKm:100,yardHomeKm:100,litersFilled:40,qty:30000,qtyPk:500,extraCost:0,nights:1,lifts:2,waitHrs:0,dest:'—',driver:'(จำลอง)',plate:'—',id:'จำลอง'};
   function mSum(){return PATTERN==='viaYard'?(M.lightKm+M.yardKm+M.yardHomeKm):(M.lightKm+M.heavyKm);}
   var money=function(n){return Math.round(n).toLocaleString('th-TH');};
   function toMin(t){var p=String(t||'0:0').split(':');return (+p[0])*60+(+p[1]||0);}
@@ -304,7 +307,7 @@
         '<div class="tile"><div class="k">เกณฑ์รุ่น</div><div class="v"><span id="benchDisp">'+P.benchmark+'</span> <span class="u">กม./ล.</span></div></div>';
     }else{
       head.textContent='✏️ เติมเลขจำลอง';
-      var h='<label style="font-size:12px;color:var(--txt2)">รุ่นรถ (เกณฑ์กินน้ำมัน)<select class="sel" id="mModel" style="margin-top:4px">';
+      var h='<label style="font-size:12px;color:var(--txt2)">ประเภทรถ (เกณฑ์กินน้ำมัน)<select class="sel" id="mModel" style="margin-top:4px">';
       Object.keys(FUEL_BENCH).forEach(function(md){h+='<option value="'+md+'"'+(md===M.model?' selected':'')+'>'+md+' (เกณฑ์ '+FUEL_BENCH[md]+' กม./ล.)</option>';});
       picker.innerHTML=h+'</select></label>';
       document.getElementById('mModel').onchange=function(e){M.model=e.target.value;P.benchmark=FUEL_BENCH[M.model];syncBench();buildSource();render();};
@@ -518,20 +521,22 @@
   });
 
   // ── toggle ──
-  var toggles=[
-    {k:'distMode',label:'ระยะทาง',opts:[['actual','จริง'],['central','ค่ากลาง']]},
-    {k:'speedMode',label:'ความเร็ว',opts:[['tier','เลทตามช่วง'],['gps','GPS จริง']]},
-    {k:'speedCalc',label:'วิธีคิดเลทความเร็ว',opts:[['stair','ขั้นบันได'],['flat','เหมาช่วงเดียว']]},
-    {k:'fuelBench',label:'เกณฑ์น้ำมันอิงจาก',opts:[['tier','ช่วงระยะ'],['tierWeight','ช่วง×หนัก/เบา'],['weight','หนัก/เบา'],['model','รุ่นรถ']]},
+  var toggles=[   // R.5
+    {k:'distMode',label:'ระยะที่ใช้คิด',opts:[['central','ค่ากลาง'],['actual','จริง']]},
+    {k:'speedCalc',label:'วิธีคิดเวลาวิ่ง',opts:[['interp','ไล่ระดับ'],['stair','ขั้นบันได'],['flat','เหมาช่วง']]},
+    {k:'fuelBench',label:'เกณฑ์น้ำมัน',opts:[['single','ค่าเดียว'],['tier','ตามช่วง'],['weight','หนัก/เบา']]},
     {k:'fuelPenalty',label:'เพิ่ม/หักน้ำมัน',opts:[[true,'เปิด'],[false,'ปิด']]},
-    {k:'giveOn',label:'ให้เพิ่มตามเวลาวิ่ง',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'via',label:'จ่ายผ่านลิตร (ฮุค+ให้เพิ่ม→ลิตร)',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'weight',label:'ถ่วงหนัก/เบา',opts:[[true,'เปิด'],[false,'ปิด']]},
-    {k:'groupAlloc',label:'วิธีปันส่วนหนัก/เบา',opts:[['leg2x','ระยะขา×2×% ✓ (มติ)']]},
-    {k:'bonus10',label:'บวก % ค่าเที่ยว (หลังคิดน้ำมัน)',opts:[[true,'เปิด'],[false,'ปิด']]},
-    {k:'bonusBase',label:'ฐานคิดโบนัส',opts:[['base','ก่อน (ค่าวิ่ง+ขึ้นลง)'],['total','หลัง (ยอดรวมทั้งหมด)']]},
-    {k:'tarp',label:'ค่าคลุมผ้าใบ',opts:[[true,'เปิด'],[false,'ปิด']]}
-    // ฮุคลิฟท์/ค้างคืน = ผูกต่อประเภทงาน (ปาล์ม/Packing) ไม่ใช่สวิตช์ — คิดอัตโนมัติเมื่อตั้งค่าเงิน
-  ]; // toggle ค่าเสื่อม → ย้ายไปอยู่ท้าย drawer ต้นทุน
+    {k:'load',label:'ค่าขึ้น-ลง',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'tarp',label:'ค่าคลุมผ้าใบ',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'hooklift',label:'ฮุคลิฟท์',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'hardship',label:'Hardship (งานสวน)',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'giveOn',label:'ให้เพิ่มตามเวลาวิ่ง',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'wait',label:'ค่ารอ',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'bonus10',label:'โบนัส %',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'bonusBase',label:'ฐานคิดโบนัส',opts:[['base','ก่อน (ค่าวิ่ง+ขึ้นลง)'],['total','หลัง (ยอดรวม)']]}
+  ];
   var togBox=document.getElementById('tog');
   toggles.forEach(function(t){
     var row=document.createElement('div');row.className='togrow';
@@ -558,7 +563,7 @@
       if(inp){inp.disabled=dis;var lab=inp.closest('label');if(lab)lab.style.opacity=dis?0.35:1;}
     });
     // ปิด toggle ไหน → เบลอ param ของตัวนั้น (และเบลอ "ฐานคิดโบนัส" เมื่อปิดโบนัส)
-    [['tarpFee',!T.tarp],['overnightFee',!T.overnight],['hookliftFee',!T.hooklift],['bonusPct',!T.bonus10],['givePerHr',!T.giveOn]].forEach(function(p){
+    [['tarpFee',!T.tarp],['waitRate',!T.wait],['hookliftFee',!T.hooklift],['hardshipFee',!T.hardship],['bonusPct',!T.bonus10],['givePerHr',!T.giveOn]].forEach(function(p){
       var inp=pBox.querySelector('input[data-p="'+p[0]+'"]');
       if(inp){inp.disabled=p[1];var lab=inp.closest('label');if(lab)lab.style.opacity=p[1]?0.35:1;}
     });
@@ -569,120 +574,77 @@
     b.parentNode.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');updateDeps();renderSpeedTiers();renderLegs();render();updateBadge();};
 
   // ── param ──
-  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์รุ่นนี้'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'% บวกเพิ่มค่าเที่ยว'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'overnightFee',label:'ค่ารอขึ้นของข้ามคืน (บ./คืน)'},{k:'hookliftLiters',label:'ฮุคลิฟท์ +น้ำมัน (ลิตร/ครั้ง เทปาล์ม)'},{k:'givePerHr',label:'ให้เพิ่มตามเวลาวิ่ง (บ./ชม.)'}]; // param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer · hookliftFee เลิกใช้ (ย้ายเป็นลิตร)
+  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์น้ำมันค่าเดียว (กม./ล.)'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'โบนัส %'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'hookliftFee',label:'ฮุคลิฟท์ (บ./ครั้ง)'},{k:'waitRate',label:'ค่ารอ (บ./ชม.)'},{k:'givePerHr',label:'ให้เพิ่มตามเวลาวิ่ง (บ./ชม.วิ่ง)'},{k:'hardshipFee',label:'Hardship งานสวน (บ./เที่ยว)'}]; // R.5 · param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer
   var pBox=document.getElementById('params');
   params.forEach(function(p){var l=document.createElement('label');l.innerHTML=p.label+'<input type="number" step="any" data-p="'+p.k+'" value="'+P[p.k]+'">';pBox.appendChild(l);});
   pBox.oninput=function(e){var i=e.target.closest('input[data-p]');if(!i)return;P[i.dataset.p]=parseFloat(i.value)||0;renderLegs();render();updateBadge();};
 
   // ── คำนวณ (จาก legs) ──
+  // ── R.5: ระยะแต่ละขา (ยังไม่คิดชม./ค่าวิ่ง — คิดจากยอดรวมทั้งเที่ยวแล้วแบ่งทีหลัง) ──
   function computeLegs(s){
-    var ratio=(T.distMode==='central'&&s.distActual>0)?s.distCentral/s.distActual:1;
+    var distActual=LEGS.reduce(function(a,l){return a+(l.distKey?(s[l.distKey]||0):(l.dist||0));},0);
+    var mult=(T.distMode==='central'&&s.distCentral>0&&distActual>0)?(s.distCentral/distActual):1;
     return LEGS.map(function(l,li){
-      var dist=(l.distKey?(s[l.distKey]||0):(l.dist||0))*ratio;
+      var dist=(l.distKey?(s[l.distKey]||0):(l.dist||0))*mult;
       var pct=T.weight?(l.weight==='heavy'?P.heavyPct:P.lightPct):100;
-      // เวลาจริง (GPS) มีเฉพาะโหมดออเดอร์ — โหมดจำลอง = คำนวณเวลาจากเลทความเร็ว × ระยะที่กรอก
-      var realMin=(T.mode==='order'&&l.tOut&&l.tIn)?durMin(l.tOut,l.tIn):0;
-      var hoursFull;
-      if(T.speedMode==='gps'&&realMin>0)hoursFull=realMin/60;
-      else if(T.speedCalc==='stair')hoursFull=stairHours(dist);
-      else hoursFull=dist/(speedFor(dist)||1);
-      var speed=hoursFull>0?dist/hoursFull:speedFor(dist); // ความเร็วเฉลี่ยที่ใช้คิด
-      var driveMin=realMin>0?realMin:Math.round(hoursFull*60);
-      var travelFull=P.runRate*hoursFull; // ค่าวิ่งเต็ม ไม่ถ่วง
-      var travel=travelFull*pct/100;
       var jt=JOB_TYPES[l.job]||{up:0,down:0};
       var upMin=l.doUp?jt.up:0,downMin=l.doDown?jt.down:0;
-      var up=upMin/60,down=downMin/60;
-      var upWage=P.loadRate*up,downWage=P.loadRate*down;
-      return {name:_legMeta_(l,li,LEGS.length).name,weight:l.weight,job:l.job,dist:dist,pct:pct,speed:speed,travel:travel,up:up,upMin:upMin,upWage:upWage,down:down,downMin:downMin,downWage:downWage,sum:travel,sumFull:travelFull,travelFull:travelFull,tOut:(realMin>0?l.tOut:''),tIn:(realMin>0?l.tIn:''),driveMin:driveMin};
+      var realMin=(T.mode==='order'&&l.tOut&&l.tIn)?durMin(l.tOut,l.tIn):0;
+      return {name:_legMeta_(l,li,LEGS.length).name,weight:l.weight,job:l.job,dist:dist,pct:pct,
+        up:upMin/60,upMin:upMin,down:downMin/60,downMin:downMin,
+        tOut:(realMin>0?l.tOut:''),tIn:(realMin>0?l.tIn:''),realMin:realMin,
+        sum:0,speed:0,driveMin:0};
     });
   }
+  // ── R.5 calc (mirror computeTripWage.gs — verified 53/137/−106) ──
   function calc(){
     var s=src();var legs=computeLegs(s);
-    var fullTime=legs.reduce(function(a,l){return a+l.sumFull;},0);
-    // ถ่วงหนัก/เบา: แต่ละขาได้ pct% ของยอดฐานเต็ม — เบาไป+หนักกลับ=100% · หนักไป+หนักกลับ=140%
-    // ยกเว้นขาที่อยู่ group เดียวกัน (ของก้อนเดียวแบ่งหลายท่อน เช่น สวน→ลาน→โรงงาน) = แชร์ pct ร่วมกัน ปันตามระยะ
-    if(T.weight){
-      // แชร์เฉพาะ "ของก้อนเดียวกันจริง": กลุ่มเดียวกัน + หนัก/เบาเหมือนกัน + งานเดียวกัน
-      // (เช่น ปาล์มหนัก สวน→ลาน→โรงงาน = แชร์ 70% · แต่ เบาไปลาน + หนักขนกลับ = คนละเฟส ต่างคนต่างได้ % เต็ม)
-      var grp={};
-      legs.forEach(function(l,i){var g=LEGS[i].group;if(g){var key=g+'|'+l.weight+'|'+(LEGS[i].job||'');grp[key]=grp[key]||{dist:0,n:0};grp[key].dist+=l.dist;grp[key].n++;}});
-      // วิธี "ครึ่งทริป": ยอดรวม = ค่าวิ่ง(ระยะรวม÷2)×2 → ปันเข้าแต่ละขาตาม "ระยะตัวเอง% ของลูป × หนัก/เบา" (normalize)
-      if(T.groupAlloc==='half'){
-        var tripD=legs.reduce(function(a,l){return a+l.dist;},0);
-        var hD=tripD/2;
-        var hH=(T.speedCalc==='stair')?stairHours(hD):(hD/(speedFor(hD)||1));
-        var halfTotal=P.runRate*hH*2;
-        var wSum=legs.reduce(function(a,l){return a+l.dist*l.pct;},0)||1;
-        legs.forEach(function(l){l.sum=halfTotal*(l.dist*l.pct)/wSum;});
-      }else{
-        legs.forEach(function(l,i){
-          var g=LEGS[i].group;
-          // leg2x=ค่าวิ่งขานั้น×2×% · share=ฐานรวม (แชร์เฉพาะก้อนเดียวกัน)
-          if(T.groupAlloc==='leg2x'){l.sum=l.sumFull*2*(l.pct/100);}
-          else if(g&&T.groupAlloc==='share'){
-            var G=grp[g+'|'+l.weight+'|'+(LEGS[i].job||'')];
-            if(G&&G.n>1){l.sum=fullTime*(l.pct/100)*(G.dist>0?l.dist/G.dist:1/G.n);}
-            else l.sum=fullTime*l.pct/100;
-          }
-          else l.sum=fullTime*l.pct/100;
-        });
-      }
-    }else{legs.forEach(function(l){l.sum=l.sumFull;});}
-    var timeWage=legs.reduce(function(a,l){return a+l.sum;},0);
-    legs.forEach(function(l){l.effPct=fullTime>0?Math.round(l.sum/fullTime*1000)/10:0;}); // % ที่ได้จริงของฐาน
-    // % รวมจริง = ยอดหลังปันส่วน ÷ ฐานเต็ม (กันเพี้ยนตอนกลุ่มมีทั้งหนัก/เบาปน)
-    var pctSum=fullTime>0?Math.round(timeWage/fullTime*1000)/10:100;
+    var veh=String(s.model||'เดี่ยว');                                   // R.5 = ประเภทรถ (พ่วง/เดี่ยว/4ล้อ/6ล้อ)
+    var fw=FUEL_WEIGHT[veh]||{heavy:0,light:0}; var single=FUEL_BENCH[veh]||P.benchmark;
+    var distTotal=legs.reduce(function(a,l){return a+l.dist;},0);          // BL (ระยะใช้คิด รวม mult แล้ว)
+    var distHeavy=legs.filter(function(l){return l.weight==='heavy';}).reduce(function(a,l){return a+l.dist;},0);
+    var distLight=distTotal-distHeavy;
+    // ชม.รวมทั้งเที่ยว (BJ) : ไล่ระดับ / เหมา / ขั้นบันได
+    var totalHrs = distTotal<=0?0 : (T.speedCalc==='interp'?distTotal/bonusSpeed(distTotal):(T.speedCalc==='stair'?stairHours(distTotal):(distTotal/(speedFor(distTotal)||1))));
+    var nLeg=legs.filter(function(l){return l.dist>0;}).length||1;
+    // ค่าวิ่งต่อขา : ชม.ขา = ค่ากลาง→BJ÷จำนวนขา · จริง→BJ×สัดส่วนระยะ · legWage=ROUND(run×ชม×2×%) รายขา
+    var timeWage=0;
+    legs.forEach(function(l){
+      var legHrs=l.dist<=0?0:((T.distMode==='central')?totalHrs/nLeg:(distTotal>0?totalHrs*(l.dist/distTotal):0));
+      var lw=Math.round(T.weight?(P.runRate*legHrs*2*l.pct/100):(P.runRate*legHrs));
+      l.sum=lw; l.sumFull=P.runRate*legHrs; l.travelFull=l.sumFull; l.effPct=l.pct; l.driveMin=(l.realMin>0?l.realMin:Math.round(legHrs*60)); l.speed=legHrs>0?l.dist/legHrs:0;
+      timeWage+=lw;
+    });
+    var pctSum=T.weight?legs.reduce(function(a,l){return a+(l.pct||0)/100;},0):legs.length;
     var loadHours=legs.reduce(function(a,l){return a+l.up+l.down;},0);
-    var totalDist=legs.reduce(function(a,l){return a+l.dist;},0);
-    var fuelDist=s.distActual,actualL=s.litersFilled,kmplA=actualL>0?fuelDist/actualL:0;
-    // เกณฑ์ลิตร "ตามช่วงระยะ" = ขั้นบันได "รายขา" เสมอ — แต่ละขาเริ่มนับช่วงแรกใหม่ (ใช้ระยะจริงของขา ไม่อิงค่ากลาง)
+    var totalDist=distTotal, fuelDist=distTotal, actualL=s.litersFilled, kmplA=actualL>0?fuelDist/actualL:0;
+    // งานในทริป (flag ต่อประเภทงาน)
+    var tripTarp=LEGS.some(function(l){return JOB_TARP[l.job];});
+    var tripHook=LEGS.some(function(l){return JOB_HOOKLIFT[l.job];});
+    var tripHard=LEGS.some(function(l){return JOB_HARDSHIP[l.job];});
+    // ก้อนบวก (gate ต่อ toggle)
+    var loadWage=T.load?P.loadRate*loadHours:0;                            // AI (loadHours=ชม.)
+    var tarp=(T.tarp&&tripTarp)?P.tarpFee:0;                               // AJ
+    var hooklift=(T.hooklift&&tripHook)?P.hookliftFee:0;                   // BC
+    var hardship=(T.hardship&&tripHard)?P.hardshipFee:0;                   // BE
+    var waitHrs=Number(s.waitHrs||0);
+    var wait=T.wait?P.waitRate*waitHrs:0;                                  // BD ค่ารอ
+    var give=T.giveOn?P.givePerHr*totalHrs:0;                              // BI ให้เพิ่ม = give×BJ
+    // น้ำมัน (เกณฑ์ตามประเภทรถ + via_liters)
     var benchL;
-    if(T.fuelBench==='tier'){
-      benchL=LEGS.reduce(function(a,l){var d=l.distKey?(s[l.distKey]||0):(l.dist||0);return a+stairLiters(d);},0);
-    }else if(T.fuelBench==='tierWeight'){
-      // ช่วงระยะ × หนัก/เบา: ขั้นบันไดรายขา โดยขาเบาขยายเกณฑ์ตามสัดส่วน เบา/หนัก ของรุ่น
-      var fw1=FUEL_WEIGHT[s.model]||FUEL_WEIGHT['360'];
-      var lightMult=fw1.heavy>0?fw1.light/fw1.heavy:1.5;
-      benchL=LEGS.reduce(function(a,l){var d=l.distKey?(s[l.distKey]||0):(l.dist||0);return a+stairLiters(d,l.weight==='light'?lightMult:1);},0);
-    }else if(T.fuelBench==='weight'){
-      // รายขา: ขาหนักใช้เกณฑ์หนัก ขาเบาใช้เกณฑ์เบา (ต่อรุ่น)
-      var fw=FUEL_WEIGHT[s.model]||FUEL_WEIGHT['360'];
-      benchL=LEGS.reduce(function(a,l){var d=l.distKey?(s[l.distKey]||0):(l.dist||0);return a+d/((l.weight==='heavy'?fw.heavy:fw.light)||1);},0);
-    }else benchL=fuelDist/P.benchmark;
-    // 🆕 V.2: ฮุคลิฟท์(เทปาล์ม) → บวก N ลิตรเข้าเกณฑ์น้ำมัน (แทนเหมาบาท) · ตรง backend
-    var _jobHook0=LEGS.some(function(l){return JOB_HOOKLIFT[l.job];});
-    var _liftsN0=Number(s.lifts)>0?Number(s.lifts):1;
-    benchL+=(P.hookliftLiters||0)*((T.hooklift&&_jobHook0)?_liftsN0:0);
-    var benchKmpl=benchL>0?fuelDist/benchL:P.benchmark;
-    var fuelAdj=T.fuelPenalty?(benchL-actualL)*P.fuelRate:0;
-    // 🆕 V.2 ให้เพิ่มตามเวลาวิ่ง = givePerHr × ชม.วิ่งไป-กลับ (ระยะรวม ÷ ความเร็วตามระยะ interpolate) · ตรง backend
-    var giveHrs=totalDist>0?(totalDist/bonusSpeed(totalDist)):0;
-    var fuelTimeBonus=T.giveOn?(P.givePerHr||0)*giveHrs:0;
-    // ค่าขึ้น-ลงของ (รวมทุกขา) — แยกออกจากฐานปันส่วน เป็นรายการบวกท้าย
-    var loadWage=legs.reduce(function(a,l){return a+l.upWage+l.downWage;},0);
-    // ── รายการบวกโซนท้าย (เหมา/ตามจำนวน, toggle แยกตัว) ──
-    var tripHasTarp=LEGS.some(function(l){return JOB_TARP[l.job];});      // งานในทริปนี้มีคิดผ้าใบไหม (ต่อประเภทงาน)
-    var tarp=(T.tarp&&tripHasTarp)?P.tarpFee:0;                           // ค่าคลุมผ้าใบ = สวิตช์ × ต่อประเภทงาน
-    // ฮุคลิฟท์/ค้างคืน = ต่อประเภทงาน (ปาล์ม/Packing) · เหมา 1 ครั้ง-คืน/เที่ยว หรือ ×จำนวนที่กรอก — ให้ตรง backend
-    var jobHook=LEGS.some(function(l){return JOB_HOOKLIFT[l.job];});
-    var jobOv=LEGS.some(function(l){return JOB_OVERNIGHT[l.job];});
-    var nightsN=Number(s.nights)>0?Number(s.nights):1, liftsN=Number(s.lifts)>0?Number(s.lifts):1;
-    var overnight=(T.overnight&&jobOv)?nightsN*P.overnightFee:0;          // ค่ารอขึ้นของข้ามคืน = บ./คืน × จำนวนคืน
-    var hooklift=0;                                                       // 🆕 ฮุคลิฟท์ย้ายไปคิดเป็นน้ำมันแล้ว (บวกลิตรเข้าเกณฑ์ด้านบน)
-    // ── ก้อนที่ลากเข้า "ฐานถ่วง 70/30" → × pctSum (ผลรวมสัดส่วนขา) แบบบอส · ตรงกับ backend ──
-    var wpctSum=T.weight?legs.reduce(function(a,l){return a+(l.pct||0)/100;},0):1;
-    loadWage=T.wbLoad?loadWage*wpctSum:loadWage;
-    tarp=T.wbTarp?tarp*wpctSum:tarp;
-    fuelAdj=T.wbFuel?fuelAdj*wpctSum:fuelAdj;
-    hooklift=T.wbHooklift?hooklift*wpctSum:hooklift;
-    overnight=T.wbOvernight?overnight*wpctSum:overnight;
-    var extrasAll=tarp+overnight+hooklift;
-    // บวกเพิ่ม % ของค่าเที่ยว — toggle ฐานคิด: 'base' = ก่อน (ค่าวิ่ง+ขึ้นลง) · 'total' = หลัง (ยอดรวมทั้งหมด)
-    var wageBase=timeWage+loadWage;
-    var subtotal=wageBase+extrasAll+fuelAdj+fuelTimeBonus;   // 🆕 + ให้เพิ่มตามเวลาวิ่ง
+    if(T.fuelBench==='single')benchL=distTotal/(single||1);
+    else if(T.fuelBench==='tier')benchL=stairLiters(distTotal,veh);
+    else benchL=distHeavy/(fw.heavy||1)+distLight/(fw.light||1);
+    var viaL=T.via?(hooklift+give)/(P.fuelRate||1):0;                      // AM
+    var benchKmpl=benchL>0?fuelDist/benchL:single;
+    var fuelAdj=T.fuelPenalty?(benchL+viaL-actualL)*P.fuelRate:0;          // AN
+    // รวม (R.5 AO — flat · via เปิด = ฮุคลิฟท์+ให้เพิ่ม อยู่ในน้ำมันแล้ว ไม่บวกบาทซ้ำ)
+    var extraBaht=T.via?0:(hooklift+give);
+    var subtotal=timeWage+loadWage+tarp+fuelAdj+wait+hardship+extraBaht;   // AO
+    var wageBase=timeWage+loadWage, fullTime=timeWage;
     var bonusOn=(T.bonusBase==='base')?wageBase:subtotal;
     var bonus=T.bonus10?bonusOn*P.bonusPct/100:0;
+    var overnight=wait, fuelTimeBonus=give, giveHrs=totalHrs;              // alias เดิม (render/snapshot)
     // ── ต้นทุนบริษัท (ตรงชีต DATA_Vehicle 3 ก้อน): แรง + น้ำมัน + คงที่(รวมค่าเสื่อม) + ผันแปร + ดำเนินงาน + รายเที่ยว ──
     var wageNet=subtotal+bonus;
     var fuelCostCo=actualL*P.costFuelPrice;            // น้ำมันต้นทุน (แยกจากคงที่/ผันแปร)
@@ -709,7 +671,7 @@
     if(bkKg.w>0&&qty>0)products.push({label:bkKg.label||'สินค้า',unit:'กก.',qty:qty,share:bkKg.w/totW});
     if(bkPk.w>0&&(s.qtyPk||0)>0)products.push({label:'Packing',unit:'ชิ้น',qty:s.qtyPk,share:bkPk.w/totW});
     products.forEach(function(p){p.cost=costTotal*p.share;p.costN=costNoDepr*p.share;});
-    return {legs:legs,timeWage:timeWage,loadWage:loadWage,tarp:tarp,overnight:overnight,hooklift:hooklift,bonusOn:bonusOn,fullTime:fullTime,pctSum:pctSum,loadHours:loadHours,dist:totalDist,fuelDist:fuelDist,kmplA:kmplA,benchL:benchL,benchKmpl:benchKmpl,actualL:actualL,fuelAdj:fuelAdj,fuelTimeBonus:fuelTimeBonus,giveHrs:giveHrs,bonus:bonus,net:wageNet,
+    return {legs:legs,timeWage:timeWage,loadWage:loadWage,tarp:tarp,overnight:overnight,hooklift:hooklift,hardship:hardship,give:give,viaL:viaL,waitHrs:waitHrs,wait:wait,via:T.via,vehType:veh,totalHrs:totalHrs,bonusOn:bonusOn,fullTime:fullTime,pctSum:pctSum,loadHours:loadHours,dist:totalDist,fuelDist:fuelDist,kmplA:kmplA,benchL:benchL,benchKmpl:benchKmpl,actualL:actualL,fuelAdj:fuelAdj,fuelTimeBonus:fuelTimeBonus,giveHrs:giveHrs,bonus:bonus,net:wageNet,
       fuelCostCo:fuelCostCo,fixedCost:fixedCost,effFixed:effFixed,varCost:varCost,extraCost:extraCost,opsCost:opsCost,deprVal:deprVal,costTotal:costTotal,costNoDepr:costNoDepr,qty:qty,unit:unit,products:products};
   }
 
@@ -745,11 +707,13 @@
     h+=row('เกณฑ์ ('+c.fuelDist.toFixed(0)+' ÷ '+c.benchKmpl.toFixed(2)+(T.fuelBench==='tier'?' ขั้นบันไดรายขา':(T.fuelBench==='tierWeight'?' ช่วง×หนัก/เบา':(T.fuelBench==='weight'?' หนัก/เบารายขา':' รุ่นรถ')))+')',c.benchL.toFixed(1)+' ล.');
     var fa=c.fuelAdj;var lab=!T.fuelPenalty?'เพิ่ม/หักน้ำมัน (ปิด)':(fa>=0?'ได้คืนน้ำมัน ×'+P.fuelRate:'หักน้ำมัน ×'+P.fuelRate);
     h+=row(lab,(fa>0?'+':fa<0?'−':'')+money(Math.abs(fa))+' บ.','color:'+(fa<0?'var(--danger)':'var(--success)')+';font-weight:600');
-    if(T.giveOn&&c.fuelTimeBonus>0)h+=row('ให้เพิ่มตามเวลาวิ่ง ('+c.giveHrs.toFixed(1)+' ชม. × '+P.givePerHr.toFixed(2)+')','+'+money(c.fuelTimeBonus)+' บ.','color:var(--success);font-weight:600');
-    if(c.loadWage>0)h+=row('ค่าขึ้น-ลงของ (รวม '+(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.','color:var(--success);font-weight:600');
-    if(T.tarp)h+=row('ค่าคลุมผ้าใบ (เหมาต่อเที่ยว)','+'+money(c.tarp)+' บ.','color:var(--success);font-weight:600');
-    if(c.overnight>0)h+=row('ค่ารอขึ้นของข้ามคืน ('+Number(s.nights||1)+' คืน × '+P.overnightFee+')','+'+money(c.overnight)+' บ.','color:var(--success);font-weight:600');
-    if(c.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์ ('+Number(s.lifts||1)+' ครั้ง × '+P.hookliftFee+')','+'+money(c.hooklift)+' บ.','color:var(--success);font-weight:600');
+    if(c.via&&(c.hooklift>0||c.give>0))h+=row('↳ via_liters: ฮุคลิฟท์+ให้เพิ่ม ('+money(c.hooklift+c.give)+' บ.) → +'+c.viaL.toFixed(2)+' ล. เข้าเกณฑ์','(อยู่ในน้ำมันแล้ว)','color:var(--txt2);font-size:11px');
+    if(!c.via&&T.giveOn&&c.give>0)h+=row('ให้เพิ่มตามเวลาวิ่ง ('+c.giveHrs.toFixed(2)+' ชม. × '+P.givePerHr.toFixed(2)+')','+'+money(c.give)+' บ.','color:var(--success);font-weight:600');
+    if(c.loadWage>0)h+=row('ค่าขึ้น-ลงของ (รวม '+Math.round(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.','color:var(--success);font-weight:600');
+    if(c.tarp>0)h+=row('ค่าคลุมผ้าใบ (เหมาต่อเที่ยว)','+'+money(c.tarp)+' บ.','color:var(--success);font-weight:600');
+    if(c.wait>0)h+=row('ค่ารอ ('+c.waitHrs+' ชม. × '+P.waitRate+')','+'+money(c.wait)+' บ.','color:var(--success);font-weight:600');
+    if(!c.via&&c.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์','+'+money(c.hooklift)+' บ.','color:var(--success);font-weight:600');
+    if(c.hardship>0)h+=row('💪 Hardship Fee (งานสวน)','+'+money(c.hardship)+' บ.','color:var(--success);font-weight:600');
     if(T.bonus10)h+=row('บวกเพิ่ม '+P.bonusPct+'% '+(T.bonusBase==='base'?'(ฐาน: ค่าวิ่ง+ขึ้นลง '+money(c.bonusOn)+')':'(ฐาน: ยอดรวม '+money(c.bonusOn)+')'),'+'+money(c.bonus)+' บ.','color:var(--success);font-weight:600');
     document.getElementById('bd').innerHTML=h;
     var net=document.getElementById('net');net.textContent=money(c.net)+' บ.';net.className='amt '+(c.net>=0?'pos':'neg');
@@ -989,17 +953,20 @@
   };
 
   // ── รายงานค่าแรง HR (ดาวน์โหลด CSV เปิดใน Excel) ──
-  function orderWage(o){
-    var legs=computeLegs(o);
-    var timeWage=legs.reduce(function(a,l){return a+l.sum;},0);
-    var travel=legs.reduce(function(a,l){return a+l.travel;},0);
-    var updown=legs.reduce(function(a,l){return a+l.upWage+l.downWage;},0);
-    var bench=FUEL_BENCH[o.model]||P.benchmark;
-    var benchL=o.distActual/bench,actualL=o.litersFilled;
-    var fuelAdj=T.fuelPenalty?(benchL-actualL)*P.fuelRate:0;
-    var tDist=legs.reduce(function(a,l){return a+l.dist;},0);
-    var give=T.giveOn?(P.givePerHr||0)*(tDist>0?tDist/bonusSpeed(tDist):0):0;   // 🆕 ให้เพิ่มตามเวลาวิ่ง
-    return {travel:travel,updown:updown,fuel:fuelAdj,give:give,net:timeWage+fuelAdj+give};
+  function orderWage(o){   // R.5 (ย่อสำหรับ CSV — ข้ามผ้าใบ/ค่ารอ)
+    var legs=computeLegs(o), veh=String(o.model||'เดี่ยว'), fw=FUEL_WEIGHT[veh]||{heavy:0,light:0}, single=FUEL_BENCH[veh]||P.benchmark;
+    var distTotal=legs.reduce(function(a,l){return a+l.dist;},0);
+    var distHeavy=legs.filter(function(l){return l.weight==='heavy';}).reduce(function(a,l){return a+l.dist;},0), distLight=distTotal-distHeavy;
+    var totalHrs=distTotal<=0?0:(T.speedCalc==='interp'?distTotal/bonusSpeed(distTotal):(T.speedCalc==='stair'?stairHours(distTotal):distTotal/(speedFor(distTotal)||1)));
+    var nLeg=legs.filter(function(l){return l.dist>0;}).length||1, travel=0;
+    legs.forEach(function(l){var lh=l.dist<=0?0:((T.distMode==='central')?totalHrs/nLeg:(distTotal>0?totalHrs*(l.dist/distTotal):0));travel+=Math.round(T.weight?(P.runRate*lh*2*l.pct/100):(P.runRate*lh));});
+    var updown=T.load?P.loadRate*legs.reduce(function(a,l){return a+l.up+l.down;},0):0;
+    var tripHook=LEGS.some(function(l){return JOB_HOOKLIFT[l.job];}), tripHard=LEGS.some(function(l){return JOB_HARDSHIP[l.job];});
+    var hooklift=(T.hooklift&&tripHook)?P.hookliftFee:0, hardship=(T.hardship&&tripHard)?P.hardshipFee:0, give=T.giveOn?P.givePerHr*totalHrs:0;
+    var benchL=T.fuelBench==='single'?distTotal/(single||1):(T.fuelBench==='tier'?stairLiters(distTotal,veh):distHeavy/(fw.heavy||1)+distLight/(fw.light||1));
+    var viaL=T.via?(hooklift+give)/(P.fuelRate||1):0, fuelAdj=T.fuelPenalty?(benchL+viaL-o.litersFilled)*P.fuelRate:0;
+    var extra=T.via?0:(hooklift+give);
+    return {travel:travel,updown:updown,fuel:fuelAdj,give:give,net:Math.round(travel+updown+fuelAdj+hardship+extra)};
   }
   function fmtDMY(iso){var p=String(iso).split('-');return p[2]+'-'+p[1]+'-'+p[0];}
   function q(s){return '"'+String(s).replace(/"/g,'""')+'"';}
@@ -1045,26 +1012,33 @@
     P.runRate=_n(p.run_rate_per_hr,P.runRate); P.loadRate=_n(p.load_rate_per_hr,P.loadRate);
     P.fuelRate=_n(p.fuel_rate_wage,P.fuelRate); P.heavyPct=_n(p.heavy_pct,P.heavyPct);
     P.lightPct=_n(p.light_pct,P.lightPct); P.bonusPct=_n(p.bonus_pct,P.bonusPct);
-    P.tarpFee=_n(p.tarp_fee,P.tarpFee); P.hookliftFee=_n(p.hooklift_fee,P.hookliftFee); P.overnightFee=_n(p.overnight_fee,P.overnightFee);
-    P.hookliftLiters=_n(p.hooklift_liters,P.hookliftLiters); P.givePerHr=Math.round(_n(p.give_per_hr,P.givePerHr)*100)/100;   // 🆕 V.2 (ปัด 2 ตำแหน่ง กันทศนิยมยาว 125/12)
-    T.giveOn=_n(p.give_on,1)!==0;                                                                          // 🆕 ให้เพิ่มตามเวลาวิ่ง (default เปิด)
+    P.tarpFee=_n(p.tarp_fee,P.tarpFee); P.hookliftFee=_n(p.hooklift_fee,P.hookliftFee);
+    P.waitRate=_n(p.wait_rate_per_hr,P.waitRate); P.hardshipFee=_n(p.hardship_fee,P.hardshipFee);
+    P.givePerHr=Math.round(_n(p.give_per_hr,P.givePerHr)*100)/100;
+    // ── toggle R.5 ──
     T.weight=_n(tg.weight_on,1)!==0;
-    T.speedCalc=_n(tg.time_mode,0)===1?'flat':'stair';
-    T.speedMode=_n(tg.speed_mode,0)===1?'gps':'tier';
-    T.wbLoad=_n(tg.wb_load,0)!==0; T.wbTarp=_n(tg.wb_tarp,0)!==0; T.wbFuel=_n(tg.wb_fuel,0)!==0; T.wbHooklift=_n(tg.wb_hooklift,0)!==0; T.wbOvernight=_n(tg.wb_overnight,0)!==0;
-    T.distMode=_n(tg.dist_source,0)===1?'central':'actual';
-    T.fuelBench=(function(v){return v===2?'single':(v===1?'tier':'weight');})(_n(tg.fuel_bench,0));
+    T.speedCalc=(function(v){return v===2?'interp':(v===1?'flat':'stair');})(_n(tg.time_mode,2));  // R.5 = interp
+    T.distMode=_n(tg.dist_source,1)===1?'central':'actual';                                        // R.5 = central
+    T.fuelBench=(function(v){return v===2?'single':(v===1?'tier':'weight');})(_n(tg.fuel_bench,2)); // R.5 = single
     T.fuelPenalty=_n(tg.fuel_adj_on,1)!==0; T.tarp=_n(tg.tarp_on,1)!==0;
-    T.bonus10=_n(tg.bonus_on,1)!==0; T.bonusBase=_n(tg.bonus_base,0)===1?'base':'total';
+    T.bonus10=_n(tg.bonus_on,0)!==0; T.bonusBase=_n(tg.bonus_base,0)===1?'base':'total';
+    T.giveOn=_n(tg.give_on,1)!==0; T.wait=_n(tg.wait_on,1)!==0; T.hooklift=_n(tg.hooklift_on,1)!==0;
+    T.load=_n(tg.load_on,1)!==0; T.hardship=_n(tg.hardship_on,1)!==0; T.via=_n(tg.via_liters,1)!==0;
+    // ② speed R.5 (model='R5', 6 ช่วง) + กม./ล.ต่อประเภทรถ
     if(cfg.speedTier&&cfg.speedTier.length){
-      var bySeq={};
-      cfg.speedTier.forEach(function(t){var s=+t.seq;bySeq[s]=bySeq[s]||{label:'',max:(t.max_km==null?Infinity:+t.max_km),speed:+t.speed_kmph,kmplBy:{}};bySeq[s].kmplBy[String(t.model)]=+t.kmpl;if(String(t.model)==='360')bySeq[s].speed=+t.speed_kmph;});
-      SPEED_TIERS=Object.keys(bySeq).sort(function(a,b){return a-b;}).map(function(s){return bySeq[s];});
+      var r5=cfg.speedTier.filter(function(t){return String(t.model)==='R5';});
+      if(r5.length) SPEED_TIERS=r5.sort(function(a,b){return (+a.seq)-(+b.seq);}).map(function(t){
+        return {label:'',max:(t.max_km==null?Infinity:+t.max_km),speed:+t.speed_kmph,
+          kmplBy:{'พ่วง':+t.kmpl_trailer||0,'เดี่ยว':+t.kmpl_single||0,'4ล้อ':+t.kmpl_4wheel||0,'6ล้อ':+t.kmpl_6wheel||0}};
+      });
     }
-    if(cfg.fuelWeight&&cfg.fuelWeight.length) cfg.fuelWeight.forEach(function(f){FUEL_WEIGHT[String(f.model)]={heavy:+f.kmpl_heavy,light:+f.kmpl_light};if(f.kmpl_single!=null)FUEL_BENCH[String(f.model)]=+f.kmpl_single;});
-    if(cfg.jobTypes&&cfg.jobTypes.length){JOB_TYPES={};JOB_HOOKLIFT={};JOB_OVERNIGHT={};cfg.jobTypes.forEach(function(j){var b=function(v){return v===true||v==='t'||v==='true';};JOB_TYPES[j.job_type]={up:+j.up_min,down:+j.down_min};JOB_TARP[j.job_type]=b(j.tarp);JOB_HOOKLIFT[j.job_type]=b(j.hooklift);JOB_OVERNIGHT[j.job_type]=b(j.overnight);});}
-    T.hooklift=true; T.overnight=true;   // ฮุคลิฟท์/ค้างคืน = ผูกต่อประเภทงาน (ไม่ใช่สวิตช์) ให้ตรง backend
-    P.benchmark=FUEL_BENCH[src().model]||FUEL_BENCH['360']||3.2;
+    // ⑧ ตารางไล่ระดับ (interpolate)
+    if(cfg.speedInterp&&cfg.speedInterp.length) BONUS_SPD=cfg.speedInterp.sort(function(a,b){return (+a.seq)-(+b.seq);}).map(function(r){return [+r.dist_km,+r.avg_speed];});
+    // ③ เกณฑ์น้ำมันต่อประเภทรถ (model=พ่วง/เดี่ยว/4ล้อ/6ล้อ)
+    if(cfg.fuelWeight&&cfg.fuelWeight.length) cfg.fuelWeight.forEach(function(f){FUEL_WEIGHT[String(f.model)]={heavy:+f.kmpl_heavy||0,light:+f.kmpl_light||0};if(f.kmpl_single!=null)FUEL_BENCH[String(f.model)]=+f.kmpl_single;});
+    // ④ job_types + hardship
+    if(cfg.jobTypes&&cfg.jobTypes.length){JOB_TYPES={};JOB_TARP={};JOB_HOOKLIFT={};JOB_HARDSHIP={};cfg.jobTypes.forEach(function(j){var b=function(v){return v===true||v==='t'||v==='true';};JOB_TYPES[j.job_type]={up:+j.up_min,down:+j.down_min};JOB_TARP[j.job_type]=b(j.tarp);JOB_HOOKLIFT[j.job_type]=b(j.hooklift);JOB_HARDSHIP[j.job_type]=b(j.hardship);});}
+    P.benchmark=FUEL_BENCH[src().model]||FUEL_BENCH['เดี่ยว']||5.95;
   }
   function snapOfficial(){OFFICIAL={P:JSON.parse(JSON.stringify(P)),T:JSON.parse(JSON.stringify(T))};}
   function refreshUI(){
@@ -1075,8 +1049,8 @@
   function resetOfficial(){ if(!OFFICIAL)return; Object.keys(OFFICIAL.P).forEach(function(k){P[k]=OFFICIAL.P[k];}); Object.keys(OFFICIAL.T).forEach(function(k){T[k]=OFFICIAL.T[k];}); refreshUI(); }
   function updateBadge(){
     var b=document.getElementById('offBadge'); if(!b||!OFFICIAL)return;
-    var kp=['runRate','loadRate','fuelRate','heavyPct','lightPct','bonusPct','tarpFee','hookliftFee','overnightFee','givePerHr'];
-    var kt=['weight','speedCalc','distMode','fuelBench','fuelPenalty','tarp','bonus10','bonusBase','giveOn'];
+    var kp=['runRate','loadRate','fuelRate','heavyPct','lightPct','bonusPct','tarpFee','hookliftFee','waitRate','hardshipFee','givePerHr'];
+    var kt=['weight','speedCalc','distMode','fuelBench','fuelPenalty','tarp','bonus10','bonusBase','giveOn','wait','hooklift','load','hardship','via'];
     var dirty=kp.some(function(k){return +P[k]!==+OFFICIAL.P[k];})||kt.some(function(k){return String(T[k])!==String(OFFICIAL.T[k]);});
     b.textContent=dirty?'⚠️ กำลังจำลอง (ไม่ใช่ค่าจริงระบบ)':'✓ ค่าทางการ';
     b.style.background=dirty?'#c8352f':'var(--primary,#1f8a52)';
