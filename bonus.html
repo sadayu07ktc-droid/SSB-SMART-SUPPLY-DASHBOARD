@@ -75,8 +75,9 @@ const TON=1000;              // kg → ตัน
 const TARGET=0.60;           // จัดรถรับ ≥ 60% = ผ่าน
 const LEFTOVER_OK=30;        // ค้างลาน < 30 ตัน = ผ่านอัตโนมัติ
 const TON_PER_BIN=15;        // 15 ตัน/กระบะ · 2 กระบะ = 1 พ่วง
-// ขั้นโบนัสลดหลั่น (ตามอัตราวัน-ลานที่ผ่านเกณฑ์) — ปรับตัวเลขได้ที่นี่จุดเดียว
-const TIERS=[{min:90,amt:5000},{min:80,amt:4600},{min:70,amt:4000},{min:60,amt:3500},{min:0,amt:3000}];
+// โบนัส: จัดรถรับ ≥60% = เต็ม MAX · ต่ำกว่านั้นลดหลั่นเชิงเส้นลงถึง MIN ที่ 0% (ปรับได้จุดเดียว)
+const BONUS_MIN=3000, BONUS_MAX=5000;
+const bonusOf=p=>Math.min(BONUS_MAX,Math.max(BONUS_MIN,Math.round((BONUS_MIN+(BONUS_MAX-BONUS_MIN)*Math.min(p,60)/60)/100)*100));
 
 const fmt=(n,d=0)=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const $=s=>document.querySelector(s);
@@ -105,24 +106,24 @@ function render(records){
   const thMonth=now.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
   const cyc=records.filter(x=>String(x.date||'').slice(0,7)===ym);
 
-  let pass=0,total=0,sendSum=0,palmSum=0,leftoverBad=0; const rows=[];
+  let pass=0,total=0,sendSum=0,palmDenom=0,leftoverBad=0; const rows=[];
   cyc.forEach(x=>{
     const send=(x.send||0)/TON, stock=(x.stock||0)/TON, buy=(x.buy||0)/TON;
-    if(send<=0 && stock<=0 && buy<=0) return;        // วันไม่มีข้อมูลจริง ข้าม
-    const palm=send+stock;                            // ปาล์มทั้งวัน = จัดรับ + ค้างลาน
-    const pct=palm>0 ? send/palm : (send>0?1:0);
-    const ok=(pct>=TARGET) || (stock<LEFTOVER_OK);
+    if(send<=0 && stock<=0 && buy<=0) return;                 // วันไม่มีข้อมูลจริง ข้าม
+    const bigLeft = stock>=LEFTOVER_OK ? stock : 0;           // ค้าง<30ต ให้อภัย (ไม่นับตกค้าง)
+    const pct = (send+stock)>0 ? send/(send+stock) : (send>0?1:0);  // %รับต่อวัน (โชว์ตาราง)
+    const ok = (pct>=TARGET) || (stock<LEFTOVER_OK);
     total++; if(ok) pass++; if(stock>=LEFTOVER_OK && !ok) leftoverBad++;
-    sendSum+=send; palmSum+=palm;
+    sendSum+=send; palmDenom+=send+bigLeft;
     rows.push({date:x.date, ramp:x.ramp, buy, send, stock, pct, ok});
   });
   rows.sort((a,b)=> a.date<b.date?1:-1);
 
+  const pickPct = palmDenom ? sendSum/palmDenom*100 : 0;      // %จัดรับรวม (คิดโบนัส · ค้าง<30ต ให้อภัย)
+  const bonus = bonusOf(pickPct);
   const passRate = total ? pass/total*100 : 0;
-  const tier = TIERS.find(t=>passRate>=t.min) || TIERS[TIERS.length-1];
-  const bonus = tier.amt;
-  const avgPct = palmSum ? sendSum/palmSum*100 : 0;
-  const fillPct = Math.max(0,Math.min(100,(bonus-3000)/2000*100));
+  const avgPct = pickPct;
+  const fillPct = Math.max(0,Math.min(100,(bonus-BONUS_MIN)/(BONUS_MAX-BONUS_MIN)*100));
   const day=now.getDate();
 
   $('#app').innerHTML = `
@@ -139,29 +140,29 @@ function render(records){
     <div class="cycle">รอบ 1–30 ${thMonth} · ถึงวันที่ ${day}</div>
     <div class="lbl">รายได้โบนัส ณ ปัจจุบัน</div>
     <div class="amt">฿${fmt(bonus)}<small> / 5,000</small></div>
-    <div class="sub">อัตราผ่านเกณฑ์ ${fmt(passRate,0)}% (${pass}/${total} วัน-ลาน) · จัดรถรับเฉลี่ย ${fmt(avgPct,0)}%</div>
+    <div class="sub">จัดรถรับ ${fmt(pickPct,0)}% (คิดโบนัส) · ผ่านเกณฑ์ ${pass}/${total} วัน-ลาน (${fmt(passRate,0)}%)</div>
     <div class="meter"><div class="bar"><div class="fill" style="width:${fillPct}%"></div></div>
-      <div class="ends"><span>ขั้นต่ำ 3,000</span><span>เต็ม 5,000</span></div></div>
-    <span class="pill">${avgPct>=60?'✓ เกินเป้า 60%':'⚠️ ต่ำกว่าเป้า 60%'} · จัดรับ ${fmt(sendSum)} / ${fmt(palmSum)} ต</span>
+      <div class="ends"><span>ขั้นต่ำ 3,000</span><span>เต็ม 5,000 (จัดรับ 60%)</span></div></div>
+    <span class="pill">${pickPct>=60?'✓ ถึงเป้า 60% รับเต็ม 5,000':'จัดรับ '+fmt(pickPct,0)+'% → ลดหลั่น'} · รับ ${fmt(sendSum)}/${fmt(palmDenom)} ต</span>
   </div>
 
   <div class="tiles">
-    <div class="tile"><div class="k">🚚 จัดรถรับเฉลี่ย</div><div class="v">${fmt(avgPct,0)}<small>%</small></div><div class="foot">เป้า ≥60% <span class="tag ${avgPct>=60?'ok':'bad'}">${avgPct>=60?'ผ่าน':'ต่ำกว่าเป้า'}</span></div></div>
+    <div class="tile"><div class="k">🚚 จัดรถรับ (คิดโบนัส)</div><div class="v">${fmt(pickPct,0)}<small>%</small></div><div class="foot">เป้าเต็ม ≥60% <span class="tag ${pickPct>=60?'ok':'bad'}">${pickPct>=60?'เต็ม':'ลดหลั่น'}</span></div></div>
     <div class="tile"><div class="k">📅 วัน-ลาน ผ่านเกณฑ์</div><div class="v">${pass}<small>/${total}</small></div><div class="foot">อัตรา ${fmt(passRate,0)}%</div></div>
-    <div class="tile"><div class="k">🌴 จัดรถรับแล้ว</div><div class="v">${fmt(sendSum)}<small> ต</small></div><div class="foot">จากทั้งหมด ${fmt(palmSum)} ต</div></div>
+    <div class="tile"><div class="k">🌴 จัดรถรับแล้ว</div><div class="v">${fmt(sendSum)}<small> ต</small></div><div class="foot">จากปาล์มคิดโบนัส ${fmt(palmDenom)} ต</div></div>
     <div class="tile"><div class="k">📦 ค้างเกิน 30ต (ไม่ผ่าน)</div><div class="v">${leftoverBad}<small> ครั้ง</small></div><div class="foot">≈ พลาดเกณฑ์วัน-ลาน</div></div>
   </div>
 
   <div class="rule">
     <div class="row"><span>1</span><div>จัดรถเข้ารับ <b>≥ 60%</b> ของปาล์มทั้งวัน (จัดรับ + ค้างลาน) <b>ต่อลาน ต่อวัน</b> = ผ่าน</div></div>
     <div class="row"><span>2</span><div>ถ้า <b>ค้างลาน &lt; 30 ตัน</b> ถือว่าผ่านอัตโนมัติ · <b>30 ตัน = 1 พ่วง</b></div></div>
-    <div class="row"><span>3</span><div>ต่ำกว่าเกณฑ์ → โบนัส<b>ลดหลั่น</b> เต็ม 5,000 ลงถึงขั้นต่ำ 3,000 · <b>ตัดรอบ 1–30 ของเดือน</b></div></div>
+    <div class="row"><span>3</span><div>จัดรถรับ <b>≥60% = เต็ม ฿5,000</b> · ต่ำกว่า<b>ลดหลั่นเชิงเส้น</b>ลงถึง ฿3,000 · <b>ตัดรอบ 1–30 ของเดือน</b></div></div>
   </div>
 
-  <div class="card"><h2>💰 ขั้นโบนัส (ตามอัตราผ่านเกณฑ์ทั้งเดือน)</h2>
+  <div class="card"><h2>💰 ขั้นโบนัส (ตาม %จัดรถรับทั้งเดือน · ≥60% = เต็ม)</h2>
     <div class="ladder">
-      ${[['<60%',3000,0],['60–69%',3500,60],['70–79%',4000,70],['80–89%',4600,80],['≥90%',5000,90]]
-        .map(([p,amt,mn])=>`<div class="step ${bonus===amt?'hit':''}"><div class="p">${p}</div><div class="b">${fmt(amt)}</div></div>`).join('')}
+      ${[[0,15,'<15%'],[15,30,'15–29%'],[30,45,'30–44%'],[45,60,'45–59%'],[60,999,'≥60%']]
+        .map(([lo,hi,lbl])=>{const amt=hi>=999?5000:bonusOf((lo+hi)/2);const hit=(pickPct>=lo&&pickPct<hi)||(hi>=999&&pickPct>=60);return `<div class="step ${hit?'hit':''}"><div class="p">${lbl}</div><div class="b">฿${fmt(amt)}</div></div>`;}).join('')}
     </div>
   </div>
 
@@ -175,7 +176,7 @@ function render(records){
       }).join('') || '<div class="msg">ยังไม่มีข้อมูลรอบนี้</div>'}
     </div>
   </div>
-  <p class="note">✅ ผ่าน (≥60% หรือ ค้าง&lt;30ต) · ❌ ไม่ผ่าน · ขั้นโบนัสปรับได้ที่ค่า TIERS ในโค้ด</p>`;
+  <p class="note">✅ ผ่าน (≥60% หรือ ค้าง&lt;30ต) · ❌ ไม่ผ่าน · โบนัสปรับได้ที่ BONUS_MIN/MAX + เป้า 60% ในโค้ด</p>`;
 
   try{const s=localStorage.getItem('bonus_theme');if(s)setT(s);}catch(e){}
 }
