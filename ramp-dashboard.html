@@ -246,7 +246,9 @@ function render(){ try{
   const rows=sliceDates(curDates(),rampsInScope());
   const prev=sliceDates(prevDates(),rampsInScope());
   const tSend=sum(rows,'send'),tBuy=sum(rows,'buy'),tLost=sum(rows,'lost'),tTrips=sum(rows,'trips'),tRaw=sum(rows,'rawCull'),tRspo=sum(rows,'rspo');
-  const stockEnd=rows.length?rows[rows.length-1].stock:0;
+  // ค้างลานรวม = สต็อกล่าสุด "ของแต่ละลาน" บวกกัน (ให้ตรงกราฟแท่ง) — เดิมใช้ rows[วันสุดท้าย].stock
+  // ซึ่งเป็นค้างลานของวันล่าสุดวันเดียว (ลานที่ไม่ได้ส่งวันนั้นหาย) → banner เพี้ยนต่ำกว่าจริงมาก
+  const stockEnd=rampsInScope().reduce((s,r)=>s+rampAgg(r,curDates()).stock,0);
   const lossPct=tBuy?tLost/tBuy*100:0, rspoPct=tBuy?tRspo/tBuy*100:0;
   const ordTotal=RAMPS.reduce((s,r)=>s+rampOrderStats(r).count,0), ordTons=RAMPS.reduce((s,r)=>s+rampOrderStats(r).tons,0), tripsShown=ordTotal>0?ordTotal:tTrips;
   // เฉลี่ย/เที่ยว = ตันของ "เที่ยวที่นับ" ÷ เที่ยวนั้น (คู่กัน) — เดิมเอาส่งรวม(มีรถนอก)÷เที่ยวบริษัท เลยเพี้ยน
