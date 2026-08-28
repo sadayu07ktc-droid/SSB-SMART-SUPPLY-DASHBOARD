@@ -72,9 +72,8 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
 const TON=1000;              // kg → ตัน
-const TARGET=0.60;           // จัดรถรับ ≥ 60% = ผ่าน
-const LEFTOVER_OK=30;        // ค้างลาน < 30 ตัน = ผ่านอัตโนมัติ
-const TON_PER_BIN=15;        // 15 ตัน/กระบะ · 2 กระบะ = 1 พ่วง
+const TARGET=60;             // จัดรถรับ ≥ 60% = ผ่าน (เต็มโบนัส)
+const LEFTOVER_OK=27;        // ค้างลาน < 27 ตัน (1 พ่วง) = คิดวันนั้นเป็น 60% ผ่าน
 // โบนัส: จัดรถรับ ≥60% = เต็ม MAX · ต่ำกว่านั้นลดหลั่นเชิงเส้นลงถึง MIN ที่ 0% (ปรับได้จุดเดียว)
 const BONUS_MIN=3000, BONUS_MAX=5000;
 const bonusOf=p=>Math.min(BONUS_MAX,Math.max(BONUS_MIN,Math.round((BONUS_MIN+(BONUS_MAX-BONUS_MIN)*Math.min(p,60)/60)/100)*100));
@@ -106,20 +105,21 @@ function render(records){
   const thMonth=now.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
   const cyc=records.filter(x=>String(x.date||'').slice(0,7)===ym);
 
-  let pass=0,total=0,sendSum=0,palmDenom=0,leftoverBad=0; const rows=[];
+  let scoreSum=0,pass=0,total=0,sendSum=0,palmTotal=0,leftoverBad=0; const rows=[];
   cyc.forEach(x=>{
     const send=(x.send||0)/TON, stock=(x.stock||0)/TON, buy=(x.buy||0)/TON;
-    if(send<=0 && stock<=0 && buy<=0) return;                 // วันไม่มีข้อมูลจริง ข้าม
-    const bigLeft = stock>=LEFTOVER_OK ? stock : 0;           // ค้าง<30ต ให้อภัย (ไม่นับตกค้าง)
-    const pct = (send+stock)>0 ? send/(send+stock) : (send>0?1:0);  // %รับต่อวัน (โชว์ตาราง)
-    const ok = (pct>=TARGET) || (stock<LEFTOVER_OK);
-    total++; if(ok) pass++; if(stock>=LEFTOVER_OK && !ok) leftoverBad++;
-    sendSum+=send; palmDenom+=send+bigLeft;
-    rows.push({date:x.date, ramp:x.ramp, buy, send, stock, pct, ok});
+    if(send<=0 && stock<=0 && buy<=0) return;                          // วันไม่มีข้อมูลจริง ข้าม
+    const raw = (send+stock)>0 ? send/(send+stock)*100 : (send>0?100:0);  // %รับจริงต่อวัน
+    let score = raw;
+    if(stock < LEFTOVER_OK) score = Math.max(raw, TARGET);             // ค้าง<27ต → คิดวันนั้นเป็น 60% ผ่าน
+    const ok = score >= TARGET;
+    total++; if(ok) pass++; if(stock>=LEFTOVER_OK && raw<TARGET) leftoverBad++;
+    scoreSum+=score; sendSum+=send; palmTotal+=send+stock;
+    rows.push({date:x.date, ramp:x.ramp, buy, send, stock, pct:score/100, ok});
   });
   rows.sort((a,b)=> a.date<b.date?1:-1);
 
-  const pickPct = palmDenom ? sendSum/palmDenom*100 : 0;      // %จัดรับรวม (คิดโบนัส · ค้าง<30ต ให้อภัย)
+  const pickPct = total ? scoreSum/total : 0;                // คะแนนจัดรับเฉลี่ยรายวัน-ลาน (ค้าง<27=60)
   const bonus = bonusOf(pickPct);
   const passRate = total ? pass/total*100 : 0;
   const avgPct = pickPct;
@@ -143,19 +143,19 @@ function render(records){
     <div class="sub">จัดรถรับ ${fmt(pickPct,0)}% (คิดโบนัส) · ผ่านเกณฑ์ ${pass}/${total} วัน-ลาน (${fmt(passRate,0)}%)</div>
     <div class="meter"><div class="bar"><div class="fill" style="width:${fillPct}%"></div></div>
       <div class="ends"><span>ขั้นต่ำ 3,000</span><span>เต็ม 5,000 (จัดรับ 60%)</span></div></div>
-    <span class="pill">${pickPct>=60?'✓ ถึงเป้า 60% รับเต็ม 5,000':'จัดรับ '+fmt(pickPct,0)+'% → ลดหลั่น'} · รับ ${fmt(sendSum)}/${fmt(palmDenom)} ต</span>
+    <span class="pill">${pickPct>=60?'✓ ถึงเป้า 60% รับเต็ม 5,000':'จัดรับ '+fmt(pickPct,0)+'% → ลดหลั่น'} · รับ ${fmt(sendSum)}/${fmt(palmTotal)} ต</span>
   </div>
 
   <div class="tiles">
     <div class="tile"><div class="k">🚚 จัดรถรับ (คิดโบนัส)</div><div class="v">${fmt(pickPct,0)}<small>%</small></div><div class="foot">เป้าเต็ม ≥60% <span class="tag ${pickPct>=60?'ok':'bad'}">${pickPct>=60?'เต็ม':'ลดหลั่น'}</span></div></div>
     <div class="tile"><div class="k">📅 วัน-ลาน ผ่านเกณฑ์</div><div class="v">${pass}<small>/${total}</small></div><div class="foot">อัตรา ${fmt(passRate,0)}%</div></div>
-    <div class="tile"><div class="k">🌴 จัดรถรับแล้ว</div><div class="v">${fmt(sendSum)}<small> ต</small></div><div class="foot">จากปาล์มคิดโบนัส ${fmt(palmDenom)} ต</div></div>
+    <div class="tile"><div class="k">🌴 จัดรถรับแล้ว</div><div class="v">${fmt(sendSum)}<small> ต</small></div><div class="foot">จากปาล์มรวม ${fmt(palmTotal)} ต</div></div>
     <div class="tile"><div class="k">📦 ค้างเกิน 30ต (ไม่ผ่าน)</div><div class="v">${leftoverBad}<small> ครั้ง</small></div><div class="foot">≈ พลาดเกณฑ์วัน-ลาน</div></div>
   </div>
 
   <div class="rule">
     <div class="row"><span>1</span><div>จัดรถเข้ารับ <b>≥ 60%</b> ของปาล์มทั้งวัน (จัดรับ + ค้างลาน) <b>ต่อลาน ต่อวัน</b> = ผ่าน</div></div>
-    <div class="row"><span>2</span><div>ถ้า <b>ค้างลาน &lt; 30 ตัน</b> ถือว่าผ่านอัตโนมัติ · <b>30 ตัน = 1 พ่วง</b></div></div>
+    <div class="row"><span>2</span><div>ถ้า <b>ค้างลาน &lt; 27 ตัน (1 พ่วง)</b> → คิดวันนั้นเป็น <b>60% ผ่าน</b> อัตโนมัติ</div></div>
     <div class="row"><span>3</span><div>จัดรถรับ <b>≥60% = เต็ม ฿5,000</b> · ต่ำกว่า<b>ลดหลั่นเชิงเส้น</b>ลงถึง ฿3,000 · <b>ตัดรอบ 1–30 ของเดือน</b></div></div>
   </div>
 
