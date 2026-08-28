@@ -39,6 +39,9 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line
 .title h1{margin:0;font-size:19px;font-weight:700}.title p{margin:0;font-size:12.5px;color:var(--muted)}
 .tgl{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px}
 .tgl button{border:0;background:transparent;font-size:16px;padding:5px 9px;border-radius:8px;cursor:pointer;line-height:1}.tgl button.on{background:var(--gold-soft)}
+.acts{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.dl{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--gold-line);background:var(--gold-soft);color:var(--gold);font-family:var(--sans);font-size:13px;font-weight:700;padding:7px 13px;border-radius:11px;cursor:pointer;line-height:1}
+.dl:active{transform:scale(.97)}.dl:disabled{opacity:.5;cursor:default}
 .hero{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border-radius:20px;padding:22px 22px 20px;position:relative;overflow:hidden}
 .hero .lbl{font-size:12.5px;color:#CFE6D8}.hero .amt{font-family:var(--num);font-weight:700;font-size:52px;line-height:1.05;margin:2px 0}.hero .amt small{font-size:20px;font-weight:500;opacity:.8}
 .hero .sub{font-size:12.5px;color:#CFE6D8}.hero .cycle{position:absolute;top:18px;right:20px;font-size:11.5px;background:rgba(255,255,255,.14);padding:4px 10px;border-radius:20px;color:#eafff2}
@@ -62,11 +65,43 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line
 .pct{font-family:var(--num);font-weight:700;text-align:right}.st{justify-self:end;font-size:15px}.scroll{overflow-x:auto}
 .note{font-size:12px;color:var(--faint);text-align:center;padding-top:4px}
 .msg{text-align:center;padding:40px 16px;color:var(--muted)}
+/* โหลด: วงแหวนหมุน+อิโมจิเด้ง ทับโครงหน้า (skeleton) จางๆ */
+.skwrap{position:relative;min-height:470px}
+.skbg{display:flex;flex-direction:column;gap:14px;opacity:.7}
+.sktiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:11px}
+.sk{border-radius:12px;background:linear-gradient(100deg,var(--sunken) 40%,var(--card) 50%,var(--sunken) 60%);background-size:200% 100%;animation:skm 1.3s linear infinite}
+@keyframes skm{to{background-position:-200% 0}}
+.ldr{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:13px}
+.ldr-ring{position:relative;width:70px;height:70px}
+.ldr-ring::before{content:'';position:absolute;inset:0;border-radius:50%;
+  background:conic-gradient(from 0deg,transparent 12%,var(--gold-line) 55%,var(--green2) 100%);
+  -webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));
+          mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));
+  animation:sp 1s linear infinite}
+.ldr-ic{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:28px;animation:bob 1.15s ease-in-out infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-8deg)}50%{transform:translateY(-5px) rotate(10deg)}}
+.ldr-tx{font-size:13px;font-weight:600;color:var(--muted);background:var(--card);border:1px solid var(--line);padding:3px 13px;border-radius:20px}
+.ldr-tx i{font-style:normal;animation:dot 1.2s infinite}.ldr-tx i:nth-child(2){animation-delay:.2s}.ldr-tx i:nth-child(3){animation-delay:.4s}
+@keyframes dot{0%,60%,100%{opacity:.2}30%{opacity:1}}
 @media(max-width:560px){.hero .amt{font-size:44px}}
 </style>
 </head>
 <body>
-<div class="wrap" id="app"><div class="msg">กำลังโหลด...</div></div>
+<div class="wrap" id="app">
+  <div class="skwrap">
+    <div class="skbg">
+      <div class="sk" style="height:150px;border-radius:20px"></div>
+      <div class="sktiles"><div class="sk" style="height:78px"></div><div class="sk" style="height:78px"></div><div class="sk" style="height:78px"></div><div class="sk" style="height:78px"></div></div>
+      <div class="sk" style="height:88px;border-radius:14px"></div>
+      <div class="sk" style="height:230px;border-radius:16px"></div>
+    </div>
+    <div class="ldr">
+      <div class="ldr-ring"><div class="ldr-ic">🏆</div></div>
+      <div class="ldr-tx">กำลังคิดโบนัส<i>.</i><i>.</i><i>.</i></div>
+    </div>
+  </div>
+</div>
 
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
@@ -80,6 +115,7 @@ const bonusOf=p=>Math.min(BONUS_MAX,Math.max(BONUS_MIN,Math.round((BONUS_MIN+(BO
 
 const fmt=(n,d=0)=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const $=s=>document.querySelector(s);
+let EXPORT=null;   // เก็บผลรอบล่าสุดไว้ให้ปุ่มดาวน์โหลด Excel
 function setT(t){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.tgl button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));try{localStorage.setItem('bonus_theme',t)}catch(e){}}
 
 (async function init(){
@@ -126,6 +162,8 @@ function render(records){
   const fillPct = Math.max(0,Math.min(100,(bonus-BONUS_MIN)/(BONUS_MAX-BONUS_MIN)*100));
   const day=now.getDate();
 
+  EXPORT={thMonth,day,ym,bonus,pickPct,pass,total,passRate,sendSum,palmTotal,leftoverBad,rows};
+
   $('#app').innerHTML = `
   <div class="top">
     <div class="title">
@@ -133,7 +171,10 @@ function render(records){
       <div class="badge">🏆</div>
       <div><h1>โบนัสหัวหน้าคนขับ</h1><p>SSB Smart Supply · จัดรถเข้ารับปาล์มตามลาน</p></div>
     </div>
-    <div class="tgl"><button data-t="light" onclick="setT('light')">☀️</button><button data-t="dark" onclick="setT('dark')">🌙</button></div>
+    <div class="acts">
+      <button class="dl" onclick="downloadCSV()">⬇️ Excel</button>
+      <div class="tgl"><button data-t="light" onclick="setT('light')">☀️</button><button data-t="dark" onclick="setT('dark')">🌙</button></div>
+    </div>
   </div>
 
   <div class="hero">
@@ -179,6 +220,32 @@ function render(records){
   <p class="note">✅ ผ่าน (≥60% หรือ ค้าง&lt;30ต) · ❌ ไม่ผ่าน · โบนัสปรับได้ที่ BONUS_MIN/MAX + เป้า 60% ในโค้ด</p>`;
 
   try{const s=localStorage.getItem('bonus_theme');if(s)setT(s);}catch(e){}
+}
+
+// ── ดาวน์โหลด Excel (CSV UTF-8 BOM เปิดใน Excel ภาษาไทยไม่เพี้ยน) ──
+function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function downloadCSV(){
+  if(!EXPORT){ alert('ยังไม่มีข้อมูลให้ดาวน์โหลด'); return; }
+  const e=EXPORT, L=[];
+  L.push(['โบนัสหัวหน้าคนขับ — SSB Smart Supply']);
+  L.push(['รอบ','1–30 '+e.thMonth+' (ถึงวันที่ '+e.day+')']);
+  L.push(['โบนัส ณ ปัจจุบัน (บาท)', Math.round(e.bonus)]);
+  L.push(['จัดรถรับเฉลี่ย (คิดโบนัส) %', fmt(e.pickPct,0)]);
+  L.push(['ผ่านเกณฑ์ (วัน-ลาน)', e.pass+' / '+e.total+' ('+fmt(e.passRate,0)+'%)']);
+  L.push(['จัดรถรับรวม (ตัน)', fmt(e.sendSum,1)]);
+  L.push(['ปาล์มรวม จัดรับ+ค้าง (ตัน)', fmt(e.palmTotal,1)]);
+  L.push(['ค้างเกิน 27ต แล้วรับ<60% (ครั้ง)', e.leftoverBad]);
+  L.push([]);
+  L.push(['วันที่','ลาน','รับซื้อ(ต)','จัดรับ(ต)','ค้างลาน(ต)','%รับ(คิดโบนัส)','ผล']);
+  e.rows.slice().sort((a,b)=> a.date<b.date?-1:1).forEach(r=>{
+    L.push([r.date, r.ramp, fmt(r.buy,1), fmt(r.send,1), fmt(r.stock,1), fmt(r.pct*100,0)+'%', r.ok?'ผ่าน':'ไม่ผ่าน']);
+  });
+  const csv='﻿'+L.map(row=>row.map(csvCell).join(',')).join('\r\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const fn='โบนัสหัวหน้าคนขับ_'+e.ym+'.csv';
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=fn; document.body.appendChild(a); a.click();
+  setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},400);
 }
 </script>
 </body>
