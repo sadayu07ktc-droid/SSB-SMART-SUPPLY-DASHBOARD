@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>โบนัสหัวหน้าคนขับ — SSB</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF1EE; --card:#FFFFFF; --sunken:#F1F5F2; --ink:#152019; --muted:#5D6B62; --faint:#8A968D;
+  --line:#DCE4DE; --line-soft:#E9EEEA;
+  --green:#1B4332; --green2:#2D6A4F; --gold:#B7892A; --gold-soft:#F7EDD6; --gold-line:#E4C878;
+  --ok:#1E7A4C; --ok-soft:#E3F3EA; --bad:#C0392B; --bad-soft:#FBE7E4;
+  --sans:"Noto Sans Thai","Sarabun","Segoe UI",sans-serif; --num:"Space Grotesk",ui-monospace,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D1411; --card:#141D18; --sunken:#1A241E; --ink:#E7EEE9; --muted:#9AA79E; --faint:#748076;
+  --line:#24302A; --line-soft:#1E2822; --green:#123024; --green2:#2D6A4F;
+  --gold:#E7CE86; --gold-soft:#2A2313; --gold-line:#5A481F;
+  --ok:#5FBF8B; --ok-soft:#15281E; --bad:#E77A6E; --bad-soft:#2E1714;
+}}
+:root[data-theme="dark"]{
+  --bg:#0D1411; --card:#141D18; --sunken:#1A241E; --ink:#E7EEE9; --muted:#9AA79E; --faint:#748076;
+  --line:#24302A; --line-soft:#1E2822; --green:#123024; --green2:#2D6A4F;
+  --gold:#E7CE86; --gold-soft:#2A2313; --gold-line:#5A481F;
+  --ok:#5FBF8B; --ok-soft:#15281E; --bad:#E77A6E; --bad-soft:#2E1714;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;font-size:15px}
+.wrap{max-width:840px;margin:0 auto;padding:18px 16px 60px;display:flex;flex-direction:column;gap:16px}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.title{display:flex;align-items:center;gap:11px}
+.back{border:0;background:var(--card);border:1px solid var(--line);width:34px;height:34px;border-radius:10px;cursor:pointer;font-size:16px;color:var(--ink)}
+.badge{width:42px;height:42px;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.title h1{margin:0;font-size:19px;font-weight:700}.title p{margin:0;font-size:12.5px;color:var(--muted)}
+.tgl{display:flex;gap:4px;background:var(--card);border:1px solid var(--line);border-radius:11px;padding:3px}
+.tgl button{border:0;background:transparent;font-size:16px;padding:5px 9px;border-radius:8px;cursor:pointer;line-height:1}.tgl button.on{background:var(--gold-soft)}
+.hero{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border-radius:20px;padding:22px 22px 20px;position:relative;overflow:hidden}
+.hero .lbl{font-size:12.5px;color:#CFE6D8}.hero .amt{font-family:var(--num);font-weight:700;font-size:52px;line-height:1.05;margin:2px 0}.hero .amt small{font-size:20px;font-weight:500;opacity:.8}
+.hero .sub{font-size:12.5px;color:#CFE6D8}.hero .cycle{position:absolute;top:18px;right:20px;font-size:11.5px;background:rgba(255,255,255,.14);padding:4px 10px;border-radius:20px;color:#eafff2}
+.meter{margin-top:16px}.meter .bar{height:10px;border-radius:6px;background:rgba(255,255,255,.18);position:relative;overflow:hidden}
+.meter .fill{position:absolute;inset:0 auto 0 0;border-radius:6px;background:linear-gradient(90deg,var(--gold-line),#F2D98B);transition:width .5s}
+.meter .ends{display:flex;justify-content:space-between;font-family:var(--num);font-size:11px;color:#CFE6D8;margin-top:5px}
+.pill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:20px;margin-top:10px;background:var(--gold-soft);color:var(--gold)}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:11px}
+.tile{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:13px 15px;display:flex;flex-direction:column;gap:2px}
+.tile .k{font-size:12px;color:var(--muted)}.tile .v{font-family:var(--num);font-weight:700;font-size:26px}.tile .v small{font-size:13px;font-weight:500;color:var(--faint)}.tile .foot{font-size:11.5px;color:var(--faint)}
+.tag{font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:20px}.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.bad{background:var(--bad-soft);color:var(--bad)}
+.rule{background:var(--gold-soft);border:1px solid var(--gold-line);border-radius:14px;padding:12px 15px;font-size:13px;display:flex;flex-direction:column;gap:5px}
+.rule b{color:var(--gold)}.rule .row{display:flex;gap:8px}.rule .row span:first-child{color:var(--gold);font-weight:700}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.card>h2{margin:0;font-size:14.5px;font-weight:700;padding:14px 16px 10px}
+.ladder{display:flex;padding:0 14px 14px}.step{flex:1;text-align:center;padding:9px 4px;border-right:1px solid var(--line-soft)}.step:last-child{border-right:0}.step.hit{background:var(--gold-soft);border-radius:10px}.step .p{font-size:11px;color:var(--muted)}.step .b{font-family:var(--num);font-weight:700;font-size:15px}.step.hit .b{color:var(--gold)}
+.thead,.trow{display:grid;grid-template-columns:78px 1fr 60px 60px 60px 52px 46px;gap:6px;align-items:center;padding:9px 14px;font-size:12.5px;min-width:520px}
+.thead{background:var(--sunken);color:var(--faint);font-size:11px;font-weight:600;border-bottom:1px solid var(--line)}
+.trow{border-bottom:1px solid var(--line-soft)}.trow:last-child{border-bottom:0}
+.trow .n{font-family:var(--num);text-align:right}.trow .ramp{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pct{font-family:var(--num);font-weight:700;text-align:right}.st{justify-self:end;font-size:15px}.scroll{overflow-x:auto}
+.note{font-size:12px;color:var(--faint);text-align:center;padding-top:4px}
+.msg{text-align:center;padding:40px 16px;color:var(--muted)}
+@media(max-width:560px){.hero .amt{font-size:44px}}
+</style>
+</head>
+<body>
+<div class="wrap" id="app"><div class="msg">กำลังโหลด...</div></div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
+const LIFF_ID='2010274217-Ot7vGhri';
+const TON=1000;              // kg → ตัน
+const TARGET=0.60;           // จัดรถรับ ≥ 60% = ผ่าน
+const LEFTOVER_OK=30;        // ค้างลาน < 30 ตัน = ผ่านอัตโนมัติ
+const TON_PER_BIN=15;        // 15 ตัน/กระบะ · 2 กระบะ = 1 พ่วง
+// ขั้นโบนัสลดหลั่น (ตามอัตราวัน-ลานที่ผ่านเกณฑ์) — ปรับตัวเลขได้ที่นี่จุดเดียว
+const TIERS=[{min:90,amt:5000},{min:80,amt:4600},{min:70,amt:4000},{min:60,amt:3500},{min:0,amt:3000}];
+
+const fmt=(n,d=0)=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const $=s=>document.querySelector(s);
+function setT(t){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.tgl button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));try{localStorage.setItem('bonus_theme',t)}catch(e){}}
+
+(async function init(){
+  let uid='';
+  const q=new URLSearchParams(location.search).get('uid');   // ?uid= สำหรับแอดมินเทส
+  if(q){ uid=q; }
+  else{
+    try{ await liff.init({liffId:LIFF_ID}); if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;} const p=await liff.getProfile(); uid=p.userId||''; }
+    catch(e){ $('#app').innerHTML='<div class="msg" style="color:var(--bad)">เข้าระบบ LINE ไม่สำเร็จ</div>'; return; }
+  }
+  if(!uid){ $('#app').innerHTML='<div class="msg" style="color:var(--bad)">ไม่พบ LINE UID</div>'; return; }
+  try{
+    const r=await fetch(GAS_URL+'?action=getRampDaily&userId='+encodeURIComponent(uid));
+    const d=await r.json();
+    if(!d.ok){ $('#app').innerHTML='<div class="msg" style="color:var(--bad)">'+(d.error||'โหลดข้อมูลไม่สำเร็จ')+'</div>'; return; }
+    render(d.records||[]);
+  }catch(e){ $('#app').innerHTML='<div class="msg" style="color:var(--bad)">เชื่อมต่อไม่ได้ — ลองใหม่</div>'; }
+})();
+
+function render(records){
+  // รอบ 1–30 เดือนปัจจุบัน
+  const now=new Date(); const ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  const thMonth=now.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
+  const cyc=records.filter(x=>String(x.date||'').slice(0,7)===ym);
+
+  let pass=0,total=0,sendSum=0,palmSum=0,leftoverBad=0; const rows=[];
+  cyc.forEach(x=>{
+    const send=(x.send||0)/TON, stock=(x.stock||0)/TON, buy=(x.buy||0)/TON;
+    if(send<=0 && stock<=0 && buy<=0) return;        // วันไม่มีข้อมูลจริง ข้าม
+    const palm=send+stock;                            // ปาล์มทั้งวัน = จัดรับ + ค้างลาน
+    const pct=palm>0 ? send/palm : (send>0?1:0);
+    const ok=(pct>=TARGET) || (stock<LEFTOVER_OK);
+    total++; if(ok) pass++; if(stock>=LEFTOVER_OK && !ok) leftoverBad++;
+    sendSum+=send; palmSum+=palm;
+    rows.push({date:x.date, ramp:x.ramp, buy, send, stock, pct, ok});
+  });
+  rows.sort((a,b)=> a.date<b.date?1:-1);
+
+  const passRate = total ? pass/total*100 : 0;
+  const tier = TIERS.find(t=>passRate>=t.min) || TIERS[TIERS.length-1];
+  const bonus = tier.amt;
+  const avgPct = palmSum ? sendSum/palmSum*100 : 0;
+  const fillPct = Math.max(0,Math.min(100,(bonus-3000)/2000*100));
+  const day=now.getDate();
+
+  $('#app').innerHTML = `
+  <div class="top">
+    <div class="title">
+      <button class="back" onclick="history.length>1?history.back():location.href='ramp-dashboard.html'">←</button>
+      <div class="badge">🏆</div>
+      <div><h1>โบนัสหัวหน้าคนขับ</h1><p>SSB Smart Supply · จัดรถเข้ารับปาล์มตามลาน</p></div>
+    </div>
+    <div class="tgl"><button data-t="light" onclick="setT('light')">☀️</button><button data-t="dark" onclick="setT('dark')">🌙</button></div>
+  </div>
+
+  <div class="hero">
+    <div class="cycle">รอบ 1–30 ${thMonth} · ถึงวันที่ ${day}</div>
+    <div class="lbl">รายได้โบนัส ณ ปัจจุบัน</div>
+    <div class="amt">฿${fmt(bonus)}<small> / 5,000</small></div>
+    <div class="sub">อัตราผ่านเกณฑ์ ${fmt(passRate,0)}% (${pass}/${total} วัน-ลาน) · จัดรถรับเฉลี่ย ${fmt(avgPct,0)}%</div>
+    <div class="meter"><div class="bar"><div class="fill" style="width:${fillPct}%"></div></div>
+      <div class="ends"><span>ขั้นต่ำ 3,000</span><span>เต็ม 5,000</span></div></div>
+    <span class="pill">${avgPct>=60?'✓ เกินเป้า 60%':'⚠️ ต่ำกว่าเป้า 60%'} · จัดรับ ${fmt(sendSum)} / ${fmt(palmSum)} ต</span>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="k">🚚 จัดรถรับเฉลี่ย</div><div class="v">${fmt(avgPct,0)}<small>%</small></div><div class="foot">เป้า ≥60% <span class="tag ${avgPct>=60?'ok':'bad'}">${avgPct>=60?'ผ่าน':'ต่ำกว่าเป้า'}</span></div></div>
+    <div class="tile"><div class="k">📅 วัน-ลาน ผ่านเกณฑ์</div><div class="v">${pass}<small>/${total}</small></div><div class="foot">อัตรา ${fmt(passRate,0)}%</div></div>
+    <div class="tile"><div class="k">🌴 จัดรถรับแล้ว</div><div class="v">${fmt(sendSum)}<small> ต</small></div><div class="foot">จากทั้งหมด ${fmt(palmSum)} ต</div></div>
+    <div class="tile"><div class="k">📦 ค้างเกิน 30ต (ไม่ผ่าน)</div><div class="v">${leftoverBad}<small> ครั้ง</small></div><div class="foot">≈ พลาดเกณฑ์วัน-ลาน</div></div>
+  </div>
+
+  <div class="rule">
+    <div class="row"><span>1</span><div>จัดรถเข้ารับ <b>≥ 60%</b> ของปาล์มทั้งวัน (จัดรับ + ค้างลาน) <b>ต่อลาน ต่อวัน</b> = ผ่าน</div></div>
+    <div class="row"><span>2</span><div>ถ้า <b>ค้างลาน &lt; 30 ตัน</b> ถือว่าผ่านอัตโนมัติ · <b>30 ตัน = 1 พ่วง</b></div></div>
+    <div class="row"><span>3</span><div>ต่ำกว่าเกณฑ์ → โบนัส<b>ลดหลั่น</b> เต็ม 5,000 ลงถึงขั้นต่ำ 3,000 · <b>ตัดรอบ 1–30 ของเดือน</b></div></div>
+  </div>
+
+  <div class="card"><h2>💰 ขั้นโบนัส (ตามอัตราผ่านเกณฑ์ทั้งเดือน)</h2>
+    <div class="ladder">
+      ${[['<60%',3000,0],['60–69%',3500,60],['70–79%',4000,70],['80–89%',4600,80],['≥90%',5000,90]]
+        .map(([p,amt,mn])=>`<div class="step ${bonus===amt?'hit':''}"><div class="p">${p}</div><div class="b">${fmt(amt)}</div></div>`).join('')}
+    </div>
+  </div>
+
+  <div class="card"><h2>📋 รายวัน-รายลาน (รอบนี้ ${total} รายการ)</h2>
+    <div class="scroll">
+      <div class="thead"><div>วันที่</div><div>ลาน</div><div class="n">รับซื้อ</div><div class="n">จัดรับ</div><div class="n">ค้างลาน</div><div class="n">%รับ</div><div class="st">ผล</div></div>
+      ${rows.slice(0,40).map(r=>{
+        const dd=new Date(r.date+'T00:00:00'); const dl=dd.getDate()+' '+dd.toLocaleDateString('th-TH',{month:'short'});
+        const col=r.ok?'var(--ok)':'var(--bad)';
+        return `<div class="trow"><div class="num">${dl}</div><div class="ramp">${r.ramp}</div><div class="n">${fmt(r.buy,1)}</div><div class="n">${fmt(r.send,1)}</div><div class="n">${fmt(r.stock,1)}</div><div class="pct" style="color:${col}">${fmt(r.pct*100,0)}%</div><div class="st">${r.ok?'✅':'❌'}</div></div>`;
+      }).join('') || '<div class="msg">ยังไม่มีข้อมูลรอบนี้</div>'}
+    </div>
+  </div>
+  <p class="note">✅ ผ่าน (≥60% หรือ ค้าง&lt;30ต) · ❌ ไม่ผ่าน · ขั้นโบนัสปรับได้ที่ค่า TIERS ในโค้ด</p>`;
+
+  try{const s=localStorage.getItem('bonus_theme');if(s)setT(s);}catch(e){}
+}
+</script>
+</body>
+</html>

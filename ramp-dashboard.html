@@ -122,6 +122,7 @@
       </div>
       <div class="dr"><input type="date" id="fromD" title="ตั้งแต่"><span>–</span><input type="date" id="toD" title="ถึง"></div>
       <select id="rampSel"></select>
+      <button id="bonusBtn" title="โบนัสหัวหน้าคนขับ" style="border:1px solid var(--buy);background:var(--buySoft);color:var(--buy);border-radius:11px;height:40px;padding:0 14px;font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap">🏆 โบนัส</button>
       <div class="seg" id="themeSeg" title="โหมดสว่าง / มืด">
         <button data-t="light">☀️</button>
         <button data-t="dark">🌙</button>
@@ -150,6 +151,7 @@ function applyTheme(t){document.documentElement.setAttribute('data-theme',t);try
   if(window._rendered)render();}
 (function(){let sv=null;try{sv=localStorage.getItem('rampTheme');}catch(e){}applyTheme(sv||effTheme());})();
 $('#themeSeg').onclick=e=>{const b=e.target.closest('button');if(b)applyTheme(b.dataset.t);};
+$('#bonusBtn').onclick=()=>{location.href='bonus.html'+(MY_UID?'?uid='+encodeURIComponent(MY_UID):'');};
 
 // ── ข้อมูลจริง ──
 let RECORDS=[], RAMPS=[], DATES=[], BY={}, ORD_BY_RAMP={};
