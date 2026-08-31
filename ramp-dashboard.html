@@ -552,7 +552,9 @@ function billCard(r,ramp){
     <div onclick="toggleBill('${id}',this)" style="border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card);cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-weight:800;font-size:13px"><span class="bcaret" style="color:var(--muted);margin-right:5px">▸</span>🗓️ ${billDate(r.date)}</div>
-        ${lost>0.01?`<span style="font-size:10px;font-weight:700;color:var(--loss);background:var(--panel);padding:2px 8px;border-radius:999px">หาย ${fmt(lost,2)} ต · ${fmt(lp,1)}%</span>`:'<span style="font-size:10px;color:var(--muted)">ยังไม่ปิดยอด</span>'}
+        ${r.kind==='close'
+          ? `<span style="font-size:10px;font-weight:800;color:var(--gpalm);background:var(--gpalmSoft);padding:2px 8px;border-radius:999px">🧾 ล้างลาน${lost>0.01?` · หาย ${fmt(lost,2)}ต`:''}</span>`
+          : (lost>0.01?`<span style="font-size:10px;font-weight:700;color:var(--loss);background:var(--panel);padding:2px 8px;border-radius:999px">หาย ${fmt(lost,2)} ต · ${fmt(lp,1)}%</span>`:'<span style="font-size:10px;color:var(--muted)">ยังไม่ปิดยอด</span>')}
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
         ${cell('ซื้อเข้า',fmt(buy)+' ต','var(--buy)')}
@@ -571,6 +573,18 @@ function billDetailFlex(r,ramp){
   const remain=r.stock||0, totalIn=carry+buy;
   const line=(l,v,strong)=>`<div style="display:flex;justify-content:space-between;padding:5px 2px;font-size:12.5px;${strong?'border-top:1px solid var(--line)':''}"><span style="color:var(--ink2)">${l}</span><span class="num" style="font-weight:${strong?800:600};color:var(--ink)">${v}</span></div>`;
   const sec=t=>`<div style="background:var(--sendSoft);color:var(--send);font-weight:800;font-size:11.5px;letter-spacing:.02em;padding:5px 9px;border-radius:7px;margin:9px 0 3px">${t}</div>`;
+  // 🧾 สรุปรอบ (ล้างลาน) — โชว์ตามที่ลานแจ้ง: ช่วง / ซื้อรวมทั้งรอบ / ส่งรวมทั้งรอบ / น้ำหนักหายทั้งรอบ
+  let cycleBlock='';
+  if(r.kind==='close'){
+    const rf=r.roundFrom||'', rt=r.roundTo||r.date;
+    const days=(rf&&rt&&!isNaN(Date.parse(rf))&&!isNaN(Date.parse(rt)))?(Math.round((Date.parse(rt)-Date.parse(rf))/864e5)+1):0;
+    const rl=r.roundLoss||0, rlc=rl>0.5?'var(--loss)':(rl<-0.5?'var(--good)':'var(--ink)');
+    cycleBlock=`<div style="background:var(--gpalmSoft);color:var(--gpalm);font-weight:800;font-size:11.5px;letter-spacing:.02em;padding:5px 9px;border-radius:7px;margin:12px 0 3px">🧾 สรุปรอบทั้งหมด (ล้างลาน)</div>`
+      +line('ช่วงรอบ',(rf?billDate(rf):'—')+' – '+billDate(rt)+(days?` · ${days} วัน`:''))
+      +line('ซื้อรวมทั้งรอบ',kg(r.roundBuy),1)
+      +line('ส่งรวมทั้งรอบ',kg(r.roundSend),1)
+      +`<div style="display:flex;justify-content:space-between;padding:5px 2px;font-size:12.5px;border-top:1px solid var(--line)"><span style="color:var(--ink2)">น้ำหนักหายทั้งรอบ</span><span class="num" style="font-weight:800;color:${rlc}">${fmt(rl)} กก. · ${fmt(r.roundLossPct||0,2)}%</span></div>`;
+  }
   return `<div style="border:1px solid var(--line);border-radius:13px;overflow:hidden;background:var(--card)">
     <div style="background:#1c3b2e;color:#fff;padding:12px 14px">
       <div style="font-size:11.5px;opacity:.85">🏭 รายงานผลปาล์มประจำวัน</div>
@@ -592,6 +606,7 @@ function billDetailFlex(r,ramp){
       ${line('ส่งรวม',kg(send),1)}
       ${sec('ปิดยอด')}
       ${line('คงค้าง',kg(remain),1)}
+      ${cycleBlock}
     </div>
   </div>`;
 }
