@@ -11,6 +11,7 @@
     --ink:#17201b; --ink2:#5c6b60; --muted:#8a978c;
     --accent:#1e7a4d; --send:#1e7a4d; --buy:#c98a1e; --loss:#c0492f; --good:#1e7a4d;
     --sendSoft:rgba(30,122,77,.14); --buySoft:rgba(201,138,30,.14);--stock:#2f6ca8;--stockSoft:rgba(47,108,168,.14);
+    --gpalm:#7c3aed;--gpalmSoft:rgba(124,58,237,.12);
     --shadow:0 1px 2px rgba(20,40,25,.05),0 8px 24px -12px rgba(20,40,25,.12); --r:16px;
   }
   @media (prefers-color-scheme:dark){:root{
@@ -18,10 +19,11 @@
     --ink:#e7ece7; --ink2:#9fb0a3; --muted:#718476;
     --accent:#43b982; --send:#33a166; --buy:#bd8722; --loss:#e0705a; --good:#43b982;
     --sendSoft:rgba(51,161,102,.16); --buySoft:rgba(189,135,34,.15);--stock:#3d92c4;--stockSoft:rgba(61,146,196,.16);
+    --gpalm:#a78bfa;--gpalmSoft:rgba(167,139,250,.16);
     --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6);
   }}
   :root[data-theme="light"]{--bg:#eef0ea;--panel:#f8f8f4;--card:#fff;--line:#dfe3da;--line2:#cdd3c6;--ink:#17201b;--ink2:#5c6b60;--muted:#8a978c;--accent:#1e7a4d;--send:#1e7a4d;--buy:#c98a1e;--loss:#c0492f;--good:#1e7a4d;--sendSoft:rgba(30,122,77,.14);--buySoft:rgba(201,138,30,.14);--stock:#2f6ca8;--stockSoft:rgba(47,108,168,.14);--shadow:0 1px 2px rgba(20,40,25,.05),0 8px 24px -12px rgba(20,40,25,.12)}
-  :root[data-theme="dark"]{--bg:#0e1512;--panel:#121b16;--card:#16211c;--line:#243029;--line2:#324034;--ink:#e7ece7;--ink2:#9fb0a3;--muted:#718476;--accent:#43b982;--send:#33a166;--buy:#bd8722;--loss:#e0705a;--good:#43b982;--sendSoft:rgba(51,161,102,.16);--buySoft:rgba(189,135,34,.15);--stock:#3d92c4;--stockSoft:rgba(61,146,196,.16);--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
+  :root[data-theme="dark"]{--bg:#0e1512;--panel:#121b16;--card:#16211c;--line:#243029;--line2:#324034;--ink:#e7ece7;--ink2:#9fb0a3;--muted:#718476;--accent:#43b982;--send:#33a166;--buy:#bd8722;--loss:#e0705a;--good:#43b982;--sendSoft:rgba(51,161,102,.16);--buySoft:rgba(189,135,34,.15);--stock:#3d92c4;--stockSoft:rgba(61,146,196,.16);--gpalm:#a78bfa;--gpalmSoft:rgba(167,139,250,.16);--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px -14px rgba(0,0,0,.6)}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:"Noto Sans Thai","Sarabun",-apple-system,"Segoe UI",system-ui,sans-serif;line-height:1.5;-webkit-font-smoothing:antialiased}
   .wrap{max-width:1160px;margin:0 auto;padding:22px 18px 60px}
@@ -73,6 +75,10 @@
   .chip{font-size:10.5px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap}
   .chip.ok{background:var(--sendSoft);color:var(--good)}
   .chip.bad{background:color-mix(in srgb,var(--loss) 16%,transparent);color:var(--loss)}
+  .gchip{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;color:var(--ink);background:var(--gpalmSoft);border:1px solid color-mix(in srgb,var(--gpalm) 32%,var(--line));border-radius:999px;padding:6px 12px;cursor:pointer;transition:.12s;font-family:inherit}
+  .gchip:hover{border-color:var(--gpalm)}.gchip:active{transform:scale(.97)}
+  .gchip b{color:var(--gpalm);font-variant-numeric:tabular-nums}
+  .gchip .gtrip{font-size:10px;color:var(--muted);font-weight:600;background:var(--card);padding:1px 6px;border-radius:999px}
   .ins{padding:6px 16px 16px;display:flex;flex-direction:column;gap:9px}
   .icard{display:flex;gap:11px;align-items:flex-start;padding:11px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
   .icard .em{font-size:17px;line-height:1.2;flex:none}
@@ -155,6 +161,7 @@ $('#bonusBtn').onclick=()=>{location.href='bonus.html'+(MY_UID?'?uid='+encodeURI
 
 // ── ข้อมูลจริง ──
 let RECORDS=[], RAMPS=[], DATES=[], BY={}, ORD_BY_RAMP={};
+let GARDEN_RECORDS=[], GARDENS=[];   // 🌳 ปาล์มจากสวน ส่งตรงโรงงาน (getGardenDaily)
 let RANGE=30, SCOPE='all', CHARTTYPE='line', MODE='preset', FROM='', TO='';
 const TON=1000; // kg → ตัน
 const TON_PER_BIN=15; // ตัน/กระบะ · 2 กระบะ = 1 พ่วง (สั่งออเดอร์เป็นกระบะ)
@@ -180,6 +187,10 @@ async function boot(){
     try{ const or=await fetch(GAS_URL+'?action=getRampOrders&userId='+encodeURIComponent(MY_UID)); const od=await or.json();
       if(od.ok){ ORD_BY_RAMP={}; (od.orders||[]).forEach(o=>{(ORD_BY_RAMP[o.ramp]=ORD_BY_RAMP[o.ramp]||[]).push(o);}); Object.keys(ORD_BY_RAMP).forEach(k=>ORD_BY_RAMP[k].sort((x,y)=>x.date<y.date?1:-1)); }
     }catch(e){}
+    // 🌳 ปาล์มจากสวน ส่งตรงโรงงาน (degrade ได้ถ้ายังไม่ deploy endpoint)
+    try{ const gr=await fetch(GAS_URL+'?action=getGardenDaily&userId='+encodeURIComponent(MY_UID)); const gd=await gr.json();
+      if(gd.ok){ GARDEN_RECORDS=gd.records||[]; GARDENS=gd.gardens||[]; }
+    }catch(e){}
     buildShell();
     window._rendered=true; render();
   }catch(e){$('#app').innerHTML='<div class="msg">ผิดพลาด: '+e+'</div>';}
@@ -199,6 +210,15 @@ function buildShell(){
       <div class="legend" id="legend"></div>
       <div id="stockBanner" style="margin:2px 18px 8px;padding:9px 13px;border-radius:11px;background:var(--stockSoft);display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-size:13px"></div>
       <div class="chartwrap"><svg id="chart" viewBox="0 0 900 300" role="img" aria-label="กราฟปาล์มซื้อเข้า ส่งโรงงาน ค้างลาน"></svg></div>
+    </div>
+    <div class="panel" id="gardenPanel" style="margin-top:16px">
+      <div class="phead">
+        <div><div class="eyebrow">สวนส่งตรงโรงงาน</div><div class="ptitle">🌳 ปาล์มจากสวน (ไม่ผ่านลาน)</div></div>
+        <div class="pnote" id="gardenNote"></div>
+      </div>
+      <div id="gardenChips" style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 18px 12px"></div>
+      <div class="legend"><span class="lg"><i style="background:var(--send)"></i>ลานทั้งหมด</span><span class="lg"><i style="background:var(--gpalm)"></i>สวนส่งตรง</span><span class="lg" style="color:var(--muted)">เปรียบเทียบ ส่งเข้าโรงงาน · ตัน/วัน</span></div>
+      <div class="chartwrap"><svg id="cmpChart" viewBox="0 0 900 260" role="img" aria-label="เปรียบเทียบส่งโรงงาน ลาน เทียบ สวน"></svg></div>
     </div>
     <div class="grid2">
       <div class="panel">
@@ -278,8 +298,73 @@ function render(){ try{
     ? `<span style="font-weight:700;color:var(--stock)">📦 ค้างลาน ${fmt(stockEnd)} ตัน</span><span style="font-weight:800;background:var(--stock);color:#fff;padding:2px 11px;border-radius:999px">${dispatchText(stockEnd)}</span><span style="color:var(--ink2)">ควรเรียกรถเข้ารับ · 15 ตัน/กระบะ · 2 กระบะ = 1 พ่วง</span>`
     : '<span style="color:var(--ink2)">✓ ไม่มีปาล์มค้างลาน</span>';
   if(useBar) drawBar(); else drawChart(rows);
-  drawRank(); drawInsights(rows,{tSend,tBuy,tRaw,tRspo},lossPct,rspoPct);
+  drawRank(); drawInsights(rows,{tSend,tBuy,tRaw,tRspo},lossPct,rspoPct); drawGarden();
 }catch(e){console.error('render error',e);} }
+
+// ── 🌳 สวนส่งตรงโรงงาน: ชิปต่อสวน + กราฟเปรียบเทียบ ลาน vs สวน ──
+function gardenAggInRange(){
+  const set=new Set(curDates()), m={};
+  GARDEN_RECORDS.forEach(r=>{ if(!set.has(r.date))return; const t=r.send/TON;
+    const g=m[r.garden]||(m[r.garden]={garden:r.garden,tons:0,trips:0}); g.tons+=t; g.trips+=r.trips; });
+  return Object.values(m).sort((a,b)=>b.tons-a.tons);
+}
+function gardenSendPerDay(dates){ const idx={}; GARDEN_RECORDS.forEach(r=>{idx[r.date]=(idx[r.date]||0)+r.send/TON;}); return dates.map(d=>idx[d]||0); }
+function drawGarden(){
+  if(!$('#gardenPanel'))return;
+  const aggs=gardenAggInRange(); window._gagg=aggs;
+  const total=aggs.reduce((s,g)=>s+g.tons,0);
+  $('#gardenNote').textContent = aggs.length ? (aggs.length+' สวน · รวม '+fmt(total)+' ตัน') : 'ช่วงนี้ไม่มีสวนส่งตรง';
+  const clean=s=>String(s||'').replace(/\s*\n\s*/g,' · ').trim();
+  $('#gardenChips').innerHTML = aggs.length
+    ? aggs.map((g,i)=>{const nm=clean(g.garden),short=nm.length>22?nm.slice(0,21)+'…':nm;
+        return `<button class="gchip" onclick="openGardenDrawer(${i})" title="${nm.replace(/"/g,'&quot;')}">🌳 ${short} · <b>${fmt(g.tons,1)}</b> ต<span class="gtrip">${g.trips} เที่ยว</span></button>`;}).join('')
+    : '<div class="pnote" style="padding:2px 0">ยังไม่มีปาล์มจากสวนส่งตรงโรงงานในช่วงนี้ (ปาล์มสวนส่วนใหญ่อาจส่งผ่านลาน)</div>';
+  drawCompare();
+}
+function openGardenDrawer(i){
+  const g=(window._gagg||[])[i]; if(!g)return;
+  const dts=curDates(), set=new Set(dts);
+  const days=GARDEN_RECORDS.filter(r=>r.garden===g.garden&&set.has(r.date)).sort((a,b)=>a.date<b.date?1:-1);
+  $('#drTitle').textContent='🌳 '+String(g.garden||'').replace(/\s*\n\s*/g,' · ');
+  let h=`<div style="font-size:12px;color:var(--ink2);margin-bottom:12px">${dts[0]||'-'} → ${dts[dts.length-1]||'-'} · ส่งตรงโรงงาน (ไม่ผ่านลาน)</div>`;
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">${sumTile('ส่งโรงงานรวม',fmt(g.tons)+' ตัน','var(--gpalm)')}${sumTile('จำนวนเที่ยว',g.trips+' เที่ยว','var(--send)')}</div>`;
+  h+=`<div style="font-size:13px;font-weight:800;color:var(--gpalm);margin:2px 0 6px;padding:5px 0 5px 9px;border-left:3px solid var(--gpalm);background:var(--gpalmSoft);border-radius:0 6px 6px 0">🗓️ รายวัน (${days.length} วัน)</div>`;
+  h+=days.map(r=>`<div class="ordrow"><div><div class="id">${billDate(r.date)}</div><div class="meta">${r.trips} เที่ยว</div></div><div><div class="w" style="color:var(--gpalm)">${fmt(r.send/TON,1)} ต</div></div></div>`).join('')||'<div style="color:var(--muted);font-size:13px">ไม่มีข้อมูลในช่วงนี้</div>';
+  $('#drBody').innerHTML=h; $('#ov').classList.add('on');$('#dr').classList.add('on');
+}
+function drawCompare(){
+  const svg=$('#cmpChart'); if(!svg)return;
+  const dates=curDates();
+  if(dates.length<2){ svg.innerHTML='<text x="450" y="130" text-anchor="middle" font-size="13" fill="var(--muted)">ข้อมูลไม่พอวาดกราฟ (ต้องมีอย่างน้อย 2 วัน)</text>'; return; }
+  const rSend=sliceDates(dates,RAMPS).map(r=>r.send);   // ลานทั้งหมด (ไม่ขึ้นกับตัวเลือกลาน)
+  const gSend=gardenSendPerDay(dates);
+  const CW=900,CH=260,CP={l:44,r:54,t:14,b:26};
+  const max=Math.max(...rSend,...gSend,1)*1.12;
+  const x=i=>CP.l+(CW-CP.l-CP.r)*(i/(dates.length-1));
+  const y=v=>CP.t+(CH-CP.t-CP.b)*(1-v/max);
+  const rP=rSend.map((v,i)=>({x:x(i),y:y(v)})), gP=gSend.map((v,i)=>({x:x(i),y:y(v)}));
+  let g='';const ticks=4;
+  for(let t=0;t<=ticks;t++){const v=max*t/ticks,yy=y(v);g+=`<line x1="${CP.l}" y1="${yy.toFixed(1)}" x2="${CW-CP.r}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${CP.l-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`;}
+  const step=Math.max(1,Math.round(dates.length/6));
+  for(let i=0;i<dates.length;i+=step){const dt=new Date(toMs(dates[i]));g+=`<text x="${x(i).toFixed(1)}" y="${CH-6}" text-anchor="middle" font-size="10.5" fill="var(--muted)">${dt.getUTCDate()}/${dt.getUTCMonth()+1}</text>`;}
+  const eR=rP[rP.length-1],eG=gP[gP.length-1];
+  svg.innerHTML=`${g}
+    <path d="${smooth(rP)}" fill="none" stroke="var(--send)" stroke-width="2.6" stroke-linecap="round"/>
+    <path d="${smooth(gP)}" fill="none" stroke="var(--gpalm)" stroke-width="2.6" stroke-linecap="round"/>
+    <circle cx="${eR.x.toFixed(1)}" cy="${eR.y.toFixed(1)}" r="4.5" fill="var(--send)" stroke="var(--card)" stroke-width="2"/>
+    <circle cx="${eG.x.toFixed(1)}" cy="${eG.y.toFixed(1)}" r="4.5" fill="var(--gpalm)" stroke="var(--card)" stroke-width="2"/>
+    <text x="${(eR.x+7).toFixed(1)}" y="${(eR.y+4).toFixed(1)}" font-size="11" font-weight="800" fill="var(--send)">${fmt(rSend[rSend.length-1])}</text>
+    <text x="${(eG.x+7).toFixed(1)}" y="${(eG.y+4).toFixed(1)}" font-size="11" font-weight="800" fill="var(--gpalm)">${fmt(gSend[gSend.length-1])}</text>
+    <line id="ccross" x1="0" y1="${CP.t}" x2="0" y2="${CH-CP.b}" stroke="var(--line2)" stroke-width="1" opacity="0"/>
+    <rect id="chit" x="${CP.l}" y="0" width="${CW-CP.l-CP.r}" height="${CH}" fill="transparent"/>`;
+  const hit=svg.querySelector('#chit'),cross=svg.querySelector('#ccross'),tt=$('#tt');
+  function move(ev){const rect=svg.getBoundingClientRect();const cxp=(ev.touches?ev.touches[0].clientX:ev.clientX),cyp=(ev.touches?ev.touches[0].clientY:ev.clientY);
+    const px=(cxp-rect.left)/rect.width*CW;let i=Math.round((px-CP.l)/((CW-CP.l-CP.r)/(dates.length-1)));i=Math.max(0,Math.min(dates.length-1,i));const cx=x(i);cross.setAttribute('x1',cx);cross.setAttribute('x2',cx);cross.setAttribute('opacity','1');const dt=new Date(toMs(dates[i]));
+    tt.innerHTML=`<div class="d">${dt.getUTCDate()}/${dt.getUTCMonth()+1}/${(dt.getUTCFullYear()+543)%100}</div><div class="r"><span><i style="background:var(--send)"></i>ลานทั้งหมด</span><b class="num">${fmt(rSend[i])} ตัน</b></div><div class="r"><span><i style="background:var(--gpalm)"></i>สวนส่งตรง</span><b class="num">${fmt(gSend[i])} ตัน</b></div><div class="r" style="border-top:1px solid var(--line);margin-top:3px;padding-top:4px"><span style="color:var(--muted)">รวมเข้าโรงงาน</span><b class="num" style="color:var(--ink2)">${fmt(rSend[i]+gSend[i])} ตัน</b></div>`;
+    tt.style.opacity='1';let tx=cxp+14;if(tx+180>innerWidth)tx=cxp-190;tt.style.left=tx+'px';tt.style.top=(cyp-10)+'px';}
+  function leave(){cross.setAttribute('opacity','0');tt.style.opacity='0';}
+  hit.addEventListener('mousemove',move);hit.addEventListener('mouseleave',leave);hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('touchend',leave);
+}
 
 const W=900,H=300,PAD={l:44,r:54,t:16,b:26};
 function smooth(pts){if(pts.length<2)return pts.length?`M${pts[0].x},${pts[0].y}`:'';let d=`M${pts[0].x},${pts[0].y}`;for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;const c1x=p1.x+(p2.x-p0.x)/6,c1y=p1.y+(p2.y-p0.y)/6,c2x=p2.x-(p3.x-p1.x)/6,c2y=p2.y-(p3.y-p1.y)/6;d+=` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;}return d;}
