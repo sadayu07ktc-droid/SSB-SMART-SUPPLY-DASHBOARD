@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>แดชบอร์ดลานปาล์ม · SSB Smart Supply</title>
+<title>แดชบอร์ดรับเข้าผลปาล์ม · SSB Smart Supply</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <style>
   :root{
@@ -117,7 +117,7 @@
     <div class="brand">
       <button onclick="goBack()" style="border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:11px;width:42px;height:42px;font-size:18px;cursor:pointer">←</button>
       <div class="logo">🌴</div>
-      <div><h1>แดชบอร์ดลานปาล์ม</h1><div class="sub">SSB Smart Supply · ผลปาล์มรายวัน เข้า–ออก–ส่งโรงงาน</div></div>
+      <div><h1>แดชบอร์ดรับเข้าผลปาล์ม</h1><div class="sub">SSB Smart Supply · ปาล์มเข้าโรงงาน · ลาน + สวน</div></div>
     </div>
     <div class="controls">
       <div class="seg" id="rangeSeg">
@@ -231,7 +231,12 @@ function buildShell(){
       </div>
     </div>`;
   const sel=$('#rampSel');
-  sel.innerHTML='<option value="all">🌐 ภาพรวมทุกลาน</option>'+RAMPS.map(r=>`<option value="${r}">${r}</option>`).join('');
+  sel.innerHTML=
+    '<option value="all">🌐 ภาพรวมทุกลาน</option>'+
+    '<option value="gardens">🌳 ภาพรวมทุกสวน</option>'+
+    '<option value="everything">📊 ภาพรวมทั้งหมด (ลาน+สวน)</option>'+
+    (RAMPS.length?('<optgroup label="🏭 แยกรายลาน">'+RAMPS.map(r=>`<option value="${r}">${r}</option>`).join('')+'</optgroup>'):'')+
+    (GARDENS.length?('<optgroup label="🌳 แยกรายสวน">'+GARDENS.map((g,i)=>`<option value="g:${i}">${cleanName(g)}</option>`).join('')+'</optgroup>'):'');
   sel.onchange=e=>{SCOPE=e.target.value;render();};
   $('#rangeSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('#rangeSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');RANGE=+b.dataset.r;MODE='preset';$('#fromD').classList.remove('on');$('#toD').classList.remove('on');render();};
   $('#chartSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;CHARTTYPE=b.dataset.c;render();};
@@ -260,45 +265,77 @@ function prevDates(){
   const cur=curDates(); if(!cur.length)return [];
   const first=DATES.indexOf(cur[0]); return DATES.slice(Math.max(0,first-cur.length),first);
 }
-function rampsInScope(){return SCOPE==='all'?RAMPS:[SCOPE];}
-function sum(rows,k){return rows.reduce((a,r)=>a+r[k],0);}
+function rampsInScope(){return SCOPE==='all'?RAMPS:[SCOPE];}   // (คงไว้เผื่อเรียกเก่า)
+function sum(rows,k){return rows.reduce((a,r)=>a+(r[k]||0),0);}
+// ── สโคป: ลาน / สวน / ทั้งหมด / รายลาน / รายสวน ──
+function cleanName(s){return String(s||'').replace(/\s*\n\s*/g,' · ').trim();}
+function scopeSel(){
+  if(SCOPE==='all')        return {ramps:RAMPS.slice(), gardens:[],             kind:'ramps',   label:'ทุกลาน'};
+  if(SCOPE==='gardens')    return {ramps:[],            gardens:GARDENS.slice(), kind:'gardens', label:'ทุกสวน'};
+  if(SCOPE==='everything') return {ramps:RAMPS.slice(), gardens:GARDENS.slice(), kind:'all',     label:'ทั้งหมด (ลาน+สวน)'};
+  if(String(SCOPE).slice(0,2)==='g:'){const g=GARDENS[+String(SCOPE).slice(2)]||''; return {ramps:[], gardens:g?[g]:[], kind:'garden1', label:cleanName(g)};}
+  return {ramps:[SCOPE], gardens:[], kind:'ramp1', label:SCOPE};
+}
+const hasR=s=>s.ramps.length>0, hasG=s=>s.gardens.length>0;
+function gardenIdx(gardens){const set=new Set(gardens),idx={};if(set.size)GARDEN_RECORDS.forEach(r=>{if(!set.has(r.garden))return;const o=idx[r.date]||(idx[r.date]={send:0,trips:0});o.send+=r.send/TON;o.trips+=r.trips;});return idx;}
+function gardenAggScope(gardens){const gset=new Set(gardens),dset=new Set(curDates());let trips=0,tons=0;if(gset.size)GARDEN_RECORDS.forEach(r=>{if(gset.has(r.garden)&&dset.has(r.date)){trips+=r.trips;tons+=r.send/TON;}});return {trips,tons};}
+function gardenAggList(gardens,dates){const gset=new Set(gardens),dset=new Set(dates),m={};if(gset.size)GARDEN_RECORDS.forEach(r=>{if(!gset.has(r.garden)||!dset.has(r.date))return;const g=m[r.garden]||(m[r.garden]={garden:r.garden,tons:0,trips:0});g.tons+=r.send/TON;g.trips+=r.trips;});return Object.values(m).sort((a,b)=>b.tons-a.tons);}
+// รวมรายวันตามสโคป (ลาน buy/stock/loss + สวน send/trips) · แยก rsend/gsend ไว้เทียบ
+function unifiedRows(dates,s){s=s||scopeSel();const gi=gardenIdx(s.gardens);
+  return dates.map(dt=>{let o={day:toMs(dt),buy:0,send:0,rsend:0,gsend:0,stock:0,lost:0,trips:0,rawCull:0,rspo:0};
+    s.ramps.forEach(rn=>{const r=BY[rn]&&BY[rn][dt];if(r){o.buy+=r.buy/TON;o.rsend+=r.send/TON;o.stock+=r.stock/TON;o.lost+=(r.lost+(r.roundLoss||0))/TON;o.trips+=r.trips;o.rawCull+=r.rawCull;o.rspo+=r.rspo/TON;}});
+    const g=gi[dt];if(g){o.gsend+=g.send;o.trips+=g.trips;}
+    o.send=o.rsend+o.gsend;return o;});}
+// ทะเบียนชื่อสำหรับคลิกเปิด drawer (กันปัญหา escape ชื่อสวนที่มีอักขระพิเศษ)
+let _DRW=[];
+function _reg(name){_DRW.push(name);return _DRW.length-1;}
 
 function render(){ try{
-  $('#tt').style.opacity='0';   // กัน tooltip ค้างตอนสลับลาน
-  const rows=sliceDates(curDates(),rampsInScope());
-  const prev=sliceDates(prevDates(),rampsInScope());
+  $('#tt').style.opacity='0';   // กัน tooltip ค้างตอนสลับสโคป
+  _DRW=[];
+  const s=scopeSel(), R=hasR(s), G=hasG(s);
+  const rows=unifiedRows(curDates(),s), prev=unifiedRows(prevDates(),s);
   const tSend=sum(rows,'send'),tBuy=sum(rows,'buy'),tLost=sum(rows,'lost'),tTrips=sum(rows,'trips'),tRaw=sum(rows,'rawCull'),tRspo=sum(rows,'rspo');
-  // ค้างลานรวม = สต็อกล่าสุด "ของแต่ละลาน" บวกกัน (ให้ตรงกราฟแท่ง) — เดิมใช้ rows[วันสุดท้าย].stock
-  // ซึ่งเป็นค้างลานของวันล่าสุดวันเดียว (ลานที่ไม่ได้ส่งวันนั้นหาย) → banner เพี้ยนต่ำกว่าจริงมาก
-  const stockEnd=rampsInScope().reduce((s,r)=>s+rampAgg(r,curDates()).stock,0);
+  const tRsend=sum(rows,'rsend'),tGsend=sum(rows,'gsend');
+  const stockEnd=s.ramps.reduce((a,r)=>a+rampAgg(r,curDates()).stock,0);
   const lossPct=tBuy?tLost/tBuy*100:0, rspoPct=tBuy?tRspo/tBuy*100:0;
-  const ordTotal=RAMPS.reduce((s,r)=>s+rampOrderStats(r).count,0), ordTons=RAMPS.reduce((s,r)=>s+rampOrderStats(r).tons,0), tripsShown=ordTotal>0?ordTotal:tTrips;
-  // เฉลี่ย/เที่ยว = ตันของ "เที่ยวที่นับ" ÷ เที่ยวนั้น (คู่กัน) — เดิมเอาส่งรวม(มีรถนอก)÷เที่ยวบริษัท เลยเพี้ยน
-  const kgTrip=ordTotal>0 ? (ordTons/ordTotal) : (tTrips? tSend/tTrips : 0);
+  // เที่ยว + เฉลี่ย/เที่ยว (ตามสโคป) — ลาน:จากออเดอร์จริง · สวน:จาก getGardenDaily
+  const ordStats=s.ramps.reduce((a,r)=>{const st=rampOrderStats(r);a.count+=st.count;a.tons+=st.tons;return a;},{count:0,tons:0});
+  const gA=gardenAggScope(s.gardens);
+  const trips=ordStats.count+gA.trips, tonsAvg=ordStats.tons+gA.tons;
+  const tripsShown=trips>0?trips:tTrips;
+  const kgTrip=trips>0?tonsAvg/trips:(tTrips?tSend/tTrips:0);
   const dl=(c,p,goodUp=true)=>{if(!p)return '<span class="delta" style="color:var(--muted)">รวมช่วง</span>';const d=(c-p)/p*100,good=goodUp?d>=0:d<0;return `<span class="delta ${good?'up':'down'}">${d>=0?'▲':'▼'} ${fmt(Math.abs(d),1)}%<span style="color:var(--muted);font-weight:600"> vs ก่อนหน้า</span></span>`;};
+  const naR='<span class="delta" style="color:var(--muted)">เฉพาะลาน</span>';
+  const sendDelta=(R&&G)?`<span class="delta" style="color:var(--muted)">ลาน ${fmt(tRsend)} · สวน ${fmt(tGsend)} ต</span>`:dl(tSend,sum(prev,'send'));
   const kpi=[
-    {lbl:'ส่งโรงงาน',dot:'var(--send)',val:fmt(tSend),u:'ตัน',d:dl(tSend,sum(prev,'send'))},
-    {lbl:'ซื้อเข้า',dot:'var(--buy)',val:fmt(tBuy),u:'ตัน',d:dl(tBuy,sum(prev,'buy'))},
-    {lbl:'สต็อกค้างที่ลาน',dot:'var(--stock)',val:fmt(stockEnd),u:'ตัน',d:`<span class="delta" style="color:var(--stock)">≈ ${binsFor(stockEnd)} กระบะที่ต้องรับ</span>`},
-    {lbl:'น้ำหนักหาย',dot:'var(--loss)',val:tLost>0?fmt(lossPct,2):'—',u:tLost>0?'%':'',d:tLost>0?`<span class="delta down">${fmt(tLost)} ตัน</span>`:'<span class="delta" style="color:var(--muted)">รอปิดรอบล้างลาน</span>',warn:tLost>0&&lossPct>1.5},
-    {lbl:'เที่ยวส่งโรงงาน',dot:'var(--accent)',val:fmt(tripsShown),u:'เที่ยว',d:`<span class="delta" style="color:var(--muted)">${ordTotal>0?'จากออเดอร์จริง':'กรอกมือ'}</span>`},
-    {lbl:'เฉลี่ย/เที่ยว',dot:'var(--accent)',val:fmt(kgTrip,1),u:'ตัน',d:`<span class="delta" style="color:var(--muted)">${ordTotal>0?'ต่อเที่ยว (ออเดอร์บริษัท)':'ต่อเที่ยว'}</span>`},
+    {lbl:'ส่งโรงงาน',dot:'var(--send)',val:fmt(tSend),u:'ตัน',d:sendDelta},
+    R?{lbl:'ซื้อเข้า',dot:'var(--buy)',val:fmt(tBuy),u:'ตัน',d:dl(tBuy,sum(prev,'buy'))}
+     :{lbl:'ซื้อเข้า',dot:'var(--buy)',val:'—',u:'',d:naR},
+    R?{lbl:'สต็อกค้างที่ลาน',dot:'var(--stock)',val:fmt(stockEnd),u:'ตัน',d:`<span class="delta" style="color:var(--stock)">≈ ${binsFor(stockEnd)} กระบะที่ต้องรับ</span>`}
+     :{lbl:'สต็อกค้างที่ลาน',dot:'var(--stock)',val:'—',u:'',d:naR},
+    R?{lbl:'น้ำหนักหาย',dot:'var(--loss)',val:tLost>0?fmt(lossPct,2):'—',u:tLost>0?'%':'',d:tLost>0?`<span class="delta down">${fmt(tLost)} ตัน</span>`:'<span class="delta" style="color:var(--muted)">รอปิดรอบล้างลาน</span>',warn:tLost>0&&lossPct>1.5}
+     :{lbl:'น้ำหนักหาย',dot:'var(--loss)',val:'—',u:'',d:naR},
+    {lbl:'เที่ยวส่งโรงงาน',dot:'var(--accent)',val:fmt(tripsShown),u:'เที่ยว',d:`<span class="delta" style="color:var(--muted)">${trips>0?(G&&!R?'จากออเดอร์สวน':'จากออเดอร์จริง'):'กรอกมือ'}</span>`},
+    {lbl:'เฉลี่ย/เที่ยว',dot:'var(--accent)',val:fmt(kgTrip,1),u:'ตัน',d:`<span class="delta" style="color:var(--muted)">ต่อเที่ยว</span>`},
   ];
   $('#kpis').innerHTML=kpi.map(k=>`<div class="kpi ${k.warn?'warn':''}"><div class="lbl"><span class="dot" style="background:${k.dot}"></span>${k.lbl}</div><div class="val num">${k.val}<small>${k.u}</small></div>${k.d}</div>`).join('');
   const useBar = CHARTTYPE==='bar' || rows.length<2;
-  $('#trendTitle').textContent=(SCOPE==='all'?'ทุกลาน':SCOPE)+(useBar?' · สรุป ซื้อ/ส่ง/ค้างลาน':' · ซื้อเข้า เทียบ ส่งโรงงาน');
+  const scLabel=cleanName(s.label);
+  $('#trendTitle').textContent=scLabel+(useBar?' · สรุปส่งโรงงาน':(R?' · ซื้อเข้า เทียบ ส่งโรงงาน':' · ส่งโรงงานรายวัน'));
   $('#trendNote').textContent=(RANGE===1?'วันนี้':rows.length+' วันล่าสุด')+' · หน่วยตัน';
   $('#legend').innerHTML = useBar
-    ? '<span class="lg"><i style="background:var(--buy)"></i>ซื้อเข้า</span><span class="lg"><i style="background:var(--send)"></i>ส่งโรงงาน</span><span class="lg"><i style="background:var(--stock)"></i>ค้างลาน</span>'
-    : '<span class="lg"><i style="background:var(--buy)"></i>ซื้อเข้า</span><span class="lg"><i style="background:var(--send)"></i>ส่งโรงงาน</span><span class="lg" style="color:var(--muted)">พื้นที่ระหว่างเส้น = สะสมเข้าสต็อก</span>';
+    ? (R?'<span class="lg"><i style="background:var(--buy)"></i>ซื้อเข้า</span>':'')+'<span class="lg"><i style="background:var(--send)"></i>ส่งโรงงาน</span>'+(R?'<span class="lg"><i style="background:var(--stock)"></i>ค้างลาน</span>':'')+(G&&!R?'<span class="lg" style="color:var(--muted)">🌳 รายสวน</span>':'')
+    : (R?'<span class="lg"><i style="background:var(--buy)"></i>ซื้อเข้า</span>':'')+'<span class="lg"><i style="background:var(--send)"></i>ส่งโรงงาน</span>'+(R?'<span class="lg" style="color:var(--muted)">พื้นที่ระหว่างเส้น = สะสมเข้าสต็อก</span>':'<span class="lg" style="color:var(--muted)">🌳 ปาล์มจากสวน ส่งตรงโรงงาน</span>');
   $('#chartSeg').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c===(useBar?'bar':'line')));
   const canLine=rows.length>=2, lineBtn=$('#chartSeg').querySelector('button[data-c="line"]');
   lineBtn.style.opacity=canLine?'':'0.4'; lineBtn.style.pointerEvents=canLine?'':'none'; lineBtn.title=canLine?'':'กราฟเส้นต้องมีอย่างน้อย 2 วัน';
-  $('#stockBanner').innerHTML = stockEnd>0
+  $('#stockBanner').innerHTML = R ? (stockEnd>0
     ? `<span style="font-weight:700;color:var(--stock)">📦 ค้างลาน ${fmt(stockEnd)} ตัน</span><span style="font-weight:800;background:var(--stock);color:#fff;padding:2px 11px;border-radius:999px">${dispatchText(stockEnd)}</span><span style="color:var(--ink2)">ควรเรียกรถเข้ารับ · 15 ตัน/กระบะ · 2 กระบะ = 1 พ่วง</span>`
-    : '<span style="color:var(--ink2)">✓ ไม่มีปาล์มค้างลาน</span>';
-  if(useBar) drawBar(); else drawChart(rows);
-  drawRank(); drawInsights(rows,{tSend,tBuy,tRaw,tRspo},lossPct,rspoPct); drawGarden();
+    : '<span style="color:var(--ink2)">✓ ไม่มีปาล์มค้างลาน</span>')
+    : `<span style="color:var(--ink2)">🌳 โหมดสวน — ปาล์มส่งตรงโรงงาน ${fmt(tSend)} ตัน · ${gA.trips} เที่ยว (ไม่มีค้างลาน)</span>`;
+  if(useBar) drawBar(); else drawChart(rows,R);
+  drawRank(); drawInsights(rows,{tSend,tBuy,tRaw,tRspo,tGsend,tRsend},lossPct,rspoPct); drawGarden();
 }catch(e){console.error('render error',e);} }
 
 // ── 🌳 สวนส่งตรงโรงงาน: ชิปต่อสวน + กราฟเปรียบเทียบ ลาน vs สวน ──
@@ -321,13 +358,16 @@ function drawGarden(){
     : '<div class="pnote" style="padding:2px 0">ยังไม่มีปาล์มจากสวนส่งตรงโรงงานในช่วงนี้ (ปาล์มสวนส่วนใหญ่อาจส่งผ่านลาน)</div>';
   drawCompare();
 }
-function openGardenDrawer(i){
-  const g=(window._gagg||[])[i]; if(!g)return;
+function openGardenDrawer(arg){
+  // รับได้ทั้ง index (จากชิป) และชื่อสวน (จากอันดับ/แท่ง)
+  const name=(typeof arg==='number')?((window._gagg||[])[arg]||{}).garden:arg;
+  if(!name)return;
   const dts=curDates(), set=new Set(dts);
-  const days=GARDEN_RECORDS.filter(r=>r.garden===g.garden&&set.has(r.date)).sort((a,b)=>a.date<b.date?1:-1);
-  $('#drTitle').textContent='🌳 '+String(g.garden||'').replace(/\s*\n\s*/g,' · ');
+  const days=GARDEN_RECORDS.filter(r=>r.garden===name&&set.has(r.date)).sort((a,b)=>a.date<b.date?1:-1);
+  const tons=days.reduce((a,r)=>a+r.send/TON,0), trips=days.reduce((a,r)=>a+r.trips,0);
+  $('#drTitle').textContent='🌳 '+cleanName(name);
   let h=`<div style="font-size:12px;color:var(--ink2);margin-bottom:12px">${dts[0]||'-'} → ${dts[dts.length-1]||'-'} · ส่งตรงโรงงาน (ไม่ผ่านลาน)</div>`;
-  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">${sumTile('ส่งโรงงานรวม',fmt(g.tons)+' ตัน','var(--gpalm)')}${sumTile('จำนวนเที่ยว',g.trips+' เที่ยว','var(--send)')}</div>`;
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">${sumTile('ส่งโรงงานรวม',fmt(tons)+' ตัน','var(--gpalm)')}${sumTile('จำนวนเที่ยว',trips+' เที่ยว','var(--send)')}</div>`;
   h+=`<div style="font-size:13px;font-weight:800;color:var(--gpalm);margin:2px 0 6px;padding:5px 0 5px 9px;border-left:3px solid var(--gpalm);background:var(--gpalmSoft);border-radius:0 6px 6px 0">🗓️ รายวัน (${days.length} วัน)</div>`;
   h+=days.map(r=>`<div class="ordrow"><div><div class="id">${billDate(r.date)}</div><div class="meta">${r.trips} เที่ยว</div></div><div><div class="w" style="color:var(--gpalm)">${fmt(r.send/TON,1)} ต</div></div></div>`).join('')||'<div style="color:var(--muted);font-size:13px">ไม่มีข้อมูลในช่วงนี้</div>';
   $('#drBody').innerHTML=h; $('#ov').classList.add('on');$('#dr').classList.add('on');
@@ -369,20 +409,30 @@ function drawCompare(){
 const W=900,H=300,PAD={l:44,r:54,t:16,b:26};
 function smooth(pts){if(pts.length<2)return pts.length?`M${pts[0].x},${pts[0].y}`:'';let d=`M${pts[0].x},${pts[0].y}`;for(let i=0;i<pts.length-1;i++){const p0=pts[i-1]||pts[i],p1=pts[i],p2=pts[i+1],p3=pts[i+2]||p2;const c1x=p1.x+(p2.x-p0.x)/6,c1y=p1.y+(p2.y-p0.y)/6,c2x=p2.x-(p3.x-p1.x)/6,c2y=p2.y-(p3.y-p1.y)/6;d+=` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${p2.x.toFixed(1)},${p2.y.toFixed(1)}`;}return d;}
 let CH={};
-// กราฟแท่ง stacked 3 สี (ซื้อ/ส่ง/ค้างลาน) · ทั้งหมด=1แท่ง/ลาน · เลือกลาน=1แท่ง/วัน
+// กราฟแท่ง stacked (ซื้อ/ส่ง/ค้างลาน) · overview=1แท่ง/ลานหรือสวน · เลือกเดี่ยว=1แท่ง/วัน
+// สวน: มีแต่ส่งโรงงาน (ซื้อ/ค้าง=0 → โชว์แค่แท่งส่ง)
 function drawBar(){
-  const svg=$('#chart'), tt=$('#tt');
-  const dts=curDates(), perDay=(SCOPE!=='all');
+  const svg=$('#chart'), tt=$('#tt'), s=scopeSel(), dts=curDates();
+  const single=(s.kind==='ramp1'||s.kind==='garden1');
   let data;
-  if(!perDay){
-    data=RAMPS.map(r=>{const a=rampAgg(r,dts);return {full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,hasOrd:rampDrawerOrders(a.name).some(o=>!o.done)};})
-      .filter(d=>d.buy>0||d.send>0||d.stock>0).sort((a,b)=>b.stock-a.stock);
+  if(single){
+    if(s.kind==='ramp1'){const rn=s.ramps[0];
+      data=dts.map(dt=>{const r=BY[rn]&&BY[rn][dt],dd=new Date(toMs(dt)),dl=dd.getUTCDate()+'/'+(dd.getUTCMonth()+1);
+        return {full:rn+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,hasOrd:(ORD_BY_RAMP[rn]||[]).some(o=>o.date===dt&&!o.done)};})
+        .filter(d=>d.buy>0||d.send>0||d.stock>0);
+    }else{const gi=gardenIdx(s.gardens);
+      data=dts.map(dt=>{const g=gi[dt],dd=new Date(toMs(dt)),dl=dd.getUTCDate()+'/'+(dd.getUTCMonth()+1);
+        return {full:s.label+' · '+dl,label:dl,buy:0,send:g?g.send:0,stock:0,hasOrd:false};})
+        .filter(d=>d.send>0);
+    }
   }else{
-    data=dts.map(dt=>{const r=BY[SCOPE]&&BY[SCOPE][dt],dd=new Date(toMs(dt)),dl=dd.getUTCDate()+'/'+(dd.getUTCMonth()+1);
-      return {full:SCOPE+' · '+dl,label:dl,buy:r?r.buy/TON:0,send:r?r.send/TON:0,stock:r?r.stock/TON:0,hasOrd:(ORD_BY_RAMP[SCOPE]||[]).some(o=>o.date===dt&&!o.done)};})
-      .filter(d=>d.buy>0||d.send>0||d.stock>0);
+    data=[];
+    if(hasR(s)) s.ramps.forEach(r=>{const a=rampAgg(r,dts);if(a.buy>0||a.send>0||a.stock>0)data.push({full:a.name,label:a.name,buy:a.buy,send:a.send,stock:a.stock,hasOrd:rampDrawerOrders(a.name).some(o=>!o.done),gname:''});});
+    if(hasG(s)) gardenAggList(s.gardens,dts).forEach(g=>{if(g.tons>0)data.push({full:'🌳 '+cleanName(g.garden),label:'🌳 '+cleanName(g.garden),buy:0,send:g.tons,stock:0,hasOrd:false,gname:g.garden});});
+    data.sort((a,b)=>(b.stock+b.send)-(a.stock+a.send));
   }
   if(!data.length){svg.innerHTML='<text x="450" y="150" text-anchor="middle" font-size="13" fill="var(--muted)">ไม่มีข้อมูลในช่วงนี้</text>';tt.style.opacity='0';return;}
+  const perDay=single;
   const segs=[['buy','var(--buy)'],['send','var(--send)'],['stock','var(--stock)']];
   const max=Math.max(...data.map(d=>d.buy+d.send+d.stock),1)*1.16;
   const inner=W-PAD.l-PAD.r, n=data.length;
@@ -404,21 +454,27 @@ function drawBar(){
   svg.innerHTML=g;
   svg.querySelectorAll('.bhit').forEach(el=>{
     const show=ev=>{const d=data[+el.dataset.i],cx=ev.touches?ev.touches[0].clientX:ev.clientX,cy=ev.touches?ev.touches[0].clientY:ev.clientY;
-      tt.innerHTML=`<div class="d">${d.full}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(d.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r"><span><i style="background:var(--stock)"></i>ค้างลาน</span><b class="num">${fmt(d.stock)} ตัน</b></div><div class="r"><span style="color:var(--muted)">ต้องเรียกรับ</span><b class="num" style="color:var(--stock)">${dispatchText(d.stock)}</b></div><div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:5px;justify-content:center"><span style="color:var(--accent);font-weight:700">👆 แตะดูออเดอร์ที่ขน</span></div>`;
+      const isG=(s.kind==='garden1')||!!d.gname;
+      tt.innerHTML=isG
+        ? `<div class="d">${d.full}</div><div class="r"><span><i style="background:var(--gpalm)"></i>ส่งตรงโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:5px;justify-content:center"><span style="color:var(--gpalm);font-weight:700">👆 แตะดูรายวัน</span></div>`
+        : `<div class="d">${d.full}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(d.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(d.send)} ตัน</b></div><div class="r"><span><i style="background:var(--stock)"></i>ค้างลาน</span><b class="num">${fmt(d.stock)} ตัน</b></div><div class="r"><span style="color:var(--muted)">ต้องเรียกรับ</span><b class="num" style="color:var(--stock)">${dispatchText(d.stock)}</b></div><div class="r" style="border-top:1px solid var(--line);margin-top:4px;padding-top:5px;justify-content:center"><span style="color:var(--accent);font-weight:700">👆 แตะดูออเดอร์ที่ขน</span></div>`;
       tt.style.opacity='1';let tx=cx+14;if(tx+185>innerWidth)tx=cx-195;tt.style.left=tx+'px';tt.style.top=(cy-10)+'px';};
     el.addEventListener('mousemove',show);el.addEventListener('mouseleave',()=>tt.style.opacity='0');
     el.addEventListener('touchstart',show,{passive:true});el.addEventListener('touchend',()=>tt.style.opacity='0');
-    el.style.cursor='pointer'; el.addEventListener('click',()=>{tt.style.opacity='0';openRampDrawer(perDay?SCOPE:data[+el.dataset.i].full);});
+    el.style.cursor='pointer'; el.addEventListener('click',()=>{tt.style.opacity='0';const d=data[+el.dataset.i];
+      if(s.kind==='garden1')openGardenDrawer(s.gardens[0]); else if(d.gname)openGardenDrawer(d.gname);
+      else openRampDrawer(s.kind==='ramp1'?s.ramps[0]:d.full);});
   });
 }
-function drawChart(rows){
+function drawChart(rows,showBuy){
+  showBuy=showBuy!==false;   // สวน: ไม่มีซื้อเข้า → โชว์แค่เส้นส่งโรงงาน
   const svg=$('#chart');
   if(rows.length<2){svg.innerHTML='<text x="450" y="150" text-anchor="middle" font-size="13" fill="var(--muted)">ข้อมูลไม่พอวาดกราฟ</text>';return;}
-  const max=Math.max(...rows.map(r=>Math.max(r.buy,r.send)),1)*1.12;
+  const max=Math.max(...rows.map(r=>Math.max(showBuy?r.buy:0,r.send)),1)*1.12;
   const x=i=>PAD.l+(W-PAD.l-PAD.r)*(i/(rows.length-1));
   const y=v=>PAD.t+(H-PAD.t-PAD.b)*(1-v/max);
   const buyP=rows.map((r,i)=>({x:x(i),y:y(r.buy)})),sendP=rows.map((r,i)=>({x:x(i),y:y(r.send)}));
-  CH={rows,x,y};
+  CH={rows,x,y,showBuy};
   let g='';const ticks=4;
   for(let t=0;t<=ticks;t++){const v=max*t/ticks,yy=y(v);g+=`<line x1="${PAD.l}" y1="${yy.toFixed(1)}" x2="${W-PAD.r}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${PAD.l-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`;}
   const step=Math.max(1,Math.round(rows.length/6));
@@ -426,22 +482,26 @@ function drawChart(rows){
   const band=`${smooth(buyP)} ${sendP.slice().reverse().map(p=>`L${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')} Z`;
   const sendArea=`${smooth(sendP)} L${x(rows.length-1).toFixed(1)},${y(0)} L${x(0).toFixed(1)},${y(0)} Z`;
   const eB=buyP[buyP.length-1],eS=sendP[sendP.length-1];
-  svg.innerHTML=`<defs><linearGradient id="sfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--send)" stop-opacity="0.20"/><stop offset="1" stop-color="var(--send)" stop-opacity="0.02"/></linearGradient></defs>
-    ${g}<path d="${sendArea}" fill="url(#sfill)"/><path d="${band}" fill="var(--buySoft)"/>
-    <path d="${smooth(buyP)}" fill="none" stroke="var(--buy)" stroke-width="2.4" stroke-linecap="round"/>
-    <path d="${smooth(sendP)}" fill="none" stroke="var(--send)" stroke-width="2.6" stroke-linecap="round"/>
-    <circle cx="${eB.x.toFixed(1)}" cy="${eB.y.toFixed(1)}" r="4" fill="var(--buy)" stroke="var(--card)" stroke-width="2"/>
-    <circle cx="${eS.x.toFixed(1)}" cy="${eS.y.toFixed(1)}" r="4.5" fill="var(--send)" stroke="var(--card)" stroke-width="2"/>
-    <text x="${(eS.x+8).toFixed(1)}" y="${(eS.y+4).toFixed(1)}" font-size="11.5" font-weight="800" fill="var(--send)">${fmt(rows[rows.length-1].send)}</text>
-    <text x="${(eB.x+8).toFixed(1)}" y="${(eB.y+4).toFixed(1)}" font-size="11.5" font-weight="800" fill="var(--buy)">${fmt(rows[rows.length-1].buy)}</text>
+  const sendCol=showBuy?'var(--send)':'var(--gpalm)';   // โหมดสวน ใช้สีม่วงให้เข้ากับส่วนสวน
+  svg.innerHTML=`<defs><linearGradient id="sfill" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${sendCol}" stop-opacity="0.20"/><stop offset="1" stop-color="${sendCol}" stop-opacity="0.02"/></linearGradient></defs>
+    ${g}<path d="${sendArea}" fill="url(#sfill)"/>${showBuy?`<path d="${band}" fill="var(--buySoft)"/>`:''}
+    ${showBuy?`<path d="${smooth(buyP)}" fill="none" stroke="var(--buy)" stroke-width="2.4" stroke-linecap="round"/>`:''}
+    <path d="${smooth(sendP)}" fill="none" stroke="${sendCol}" stroke-width="2.6" stroke-linecap="round"/>
+    ${showBuy?`<circle cx="${eB.x.toFixed(1)}" cy="${eB.y.toFixed(1)}" r="4" fill="var(--buy)" stroke="var(--card)" stroke-width="2"/>`:''}
+    <circle cx="${eS.x.toFixed(1)}" cy="${eS.y.toFixed(1)}" r="4.5" fill="${sendCol}" stroke="var(--card)" stroke-width="2"/>
+    <text x="${(eS.x+8).toFixed(1)}" y="${(eS.y+4).toFixed(1)}" font-size="11.5" font-weight="800" fill="${sendCol}">${fmt(rows[rows.length-1].send)}</text>
+    ${showBuy?`<text x="${(eB.x+8).toFixed(1)}" y="${(eB.y+4).toFixed(1)}" font-size="11.5" font-weight="800" fill="var(--buy)">${fmt(rows[rows.length-1].buy)}</text>`:''}
     <line id="cross" x1="0" y1="${PAD.t}" x2="0" y2="${H-PAD.b}" stroke="var(--line2)" stroke-width="1" opacity="0"/>
     <rect id="hit" x="${PAD.l}" y="0" width="${W-PAD.l-PAD.r}" height="${H}" fill="transparent"/>`;
   bindHover(svg);
 }
 function bindHover(svg){
-  const hit=svg.querySelector('#hit'),cross=svg.querySelector('#cross'),tt=$('#tt'),{rows,x}=CH;
+  const hit=svg.querySelector('#hit'),cross=svg.querySelector('#cross'),tt=$('#tt'),{rows,x,showBuy}=CH;
   function move(ev){const rect=svg.getBoundingClientRect();const px=((ev.touches?ev.touches[0].clientX:ev.clientX)-rect.left)/rect.width*W;let i=Math.round((px-PAD.l)/((W-PAD.l-PAD.r)/(rows.length-1)));i=Math.max(0,Math.min(rows.length-1,i));const r=rows[i],cx=x(i);cross.setAttribute('x1',cx);cross.setAttribute('x2',cx);cross.setAttribute('opacity','1');const dt=new Date(r.day);
-    tt.innerHTML=`<div class="d">${dt.getUTCDate()}/${dt.getUTCMonth()+1}/${(dt.getUTCFullYear()+543)%100}</div><div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(r.buy)} ตัน</b></div><div class="r"><span><i style="background:var(--send)"></i>ส่งโรงงาน</span><b class="num">${fmt(r.send)} ตัน</b></div><div class="r"><span style="color:var(--muted)">เข้าสต็อก</span><b class="num" style="color:var(--ink2)">${fmt(Math.max(0,r.buy-r.send))} ตัน</b></div>`;
+    tt.innerHTML=`<div class="d">${dt.getUTCDate()}/${dt.getUTCMonth()+1}/${(dt.getUTCFullYear()+543)%100}</div>`+
+      (showBuy?`<div class="r"><span><i style="background:var(--buy)"></i>ซื้อเข้า</span><b class="num">${fmt(r.buy)} ตัน</b></div>`:'')+
+      `<div class="r"><span><i style="background:${showBuy?'var(--send)':'var(--gpalm)'}"></i>ส่งโรงงาน</span><b class="num">${fmt(r.send)} ตัน</b></div>`+
+      (showBuy?`<div class="r"><span style="color:var(--muted)">เข้าสต็อก</span><b class="num" style="color:var(--ink2)">${fmt(Math.max(0,r.buy-r.send))} ตัน</b></div>`:'');
     tt.style.opacity='1';let tx=ev.clientX+14;if(tx+170>innerWidth)tx=ev.clientX-184;tt.style.left=tx+'px';tt.style.top=((ev.touches?ev.touches[0].clientY:ev.clientY)-10)+'px';}
   function leave(){cross.setAttribute('opacity','0');tt.style.opacity='0';}
   hit.addEventListener('mousemove',move);hit.addEventListener('mouseleave',leave);hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('touchend',leave);
@@ -537,31 +597,50 @@ function openRampDrawer(ramp){
   $('#ov').classList.add('on');$('#dr').classList.add('on');
 }
 function drawRank(){
-  const dts=curDates();
-  const data=RAMPS.map(r=>rampAgg(r,dts)).filter(d=>d.buy>0||d.send>0).sort((a,b)=>b.send-a.send);
-  const max=Math.max(...data.map(d=>d.send),1);
-  $('#rank').innerHTML=data.map(d=>{const bad=d.hasLoss&&d.lossPct>1.5,hl=SCOPE!=='all'&&d.name===SCOPE?'style="font-weight:800;color:var(--accent)"':'';
-    const chip=d.hasLoss?`<span class="chip ${bad?'bad':'ok'}" title="น้ำหนักหาย (ตอนล้างลาน)">${fmt(d.lossPct,1)}%</span>`:`<span class="chip" style="background:var(--panel);color:var(--muted)" title="ยังไม่มีข้อมูลหาย — คิดตอนล้างลาน">—</span>`;
-    const os=rampDrawerOrders(d.name),pend=os.filter(o=>!o.done).length,dn=os.length-pend;
-    const ordLine=pend>0?`<div style="font-size:9.5px;font-weight:700;color:var(--send);white-space:nowrap">🔔 มีรถกำลังมา ${pend} · แตะดู</div>`:(dn>0?`<div style="font-size:9.5px;font-weight:700;color:var(--ink2);white-space:nowrap">✓ จบแล้ว ${dn} · แตะดู</div>`:(d.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก · แตะดู</div>`:''));
-    return `<div class="rrow" onclick="openRampDrawer('${d.name}')"><div class="rname" ${hl}>${d.name}${ordLine}</div><div class="bartrack"><div class="barfill" style="width:${(d.send/max*100).toFixed(1)}%"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(d.send)}</span>${chip}</div></div>`;}).join('')||'<div class="pnote" style="padding:10px 0">ไม่มีข้อมูลในช่วงนี้</div>';
+  const dts=curDates(), s=scopeSel();
+  let items=[];
+  if(hasR(s)) s.ramps.forEach(r=>{const a=rampAgg(r,dts);if(a.buy>0||a.send>0)items.push({name:a.name,send:a.send,isG:false,agg:a});});
+  if(hasG(s)) gardenAggList(s.gardens,dts).forEach(g=>{if(g.tons>0)items.push({name:g.garden,send:g.tons,trips:g.trips,isG:true});});
+  items.sort((a,b)=>b.send-a.send);
+  const max=Math.max(...items.map(d=>d.send),1);
+  $('#rank').innerHTML=items.map(d=>{
+    if(d.isG){const gi=_reg(d.name);
+      return `<div class="rrow" onclick="openGardenDrawer(_DRW[${gi}])"><div class="rname" style="color:var(--gpalm);font-weight:700">🌳 ${cleanName(d.name)}<div style="font-size:9.5px;font-weight:700;color:var(--gpalm);white-space:nowrap">ส่งตรงโรงงาน ${d.trips} เที่ยว · แตะดู</div></div><div class="bartrack"><div class="barfill" style="width:${(d.send/max*100).toFixed(1)}%;background:var(--gpalm)"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(d.send)}</span></div></div>`;
+    }
+    const a=d.agg,bad=a.hasLoss&&a.lossPct>1.5,hl=(s.kind==='ramp1'&&a.name===s.ramps[0])?'style="font-weight:800;color:var(--accent)"':'';
+    const chip=a.hasLoss?`<span class="chip ${bad?'bad':'ok'}" title="น้ำหนักหาย (ตอนล้างลาน)">${fmt(a.lossPct,1)}%</span>`:`<span class="chip" style="background:var(--panel);color:var(--muted)" title="ยังไม่มีข้อมูลหาย — คิดตอนล้างลาน">—</span>`;
+    const os=rampDrawerOrders(a.name),pend=os.filter(o=>!o.done).length,dn=os.length-pend;
+    const ordLine=pend>0?`<div style="font-size:9.5px;font-weight:700;color:var(--send);white-space:nowrap">🔔 มีรถกำลังมา ${pend} · แตะดู</div>`:(dn>0?`<div style="font-size:9.5px;font-weight:700;color:var(--ink2);white-space:nowrap">✓ จบแล้ว ${dn} · แตะดู</div>`:(a.send>0?`<div style="font-size:9.5px;font-weight:700;color:var(--buy);white-space:nowrap">🚛 รถนอก · แตะดู</div>`:''));
+    return `<div class="rrow" onclick="openRampDrawer('${a.name}')"><div class="rname" ${hl}>${a.name}${ordLine}</div><div class="bartrack"><div class="barfill" style="width:${(a.send/max*100).toFixed(1)}%"></div></div><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span class="rval num">${fmt(a.send)}</span>${chip}</div></div>`;
+  }).join('')||'<div class="pnote" style="padding:10px 0">ไม่มีข้อมูลในช่วงนี้</div>';
 }
 function drawInsights(rows,tot,lossPct,rspoPct){
-  const dts=curDates(),n=rows.length||1;
-  const per=RAMPS.map(r=>rampAgg(r,dts)).filter(d=>d.buy>0||d.send>0);
-  if(!per.length){$('#ins').innerHTML='<div class="pnote" style="padding:10px 16px">ไม่มีข้อมูล</div>';return;}
-  const best=per.slice().sort((a,b)=>b.send-a.send)[0];
-  const worstLoss=per.filter(d=>d.hasLoss).sort((a,b)=>b.lossPct-a.lossPct)[0];
-  const topStock=per.slice().sort((a,b)=>b.stock-a.stock)[0];
-  const clearDays=best.send>0?topStock.stock/(best.send/n):0;
-  const ins=[
-    {em:'🏭',tl:'ระบายเข้าโรงงานดีสุด',bd:`<b>${best.name}</b> ส่ง ${fmt(best.send)} ตัน`},
-    {alert:!!worstLoss&&worstLoss.lossPct>1.5,em:(worstLoss&&worstLoss.lossPct>1.5)?'⚠️':'🍃',tl:'น้ำหนักหายสูงสุด',bd:worstLoss?`<b>${worstLoss.name}</b> ${fmt(worstLoss.lossPct,2)}%${worstLoss.lossPct>1.5?' — ควรตรวจสาเหตุ':''}`:'ยังไม่มีข้อมูล (คิดตอนล้างลาน)'},
-    {em:'📦',tl:'สต็อกค้างที่ลานเยอะสุด',bd:`<b>${topStock.name}</b> ${fmt(topStock.stock)} ตัน${clearDays?` (~${fmt(clearDays,1)} วันระบาย)`:''}`},
-    {em:'🌱',tl:'ปาล์ม RSPO',bd:`${fmt(rspoPct,1)}% ของยอดซื้อ · ${fmt(tot.tRspo)} ตัน`},
-    {em:'🍂',tl:'ปาล์มดิบคัดทิ้ง',bd:`${fmt(tot.tRaw)} ทะลาย · เฉลี่ย ${fmt(tot.tRaw/n,0)}/วัน`},
-    {em:'📈',tl:'อัตราส่งเฉลี่ย',bd:`${fmt(tot.tSend/n)} ตัน/วัน · ${fmt(tot.tBuy?tot.tSend/tot.tBuy*100:0,0)}% ของที่ซื้อเข้า`},
-  ];
+  const dts=curDates(),n=rows.length||1,s=scopeSel();
+  const per=hasR(s)?s.ramps.map(r=>rampAgg(r,dts)).filter(d=>d.buy>0||d.send>0):[];
+  const gper=hasG(s)?gardenAggList(s.gardens,dts):[];
+  if(!per.length&&!gper.length){$('#ins').innerHTML='<div class="pnote" style="padding:10px 16px">ไม่มีข้อมูล</div>';return;}
+  const ins=[];
+  const bestR=per.slice().sort((a,b)=>b.send-a.send)[0], bestG=gper[0];
+  const best=(bestG&&(!bestR||bestG.tons>bestR.send))?{name:'🌳 '+cleanName(bestG.garden),send:bestG.tons}:(bestR?{name:bestR.name,send:bestR.send}:null);
+  if(best)ins.push({em:'🏭',tl:'ระบายเข้าโรงงานดีสุด',bd:`<b>${best.name}</b> ส่ง ${fmt(best.send)} ตัน`});
+  if(per.length){
+    const worstLoss=per.filter(d=>d.hasLoss).sort((a,b)=>b.lossPct-a.lossPct)[0];
+    const topStock=per.slice().sort((a,b)=>b.stock-a.stock)[0];
+    const bb=per.slice().sort((a,b)=>b.send-a.send)[0];
+    const clearDays=(bb&&bb.send>0&&topStock)?topStock.stock/(bb.send/n):0;
+    ins.push({alert:!!worstLoss&&worstLoss.lossPct>1.5,em:(worstLoss&&worstLoss.lossPct>1.5)?'⚠️':'🍃',tl:'น้ำหนักหายสูงสุด',bd:worstLoss?`<b>${worstLoss.name}</b> ${fmt(worstLoss.lossPct,2)}%${worstLoss.lossPct>1.5?' — ควรตรวจสาเหตุ':''}`:'ยังไม่มีข้อมูล (คิดตอนล้างลาน)'});
+    if(topStock)ins.push({em:'📦',tl:'สต็อกค้างที่ลานเยอะสุด',bd:`<b>${topStock.name}</b> ${fmt(topStock.stock)} ตัน${clearDays?` (~${fmt(clearDays,1)} วันระบาย)`:''}`});
+  }
+  if(gper.length){
+    const gT=gper.reduce((a,g)=>a+g.tons,0),gTr=gper.reduce((a,g)=>a+g.trips,0);
+    ins.push({em:'🌳',tl:'สวนส่งตรงโรงงาน',bd:`<b>${gper.length}</b> สวน · ${fmt(gT)} ตัน · ${gTr} เที่ยว`});
+    if(gper[0])ins.push({em:'🏆',tl:'สวนส่งมากสุด',bd:`<b>${cleanName(gper[0].garden)}</b> ${fmt(gper[0].tons)} ตัน`});
+  }
+  if(per.length){
+    ins.push({em:'🌱',tl:'ปาล์ม RSPO',bd:`${fmt(rspoPct,1)}% ของยอดซื้อ · ${fmt(tot.tRspo)} ตัน`});
+    ins.push({em:'🍂',tl:'ปาล์มดิบคัดทิ้ง',bd:`${fmt(tot.tRaw)} ทะลาย · เฉลี่ย ${fmt(tot.tRaw/n,0)}/วัน`});
+  }
+  ins.push({em:'📈',tl:'อัตราส่งเฉลี่ย',bd:`${fmt(tot.tSend/n)} ตัน/วัน${tot.tBuy?` · ${fmt(tot.tSend/tot.tBuy*100,0)}% ของที่ซื้อเข้า`:''}`});
   $('#ins').innerHTML=ins.map(i=>`<div class="icard ${i.alert?'alert':''}"><span class="em">${i.em}</span><div><div class="tl">${i.tl}</div><div class="bd">${i.bd}</div></div></div>`).join('');
 }
 matchMedia('(prefers-color-scheme:dark)').addEventListener('change',()=>{if(!localStorage.getItem('rampTheme')&&window._rendered)render();});
