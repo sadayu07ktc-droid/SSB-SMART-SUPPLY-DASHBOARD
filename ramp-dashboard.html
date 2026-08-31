@@ -372,6 +372,23 @@ function openGardenDrawer(arg){
   h+=days.map(r=>`<div class="ordrow"><div><div class="id">${billDate(r.date)}</div><div class="meta">${r.trips} เที่ยว</div></div><div><div class="w" style="color:var(--gpalm)">${fmt(r.send/TON,1)} ต</div></div></div>`).join('')||'<div style="color:var(--muted);font-size:13px">ไม่มีข้อมูลในช่วงนี้</div>';
   $('#drBody').innerHTML=h; $('#ov').classList.add('on');$('#dr').classList.add('on');
 }
+// 🗓️ คลิกจุดในกราฟ → drawer รายวัน (ลาน/สวนที่ส่งวันนั้น) · sOverride ใช้ตอนคลิกกราฟเปรียบเทียบ
+function openDayDrawer(dt,sOverride){
+  const s=sOverride||scopeSel();
+  $('#drTitle').textContent='🗓️ '+billDate(dt);
+  const hd=(t,c,mt)=>`<div style="font-size:13px;font-weight:800;color:${c};margin:${mt}px 0 6px;padding:5px 0 5px 9px;border-left:3px solid ${c};background:${c==='var(--gpalm)'?'var(--gpalmSoft)':'var(--sendSoft)'};border-radius:0 6px 6px 0">${t}</div>`;
+  let rampsD=[],gardensD=[];
+  if(hasR(s)) s.ramps.forEach(rn=>{const r=BY[rn]&&BY[rn][dt];if(r&&(r.send>0||r.buy>0||r.stock>0))rampsD.push({name:rn,send:r.send/TON,buy:r.buy/TON,stock:r.stock/TON});});
+  if(hasG(s)){const set=new Set(s.gardens);GARDEN_RECORDS.forEach(r=>{if(r.date===dt&&set.has(r.garden))gardensD.push({name:r.garden,send:r.send/TON,trips:r.trips});});}
+  rampsD.sort((a,b)=>b.send-a.send);gardensD.sort((a,b)=>b.send-a.send);
+  const totSend=rampsD.reduce((a,r)=>a+r.send,0)+gardensD.reduce((a,g)=>a+g.send,0), totBuy=rampsD.reduce((a,r)=>a+r.buy,0);
+  let h=`<div style="font-size:12px;color:var(--ink2);margin-bottom:12px">${cleanName(s.label)} · สรุปรายวัน</div>`;
+  h+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">${sumTile('ส่งโรงงานวันนี้',fmt(totSend)+' ตัน','var(--send)')}${rampsD.length?sumTile('ซื้อเข้าวันนี้',fmt(totBuy)+' ตัน','var(--buy)'):sumTile('จำนวนสวน',gardensD.length+' สวน','var(--gpalm)')}</div>`;
+  if(rampsD.length)h+=hd('🏭 ลาน ('+rampsD.length+')','var(--send)',2)+rampsD.map(r=>`<div class="ordrow" style="cursor:pointer" onclick="openRampDrawer('${r.name}')"><div><div class="id">${r.name}</div><div class="meta">ซื้อ ${fmt(r.buy)} · ค้าง ${fmt(r.stock)} ต</div></div><div><div class="w">${fmt(r.send)} ต</div><div class="st" style="color:var(--send)">ส่งโรงงาน</div></div></div>`).join('');
+  if(gardensD.length)h+=hd('🌳 สวน ('+gardensD.length+')','var(--gpalm)',rampsD.length?14:2)+gardensD.map(g=>{const gi=_reg(g.name);return `<div class="ordrow" style="cursor:pointer" onclick="openGardenDrawer(_DRW[${gi}])"><div><div class="id">🌳 ${cleanName(g.name)}</div><div class="meta">${g.trips} เที่ยว</div></div><div><div class="w" style="color:var(--gpalm)">${fmt(g.send)} ต</div><div class="st" style="color:var(--gpalm)">ส่งตรง</div></div></div>`;}).join('');
+  if(!rampsD.length&&!gardensD.length)h+='<div style="color:var(--muted);font-size:13px;padding:8px 0">ไม่มีข้อมูลวันนี้</div>';
+  $('#drBody').innerHTML=h;$('#ov').classList.add('on');$('#dr').classList.add('on');
+}
 function drawCompare(){
   const svg=$('#cmpChart'); if(!svg)return;
   const dates=curDates();
@@ -404,6 +421,8 @@ function drawCompare(){
     tt.style.opacity='1';let tx=cxp+14;if(tx+180>innerWidth)tx=cxp-190;tt.style.left=tx+'px';tt.style.top=(cyp-10)+'px';}
   function leave(){cross.setAttribute('opacity','0');tt.style.opacity='0';}
   hit.addEventListener('mousemove',move);hit.addEventListener('mouseleave',leave);hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('touchend',leave);
+  hit.style.cursor='pointer';
+  hit.addEventListener('click',ev=>{const rect=svg.getBoundingClientRect();const px=(ev.clientX-rect.left)/rect.width*CW;let i=Math.round((px-CP.l)/((CW-CP.l-CP.r)/(dates.length-1)));i=Math.max(0,Math.min(dates.length-1,i));if(dates[i]){tt.style.opacity='0';openDayDrawer(dates[i],{ramps:RAMPS.slice(),gardens:GARDENS.slice(),kind:'all',label:'ทั้งหมด (ลาน+สวน)'});}});
 }
 
 const W=900,H=300,PAD={l:44,r:54,t:16,b:26};
@@ -474,7 +493,7 @@ function drawChart(rows,showBuy){
   const x=i=>PAD.l+(W-PAD.l-PAD.r)*(i/(rows.length-1));
   const y=v=>PAD.t+(H-PAD.t-PAD.b)*(1-v/max);
   const buyP=rows.map((r,i)=>({x:x(i),y:y(r.buy)})),sendP=rows.map((r,i)=>({x:x(i),y:y(r.send)}));
-  CH={rows,x,y,showBuy};
+  CH={rows,x,y,showBuy,dates:curDates()};
   let g='';const ticks=4;
   for(let t=0;t<=ticks;t++){const v=max*t/ticks,yy=y(v);g+=`<line x1="${PAD.l}" y1="${yy.toFixed(1)}" x2="${W-PAD.r}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${PAD.l-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`;}
   const step=Math.max(1,Math.round(rows.length/6));
@@ -505,6 +524,8 @@ function bindHover(svg){
     tt.style.opacity='1';let tx=ev.clientX+14;if(tx+170>innerWidth)tx=ev.clientX-184;tt.style.left=tx+'px';tt.style.top=((ev.touches?ev.touches[0].clientY:ev.clientY)-10)+'px';}
   function leave(){cross.setAttribute('opacity','0');tt.style.opacity='0';}
   hit.addEventListener('mousemove',move);hit.addEventListener('mouseleave',leave);hit.addEventListener('touchmove',move,{passive:true});hit.addEventListener('touchend',leave);
+  hit.style.cursor='pointer';
+  hit.addEventListener('click',ev=>{const rect=svg.getBoundingClientRect();const px=(ev.clientX-rect.left)/rect.width*W;let i=Math.round((px-PAD.l)/((W-PAD.l-PAD.r)/(rows.length-1)));i=Math.max(0,Math.min(rows.length-1,i));const dts=CH.dates||[];if(dts[i]){tt.style.opacity='0';openDayDrawer(dts[i]);}});
 }
 function rampAgg(ramp,dates){let send=0,buy=0,lost=0,stock=0,last=null,storedPct=0,ord='',taken=false,bins=0,drv='';dates.forEach(dt=>{const r=BY[ramp]&&BY[ramp][dt];if(r){send+=r.send/TON;buy+=r.buy/TON;lost+=(r.lost+(r.roundLoss||0))/TON;storedPct=Math.max(storedPct,r.roundLossPct||0,r.lossPct||0);if(r.orderId){ord=r.orderId;taken=!!r.taken;bins=r.bins||0;drv=r.ordDriver||'';}last=r;}});if(last)stock=last.stock/TON;
   let lossPct=buy?lost/buy*100:0, hasLoss=lost>0.0001; if(!hasLoss&&storedPct>0){lossPct=storedPct;hasLoss=true;}
