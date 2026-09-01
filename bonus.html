@@ -85,6 +85,26 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line
 .ldr-tx i{font-style:normal;animation:dot 1.2s infinite}.ldr-tx i:nth-child(2){animation-delay:.2s}.ldr-tx i:nth-child(3){animation-delay:.4s}
 @keyframes dot{0%,60%,100%{opacity:.2}30%{opacity:1}}
 @media(max-width:560px){.hero .amt{font-size:44px}}
+/* Popup เลือกช่วงวันที่ */
+.xmodal{position:fixed;inset:0;background:rgba(10,20,15,.5);display:none;align-items:center;justify-content:center;z-index:50;padding:18px}
+.xmodal.on{display:flex}
+.xsheet{background:var(--card);border:1px solid var(--line);border-radius:18px;width:100%;max-width:380px;overflow:hidden;box-shadow:0 20px 50px -12px rgba(0,0,0,.4)}
+.xhead{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-weight:700;font-size:15px;padding:15px 18px}
+.xbody{padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.xfield{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:14px;font-weight:600;color:var(--ink)}
+.xfield span{color:var(--muted);font-weight:600}
+.xfield input[type=date]{flex:1;max-width:200px;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--sunken);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+.xfield input:disabled{opacity:.45}
+.xall{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:var(--ink);cursor:pointer;padding-top:2px}
+.xall input{width:17px;height:17px;accent-color:var(--green2)}
+.xnote{background:var(--gold-soft);border:1px solid var(--gold-line);color:var(--ink);border-radius:10px;padding:9px 12px;font-size:13px;text-align:center}
+.xnote b{color:var(--gold)}
+.xhint{font-size:11.5px;color:var(--faint);line-height:1.5}
+.xfoot{display:flex;gap:10px;padding:0 18px 18px}
+.xbtn{flex:1;border:0;border-radius:12px;padding:12px;font-family:var(--sans);font-size:14px;font-weight:700;cursor:pointer}
+.xbtn:active{transform:scale(.98)}
+.xbtn.cancel{background:var(--sunken);color:var(--muted);border:1px solid var(--line)}
+.xbtn.ok{background:var(--green);color:#fff}
 </style>
 </head>
 <body>
@@ -103,6 +123,23 @@ body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);line
   </div>
 </div>
 
+<div class="xmodal" id="xmodal" onclick="if(event.target===this)closeExport()">
+  <div class="xsheet">
+    <div class="xhead">📆 เลือกช่วงวันที่ที่จะดาวน์โหลด</div>
+    <div class="xbody">
+      <label class="xfield"><span>ตั้งแต่</span><input type="date" id="xfrom" oninput="updateXnote()"></label>
+      <label class="xfield"><span>ถึง</span><input type="date" id="xto" oninput="updateXnote()"></label>
+      <label class="xall"><input type="checkbox" id="xall" onchange="xToggleAll()"> ทั้งหมด (ทุกวันในระบบ)</label>
+      <div class="xnote" id="xnote"></div>
+      <div class="xhint">ระบบจะคิดคะแนน/โบนัสใหม่ตามช่วงที่เลือก แล้วส่งออกเป็นไฟล์ Excel (CSV)</div>
+    </div>
+    <div class="xfoot">
+      <button class="xbtn cancel" onclick="closeExport()">ยกเลิก</button>
+      <button class="xbtn ok" onclick="confirmExport()">⬇️ ดาวน์โหลด</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjfBQUSYaTEdrxkdXUVN98G68XseCquhDeXfMgU8cVYaY/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -115,8 +152,29 @@ const bonusOf=p=>Math.min(BONUS_MAX,Math.max(BONUS_MIN,Math.round((BONUS_MIN+(BO
 
 const fmt=(n,d=0)=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 const $=s=>document.querySelector(s);
-let EXPORT=null;   // เก็บผลรอบล่าสุดไว้ให้ปุ่มดาวน์โหลด Excel
+let EXPORT=null, ALL_RECORDS=[];   // ALL_RECORDS = ข้อมูลดิบทุกวัน (ให้ export เลือกช่วงเองได้)
 function setT(t){document.documentElement.setAttribute('data-theme',t);document.querySelectorAll('.tgl button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));try{localStorage.setItem('bonus_theme',t)}catch(e){}}
+function isoOf(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+// คิดโบนัส/คะแนน ตามช่วงวันที่ (from/to = yyyy-mm-dd หรือว่าง = ไม่จำกัด) — สูตรเดียวกับหน้าจอ
+function computeRange(records,fromISO,toISO){
+  const inR=d=>(!fromISO||d>=fromISO)&&(!toISO||d<=toISO);
+  let scoreSum=0,pass=0,total=0,sendSum=0,palmTotal=0,leftoverBad=0; const rows=[];
+  (records||[]).forEach(x=>{
+    const dt=String(x.date||'').slice(0,10); if(!dt||!inR(dt)) return;
+    const send=(x.send||0)/TON, stock=(x.stock||0)/TON, buy=(x.buy||0)/TON;
+    if(send<=0 && stock<=0 && buy<=0) return;
+    const raw=(send+stock)>0?send/(send+stock)*100:(send>0?100:0);
+    let score=raw; if(stock<LEFTOVER_OK) score=Math.max(raw,TARGET);
+    const ok=score>=TARGET;
+    total++; if(ok)pass++; if(stock>=LEFTOVER_OK&&raw<TARGET)leftoverBad++;
+    scoreSum+=score; sendSum+=send; palmTotal+=send+stock;
+    rows.push({date:dt,ramp:x.ramp,buy,send,stock,pct:score/100,ok});
+  });
+  rows.sort((a,b)=>a.date<b.date?1:-1);
+  const pickPct=total?scoreSum/total:0;
+  return {rows,pickPct,bonus:bonusOf(pickPct),passRate:total?pass/total*100:0,pass,total,sendSum,palmTotal,leftoverBad};
+}
+function dataSpan(){const ds=ALL_RECORDS.map(x=>String(x.date||'').slice(0,10)).filter(Boolean).sort();return {min:ds[0]||'',max:ds[ds.length-1]||''};}
 
 (async function init(){
   let uid='';
@@ -136,29 +194,12 @@ function setT(t){document.documentElement.setAttribute('data-theme',t);document.
 })();
 
 function render(records){
+  ALL_RECORDS=records||[];
   // รอบ 1–30 เดือนปัจจุบัน
   const now=new Date(); const ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
   const thMonth=now.toLocaleDateString('th-TH',{month:'short',year:'numeric'});
-  const cyc=records.filter(x=>String(x.date||'').slice(0,7)===ym);
-
-  let scoreSum=0,pass=0,total=0,sendSum=0,palmTotal=0,leftoverBad=0; const rows=[];
-  cyc.forEach(x=>{
-    const send=(x.send||0)/TON, stock=(x.stock||0)/TON, buy=(x.buy||0)/TON;
-    if(send<=0 && stock<=0 && buy<=0) return;                          // วันไม่มีข้อมูลจริง ข้าม
-    const raw = (send+stock)>0 ? send/(send+stock)*100 : (send>0?100:0);  // %รับจริงต่อวัน
-    let score = raw;
-    if(stock < LEFTOVER_OK) score = Math.max(raw, TARGET);             // ค้าง<27ต → คิดวันนั้นเป็น 60% ผ่าน
-    const ok = score >= TARGET;
-    total++; if(ok) pass++; if(stock>=LEFTOVER_OK && raw<TARGET) leftoverBad++;
-    scoreSum+=score; sendSum+=send; palmTotal+=send+stock;
-    rows.push({date:x.date, ramp:x.ramp, buy, send, stock, pct:score/100, ok});
-  });
-  rows.sort((a,b)=> a.date<b.date?1:-1);
-
-  const pickPct = total ? scoreSum/total : 0;                // คะแนนจัดรับเฉลี่ยรายวัน-ลาน (ค้าง<27=60)
-  const bonus = bonusOf(pickPct);
-  const passRate = total ? pass/total*100 : 0;
-  const avgPct = pickPct;
+  const cur=computeRange(records, ym+'-01', ym+'-31');
+  const {rows,pickPct,bonus,passRate,pass,total,sendSum,palmTotal,leftoverBad}=cur;
   const fillPct = Math.max(0,Math.min(100,(bonus-BONUS_MIN)/(BONUS_MAX-BONUS_MIN)*100));
   const day=now.getDate();
 
@@ -172,7 +213,7 @@ function render(records){
       <div><h1>โบนัสหัวหน้าคนขับ</h1><p>SSB Smart Supply · จัดรถเข้ารับปาล์มตามลาน</p></div>
     </div>
     <div class="acts">
-      <button class="dl" onclick="downloadCSV()">⬇️ Excel</button>
+      <button class="dl" onclick="openExportModal()">⬇️ Excel</button>
       <div class="tgl"><button data-t="light" onclick="setT('light')">☀️</button><button data-t="dark" onclick="setT('dark')">🌙</button></div>
     </div>
   </div>
@@ -222,30 +263,56 @@ function render(records){
   try{const s=localStorage.getItem('bonus_theme');if(s)setT(s);}catch(e){}
 }
 
-// ── ดาวน์โหลด Excel (CSV UTF-8 BOM เปิดใน Excel ภาษาไทยไม่เพี้ยน) ──
+// ── Popup เลือกช่วงวันที่ก่อน export ──
+function openExportModal(){
+  const now=new Date(), ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0'), sp=dataSpan();
+  const from=$('#xfrom'), to=$('#xto');
+  from.min=to.min=sp.min; from.max=to.max=sp.max;
+  from.value=ym+'-01'; to.value=isoOf(now);
+  $('#xall').checked=false; from.disabled=false; to.disabled=false;
+  updateXnote();
+  $('#xmodal').classList.add('on');
+}
+function closeExport(){ $('#xmodal').classList.remove('on'); }
+function xToggleAll(){ const on=$('#xall').checked; $('#xfrom').disabled=on; $('#xto').disabled=on; updateXnote(); }
+function xrange(){
+  if($('#xall').checked){ const sp=dataSpan(); return {from:sp.min,to:sp.max,label:'ทั้งหมด ('+sp.min+' – '+sp.max+')',fname:'ทั้งหมด'}; }
+  let from=$('#xfrom').value, to=$('#xto').value;
+  if(from&&to&&from>to){ const x=from; from=to; to=x; }
+  return {from,to,label:(from||'?')+' – '+(to||'?'),fname:(from||'')+'_'+(to||'')};
+}
+function updateXnote(){
+  const r=xrange(), res=computeRange(ALL_RECORDS,r.from,r.to);
+  $('#xnote').innerHTML = res.total
+    ? `<b>${res.total}</b> แถว · ผ่าน ${res.pass}/${res.total} · โบนัส <b>฿${fmt(res.bonus)}</b> (จัดรับ ${fmt(res.pickPct,0)}%)`
+    : '<span style="color:var(--bad)">ไม่มีข้อมูลในช่วงนี้</span>';
+}
+function confirmExport(){ const r=xrange(); if(doExport(r.from,r.to,r.label,r.fname)) closeExport(); }
+// ── สร้าง+ดาวน์โหลด CSV (UTF-8 BOM เปิด Excel ภาษาไทยไม่เพี้ยน) ──
 function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
-function downloadCSV(){
-  if(!EXPORT){ alert('ยังไม่มีข้อมูลให้ดาวน์โหลด'); return; }
-  const e=EXPORT, L=[];
+function doExport(fromISO,toISO,label,fname){
+  const res=computeRange(ALL_RECORDS,fromISO,toISO);
+  if(!res.total){ alert('ไม่มีข้อมูลในช่วงที่เลือก'); return false; }
+  const L=[];
   L.push(['โบนัสหัวหน้าคนขับ — SSB Smart Supply']);
-  L.push(['รอบ','1–30 '+e.thMonth+' (ถึงวันที่ '+e.day+')']);
-  L.push(['โบนัส ณ ปัจจุบัน (บาท)', Math.round(e.bonus)]);
-  L.push(['จัดรถรับเฉลี่ย (คิดโบนัส) %', fmt(e.pickPct,0)]);
-  L.push(['ผ่านเกณฑ์ (วัน-ลาน)', e.pass+' / '+e.total+' ('+fmt(e.passRate,0)+'%)']);
-  L.push(['จัดรถรับรวม (ตัน)', fmt(e.sendSum,1)]);
-  L.push(['ปาล์มรวม จัดรับ+ค้าง (ตัน)', fmt(e.palmTotal,1)]);
-  L.push(['ค้างเกิน 27ต แล้วรับ<60% (ครั้ง)', e.leftoverBad]);
+  L.push(['ช่วงวันที่', label]);
+  L.push(['โบนัส (บาท)', Math.round(res.bonus)]);
+  L.push(['จัดรถรับเฉลี่ย (คิดโบนัส) %', fmt(res.pickPct,0)]);
+  L.push(['ผ่านเกณฑ์ (วัน-ลาน)', res.pass+' / '+res.total+' ('+fmt(res.passRate,0)+'%)']);
+  L.push(['จัดรถรับรวม (ตัน)', fmt(res.sendSum,1)]);
+  L.push(['ปาล์มรวม จัดรับ+ค้าง (ตัน)', fmt(res.palmTotal,1)]);
+  L.push(['ค้างเกิน 27ต แล้วรับ<60% (ครั้ง)', res.leftoverBad]);
   L.push([]);
   L.push(['วันที่','ลาน','รับซื้อ(ต)','จัดรับ(ต)','ค้างลาน(ต)','%รับ(คิดโบนัส)','ผล']);
-  e.rows.slice().sort((a,b)=> a.date<b.date?-1:1).forEach(r=>{
+  res.rows.slice().sort((a,b)=> a.date<b.date?-1:1).forEach(r=>{
     L.push([r.date, r.ramp, fmt(r.buy,1), fmt(r.send,1), fmt(r.stock,1), fmt(r.pct*100,0)+'%', r.ok?'ผ่าน':'ไม่ผ่าน']);
   });
   const csv='﻿'+L.map(row=>row.map(csvCell).join(',')).join('\r\n');
   const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const fn='โบนัสหัวหน้าคนขับ_'+e.ym+'.csv';
   const url=URL.createObjectURL(blob);
-  const a=document.createElement('a'); a.href=url; a.download=fn; document.body.appendChild(a); a.click();
+  const a=document.createElement('a'); a.href=url; a.download='โบนัสหัวหน้าคนขับ_'+(fname||'export')+'.csv'; document.body.appendChild(a); a.click();
   setTimeout(()=>{document.body.removeChild(a);URL.revokeObjectURL(url);},400);
+  return true;
 }
 </script>
 </body>
