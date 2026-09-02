@@ -113,10 +113,28 @@
   .np-s{font-size:11.5px;color:var(--ink-faint);margin-top:2px;line-height:1.35}
   .np-empty{padding:22px 10px;text-align:center;color:var(--ink-faint);font-size:13px}
 
-  .who{display:flex;align-items:center;gap:11px;padding-left:4px}
-  .who .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--leaf),var(--pine));display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
+  .who{display:flex;align-items:center;gap:9px;padding:4px 6px 4px 4px;cursor:pointer;border-radius:12px;transition:background .15s}
+  .who:hover{background:var(--pine-soft)}
+  .who .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--leaf),var(--pine));background-size:cover;background-position:center;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px}
   .who .wn{font-size:13.5px;font-weight:600}
   .who .wr{font-size:11px;color:var(--ink-faint)}
+  .who-caret{width:15px;height:15px;color:var(--ink-faint);transition:transform .15s;flex-shrink:0}
+  .who.open .who-caret{transform:rotate(180deg)}
+  /* ===== User menu: จิ้มชื่อ → ออกจากระบบ ===== */
+  .user-pop{position:absolute;top:62px;right:12px;width:224px;max-width:calc(100vw - 24px);background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 22px 60px -20px rgba(15,50,38,.38);z-index:80;padding:12px;display:none}
+  .user-pop.show{display:block}
+  .up-head{display:flex;align-items:center;gap:10px;padding:4px 4px 12px;border-bottom:1px solid var(--line)}
+  .up-head .av{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--leaf),var(--pine));background-size:cover;background-position:center;display:grid;place-items:center;color:#fff;font-weight:700;font-size:14px;flex-shrink:0}
+  .up-name{font-size:13.5px;font-weight:700;color:var(--ink)}
+  .up-role{font-size:11px;color:var(--ink-faint);margin-top:1px}
+  .up-logout{width:100%;margin-top:10px;border:1px solid var(--line);background:var(--surface-2);color:var(--danger);border-radius:11px;padding:10px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
+  .up-logout:hover{background:#FDECEC;border-color:var(--danger)}
+  .up-confirm{margin-top:10px}
+  .up-q{font-size:12.5px;color:var(--ink-soft);text-align:center;margin-bottom:8px}
+  .up-btns{display:flex;gap:8px}
+  .up-btns button{flex:1;border-radius:11px;padding:9px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;border:1px solid var(--line)}
+  .up-cancel{background:var(--surface-2);color:var(--ink-soft)}
+  .up-ok{background:var(--danger);color:#fff;border-color:var(--danger)}
 
   .content{padding:24px;overflow-y:auto}
   .page-tag{display:inline-flex;align-items:center;gap:8px;font-size:12px;color:var(--pine);background:var(--pine-soft);padding:5px 12px;border-radius:20px;font-weight:600;margin-bottom:18px}
@@ -266,11 +284,23 @@
       </div>
       <div class="np-list" id="notifyPopList"></div>
     </div>
-    <div class="who">
+    <div class="who" id="whoBtn" onclick="toggleUserMenu(event)" title="เมนูผู้ใช้">
       <div class="av" id="profileAvatar">ผ</div>
       <div>
         <div class="wn" id="profileName">กำลังโหลด...</div>
         <div class="wr" id="profileRole">ตรวจสอบสิทธิ์</div>
+      </div>
+      <svg class="who-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </div>
+    <div class="user-pop" id="userPop">
+      <div class="up-head">
+        <div class="av" id="upAvatar">ผ</div>
+        <div><div class="up-name" id="upName">—</div><div class="up-role" id="upRole">—</div></div>
+      </div>
+      <div id="upActions"><button class="up-logout" onclick="askLogout(true)">🚪 ออกจากระบบ</button></div>
+      <div class="up-confirm" id="upConfirm" style="display:none">
+        <div class="up-q">ออกจากระบบ SSB Smart Supply?</div>
+        <div class="up-btns"><button class="up-cancel" onclick="askLogout(false)">ยกเลิก</button><button class="up-ok" onclick="logout()">ออกจากระบบ</button></div>
       </div>
     </div>
   </header>
@@ -593,6 +623,36 @@
     }
   }
 
+  // ===== เมนูผู้ใช้ (จิ้มชื่อ → ออกจากระบบ) =====
+  function toggleUserMenu(e){
+    if(e) e.stopPropagation();
+    const pop=document.getElementById('userPop'), who=document.getElementById('whoBtn');
+    if(!pop) return;
+    const open=pop.classList.toggle('show');
+    if(who) who.classList.toggle('open', open);
+    if(open){
+      // sync ชื่อ/ตำแหน่ง/รูป จากมุมขวาบน
+      const src=document.getElementById('profileAvatar'), av=document.getElementById('upAvatar');
+      document.getElementById('upName').textContent = document.getElementById('profileName').textContent || '—';
+      document.getElementById('upRole').textContent = document.getElementById('profileRole').textContent || '';
+      if(av && src){ av.textContent = src.style.backgroundImage ? '' : src.textContent; av.style.backgroundImage = src.style.backgroundImage||''; }
+      askLogout(false);   // เริ่มที่ปุ่มปกติ (ยังไม่ยืนยัน)
+    }
+  }
+  function closeUserMenu(){
+    const pop=document.getElementById('userPop'), who=document.getElementById('whoBtn');
+    if(pop) pop.classList.remove('show'); if(who) who.classList.remove('open');
+  }
+  function askLogout(show){
+    const a=document.getElementById('upActions'), c=document.getElementById('upConfirm');
+    if(a) a.style.display = show?'none':'block';
+    if(c) c.style.display = show?'block':'none';
+  }
+  function logout(){
+    try{ if(window.liff && liff.logout && liff.isLoggedIn && liff.isLoggedIn()) liff.logout(); }catch(e){}
+    location.reload();   // โหลดใหม่ → liff.login เด้งหน้าเข้าสู่ระบบอีกครั้ง
+  }
+
   function closeNotifyPanel(){
     const pop = document.getElementById('notifyPop');
     if(pop) pop.classList.remove('show');
@@ -683,9 +743,9 @@
 
   document.addEventListener('click', e => {
     const pop = document.getElementById('notifyPop');
-    if(!pop) return;
-    if(e.target.closest('.notify-pop') || e.target.closest('.icon-btn')) return;
-    closeNotifyPanel();
+    if(pop && !e.target.closest('.notify-pop') && !e.target.closest('.icon-btn')) closeNotifyPanel();
+    const up = document.getElementById('userPop');
+    if(up && up.classList.contains('show') && !e.target.closest('.user-pop') && !e.target.closest('#whoBtn')) closeUserMenu();
   });
 
   async function refreshNotifyBadge(){
