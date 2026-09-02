@@ -163,6 +163,7 @@ $('#bonusBtn').onclick=()=>{location.href='bonus.html'+(MY_UID?'?uid='+encodeURI
 let RECORDS=[], RAMPS=[], DATES=[], BY={}, ORD_BY_RAMP={};
 let GARDEN_RECORDS=[], GARDENS=[];   // 🌳 ปาล์มจากสวน ส่งตรงโรงงาน (getGardenDaily)
 let RANGE=30, SCOPE='all', CHARTTYPE='line', MODE='preset', FROM='', TO='';
+let GMODE='cmp';   // ชนิดกราฟกล่องสวน: cmp=เทียบลาน/สวน · bars=แท่งรายสวน
 const TON=1000; // kg → ตัน
 const TON_PER_BIN=15; // ตัน/กระบะ · 2 กระบะ = 1 พ่วง (สั่งออเดอร์เป็นกระบะ)
 function binsFor(ton){return Math.max(0,Math.ceil((ton||0)/TON_PER_BIN));}       // จำนวนกระบะ
@@ -214,11 +215,14 @@ function buildShell(){
     <div class="panel" id="gardenPanel" style="margin-top:16px">
       <div class="phead">
         <div><div class="eyebrow">สวนส่งตรงโรงงาน</div><div class="ptitle">🌳 ปาล์มจากสวน (ไม่ผ่านลาน)</div></div>
-        <div class="pnote" id="gardenNote"></div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <select id="gchartSel" title="เลือกชนิดกราฟ"><option value="cmp">📈 เทียบ ลาน/สวน</option><option value="bars">📊 แท่งรายสวน</option></select>
+          <div class="pnote" id="gardenNote"></div>
+        </div>
       </div>
       <div id="gardenChips" style="display:flex;flex-wrap:wrap;gap:8px;padding:4px 18px 12px"></div>
-      <div class="legend"><span class="lg"><i style="background:var(--send)"></i>ลานทั้งหมด</span><span class="lg"><i style="background:var(--gpalm)"></i>สวนส่งตรง</span><span class="lg" style="color:var(--muted)">เปรียบเทียบ ส่งเข้าโรงงาน · ตัน/วัน</span></div>
-      <div class="chartwrap"><svg id="cmpChart" viewBox="0 0 900 260" role="img" aria-label="เปรียบเทียบส่งโรงงาน ลาน เทียบ สวน"></svg></div>
+      <div class="legend" id="gardenLegend"></div>
+      <div class="chartwrap"><svg id="cmpChart" viewBox="0 0 900 260" role="img" aria-label="กราฟส่งโรงงานรายสวน"></svg></div>
     </div>
     <div class="grid2">
       <div class="panel">
@@ -240,6 +244,7 @@ function buildShell(){
   sel.onchange=e=>{SCOPE=e.target.value;render();};
   $('#rangeSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;$('#rangeSeg').querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');RANGE=+b.dataset.r;MODE='preset';$('#fromD').classList.remove('on');$('#toD').classList.remove('on');render();};
   $('#chartSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;CHARTTYPE=b.dataset.c;render();};
+  const gsel=$('#gchartSel'); if(gsel) gsel.onchange=e=>{GMODE=e.target.value;drawGarden();};
   // ช่วงวันที่กำหนดเอง
   const dMin=DATES[0], dMax=DATES[DATES.length-1];
   ['fromD','toD'].forEach(id=>{$('#'+id).min=dMin;$('#'+id).max=dMax;});
@@ -356,7 +361,46 @@ function drawGarden(){
     ? aggs.map((g,i)=>{const nm=clean(g.garden),short=nm.length>22?nm.slice(0,21)+'…':nm;
         return `<button class="gchip" onclick="openGardenDrawer(${i})" title="${nm.replace(/"/g,'&quot;')}">🌳 ${short} · <b>${fmt(g.tons,1)}</b> ต<span class="gtrip">${g.trips} เที่ยว</span></button>`;}).join('')
     : '<div class="pnote" style="padding:2px 0">ยังไม่มีปาล์มจากสวนส่งตรงโรงงานในช่วงนี้ (ปาล์มสวนส่วนใหญ่อาจส่งผ่านลาน)</div>';
-  drawCompare();
+  const gsel=$('#gchartSel'); if(gsel) gsel.value=GMODE;
+  if(GMODE==='bars'){
+    $('#gardenLegend').innerHTML='<span class="lg"><i style="background:var(--gpalm)"></i>สวนส่งตรงโรงงาน</span><span class="lg" style="color:var(--muted)">รวมทั้งช่วง · ตัน · แตะแท่งดูรายวัน</span>';
+    drawGardenBars(aggs);
+  }else{
+    $('#gardenLegend').innerHTML='<span class="lg"><i style="background:var(--send)"></i>ลานทั้งหมด</span><span class="lg"><i style="background:var(--gpalm)"></i>สวนส่งตรง</span><span class="lg" style="color:var(--muted)">เปรียบเทียบ ส่งเข้าโรงงาน · ตัน/วัน</span>';
+    drawCompare();
+  }
+}
+// กราฟแท่งรายสวน (1 แท่ง/สวน · รวมทั้งช่วง) — สีม่วง gpalm เหมือนฝั่งเปรียบเทียบ
+function drawGardenBars(aggs){
+  const svg=$('#cmpChart'); if(!svg)return;
+  if(!aggs||!aggs.length){svg.innerHTML='<text x="450" y="130" text-anchor="middle" font-size="13" fill="var(--muted)">ไม่มีข้อมูลสวนในช่วงนี้</text>';return;}
+  const CW=900,CH=260,CP={l:44,r:16,t:16,b:58};
+  const max=Math.max(...aggs.map(g=>g.tons),1)*1.16;
+  const inner=CW-CP.l-CP.r, n=aggs.length;
+  const bw=Math.max(8,Math.min(66,inner/n*(n>10?0.6:0.5))), gap=(inner-n*bw)/(n+1);
+  const y=v=>CP.t+(CH-CP.t-CP.b)*(1-v/max);
+  let g='';const ticks=4;
+  for(let t=0;t<=ticks;t++){const v=max*t/ticks,yy=y(v);g+=`<line x1="${CP.l}" y1="${yy.toFixed(1)}" x2="${CW-CP.r}" y2="${yy.toFixed(1)}" stroke="var(--line)" stroke-width="1"/><text x="${CP.l-8}" y="${(yy+4).toFixed(1)}" text-anchor="end" font-size="11" fill="var(--muted)">${fmt(v)}</text>`;}
+  const showNum=bw>=22;
+  aggs.forEach((d,i)=>{const bx=CP.l+gap+(bw+gap)*i, cx=bx+bw/2, top=y(d.tons), h=Math.max(0,(CH-CP.b)-top);
+    g+=`<rect x="${bx.toFixed(1)}" y="${top.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="${Math.min(4,bw/2).toFixed(1)}" fill="var(--gpalm)"/>`;
+    if(showNum)g+=`<text x="${cx.toFixed(1)}" y="${(top-6).toFixed(1)}" text-anchor="middle" font-size="12" font-weight="800" fill="var(--gpalm)">${fmt(d.tons)}</text>`;
+    let lbl=cleanName(d.garden); lbl=lbl.length>11?lbl.slice(0,10)+'…':lbl;
+    const ly=CH-CP.b+14;
+    g+=`<text x="${cx.toFixed(1)}" y="${ly}" text-anchor="end" transform="rotate(-35 ${cx.toFixed(1)} ${ly})" font-size="10" font-weight="600" fill="var(--ink2)">${lbl}</text>`;
+    g+=`<rect class="gbhit" data-i="${i}" x="${bx.toFixed(1)}" y="${CP.t}" width="${bw.toFixed(1)}" height="${(CH-CP.b-CP.t).toFixed(1)}" fill="transparent" style="cursor:pointer"/>`;
+  });
+  svg.innerHTML=g;
+  const tt=$('#tt'); window._gbar=aggs;
+  svg.querySelectorAll('.gbhit').forEach(el=>{
+    const d=aggs[+el.dataset.i];
+    const show=ev=>{const cx=ev.touches?ev.touches[0].clientX:ev.clientX,cy=ev.touches?ev.touches[0].clientY:ev.clientY;
+      tt.innerHTML=`<div class="d">🌳 ${cleanName(d.garden)}</div><div class="r"><span><i style="background:var(--gpalm)"></i>ส่งตรงโรงงาน</span><b class="num">${fmt(d.tons)} ตัน</b></div><div class="r"><span style="color:var(--muted)">จำนวนเที่ยว</span><b class="num">${d.trips} เที่ยว</b></div><div class="r" style="border-top:1px solid var(--line);margin-top:3px;padding-top:4px;justify-content:center"><span style="color:var(--gpalm);font-weight:700">👆 แตะดูรายวัน</span></div>`;
+      tt.style.opacity='1';let tx=cx+14;if(tx+180>innerWidth)tx=cx-190;tt.style.left=tx+'px';tt.style.top=(cy-10)+'px';};
+    el.addEventListener('mousemove',show);el.addEventListener('mouseleave',()=>tt.style.opacity='0');
+    el.addEventListener('touchstart',show,{passive:true});el.addEventListener('touchend',()=>tt.style.opacity='0');
+    el.addEventListener('click',()=>{tt.style.opacity='0';openGardenDrawer(d.garden);});
+  });
 }
 function openGardenDrawer(arg){
   // รับได้ทั้ง index (จากชิป) และชื่อสวน (จากอันดับ/แท่ง)
