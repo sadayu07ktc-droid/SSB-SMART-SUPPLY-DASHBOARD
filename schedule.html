@@ -15,20 +15,20 @@
   --sans:"Noto Sans Thai","Sarabun","Segoe UI",sans-serif; --num:"Space Grotesk",ui-monospace,monospace;
   /* สถานะงาน */
   --st-wait:#B7892A; --st-wait-bg:#FBF1DC; --st-confirm:#2F6FD6; --st-confirm-bg:#E6EFFB;
-  --st-assign:#6D5AE0; --st-assign-bg:#EDEAFB; --st-run:#1E7A4C; --st-run-bg:#E3F3EA;
-  --st-done:#14532D; --st-done-bg:#DCEBE1; --st-cancel:#C0392B; --st-cancel-bg:#FBE7E4;
+  --st-assign:#7C3AED; --st-assign-bg:#EFE9FC; --st-run:#0D9488; --st-run-bg:#D5F0EC;
+  --st-done:#16A34A; --st-done-bg:#D7F3DF; --st-cancel:#6B7280; --st-cancel-bg:#EDEFF1;
   --st-nodrv:#E11D48; --st-nodrv-bg:#FCE7EC;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
   --bg:#0D1411; --card:#141D18; --sunken:#1A241E; --ink:#E7EEE9; --muted:#9AA79E; --faint:#748076;
   --line:#24302A; --line-soft:#1E2822; --green:#0F2A20; --green2:#2D6A4F; --gold:#E7CE86;
-  --st-wait-bg:#2A2313; --st-confirm-bg:#12233A; --st-assign-bg:#1C1836; --st-run-bg:#15281E;
+  --st-wait-bg:#2A2313; --st-confirm-bg:#12233A; --st-assign-bg:#1C1836; --st-run-bg:#10303A;
   --st-done-bg:#12281B; --st-cancel-bg:#2E1714; --st-nodrv-bg:#2E121C;
 }}
 :root[data-theme="dark"]{
   --bg:#0D1411; --card:#141D18; --sunken:#1A241E; --ink:#E7EEE9; --muted:#9AA79E; --faint:#748076;
   --line:#24302A; --line-soft:#1E2822; --green:#0F2A20; --green2:#2D6A4F; --gold:#E7CE86;
-  --st-wait-bg:#2A2313; --st-confirm-bg:#12233A; --st-assign-bg:#1C1836; --st-run-bg:#15281E;
+  --st-wait-bg:#2A2313; --st-confirm-bg:#12233A; --st-assign-bg:#1C1836; --st-run-bg:#10303A;
   --st-done-bg:#12281B; --st-cancel-bg:#2E1714; --st-nodrv-bg:#2E121C;
 }
 *{box-sizing:border-box}
@@ -98,6 +98,13 @@ h1{margin:0;font-size:19px;font-weight:800}.top p{margin:0;font-size:12px;color:
 .drb{padding:16px 20px 40px;display:flex;flex-direction:column;gap:10px}
 .kv{display:flex;justify-content:space-between;gap:12px;font-size:13px;padding:6px 0;border-bottom:1px solid var(--line-soft)}.kv .k{color:var(--muted)}.kv .v{font-weight:600;text-align:right}
 .stpill{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px}
+.assignBtn{width:100%;margin-top:12px;border:0;border-radius:12px;padding:12px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;font-family:inherit;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:transform .14s}
+.assignBtn:hover{transform:translateY(-1px)}.assignBtn:active{transform:scale(.98)}
+.drvpick{width:100%;display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:var(--card);border-radius:11px;padding:9px 12px;margin-bottom:6px;cursor:pointer;font-family:inherit;text-align:left;transition:.13s}
+.drvpick:hover{border-color:var(--green2);background:var(--sunken)}
+.drvpick .dp-n{font-size:13.5px;font-weight:700;color:var(--ink);flex:1}
+.drvpick .dp-m{font-family:var(--num);font-size:12px;color:var(--muted)}
+.drvpick .dp-s{font-size:11px;font-weight:700;white-space:nowrap}
 @media(max-width:640px){.dcell{min-width:150px}.dn b{max-width:90px}}
 </style>
 </head>
@@ -159,6 +166,13 @@ async function load(){
 }
 
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('sch_theme',t)}catch(e){}}
+let DRIVERS_ROSTER=null;
+const IC_SUN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+const IC_MOON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>';
+const IC_TRUCK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;vertical-align:-3px"><path d="M10 17h4V5H2v12h2"/><path d="M14 9h4l3 3v5h-2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>';
+function effTheme(){const a=document.documentElement.getAttribute('data-theme');if(a)return a;return matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
+function themeIcon(){return effTheme()==='dark'?IC_SUN:IC_MOON;}   // มืดอยู่→โชว์พระอาทิตย์ (กด=สว่าง)
+function toggleTheme(){setTheme(effTheme()==='dark'?'light':'dark');const b=document.getElementById('tglBtn');if(b)b.innerHTML=themeIcon();}
 function setView(v){ if(v===VIEW)return; VIEW=v; load(); }
 function setFilter(f){ FILTER=(FILTER===f&&f!=='all')?'all':f; if(DATA)render(); }
 function step(n){ if(VIEW==='day')ANCHOR=addDays(ANCHOR,n); else if(VIEW==='month')ANCHOR=new Date(ANCHOR.getFullYear(),ANCHOR.getMonth()+n,1); else ANCHOR=addDays(ANCHOR,n*7); load(); }
@@ -177,7 +191,7 @@ function headBar(){
     </div>
     <div class="nav"><button onclick="step(-1)">‹</button><span class="lbl">${rangeLabel()}</span><button onclick="step(1)">›</button></div>
     <button class="back" title="วันนี้" onclick="goToday()" style="width:auto;padding:0 12px;font-size:13px;font-weight:700">วันนี้</button>
-    <div class="tgl"><button onclick="setTheme('light')">☀️</button><button onclick="setTheme('dark')">🌙</button></div>
+    <button class="back" id="tglBtn" onclick="toggleTheme()" title="สลับโหมดสว่าง/มืด" style="display:grid;place-items:center">${themeIcon()}</button>
   </div>`;
 }
 function legendBar(){
@@ -202,7 +216,7 @@ function jobChip(o){
   const st=stInfo(o.status), km=Number(o.distanceKm)||0;
   const kmw=Math.max(6,Math.min(100,km/40*100));   // 40กม.=เต็มแถบ
   return `<div class="job" style="background:var(${st.bg});border-left-color:var(${st.c})" onclick="openJob('${o.orderId}')">
-    <div class="jt"><span class="jtime" style="color:var(${st.c})">${o.time||'—'}</span>${km>0?`<span class="jkm" style="color:var(${st.c})">${fmt(km)} กม.</span>`:''}</div>
+    <div class="jt"><span class="jtime" style="color:var(${st.c})">${st.g==='done'?'✓ ':''}${o.time||'—'}</span>${km>0?`<span class="jkm" style="color:var(${st.c})">${fmt(km)} กม.</span>`:''}</div>
     <div class="jdest" title="${(o.dest||o.pickup||'').replace(/"/g,'&quot;')}">${o.dest||o.pickup||'(งาน)'}</div>
     ${km>0?`<div class="jkmbar" style="width:${kmw}%;background:var(${st.c})"></div>`:''}
   </div>`;
@@ -290,7 +304,7 @@ function renderDay(day,map,un,tIso,drivers,showUn){
       const km=Number(o.distanceKm)||0;const w=Math.max(96,Math.min(220,80+km/40*140));
       const lane=i%1;  // simple: same row; overlaps handled by z-order/opacity
       track+=`<div class="gantt-job" style="left:${left}px;width:${w}px;background:var(${st.bg});border-left-color:var(${st.c})" onclick="openJob('${o.orderId}')">
-        <div class="jt"><span class="jtime" style="color:var(${st.c})">${o.time||'ไม่ระบุ'}</span>${km>0?`<span class="jkm" style="color:var(${st.c})">${fmt(km)}กม.</span>`:''}</div>
+        <div class="jt"><span class="jtime" style="color:var(${st.c})">${st.g==='done'?'✓ ':''}${o.time||'ไม่ระบุ'}</span>${km>0?`<span class="jkm" style="color:var(${st.c})">${fmt(km)}กม.</span>`:''}</div>
         <div class="jdest">${o.dest||o.pickup||'(งาน)'}</div></div>`;
     });
     track+='</div>';
@@ -318,10 +332,37 @@ function openJob(id){
       <div class="kv"><span class="k">ระยะทาง</span><span class="v num" style="color:var(${st.c})">${km>0?fmt(km)+' กม.':'—'}</span></div>
       ${o.startTime?`<div class="kv"><span class="k">เริ่มงานจริง</span><span class="v num">${o.startTime}</span></div>`:''}
       ${o.doneTime?`<div class="kv"><span class="k">เสร็จงานจริง</span><span class="v num">${o.doneTime}</span></div>`:''}
+      ${(st.g!=='done'&&st.g!=='cancel')?`<button class="assignBtn" onclick="showAssign('${o.orderId}')">${IC_TRUCK} ${o.driverUid?'เปลี่ยนคนขับ':'จัดหาคนขับ'}</button><div id="assignPick" style="display:none;margin-top:2px"></div>`:''}
     </div>`;
   $('#dr').classList.add('on');$('#ov').classList.add('on');
 }
 function closeDr(){$('#dr').classList.remove('on');$('#ov').classList.remove('on');}
+
+// ── จัดหา/เปลี่ยนคนขับ จากในช่องรายละเอียด ──
+async function showAssign(orderId){
+  const box=document.getElementById('assignPick'); if(!box)return;
+  const open=box.style.display!=='none'; if(open){ box.style.display='none'; return; }
+  box.style.display='block'; box.innerHTML='<div style="padding:10px;color:var(--muted);font-size:12px">กำลังโหลดรายชื่อคนขับ...</div>';
+  if(!DRIVERS_ROSTER){
+    try{ const r=await fetch(GAS_URL+'?action=getReassignDrivers&userId='+encodeURIComponent(MY_UID)+_CB); const d=await r.json();
+      DRIVERS_ROSTER = d.ok ? (d.drivers||d.list||[]) : []; }
+    catch(e){ DRIVERS_ROSTER=[]; }
+  }
+  const rank=s=>String(s||'').includes('ว่าง')?0:(String(s||'').includes('วิ่ง')?1:2);
+  const list=(DRIVERS_ROSTER||[]).slice().sort((a,b)=>rank(a.status)-rank(b.status));
+  if(!list.length){ box.innerHTML='<div style="padding:10px;color:var(--st-cancel);font-size:12.5px">โหลดรายชื่อไม่ได้ (ต้องเป็นแอดมิน)</div>'; return; }
+  box.innerHTML='<div style="font-size:11.5px;font-weight:700;color:var(--muted);margin:8px 2px 6px">เลือกคนขับที่จะมอบหมาย</div>'+
+    list.map(d=>{const free=String(d.status||'').includes('ว่าง');return `<button class="drvpick" onclick="doAssign('${orderId}','${d.uid}')"><span class="dp-n">${d.name}</span><span class="dp-m">${d.plate||''}</span><span class="dp-s" style="color:${free?'var(--st-done)':'var(--faint)'}">${d.status||''}</span></button>`;}).join('');
+}
+async function doAssign(orderId, driverUid){
+  const box=document.getElementById('assignPick'); if(box)box.innerHTML='<div style="padding:10px;color:var(--muted);font-size:12.5px">กำลังมอบหมาย...</div>';
+  try{
+    const r=await fetch(GAS_URL, {method:'POST', body:JSON.stringify({action:'reassignDriver', userId:MY_UID, orderId:orderId, driverUid:driverUid})});
+    const d=await r.json();
+    if(d.success){ closeDr(); DRIVERS_ROSTER=null; load(); }
+    else{ if(box)box.innerHTML='<div style="padding:10px;color:var(--st-cancel);font-size:12.5px">❌ '+(d.error||'มอบหมายไม่สำเร็จ')+'</div>'; }
+  }catch(e){ if(box)box.innerHTML='<div style="padding:10px;color:var(--st-cancel);font-size:12.5px">เชื่อมต่อไม่ได้</div>'; }
+}
 
 (async function init(){
   const q=new URLSearchParams(location.search).get('uid');
