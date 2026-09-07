@@ -52,7 +52,12 @@ h1{margin:0;font-size:19px;font-weight:800}.top p{margin:0;font-size:12px;color:
 .legend .lg{display:inline-flex;align-items:center;gap:5px}
 .legend i{width:11px;height:11px;border-radius:3px;flex:none}
 .summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 13px;min-width:96px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 13px;min-width:96px;transition:transform .16s cubic-bezier(.34,1.5,.64,1),box-shadow .16s,border-color .16s}
+.stat.click{cursor:pointer}
+.stat.click:hover{transform:translateY(-3px);box-shadow:0 12px 24px -14px rgba(20,40,25,.4);border-color:var(--green2)}
+.stat.click:active{transform:translateY(-1px) scale(.98)}
+.stat.on{border-color:var(--green);box-shadow:0 0 0 2px color-mix(in srgb,var(--green) 30%,transparent)}
+@media(prefers-reduced-motion:reduce){.stat{transition:none}.stat.click:hover{transform:none}}
 .stat .k{font-size:11px;color:var(--muted)}.stat .v{font-family:var(--num);font-weight:700;font-size:19px}.stat .v small{font-size:12px;color:var(--faint);font-weight:500}
 /* board */
 .board{background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:auto;max-height:calc(100vh - 210px)}
@@ -105,7 +110,7 @@ const GAS_URL='https://script.google.com/macros/s/AKfycbw4UvKuRrAQ_3Ldm8U0VJqfjf
 const LIFF_ID='2010274217-Ot7vGhri';
 const $=s=>document.querySelector(s);
 const fmt=(n,d=0)=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
-let MY_UID='', VIEW='week', ANCHOR=new Date(), DATA=null, LOADING=false;
+let MY_UID='', VIEW='week', ANCHOR=new Date(), DATA=null, LOADING=false, FILTER='all';
 const _CB='&_v='+Date.now();
 
 const THMON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
@@ -155,6 +160,7 @@ async function load(){
 
 function setTheme(t){document.documentElement.setAttribute('data-theme',t);try{localStorage.setItem('sch_theme',t)}catch(e){}}
 function setView(v){ if(v===VIEW)return; VIEW=v; load(); }
+function setFilter(f){ FILTER=(FILTER===f&&f!=='all')?'all':f; if(DATA)render(); }
 function step(n){ if(VIEW==='day')ANCHOR=addDays(ANCHOR,n); else if(VIEW==='month')ANCHOR=new Date(ANCHOR.getFullYear(),ANCHOR.getMonth()+n,1); else ANCHOR=addDays(ANCHOR,n*7); load(); }
 function goToday(){ ANCHOR=new Date(); load(); }
 
@@ -210,25 +216,31 @@ function render(){
   const busyUids=new Set(Object.keys(map).filter(k=>(map[k]||[]).some(o=>isActive(o.status))));
   const totalJobs=(DATA.orders||[]).filter(o=>isActive(o.status)).length;
   const totalKm=(DATA.orders||[]).reduce((s,o)=>s+(isActive(o.status)?(Number(o.distanceKm)||0):0),0);
+  const freeCount=Math.max(0,drivers.length-busyUids.size);
+  const tile=(f,k,v,u,col,act)=>`<div class="stat click${(act&&FILTER===f)?' on':''}" onclick="setFilter('${f}')" title="จิ้มเพื่อกรอง"><div class="k">${k}</div><div class="v"${col?` style="color:${col}"`:''}>${v}<small> ${u}</small></div></div>`;
   const summary=`<div class="summary">
-    <div class="stat"><div class="k">คนขับทั้งหมด</div><div class="v">${drivers.length}<small> คน</small></div></div>
-    <div class="stat"><div class="k">มีงาน</div><div class="v" style="color:var(--st-run)">${busyUids.size}<small> คน</small></div></div>
-    <div class="stat"><div class="k">ว่าง</div><div class="v" style="color:var(--faint)">${Math.max(0,drivers.length-busyUids.size)}<small> คน</small></div></div>
-    <div class="stat"><div class="k">งานในช่วงนี้</div><div class="v">${totalJobs}<small> งาน</small></div></div>
-    <div class="stat"><div class="k">ระยะทางรวม</div><div class="v">${fmt(totalKm)}<small> กม.</small></div></div>
+    ${tile('all','คนขับทั้งหมด',drivers.length,'คน','',true)}
+    ${tile('busy','มีงาน',busyUids.size,'คน','var(--st-run)',true)}
+    ${tile('free','ว่าง',freeCount,'คน','var(--faint)',true)}
+    ${tile('busy','งานในช่วงนี้',totalJobs,'งาน','',false)}
+    ${tile('busy','ระยะทางรวม',fmt(totalKm),'กม.','',false)}
   </div>`;
 
+  // กรองแถวคนขับตามการ์ดที่จิ้ม
+  let rows=drivers, showUn=(un.length>0);
+  if(FILTER==='busy'){ rows=drivers.filter(d=>busyUids.has(d.uid||d.name)); }
+  else if(FILTER==='free'){ rows=drivers.filter(d=>!busyUids.has(d.uid||d.name)); showUn=false; }
+
   let boardHtml;
-  if(VIEW==='day') boardHtml=renderDay(days[0],map,un,tIso);
-  else boardHtml=renderGrid(days,map,un,tIso);
+  if(VIEW==='day') boardHtml=renderDay(days[0],map,un,tIso,rows,showUn);
+  else boardHtml=renderGrid(days,map,un,tIso,rows,showUn);
 
   $('#app').innerHTML=headBar()+legendBar()+summary+boardHtml;
   try{const s=localStorage.getItem('sch_theme');if(s)setTheme(s);}catch(e){}
 }
 
 // ── week / month = ตารางแถว(คนขับ) × คอลัมน์(วัน) ──
-function renderGrid(days,map,un,tIso){
-  const drivers=DATA.drivers||[];
+function renderGrid(days,map,un,tIso,drivers,showUn){
   const colW = VIEW==='month' ? 92 : 150;
   const cols = `186px repeat(${days.length}, minmax(${colW}px, 1fr))`;
   let h='<div class="board"><div class="grid" style="grid-template-columns:'+cols+'">';
@@ -236,7 +248,7 @@ function renderGrid(days,map,un,tIso){
   h+='<div class="gh dcell" style="justify-content:flex-start"><b style="font-size:12px">คนขับ / คัน</b></div>';
   days.forEach(d=>{const t=iso(d)===tIso;h+=`<div class="gh${t?' today':''}">${THDOW[d.getDay()]} ${d.getDate()}<small>${THMON[d.getMonth()]}</small></div>`;});
   // unassigned row (ถ้ามี)
-  if(un.length){
+  if(showUn && un.length){
     h+=`<div class="dcell" style="background:var(--st-nodrv-bg)"><div class="av" style="background:var(--st-nodrv-bg);color:var(--st-nodrv)">!</div><div class="dn"><b>ยังไม่มอบหมาย</b><span class="pl">${un.length} งาน</span></div></div>`;
     days.forEach(d=>{const dd=iso(d);const jobs=un.filter(o=>o.date===dd);const t=dd===tIso;h+=`<div class="cell${t?' today':''}">${jobs.map(jobChip).join('')||'<span class="empty-cell">·</span>'}</div>`;});
   }
@@ -252,13 +264,12 @@ function renderGrid(days,map,un,tIso){
 }
 
 // ── day = แกนเวลา (Gantt) ──
-function renderDay(day,map,un,tIso){
-  const drivers=DATA.drivers||[];
+function renderDay(day,map,un,tIso,drivers,showUn){
   const H0=5,H1=21;                 // 05:00–21:00
   const hours=H1-H0;
   const dd=iso(day);
   const rows=[];
-  if(un.length){const j=un.filter(o=>o.date===dd);if(j.length)rows.push({dr:{name:'ยังไม่มอบหมาย',plate:j.length+' งาน',uid:'__un'},jobs:j,un:true});}
+  if(showUn && un.length){const j=un.filter(o=>o.date===dd);if(j.length)rows.push({dr:{name:'ยังไม่มอบหมาย',plate:j.length+' งาน',uid:'__un'},jobs:j,un:true});}
   drivers.forEach(dr=>{const jobs=(map[dr.uid||dr.name]||[]).filter(o=>o.date===dd);rows.push({dr,jobs});});
   const trackW=Math.max(760, hours*70);
   const cols=`186px ${trackW}px`;

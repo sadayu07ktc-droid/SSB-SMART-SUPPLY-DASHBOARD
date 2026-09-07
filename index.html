@@ -336,7 +336,7 @@
       {icon:'pin', label:'ติดตามรถ', tag:'สด', sub:'ตำแหน่งและสถานะรถทุกคันบนแผนที่', children:[
         ['แผนที่รวมทุกคัน','ดูทั้งฟลีตพร้อมกัน'],['ติดตามรายคัน','เลือกคันเจาะลึก'],['รถใกล้โรงงาน','เข้า/ออกรัศมีโรงงาน']
       ]},
-      {icon:'ramp', label:'แดชบอร์ดลานปาล์ม', tag:'ใหม่', sub:'ผลปาล์มรายวัน เข้า–ออก–ส่งโรงงาน · KPI + กราฟ ราย ramp/ภาพรวม', url:'https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/ramp-dashboard.html'}
+      {icon:'ramp', label:'รับเข้าผลปาล์ม', tag:'ใหม่', sub:'ผลปาล์มรายวัน เข้า–ออก–ส่งโรงงาน · ลาน + สวน · KPI + กราฟ', url:'https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/ramp-dashboard.html'}
     ]},
     {group:'งานขนส่ง', items:[
       {icon:'order', label:'ออเดอร์', sub:'งานรับ-ส่งปาล์มทั้งหมด', children:[
@@ -344,7 +344,8 @@
         ['ติดตามสถานะ','ไทม์ไลน์รายออเดอร์','https://liff.line.me/2010274217-KGSFWvpp'],
         ['สร้าง/มอบหมายงาน','assign คนขับ','https://liff.line.me/2010274217-BF41B8c2'],['รอลานเทยืนยัน','คิวค้างยืนยัน'],['ประวัติงาน','งานที่จบแล้ว']
       ]},
-      {icon:'users', label:'จัดการคนขับ', sub:'สถานะ เครื่องเดินเบา สรุปพฤติกรรมรายคน', children:[
+      {icon:'users', label:'จัดการคนขับ', sub:'ตารางงาน สถานะ เครื่องเดินเบา สรุปพฤติกรรม', children:[
+        ['ตารางงานคนขับ','ใครว่าง/มีงาน · เวลานัด + ระยะทาง','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/schedule.html'],
         ['รายชื่อคนขับ','การ์ดสถานะรายคน'],['เครื่องเดินเบา','ติดเครื่องค้าง/เกินเกณฑ์'],['สรุปต่อเที่ยว','กม./ลิตร · %วิ่งหนัก'],['สรุปรายวัน/สัปดาห์','เดินเบา/วิ่ง/ขับเกิน']
       ]},
       {icon:'truck', label:'ยานพาหนะ', sub:'ทะเบียนรถ ประเภท และการจับคู่ GPS', children:[
@@ -440,7 +441,9 @@
     const sub=e.target.closest('.sub-item');
     if(sub){
       if(sub.dataset.url){          // เมนูย่อยที่ลิงก์ไป LIFF (เช่น ออเดอร์ทั้งหมด)
-        openLink(sub.dataset.url);
+        var _u=sub.dataset.url;
+        if(MY_UID && /github\.io/.test(_u)) _u += (_u.indexOf('?')<0?'?':'&')+'uid='+encodeURIComponent(MY_UID);   // ส่ง uid ให้หน้าเราเอง (เช่น ตารางงาน)
+        openLink(_u);
         return;
       }
       setPage(sub.dataset.title, sub.dataset.sub); markActive(sub);
