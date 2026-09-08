@@ -248,15 +248,23 @@ function render(){
   // summary
   const drivers=DATA.drivers||[];
   const busyUids=new Set(Object.keys(map).filter(k=>(map[k]||[]).some(o=>isActive(o.status))));
-  const totalJobs=(DATA.orders||[]).filter(o=>isActive(o.status)).length;
-  const totalKm=(DATA.orders||[]).reduce((s,o)=>s+(isActive(o.status)?(Number(o.distanceKm)||0):0),0);
   const freeCount=Math.max(0,drivers.length-busyUids.size);
+  // ── ยอดงาน/สำเร็จ/ระยะ "ผันตามฟิลเตอร์" ที่เลือก (+ ตามช่วงวัน-สัปดาห์-เดือน) ──
+  let scope=[];
+  if(FILTER==='free'){ scope=[]; }                                   // คนว่าง = ไม่มีงาน
+  else if(FILTER==='busy'){ Object.keys(map).forEach(k=>{ if(busyUids.has(k)) scope=scope.concat(map[k]); }); }
+  else { Object.keys(map).forEach(k=>{ scope=scope.concat(map[k]); }); scope=scope.concat(un); }  // ทั้งหมด
+  const actScope=scope.filter(o=>isActive(o.status));
+  const totalJobs=actScope.length;
+  const doneJobs=scope.filter(o=>stInfo(o.status).g==='done').length;
+  const totalKm=actScope.reduce((s,o)=>s+(Number(o.distanceKm)||0),0);
   const tile=(f,k,v,u,col,act)=>`<div class="stat click${(act&&FILTER===f)?' on':''}" onclick="setFilter('${f}')" title="จิ้มเพื่อกรอง"><div class="k">${k}</div><div class="v"${col?` style="color:${col}"`:''}>${v}<small> ${u}</small></div></div>`;
   const summary=`<div class="summary">
     ${tile('all','คนขับทั้งหมด',drivers.length,'คน','',true)}
     ${tile('busy','มีงาน',busyUids.size,'คน','var(--st-run)',true)}
     ${tile('free','ว่าง',freeCount,'คน','var(--faint)',true)}
     ${tile('busy','งานในช่วงนี้',totalJobs,'งาน','',false)}
+    ${tile('busy','สำเร็จแล้ว',doneJobs,'/ '+totalJobs+' งาน','var(--st-done)',false)}
     ${tile('busy','ระยะทางรวม',fmt(totalKm),'กม.','',false)}
   </div>`;
 
