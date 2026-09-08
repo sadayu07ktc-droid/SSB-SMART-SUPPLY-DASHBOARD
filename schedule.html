@@ -70,6 +70,8 @@ h1{margin:0;font-size:19px;font-weight:800}.top p{margin:0;font-size:12px;color:
 .av{width:34px;height:34px;border-radius:9px;background:var(--sunken);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--green2);flex:none}
 .dn{min-width:0}.dn b{font-size:13px;font-weight:700;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
 .dn .pl{font-family:var(--num);font-size:11px;color:var(--muted)}
+.dn .donec{display:inline-flex;align-items:center;gap:3px;margin-top:3px;font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;width:fit-content;font-family:var(--num);color:var(--st-done);background:var(--st-done-bg)}
+.dn .donec.zero{color:var(--faint);background:var(--sunken)}
 .freechip{font-size:9.5px;font-weight:700;padding:1px 6px;border-radius:20px;margin-left:auto;flex:none}
 .freechip.free{background:var(--sunken);color:var(--faint)}
 .freechip.busy{background:var(--st-run-bg);color:var(--st-run)}
@@ -232,6 +234,12 @@ function ordersByDriver(){
   return {map,un};
 }
 
+// ป้าย "เสร็จ X/Y งาน" ต่อคนขับ (ตามช่วงที่แสดงในแถวนั้น)
+function doneChip(jobs){
+  const act=jobs.filter(o=>isActive(o.status)).length; if(!act)return '';
+  const done=jobs.filter(o=>stInfo(o.status).g==='done').length;
+  return `<span class="donec${done?'':' zero'}" title="งานที่เสร็จแล้วในช่วงนี้">✓ เสร็จ ${done}/${act}</span>`;
+}
 function jobChip(o){
   const st=stInfo(o.status), km=Number(o.distanceKm)||0;
   const kmw=Math.max(6,Math.min(100,km/40*100));   // 40กม.=เต็มแถบ
@@ -298,7 +306,7 @@ function renderGrid(days,map,un,tIso,drivers,showUn){
   drivers.forEach(dr=>{
     const jobs=map[dr.uid||dr.name]||[];
     const busy=jobs.some(o=>isActive(o.status));
-    h+=`<div class="dcell"><div class="av">${(dr.name||'?').slice(0,1)}</div><div class="dn"><b title="${(dr.name||'').replace(/"/g,'&quot;')}">${dr.name}</b><span class="pl">${dr.plate||'—'}${dr.vehicleType?' · '+dr.vehicleType:''}</span></div><span class="freechip ${busy?'busy':'free'}">${busy?'มีงาน':'ว่าง'}</span></div>`;
+    h+=`<div class="dcell"><div class="av">${(dr.name||'?').slice(0,1)}</div><div class="dn"><b title="${(dr.name||'').replace(/"/g,'&quot;')}">${dr.name}</b><span class="pl">${dr.plate||'—'}${dr.vehicleType?' · '+dr.vehicleType:''}</span>${doneChip(jobs)}</div><span class="freechip ${busy?'busy':'free'}">${busy?'มีงาน':'ว่าง'}</span></div>`;
     days.forEach(d=>{const dd=iso(d);const dj=jobs.filter(o=>o.date===dd).sort((a,b)=>(a.time||'').localeCompare(b.time||''));const t=dd===tIso;h+=`<div class="cell${t?' today':''}">${dj.map(jobChip).join('')||'<span class="empty-cell">ว่าง</span>'}</div>`;});
   });
   h+='</div></div>';
@@ -324,7 +332,7 @@ function renderDay(day,map,un,tIso,drivers,showUn){
   h+='</div>';
   rows.forEach(r=>{
     const busy=r.jobs.some(o=>isActive(o.status));
-    h+=`<div class="dcell" ${r.un?'style="background:var(--st-nodrv-bg)"':''}><div class="av" ${r.un?'style="color:var(--st-nodrv)"':''}>${r.un?'!':(r.dr.name||'?').slice(0,1)}</div><div class="dn"><b>${r.dr.name}</b><span class="pl">${r.dr.plate||'—'}${r.dr.vehicleType?' · '+r.dr.vehicleType:''}</span></div>${r.un?'':`<span class="freechip ${busy?'busy':'free'}">${busy?'มีงาน':'ว่าง'}</span>`}</div>`;
+    h+=`<div class="dcell" ${r.un?'style="background:var(--st-nodrv-bg)"':''}><div class="av" ${r.un?'style="color:var(--st-nodrv)"':''}>${r.un?'!':(r.dr.name||'?').slice(0,1)}</div><div class="dn"><b>${r.dr.name}</b><span class="pl">${r.dr.plate||'—'}${r.dr.vehicleType?' · '+r.dr.vehicleType:''}</span>${r.un?'':doneChip(r.jobs)}</div>${r.un?'':`<span class="freechip ${busy?'busy':'free'}">${busy?'มีงาน':'ว่าง'}</span>`}</div>`;
     let track='<div class="gantt-track" style="width:'+trackW+'px">';
     for(let hh=H0;hh<=H1;hh++){track+=`<div class="gantt-hour" style="left:${(hh-H0)/hours*trackW}px"></div>`;}
     r.jobs.forEach((o,i)=>{
