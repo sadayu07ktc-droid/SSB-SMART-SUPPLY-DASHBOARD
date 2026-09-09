@@ -127,6 +127,17 @@ h1{margin:0;font-size:19px;font-weight:800}.top p{margin:0;font-size:12px;color:
 .tsv{font-family:var(--num);font-weight:700;font-size:19px;color:var(--ink);line-height:1.1}
 .tsv small{font-size:11px;color:var(--faint);font-weight:500;margin-left:3px}
 .tsk{font-size:11px;color:var(--muted);margin-top:3px}
+/* — ชิปค่าแรง + ใบชั่งน้ำหนัก — */
+.wagechip{display:inline-flex;align-items:center;gap:5px;background:#F3D68A;color:#4A3606;font-weight:800;font-size:12.5px;padding:3px 11px;border-radius:20px;font-family:var(--num)}
+.wagechip.pend{background:rgba(255,255,255,.16);color:#fff;font-weight:600}
+.slipsec{margin-top:8px}
+.sliprow{display:flex;gap:9px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.slip{flex:0 0 auto;width:120px;text-decoration:none;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:var(--sunken);transition:transform .15s cubic-bezier(.34,1.5,.64,1),box-shadow .15s}
+.slip:hover{transform:translateY(-2px);box-shadow:0 8px 18px -12px rgba(0,0,0,.5)}
+.slipimg{display:block;width:100%;height:92px;object-fit:cover;background:var(--line-soft)}
+.slipcap{padding:6px 9px;display:flex;flex-direction:column;gap:1px}
+.slipcap .sl-l{font-size:11px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slipcap .sl-n{font-size:11px;color:var(--muted)}
 @media(max-width:640px){.dcell{min-width:150px}.dn b{max-width:90px}}
 </style>
 </head>
@@ -391,9 +402,24 @@ function openJob(id){
   if(tiles.length) summary='<div class="tsumsec"><div class="tsh">สรุปทริป</div><div class="tsum">'+
     tiles.map(t=>`<div class="tsx"><div class="tsv">${t[1]}<small>${t[2]}</small></div><div class="tsk">${t[0]}</div></div>`).join('')+'</div></div>';
 
+  // ── ชิปสรุปค่าแรง (ในหัว drawer) ──
+  const wageChip=(o.wage!=null)
+    ? `<span class="wagechip">💰 ค่าแรง ฿${fmt(o.wage)}</span>`
+    : `<span class="wagechip pend">💰 ค่าแรง · รอคำนวณ</span>`;
+
+  // ── ใบชั่งน้ำหนัก (thumbnail จาก Google Drive) ──
+  const driveId=u=>{const m=/\/d\/([-\w]{20,})/.exec(u||'')||/[?&]id=([-\w]{20,})/.exec(u||'');return m?m[1]:'';};
+  const slipThumb=u=>{const id=driveId(u);return id?`https://drive.google.com/thumbnail?id=${id}&sz=w400`:u;};
+  const slips=o.weighSlips||[];
+  const slipsHtml=slips.length
+    ? '<div class="slipsec"><div class="tsh">ใบชั่งน้ำหนัก</div><div class="sliprow">'+
+      slips.map(s=>`<a class="slip" href="${s.url}" target="_blank" rel="noopener" title="แตะเพื่อเปิดใบชั่ง"><img class="slipimg" src="${slipThumb(s.url)}" loading="lazy" alt="${s.label}" onerror="this.style.display='none'"><div class="slipcap"><span class="sl-l">📄 ${s.label}</span>${s.net>0?`<span class="sl-n num">${fmt(s.net)} กก.</span>`:''}</div></a>`).join('')+
+      '</div></div>'
+    : '';
+
   $('#dr').innerHTML=`<div class="drh"><button class="x" onclick="closeDr()">✕</button>
       <div style="font-size:11.5px;opacity:.85">${o.orderId}</div><h3>${o.dest||o.pickup||'งาน'}</h3>
-      <div style="margin-top:8px"><span class="stpill" style="background:rgba(255,255,255,.16);color:#fff">● ${st.lbl}</span></div></div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="stpill" style="background:rgba(255,255,255,.16);color:#fff">● ${st.lbl}</span>${wageChip}</div></div>
     <div class="drb">
       <div class="kv"><span class="k">คนขับ</span><span class="v">${o.driverName||dr&&dr.name||'— ยังไม่มอบหมาย'}</span></div>
       <div class="kv"><span class="k">ทะเบียน</span><span class="v num">${o.plate||dr&&dr.plate||'—'}</span></div>
@@ -404,6 +430,7 @@ function openJob(id){
       ${o.bins?`<div class="kv"><span class="k">จำนวนกระบะ</span><span class="v num">${o.bins}</span></div>`:''}
       ${summary}
       ${timeline}
+      ${slipsHtml}
       ${(st.g!=='done'&&st.g!=='cancel')?`<button class="assignBtn" onclick="showAssign('${o.orderId}')">${IC_TRUCK} ${o.driverUid?'เปลี่ยนคนขับ':'จัดหาคนขับ'}</button><div id="assignPick" style="display:none;margin-top:2px"></div>`:''}
     </div>`;
   $('#dr').classList.add('on');$('#ov').classList.add('on');
