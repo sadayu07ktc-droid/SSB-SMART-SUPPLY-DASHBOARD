@@ -478,17 +478,26 @@ async function openWageDetail(id){
 function closeWage(){ const m=document.getElementById('wm'); if(m)m.classList.remove('on'); }
 function wageRows(d){
   const s=d.snapshot||{};
-  const row=(k,v,note)=>{ const n=Number(v)||0; if(Math.abs(n)<0.005) return '';
-    return `<div class="wr${n<0?' wr-neg':''}"><span class="wr-k">${k}${note?` <small>${note}</small>`:''}</span><span class="wr-v num">${n<0?'−':''}฿${fmt(Math.abs(n),0)}</span></div>`; };
+  const n=k=>Number(s[k])||0;
+  const tog=(s.params&&s.params.toggles)||{};
+  // viaLiters ON = ค่ายกกระบะ+ให้เพิ่ม ถูกแปลงเป็นลิตรรวมในน้ำมันแล้ว (ไม่บวกบาทซ้ำ)
+  let via=tog.viaLiters;
+  if(via===undefined){ // เผื่อ snapshot เก่าไม่มี flag → เดาจากผลรวมที่ตรงยอด
+    const base=n('runWage')+n('loadWage')+n('tarp')+n('fuelAdj')+n('wait')+n('hardship')+n('bonus');
+    via=Math.abs(base-d.wage)<=Math.abs(base+n('hooklift')+n('give')-d.wage);
+  }
+  const row=(k,v,note)=>{ const x=Number(v)||0; if(Math.abs(x)<0.005) return '';
+    return `<div class="wr${x<0?' wr-neg':''}"><span class="wr-k">${k}${note?` <small>${note}</small>`:''}</span><span class="wr-v num">${x<0?'−':''}฿${fmt(Math.abs(x),0)}</span></div>`; };
+  let fnote=(s.litersActual!=null&&s.benchLiters!=null)?('ใช้ '+fmt(s.litersActual,1)+' / เกณฑ์ '+fmt(s.benchLiters,1)+' ล.'):'';
+  if(via&&(n('hooklift')+n('give'))>0) fnote+=(fnote?' · ':'')+'รวมยกกระบะ/ให้เพิ่ม';
   let rows='';
   rows+=row('ค่าวิ่ง',s.runWage);
   rows+=row('ค่าขึ้น-ลง',s.loadWage);
-  rows+=row('ให้เพิ่มตามเวลา',s.give);
+  if(!via){ rows+=row('ให้เพิ่มตามเวลา',s.give); rows+=row('ค่ายกกระบะ',s.hooklift); }
   rows+=row('ค่าลำบาก (งานสวน)',s.hardship);
   rows+=row('ค่ารอ',s.wait, (Number(s.waitHrs)>0)?fmt(s.waitHrs,1)+' ชม.':'');
   rows+=row('ค่าผ้าใบ',s.tarp);
-  rows+=row('ค่ายกกระบะ',s.hooklift);
-  rows+=row('ปรับน้ำมัน',s.fuelAdj, (s.litersActual!=null&&s.benchLiters!=null)?('ใช้ '+fmt(s.litersActual,1)+' / เกณฑ์ '+fmt(s.benchLiters,1)+' ล.'):'');
+  rows+=row('ปรับน้ำมัน',s.fuelAdj, fnote);
   rows+=row('โบนัส',s.bonus);
   const meta=[s.vehType,s.jobType].filter(Boolean).join(' · ');
   const sub=[meta, s.distTotal?fmt(s.distTotal,1)+' กม.':'', s.totalHrs?fmt(s.totalHrs,1)+' ชม.':''].filter(Boolean).join(' · ');
