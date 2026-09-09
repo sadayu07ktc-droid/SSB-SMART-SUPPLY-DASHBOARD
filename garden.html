@@ -484,10 +484,10 @@ function pickMany(title,sub,options,current){
   });
 }
 /* พิมพ์ข้อความ — คืน string หรือ null(ยกเลิก) */
-function askText(title,sub,placeholder){
+function askText(title,sub,placeholder,def){
   return new Promise(res=>{ _pmResolve=res;
     const d=_pmOpen(title,sub);
-    d.querySelector('#pmBody').innerHTML=`<input class="pm-input" id="pmInput" placeholder="${placeholder?esc(placeholder):''}" autocomplete="off">`;
+    d.querySelector('#pmBody').innerHTML=`<input class="pm-input" id="pmInput" placeholder="${placeholder?esc(placeholder):''}" value="${def?esc(def):''}" autocomplete="off">`;
     const inp=d.querySelector('#pmInput'); setTimeout(()=>inp.focus(),60);
     inp.onkeydown=e=>{ if(e.key==='Enter'){e.preventDefault();_pmClose(inp.value);} };
     d.querySelector('#pmOk').onclick=()=>_pmClose(inp.value);
@@ -539,7 +539,7 @@ function askPickup(title,curName,curLoc){
 /* ── แก้พิกัดสวน ── */
 async function editGardenLoc(){
   const cur=CUR.garden.latlng||CUR.garden.loc||'';
-  const val=await askText('แก้ไขพิกัดสวน','วางลิงก์ Google Maps หรือพิมพ์ lat, lng (เช่น 13.7563, 100.5018) — ระบบจะบันทึกเป็นตัวเลขให้',cur);
+  const val=await askText('แก้ไขพิกัดสวน','วางลิงก์ Google Maps หรือพิมพ์ lat, lng — ระบบจะบันทึกเป็นตัวเลขให้','13.7563, 100.5018',cur);
   if(val===null) return;
   if(!String(val).trim()){ toast('กรุณากรอกพิกัด',true); return; }
   const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveGardenFields',userId:MY_UID,code:CUR.garden.code,loc:val})});
