@@ -138,6 +138,30 @@ h1{margin:0;font-size:19px;font-weight:800}.top p{margin:0;font-size:12px;color:
 .slipcap{padding:6px 9px;display:flex;flex-direction:column;gap:1px}
 .slipcap .sl-l{font-size:11px;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .slipcap .sl-n{font-size:11px;color:var(--muted)}
+button.wagechip{cursor:pointer;border:0}
+.wagechip .wc-more{opacity:.7;font-weight:800;margin-left:1px}
+/* — popup แจกแจงค่าแรง — */
+.wm{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(9,20,15,.5);opacity:0;pointer-events:none;transition:opacity .18s}
+.wm.on{opacity:1;pointer-events:auto}
+.wm-card{width:380px;max-width:100%;max-height:82vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:0 24px 60px rgba(0,0,0,.4);transform:translateY(10px) scale(.98);transition:transform .2s cubic-bezier(.32,.72,0,1)}
+.wm.on .wm-card{transform:none}
+.wm-head{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;position:sticky;top:0}
+.wm-head h3{margin:0;font-size:15px;font-weight:700}
+.wm-x{background:rgba(255,255,255,.18);border:0;color:#fff;width:28px;height:28px;border-radius:8px;cursor:pointer;font-size:14px}
+.wm-body{padding:14px 18px 18px}
+.wm-load,.wm-empty{padding:26px;text-align:center;color:var(--muted);font-size:13px}
+.wm-top{text-align:center;padding:4px 0 13px;border-bottom:1px solid var(--line-soft);margin-bottom:9px}
+.wm-total{font-family:var(--num);font-size:30px;font-weight:800;color:var(--st-done);line-height:1.1}
+.wm-sub{font-size:11.5px;color:var(--muted);margin-top:3px}
+.wm-lock,.wm-open{display:inline-block;margin-top:8px;font-size:10.5px;font-weight:700;padding:2px 10px;border-radius:20px}
+.wm-lock{background:var(--st-done-bg);color:var(--st-done)}
+.wm-open{background:var(--sunken);color:var(--muted)}
+.wr{display:flex;justify-content:space-between;gap:12px;padding:7px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.wr-k{color:var(--muted)}.wr-k small{color:var(--faint);font-size:10.5px;font-weight:400}
+.wr-v{font-weight:600}
+.wr-neg .wr-v{color:var(--st-nodrv)}
+.wr-sum{border-bottom:0;border-top:2px solid var(--line);margin-top:4px;padding-top:11px;font-size:15px}
+.wr-sum .wr-k{color:var(--ink);font-weight:700}.wr-sum .wr-v{color:var(--st-done);font-weight:800}
 @media(max-width:640px){.dcell{min-width:150px}.dn b{max-width:90px}}
 </style>
 </head>
@@ -404,7 +428,7 @@ function openJob(id){
 
   // ── ชิปสรุปค่าแรง (ในหัว drawer) ──
   const wageChip=(o.wage!=null)
-    ? `<span class="wagechip">💰 ค่าแรง ฿${fmt(o.wage)}</span>`
+    ? `<button class="wagechip" onclick="openWageDetail('${o.orderId}')" title="จิ้มดูรายละเอียดค่าแรง">💰 ค่าแรง ฿${fmt(o.wage)} <span class="wc-more">›</span></button>`
     : `<span class="wagechip pend">💰 ค่าแรง · รอคำนวณ</span>`;
 
   // ── ใบชั่งน้ำหนัก (thumbnail จาก Google Drive) ──
@@ -436,6 +460,43 @@ function openJob(id){
   $('#dr').classList.add('on');$('#ov').classList.add('on');
 }
 function closeDr(){$('#dr').classList.remove('on');$('#ov').classList.remove('on');}
+
+// ── popup แจกแจงค่าแรง (จิ้มชิปค่าแรง) ──
+async function openWageDetail(id){
+  let m=document.getElementById('wm');
+  if(!m){ m=document.createElement('div'); m.id='wm'; m.className='wm';
+    m.innerHTML='<div class="wm-card"><div class="wm-head"><h3>รายละเอียดค่าแรง</h3><button class="wm-x" onclick="closeWage()">✕</button></div><div class="wm-body" id="wmBody"></div></div>';
+    document.body.appendChild(m); m.addEventListener('click',e=>{if(e.target===m)closeWage();}); }
+  m.classList.add('on');
+  const body=document.getElementById('wmBody'); body.innerHTML='<div class="wm-load">กำลังโหลด…</div>';
+  try{
+    const r=await fetch(GAS_URL+'?action=getWageBreakdown&userId='+encodeURIComponent(MY_UID)+'&orderId='+encodeURIComponent(id)+_CB);
+    const d=await r.json();
+    body.innerHTML = d.ok ? wageRows(d) : '<div class="wm-empty">'+(d.error||'ไม่มีข้อมูลค่าแรง')+'</div>';
+  }catch(e){ body.innerHTML='<div class="wm-empty">เชื่อมต่อไม่ได้</div>'; }
+}
+function closeWage(){ const m=document.getElementById('wm'); if(m)m.classList.remove('on'); }
+function wageRows(d){
+  const s=d.snapshot||{};
+  const row=(k,v,note)=>{ const n=Number(v)||0; if(Math.abs(n)<0.005) return '';
+    return `<div class="wr${n<0?' wr-neg':''}"><span class="wr-k">${k}${note?` <small>${note}</small>`:''}</span><span class="wr-v num">${n<0?'−':''}฿${fmt(Math.abs(n),0)}</span></div>`; };
+  let rows='';
+  rows+=row('ค่าวิ่ง',s.runWage);
+  rows+=row('ค่าขึ้น-ลง',s.loadWage);
+  rows+=row('ให้เพิ่มตามเวลา',s.give);
+  rows+=row('ค่าลำบาก (งานสวน)',s.hardship);
+  rows+=row('ค่ารอ',s.wait, (Number(s.waitHrs)>0)?fmt(s.waitHrs,1)+' ชม.':'');
+  rows+=row('ค่าผ้าใบ',s.tarp);
+  rows+=row('ค่ายกกระบะ',s.hooklift);
+  rows+=row('ปรับน้ำมัน',s.fuelAdj, (s.litersActual!=null&&s.benchLiters!=null)?('ใช้ '+fmt(s.litersActual,1)+' / เกณฑ์ '+fmt(s.benchLiters,1)+' ล.'):'');
+  rows+=row('โบนัส',s.bonus);
+  const meta=[s.vehType,s.jobType].filter(Boolean).join(' · ');
+  const sub=[meta, s.distTotal?fmt(s.distTotal,1)+' กม.':'', s.totalHrs?fmt(s.totalHrs,1)+' ชม.':''].filter(Boolean).join(' · ');
+  return `<div class="wm-top"><div class="wm-total">฿${fmt(d.wage,0)}</div>${sub?`<div class="wm-sub">${sub}</div>`:''}`
+    +`<div>${d.locked?'<span class="wm-lock">🔒 จ่ายแล้ว</span>':'<span class="wm-open">ยังไม่จ่าย</span>'}</div></div>`
+    +`<div class="wm-rows">${rows||'<div class="wm-empty" style="padding:12px">ไม่มีรายการย่อย</div>'}`
+    +`<div class="wr wr-sum"><span class="wr-k">รวมค่าแรง</span><span class="wr-v num">฿${fmt(d.wage,0)}</span></div></div>`;
+}
 
 // ── จัดหา/เปลี่ยนคนขับ จากในช่องรายละเอียด ──
 async function showAssign(orderId){
