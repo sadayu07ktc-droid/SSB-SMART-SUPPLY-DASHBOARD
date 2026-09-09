@@ -345,7 +345,8 @@ function drawDetail(){
           <button class="linkbtn" onclick="editTeam()">แก้ไข</button></div>
         <div class="row"><span class="lb">ผ่านลานเท</span><span class="vl" id="rampCell">${rampHTML()}</span>
           <button class="linkbtn" onclick="editRamps()">แก้ไข</button></div>
-        <div class="row"><span class="lb">พิกัดสวน</span><span class="vl">${(g.loc||g.latlng)?`<span class="mono" style="font-size:12px">${coText(g)}</span> <a class="maplink" style="margin-left:6px" href="${esc(mapUrl(g.loc||g.latlng))}" target="_blank" rel="noopener">ดูแผนที่</a>`:'—'}</span></div>
+        <div class="row"><span class="lb">พิกัดสวน</span><span class="vl">${(g.loc||g.latlng)?`<span class="mono" style="font-size:12px">${coText(g)}</span> <a class="maplink" style="margin-left:6px" href="${esc(mapUrl(g.loc||g.latlng))}" target="_blank" rel="noopener">ดูแผนที่</a>`:'—'}</span>
+          <button class="linkbtn" onclick="editGardenLoc()">แก้ไข</button></div>
         <div class="row"><span class="lb">LINE UID</span><span class="vl mono" style="font-size:11px;color:var(--ink-faint);word-break:break-all;font-weight:400">${esc(g.uid||'—')}</span></div>
       </div>
     </div>
@@ -358,7 +359,7 @@ function drawDetail(){
           <div class="body">
             <div class="nm">${esc(p.name)}</div>
             <div class="co mono">${coText(p)}</div>
-            <div style="margin-top:6px">${rspoPill(p.rspo)}${p.geo?'':'<span class="pill no" style="margin-left:5px" title="พิกัดที่บันทึกยังเป็นลิงก์ ถ้าอยากให้เช็คอินอัตโนมัติได้ต้องบันทึกเป็นตัวเลข lat,lng">⚠ เช็คอินอัตโนมัติไม่ได้</span>'}</div>
+            <div style="margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${rspoPill(p.rspo)}${p.geo?'':'<span class="pill no" title="พิกัดที่บันทึกยังเป็นลิงก์ ถ้าอยากให้เช็คอินอัตโนมัติได้ต้องบันทึกเป็นตัวเลข lat,lng">⚠ เช็คอินอัตโนมัติไม่ได้</span>'}<button class="linkbtn" onclick="editPickup('${esc(p.id)}')">✏️ แก้ไข</button></div>
           </div>
           ${(p.loc||p.latlng)?`<a class="maplink" href="${esc(mapUrl(p.loc||p.latlng))}" target="_blank" rel="noopener">ดูแผนที่</a>`:''}
         </div>`).join('')
@@ -520,6 +521,42 @@ async function editRamps(){
   if(codes===null) return;
   CUR.garden.ramps=codes; document.getElementById('rampCell').innerHTML=rampHTML();
   saveFields({ramps:codes}, codes.length?'ตั้งลานเท '+codes.length+' แห่งแล้ว':'ตั้งเป็นส่งตรงโรงงานแล้ว');
+}
+
+/* พิมพ์ 2 ช่อง (ชื่อ + พิกัด) — คืน {name,loc} หรือ null(ยกเลิก) */
+function askPickup(title,curName,curLoc){
+  return new Promise(res=>{ _pmResolve=res;
+    const d=_pmOpen(title,'แก้ชื่อจุดรับ และพิกัด — วางลิงก์ Google Maps หรือพิมพ์ lat, lng ก็ได้');
+    d.querySelector('#pmBody').innerHTML=
+      `<label style="font-size:12px;color:var(--ink-soft);font-weight:600">ชื่อจุดรับ</label>
+       <input class="pm-input" id="pmName" autocomplete="off" value="${esc(curName||'')}">
+       <label style="font-size:12px;color:var(--ink-soft);font-weight:600;margin-top:5px">พิกัด (ละติจูด, ลองติจูด)</label>
+       <input class="pm-input" id="pmLoc" autocomplete="off" value="${esc(curLoc||'')}" placeholder="13.7563, 100.5018 หรือวางลิงก์ Google Maps">`;
+    const nm=d.querySelector('#pmName'); setTimeout(()=>nm.focus(),60);
+    d.querySelector('#pmOk').onclick=()=>_pmClose({name:d.querySelector('#pmName').value.trim(),loc:d.querySelector('#pmLoc').value.trim()});
+  });
+}
+/* ── แก้พิกัดสวน ── */
+async function editGardenLoc(){
+  const cur=CUR.garden.latlng||CUR.garden.loc||'';
+  const val=await askText('แก้ไขพิกัดสวน','วางลิงก์ Google Maps หรือพิมพ์ lat, lng (เช่น 13.7563, 100.5018) — ระบบจะบันทึกเป็นตัวเลขให้',cur);
+  if(val===null) return;
+  if(!String(val).trim()){ toast('กรุณากรอกพิกัด',true); return; }
+  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveGardenFields',userId:MY_UID,code:CUR.garden.code,loc:val})});
+  const d=await r.json();
+  if(d.ok&&d.saved){ CUR.garden.loc=d.saved.loc; CUR.garden.latlng=d.saved.loc; CUR.garden.geo=true; drawDetail(); toast('บันทึกพิกัดสวนแล้ว 📍'); }
+  else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
+}
+/* ── แก้ชื่อ+พิกัดจุดรับ ── */
+async function editPickup(pkId){
+  const p=(CUR.pickups||[]).find(x=>x.id===pkId); if(!p) return;
+  const res=await askPickup('แก้ไขจุดรับ '+pkId, p.name, p.latlng||p.loc||'');
+  if(res===null) return;
+  if(!res.name){ toast('ต้องมีชื่อจุดรับ',true); return; }
+  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'savePickupLoc',userId:MY_UID,pickupId:pkId,name:res.name,loc:res.loc})});
+  const d=await r.json();
+  if(d.ok&&d.saved){ if(d.saved.name)p.name=d.saved.name; if(d.saved.loc){p.loc=d.saved.loc;p.latlng=d.saved.loc;p.geo=true;} drawDetail(); toast('บันทึกจุดรับแล้ว 📍'); }
+  else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
 }
 
 /* ── ชื่อในบิล ── */
