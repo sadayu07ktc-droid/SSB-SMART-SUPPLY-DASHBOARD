@@ -251,6 +251,10 @@ function fmtD(v){ const d=parseTH(v); return d ? `${String(d.getDate()).padStart
 /* พิกัด: ลิงก์ Google Maps หรือ lat,long */
 const isLink = v => /^https?:\/\//i.test(String(v||''));
 const mapUrl = v => isLink(v) ? v : 'https://maps.google.com/?q='+encodeURIComponent(v||'');
+/* ข้อความพิกัดในการ์ด: โชว์ตัวเลข lat,lng (แกะจากลิงก์แล้วถ้ามี) ให้แอดมินเช็ค/แก้ปักผิดได้ · o={loc,latlng} */
+const coText = o => o.latlng
+    ? `<span title="ละติจูด, ลองติจูด — แตะค้างเพื่อคัดลอก" style="user-select:all;-webkit-user-select:all">📍 ${esc(o.latlng)}</span>`
+    : (o.loc ? (isLink(o.loc) ? '🔗 ลิงก์ Google Maps' : '📍 '+esc(o.loc)) : '— ไม่มีพิกัด —');
 
 let _tt; function toast(m,err){ let t=$('#toast'); if(!t){t=document.createElement('div');t.id='toast';document.body.appendChild(t);}
   t.textContent=m; t.className='show'+(err?' err':''); clearTimeout(_tt); _tt=setTimeout(()=>t.className='',2400); }
@@ -341,7 +345,7 @@ function drawDetail(){
           <button class="linkbtn" onclick="editTeam()">แก้ไข</button></div>
         <div class="row"><span class="lb">ผ่านลานเท</span><span class="vl" id="rampCell">${rampHTML()}</span>
           <button class="linkbtn" onclick="editRamps()">แก้ไข</button></div>
-        <div class="row"><span class="lb">พิกัดสวน</span><span class="vl">${g.loc?`${isLink(g.loc)?'🔗 ลิงก์ Google Maps':'<span class="mono" style="font-size:12px">📍 '+esc(g.loc)+'</span>'} <a class="maplink" style="margin-left:6px" href="${esc(mapUrl(g.loc))}" target="_blank" rel="noopener">ดูแผนที่</a>`:'—'}</span></div>
+        <div class="row"><span class="lb">พิกัดสวน</span><span class="vl">${(g.loc||g.latlng)?`<span class="mono" style="font-size:12px">${coText(g)}</span> <a class="maplink" style="margin-left:6px" href="${esc(mapUrl(g.loc||g.latlng))}" target="_blank" rel="noopener">ดูแผนที่</a>`:'—'}</span></div>
         <div class="row"><span class="lb">LINE UID</span><span class="vl mono" style="font-size:11px;color:var(--ink-faint);word-break:break-all;font-weight:400">${esc(g.uid||'—')}</span></div>
       </div>
     </div>
@@ -353,10 +357,10 @@ function drawDetail(){
           <span class="num">${esc(p.id)}</span>
           <div class="body">
             <div class="nm">${esc(p.name)}</div>
-            <div class="co mono">${p.loc?(isLink(p.loc)?'🔗 ลิงก์ Google Maps':'📍 '+esc(p.loc)):'— ไม่มีพิกัด —'}</div>
-            <div style="margin-top:6px">${rspoPill(p.rspo)}${p.geo?'':'<span class="pill no" style="margin-left:5px" title="เช็คอินอัตโนมัติต้องใช้พิกัดตัวเลข">⚠ เช็คอินอัตโนมัติไม่ได้</span>'}</div>
+            <div class="co mono">${coText(p)}</div>
+            <div style="margin-top:6px">${rspoPill(p.rspo)}${p.geo?'':'<span class="pill no" style="margin-left:5px" title="พิกัดที่บันทึกยังเป็นลิงก์ ถ้าอยากให้เช็คอินอัตโนมัติได้ต้องบันทึกเป็นตัวเลข lat,lng">⚠ เช็คอินอัตโนมัติไม่ได้</span>'}</div>
           </div>
-          ${p.loc?`<a class="maplink" href="${esc(mapUrl(p.loc))}" target="_blank" rel="noopener">ดูแผนที่</a>`:''}
+          ${(p.loc||p.latlng)?`<a class="maplink" href="${esc(mapUrl(p.loc||p.latlng))}" target="_blank" rel="noopener">ดูแผนที่</a>`:''}
         </div>`).join('')
       : `<div class="rows"><div class="row" style="color:var(--ink-soft);padding:16px 13px;display:block;line-height:1.7">
            <b style="color:var(--ink)">ยังไม่มีจุดรับแยก</b><br>
