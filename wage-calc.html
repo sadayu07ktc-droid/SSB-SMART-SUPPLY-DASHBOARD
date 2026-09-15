@@ -728,7 +728,7 @@
     }
     h+=row('ความเร็วที่ใช้คิด ('+(T.speedMode==='gps'?'GPS จริง':(T.speedCalc==='stair'?'ขั้นบันได·เฉลี่ย':'เหมาช่วง'))+')',c.legs.map(function(l){return Math.round(l.speed);}).join(' / ')+' กม./ชม.','color:var(--txt2)');
     h+='<div style="display:flex;justify-content:space-between;align-items:baseline;margin-top:6px;padding:10px 0 4px;border-top:1.5px solid var(--line)"><span style="font-size:13.5px;font-weight:700">รวมค่าวิ่ง (ปันส่วนแล้ว)</span><span style="font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--txt)">'+money(c.timeWage)+' บ.</span></div>';
-    h+='<div style="font-size:11px;color:var(--txt2);margin:0 0 6px">'+(!T.weight?'ค่าวิ่งทุกขาตามระยะเต็ม':(T.groupAlloc==='leg2x'?('วิธี ระยะขา×2×% (เบา '+P.lightPct+' / หนัก '+P.heavyPct+')'):(T.groupAlloc==='half'?('วิธีครึ่งทริป: ยอด = ค่าวิ่ง '+(c.dist/2).toFixed(0)+' กม.×2 → ปันเข้าขาตาม ระยะ%ของลูป × หนัก/เบา'):('ฐานค่าวิ่งเต็ม '+money(c.fullTime)+' บ. × รวม '+c.pctSum+'% (เบา '+P.lightPct+' / หนัก '+P.heavyPct+')'))))+'</div>';
+    h+='<div style="font-size:11px;color:var(--txt2);margin:0 0 6px">'+(!T.weight?'ค่าวิ่งทุกขาตามระยะเต็ม':(T.groupAlloc==='leg2x'?('วิธี ระยะขา × (หนัก '+P.heavyPct+'/เบา '+P.lightPct+') ÷ ค่ากลาง '+((P.heavyPct+P.lightPct)/2)+' (หนัก ×'+(P.heavyPct/((P.heavyPct+P.lightPct)/2)).toFixed(1)+'/เบา ×'+(P.lightPct/((P.heavyPct+P.lightPct)/2)).toFixed(1)+')'):(T.groupAlloc==='half'?('วิธีครึ่งทริป: ยอด = ค่าวิ่ง '+(c.dist/2).toFixed(0)+' กม.×2 → ปันเข้าขาตาม ระยะ%ของลูป × หนัก/เบา'):('ฐานค่าวิ่งเต็ม '+money(c.fullTime)+' บ. × รวม '+c.pctSum+'% (เบา '+P.lightPct+' / หนัก '+P.heavyPct+')'))))+'</div>';
     h+='<div class="dash"></div>';
     h+=row('เติมจริง (= '+c.kmplA.toFixed(2)+' กม./ล.)',c.actualL.toFixed(1)+' ล.');
     h+=row('เกณฑ์ ('+c.fuelDist.toFixed(0)+' ÷ '+c.benchKmpl.toFixed(2)+(T.fuelBench==='tier'?' ขั้นบันไดรายขา':(T.fuelBench==='tierWeight'?' ช่วง×หนัก/เบา':(T.fuelBench==='weight'?' หนัก/เบารายขา':' รุ่นรถ')))+')',c.benchL.toFixed(1)+' ล.');
@@ -879,11 +879,11 @@
       var wtxt=T.weight?(wl+' ('+l.pct+'%)'):'คิดเต็ม (ไม่ถ่วง)';
       x.save();x.translate(0,y);TX('ระยะ '+l.dist.toFixed(1)+' กม. · '+wtxt+' · ความเร็ว '+Math.round(l.speed)+' กม./ชม.',11.5,PAD+16,col.txt2,'400','left');x.restore();y+=20;
       R('   ค่าวิ่ง (เต็มตามระยะ)',money(l.travelFull)+' บ.');
-      var allocLbl=!T.weight?'รวมช่วงนี้':(T.groupAlloc==='leg2x'?('ค่าวิ่ง ×2 × '+l.pct+'% ('+wl+')'):(T.groupAlloc==='half'?('ปันระยะ '+Math.round(l.dist/(c.dist||1)*100)+'% ของลูป × '+wl+' '+l.pct+'%'):('ปันส่วน '+wl+' = '+l.effPct+'% ของฐาน')));
+      var allocLbl=!T.weight?'รวมช่วงนี้':(T.groupAlloc==='leg2x'?('ค่าวิ่ง × '+l.pct+'% ÷ '+((P.heavyPct+P.lightPct)/2)+' ('+wl+')'):(T.groupAlloc==='half'?('ปันระยะ '+Math.round(l.dist/(c.dist||1)*100)+'% ของลูป × '+wl+' '+l.pct+'%'):('ปันส่วน '+wl+' = '+l.effPct+'% ของฐาน')));
       x.save();x.translate(0,y-4);TX(allocLbl,12.5,W-PAD-72,col.txt2,'400','right');TX(money(l.sum)+' บ.',13.5,W-PAD,col.txt,'700','right');x.restore();y+=14;
       x.strokeStyle=col.line;x.beginPath();x.moveTo(PAD,y);x.lineTo(W-PAD,y);x.stroke();y+=18;
     });
-    y+=2;R('รวมค่าวิ่ง'+(!T.weight?'':(T.groupAlloc==='leg2x'?' (วิธี ระยะขา×2×%)':(T.groupAlloc==='half'?' (ครึ่งทริป '+(c.dist/2).toFixed(0)+' กม.×2)':' (ฐาน '+money(c.fullTime)+' × '+c.pctSum+'%)'))),money(c.timeWage)+' บ.',col.txt,true);y+=4;
+    y+=2;R('รวมค่าวิ่ง'+(!T.weight?'':(T.groupAlloc==='leg2x'?' (ระยะขา × % ÷ '+((P.heavyPct+P.lightPct)/2)+')':(T.groupAlloc==='half'?' (ครึ่งทริป '+(c.dist/2).toFixed(0)+' กม.×2)':' (ฐาน '+money(c.fullTime)+' × '+c.pctSum+'%)'))),money(c.timeWage)+' บ.',col.txt,true);y+=4;
     var fa=c.fuelAdj;
     R('น้ำมัน เติมจริง '+c.actualL.toFixed(1)+' / เกณฑ์ '+c.benchL.toFixed(1)+' ล.','');
     R((fa<0?'หักน้ำมัน (เปลือง)':fa>0?'ได้คืนน้ำมัน (ประหยัด)':'น้ำมัน (เท่าเกณฑ์)')+' ×'+P.fuelRate,
