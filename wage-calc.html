@@ -201,10 +201,10 @@
 (function(){
   var GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
   var LIFF_ID='2010274217-Ot7vGhri';
-  var FUEL_BENCH={'พ่วง':3.5,'เดี่ยว':5.95,'4ล้อ':0,'6ล้อ':0};   // R.5 kmpl_single ต่อประเภทรถ (จาก DB)
+  var FUEL_BENCH={'พ่วง':3.5,'เดี่ยว':5.95,'4ล้อ':10,'6ล้อ':6.5};   // R.11 ③ kmpl_single ต่อประเภทรถ (จาก DB)
   var JOB_TARP={'Packing':true};                       // R.5 งานไหนคิดผ้าใบ (จาก DB)
-  var JOB_HOOKLIFT={'งานสวน':true,'ลาน':true,'ปาล์ม':true}; // R.5 งานไหนคิดฮุคลิฟท์ (จาก DB)
-  var JOB_HARDSHIP={'งานสวน':true};    // R.5 งานไหนคิด Hardship (เฉพาะงานสวน · จาก DB)
+  var JOB_HOOKLIFT={'งานสวน':true,'สวน':true,'ลาน':true}; // R.11 ฮุคลิฟท์ = ลาน+สวน (ตัดปาล์มออก)
+  var JOB_HARDSHIP={'งานสวน':true,'สวน':true};    // R.11 Hardship = เฉพาะสวน (จาก DB)
   var JOB_OVERNIGHT={};                // R.5 เลิกใช้ค่าค้างคืน (แทนด้วยค่ารอ) — เก็บ empty กัน error
   var OFFICIAL=null;                       // ค่าทางการ (snapshot) สำหรับปุ่มรีเซ็ต
   var ORDERS=[
@@ -238,9 +238,10 @@
   // runRate = เลทค่าวิ่ง (บ./ชม.) · loadRate = ค่าขึ้น-ลงของ (บ./ชม.) — แยกกัน แก้ตัวไหนกระทบเฉพาะส่วนนั้น
   // ต้นทุนบริษัท (ค่าจริงจาก vehicles รุ่น 360): fixed_cost_per_km รวมค่าเสื่อมแล้ว · variable_cost_per_km รวมน้ำมัน · ops_cost_trip
   // overnightFee = ค่ารอขึ้นของข้ามคืน (บ./คืน) · hookliftFee = ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง ขึ้น+ลง) — ⚠️ ค่า placeholder รอ management เคาะ
-  var P={runRate:120,loadRate:100,fuelRate:25,benchmark:5.95,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
+  var P={runRate:100,loadRate:100,fuelRate:25,benchmark:5.95,heavyPct:70,lightPct:30,bonusPct:10,tarpFee:100,costFuelPrice:32,
     hookliftFee:100,givePerHr:12.5,waitRate:50,hardshipFee:50,
-    fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};   // R.5 defaults
+    specialHeavy:60,specialLight:40,specialAvg:50,
+    fixedPerKm:5.44,varPerKm:3.2,opsPerTrip:200,deprPerKm:4.57};   // R.11 defaults (run_rate 100 · special 60/40/50)
   // ความเร็วเลทตามช่วงระยะ — ระยะขาไหนเข้าช่วงไหน ใช้ความเร็วช่วงนั้น (master ใน DB, ค่า mock)
   // แต่ละช่วงระยะมีทั้ง ความเร็ว (กม./ชม.) และ เกณฑ์น้ำมัน (กม./ล.) — ตามที่ user กำหนด 1-25 = 20 กม./ชม. · 2.2 กม./ล.
   // เกณฑ์น้ำมัน (กม./ล.) แยกตามรุ่นรถ — 360 ตัวใหญ่กินเยอะกว่า 240 (ค่า 240 เป็น placeholder ~×1.25)
@@ -258,7 +259,23 @@
   function kmplTier(t){var m=src().model;return (t.kmplBy&&(t.kmplBy[m]||t.kmplBy['360']))||P.benchmark;}
   // เกณฑ์น้ำมันแยกหนัก/เบา ต่อรุ่น (ข้อมูลจริง: 360 หนัก 3.0-3.4 เบา 4.5-5.2 · 240 หนัก 3.8-4.2 เบา 5.0-5.5)
   // เกณฑ์หนัก/เบา ต่อรุ่น (user เคาะ 2026-07-17): 360 หนัก2.75 เบา4 · 240 หนัก3.75 เบา5
-  var FUEL_WEIGHT={'พ่วง':{heavy:2.75,light:4},'เดี่ยว':{heavy:3.75,light:5},'4ล้อ':{heavy:0,light:0},'6ล้อ':{heavy:0,light:0}};
+  var FUEL_WEIGHT={'พ่วง':{heavy:2.75,light:4},'เดี่ยว':{heavy:3.75,light:5},'4ล้อ':{heavy:5.75,light:7},'6ล้อ':{heavy:4.75,light:6}};
+  // 🆕 R.11 ⑬ เกณฑ์น้ำมัน หนัก/เบา × 4 โซนระยะ × ประเภทรถ (โซน lo/hi ตรง Excel: 0-150/151-200/201-400/401+)
+  var ZONE13_LO=[0,151,201,401], ZONE13_HI=[150,200,400,9999];
+  var TABLE13={
+    'พ่วง':{h:[2.78,3.45,3.39,3.37], l:[4.00,4.90,4.97,4.98]},
+    'เดี่ยว':{h:[2.50,2.65,2.80,2.90], l:[2.95,3.10,3.25,3.40]},
+    '4ล้อ':{h:[7.00,7.50,8.30,8.60], l:[7.95,8.50,9.40,9.75]},
+    '6ล้อ':{h:[4.50,4.80,5.15,5.80], l:[5.15,5.50,5.90,6.60]}
+  };
+  // ตามระยะหนักเบา: กระจายระยะหนัก/เบา ลงโซน (ขั้นบันได เริ่มจาก 0) แต่ละส่วน ÷ kmpl โซนนั้น (ตรง Excel AL)
+  function bench13Zone(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
+    function split(d,kk){var L=0;for(var i=0;i<4;i++){var p=Math.min(d,ZONE13_HI[i])-ZONE13_LO[i];if(p>0&&kk[i]>0)L+=p/kk[i];}return L;}
+    return split(distH,Z.h)+split(distL,Z.l);}
+  // หนักเบา-เรทช่วง: ระยะหนัก/เบา ก้อนเดียว ตกโซนไหน ใช้ kmpl โซนนั้นทั้งก้อน
+  function bench13Rate(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
+    function zi(d){for(var i=0;i<4;i++){if(d<=ZONE13_HI[i])return i;}return 3;}
+    var L=0; if(distH>0&&Z.h[zi(distH)]>0)L+=distH/Z.h[zi(distH)]; if(distL>0&&Z.l[zi(distL)]>0)L+=distL/Z.l[zi(distL)]; return L;}
   function tierIdx(d){for(var i=0;i<SPEED_TIERS.length;i++){if(d<=SPEED_TIERS[i].max)return i;}return SPEED_TIERS.length-1;}
   function speedFor(d){return SPEED_TIERS[tierIdx(d)].speed;}
   // 🆕 V.2 "ให้เพิ่มตามเวลาวิ่ง" — ตารางความเร็วตามระยะ (interpolate) ตรง Mastersheet ชีต ความเร็ววตามระยะทาง · คนละตารางกับ SPEED_TIERS
@@ -270,7 +287,7 @@
   function stairLiters(d,mult){mult=mult||1;var L=0,prev=0;for(var i=0;i<SPEED_TIERS.length;i++){var top=Math.min(d,SPEED_TIERS[i].max);if(top>prev)L+=(top-prev)/((kmplTier(SPEED_TIERS[i])*mult)||1);prev=SPEED_TIERS[i].max;if(d<=prev)break;}return L;}
   // bonusBase: 'total' = คิดโบนัสหลัง (จากยอดรวมทั้งหมด) · 'base' = คิดก่อน (จากค่าวิ่ง+ขึ้นลง เท่านั้น)
   // R.5 toggle defaults · speedCalc: interp/stair/flat · distMode: central/actual · fuelBench: single/tier/weight
-  var T={mode:'order',ordIdx:0,distMode:'central',speedMode:'tier',speedCalc:'interp',fuelBench:'single',fuelPenalty:true,weight:true,bonus10:false,bonusBase:'total',tarp:true,overnight:false,hooklift:true,depr:true,groupAlloc:'leg2x',giveOn:true,load:true,hardship:true,wait:true,via:true};
+  var T={mode:'order',ordIdx:0,distMode:'central',speedMode:'tier',speedCalc:'interp',fuelBench:'hlzone',fuelPenalty:true,weight:true,bonus10:false,bonusBase:'total',tarp:true,overnight:false,hooklift:true,depr:true,groupAlloc:'leg2x',giveOn:true,load:true,hardship:true,wait:true,via:true,special:true};   // R.11: fuelBench=ตามระยะหนักเบา · special=ถ่วงค่าพิเศษ
   var M={brand:'ISUZU',model:'เดี่ยว',distActual:200,distCentral:0,heavyKm:100,lightKm:100,yardKm:100,yardHomeKm:100,litersFilled:40,qty:30000,qtyPk:500,extraCost:0,nights:1,lifts:2,waitHrs:0,dest:'—',driver:'(จำลอง)',plate:'—',id:'จำลอง'};
   function mSum(){return PATTERN==='viaYard'?(M.lightKm+M.yardKm+M.yardHomeKm):(M.lightKm+M.heavyKm);}
   var money=function(n){return Math.round(n).toLocaleString('th-TH');};
@@ -524,7 +541,7 @@
   var toggles=[   // R.5
     {k:'distMode',label:'ระยะที่ใช้คิด',opts:[['central','ค่ากลาง'],['actual','จริง']]},
     {k:'speedCalc',label:'วิธีคิดเวลาวิ่ง',opts:[['interp','ไล่ระดับ'],['stair','ขั้นบันได'],['flat','เหมาช่วง']]},
-    {k:'fuelBench',label:'เกณฑ์น้ำมัน',opts:[['single','ค่าเดียว'],['tier','ตามช่วง'],['weight','หนัก/เบา']]},
+    {k:'fuelBench',label:'เกณฑ์น้ำมัน',opts:[['hlzone','ตามระยะหนักเบา'],['hlrate','หนักเบา-เรทช่วง'],['single','ค่าเดียว'],['tier','ตามช่วง'],['weight','หนัก/เบา']]},
     {k:'fuelPenalty',label:'เพิ่ม/หักน้ำมัน',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'via',label:'จ่ายผ่านลิตร (ฮุค+ให้เพิ่ม→ลิตร)',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'weight',label:'ถ่วงหนัก/เบา',opts:[[true,'เปิด'],[false,'ปิด']]},
@@ -533,6 +550,7 @@
     {k:'hooklift',label:'ฮุคลิฟท์',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'hardship',label:'Hardship (งานสวน)',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'giveOn',label:'ให้เพิ่มตามเวลาวิ่ง',opts:[[true,'เปิด'],[false,'ปิด']]},
+    {k:'special',label:'ถ่วงค่าพิเศษ (ให้เพิ่ม×BZ)',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'wait',label:'ค่ารอ',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'bonus10',label:'โบนัส %',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'bonusBase',label:'ฐานคิดโบนัส',opts:[['base','ก่อน (ค่าวิ่ง+ขึ้นลง)'],['total','หลัง (ยอดรวม)']]}
@@ -574,7 +592,7 @@
     b.parentNode.querySelectorAll('button').forEach(function(x){x.classList.remove('on');});b.classList.add('on');updateDeps();renderSpeedTiers();renderLegs();render();updateBadge();};
 
   // ── param ──
-  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์น้ำมันค่าเดียว (กม./ล.)'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'โบนัส %'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'hookliftFee',label:'ฮุคลิฟท์ (บ./ครั้ง)'},{k:'waitRate',label:'ค่ารอ (บ./ชม.)'},{k:'givePerHr',label:'ให้เพิ่มตามเวลาวิ่ง (บ./ชม.วิ่ง)'},{k:'hardshipFee',label:'Hardship งานสวน (บ./เที่ยว)'}]; // R.5 · param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer
+  var params=[{k:'runRate',label:'เลทค่าวิ่ง (บ./ชม.)'},{k:'loadRate',label:'ค่าขึ้น-ลง (บ./ชม.)'},{k:'fuelRate',label:'เลทน้ำมัน(ค่าแรง)'},{k:'benchmark',label:'เกณฑ์น้ำมันค่าเดียว (กม./ล.)'},{k:'heavyPct',label:'ถ่วงหนัก %'},{k:'lightPct',label:'ถ่วงเบา %'},{k:'bonusPct',label:'โบนัส %'},{k:'tarpFee',label:'ค่าคลุมผ้าใบ (บ.)'},{k:'hookliftFee',label:'ฮุคลิฟท์ (บ./ครั้ง)'},{k:'waitRate',label:'ค่ารอ (บ./ชม.)'},{k:'givePerHr',label:'ให้เพิ่มตามเวลาวิ่ง (บ./ชม.วิ่ง)'},{k:'hardshipFee',label:'Hardship งานสวน (บ./เที่ยว)'},{k:'specialHeavy',label:'ถ่วงค่าพิเศษ หนัก %'},{k:'specialLight',label:'ถ่วงค่าพิเศษ เบา %'},{k:'specialAvg',label:'ถ่วงค่าพิเศษ ค่ากลาง %'}]; // R.11 · param ต้นทุน (น้ำมัน 32/ค่าเสื่อม) → อยู่ใน drawer
   var pBox=document.getElementById('params');
   params.forEach(function(p){var l=document.createElement('label');l.innerHTML=p.label+'<input type="number" step="any" data-p="'+p.k+'" value="'+P[p.k]+'">';pBox.appendChild(l);});
   pBox.oninput=function(e){var i=e.target.closest('input[data-p]');if(!i)return;P[i.dataset.p]=parseFloat(i.value)||0;renderLegs();render();updateBadge();};
@@ -611,7 +629,8 @@
     var timeWage=0;
     legs.forEach(function(l){
       var legHrs=l.dist<=0?0:((T.distMode==='central')?totalHrs/nLeg:(distTotal>0?totalHrs*(l.dist/distTotal):0));
-      var lw=Math.round(T.weight?(P.runRate*legHrs*2*l.pct/100):(P.runRate*legHrs));
+      // R.11: ค่าวิ่งขา = run × ชม.ขา × %หนัก/เบา ÷ ค่ากลาง((heavy+light)/2=50) — เท่ากับ ×1.4/×0.6 (เลิก ×2)
+      var lw=Math.round(T.weight?(P.runRate*legHrs*l.pct/((P.heavyPct+P.lightPct)/2)):(P.runRate*legHrs));
       l.sum=lw; l.sumFull=P.runRate*legHrs; l.travelFull=l.sumFull; l.effPct=l.pct; l.driveMin=(l.realMin>0?l.realMin:Math.round(legHrs*60)); l.speed=legHrs>0?l.dist/legHrs:0;
       timeWage+=lw;
     });
@@ -629,12 +648,20 @@
     var hardship=(T.hardship&&tripHard)?P.hardshipFee:0;                   // BE
     var waitHrs=Number(s.waitHrs||0);
     var wait=T.wait?P.waitRate*waitHrs:0;                                  // BD ค่ารอ
-    var give=T.giveOn?P.givePerHr*totalHrs:0;                              // BI ให้เพิ่ม = give×BJ
-    // น้ำมัน (เกณฑ์ตามประเภทรถ + via_liters)
+    // 🆕 R.11 BZ: ถ่วง "ให้เพิ่ม" ตามสัดส่วนหนัก/เบา (special 60/40 ÷ ค่ากลาง 50) → หนักหมด 1.2 · เบาหมด 0.8
+    var bz=1;
+    if(T.special&&distTotal>0){
+      var wsum=legs.reduce(function(a,l){return a+l.dist*(l.weight==='heavy'?P.specialHeavy:(l.weight==='light'?P.specialLight:0));},0);
+      var b=wsum/distTotal/P.specialAvg; if(b>0)bz=b;
+    }
+    var give=T.giveOn?P.givePerHr*totalHrs*bz:0;                           // BI ให้เพิ่ม = give×BJ×BZ
+    // น้ำมัน (เกณฑ์ตามประเภทรถ) — R.11 default = ตามระยะหนักเบา (ตาราง⑬)
     var benchL;
     if(T.fuelBench==='single')benchL=distTotal/(single||1);
     else if(T.fuelBench==='tier')benchL=stairLiters(distTotal,veh);
-    else benchL=distHeavy/(fw.heavy||1)+distLight/(fw.light||1);
+    else if(T.fuelBench==='hlzone')benchL=bench13Zone(distHeavy,distLight,veh);   // 🆕 ⑬ ตามระยะหนักเบา
+    else if(T.fuelBench==='hlrate')benchL=bench13Rate(distHeavy,distLight,veh);   // 🆕 ⑬ หนักเบา-เรทช่วง
+    else benchL=distHeavy/(fw.heavy||1)+distLight/(fw.light||1);           // weight = หนัก/เบา ค่าเดียว
     var viaL=T.via?(hooklift+give)/(P.fuelRate||1):0;                      // AM
     var benchKmpl=benchL>0?fuelDist/benchL:single;
     var fuelAdj=T.fuelPenalty?(benchL+viaL-actualL)*P.fuelRate:0;          // AN
