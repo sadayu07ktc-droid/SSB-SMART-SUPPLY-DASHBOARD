@@ -294,7 +294,8 @@
   function toMin(t){var p=String(t||'0:0').split(':');return (+p[0])*60+(+p[1]||0);}
   function durMin(a,b){var m=toMin(b)-toMin(a);if(m<0)m+=1440;return m;}
   function hm(m){var h=Math.floor(m/60),n=Math.round(m%60);return h?(h+' ชม.'+(n?' '+n+' น.':'')):(n+' น.');}
-  function src(){return T.mode==='order'?ORDERS[T.ordIdx]:M;}
+  var _EMPTY_SRC={id:'',driver:'—',plate:'—',brand:'',model:'360',dest:'—',date:'',distActual:0,distCentral:0,heavyKm:0,lightKm:0,yardKm:0,yardHomeKm:0,litersFilled:0,qty:0,extraCost:0,nights:0,lifts:0};
+  function src(){return T.mode==='order'?(ORDERS[T.ordIdx]||_EMPTY_SRC):M;}
   function syncBench(){var bi=document.querySelector('input[data-p="benchmark"]');if(bi)bi.value=P.benchmark;}
 
   // ── โหมด ──
@@ -313,10 +314,23 @@
     var s=src();picker.innerHTML='';body.innerHTML='';
     if(T.mode==='order'){
       head.textContent='🗂️ เลือกออเดอร์ ('+(window._ordersReal?(ORDERS.length+' รายการ'):(window._ordersDenied?('ตัวอย่าง '+ORDERS.length+' รายการ · uid ไม่ใช่แอดมิน'):('ตัวอย่าง '+ORDERS.length+' รายการ · ยังไม่ได้ดึงจริง')))+')';
-      var h='<select class="sel" id="ordSel">';
-      ORDERS.forEach(function(o,i){h+='<option value="'+i+'"'+(i===T.ordIdx?' selected':'')+'>'+o.id+' · '+o.driver+'</option>';});
+      var rng=window._ordRange||'',chips='';
+      if(window._wageUid){   // มี uid = ดึงจริงได้ → โชว์ปุ่มเลือกช่วง
+        chips='<div class="seg rangeseg" style="display:flex;margin-bottom:9px">'+
+          [['','ล่าสุด 60'],['week','สัปดาห์นี้'],['month','เดือนนี้']].map(function(c){
+            return '<button type="button" class="'+(rng===c[0]?'on':'')+'" data-rng="'+c[0]+'">'+c[1]+'</button>';
+          }).join('')+'</div>';
+      }
+      var h=chips+'<select class="sel" id="ordSel">';
+      if(!ORDERS.length){h+='<option>— ไม่มีออเดอร์ในช่วงนี้ —</option>';}
+      ORDERS.forEach(function(o,i){h+='<option value="'+i+'"'+(i===T.ordIdx?' selected':'')+'>'+o.id+' · '+o.driver+(o.date?' · '+o.date:'')+'</option>';});
       picker.innerHTML=h+'</select>';
-      document.getElementById('ordSel').onchange=function(e){T.ordIdx=+e.target.value;P.benchmark=FUEL_BENCH[src().model]||3.2;syncBench();buildSource();render();};
+      picker.querySelectorAll('.rangeseg button').forEach(function(b){b.onclick=function(){
+        if((window._ordRange||'')===b.dataset.rng)return;
+        window._ordRange=b.dataset.rng;
+        if(window._wageUid){head.textContent='🗂️ กำลังดึง…';_pullOrders(window._wageUid);}else buildSource();
+      };});
+      document.getElementById('ordSel').onchange=function(e){if(!ORDERS.length)return;T.ordIdx=+e.target.value;P.benchmark=FUEL_BENCH[src().model]||3.2;syncBench();buildSource();render();};
       body.innerHTML=tile('คนขับ',s.driver)+tile('ทะเบียน',s.plate)+tile('ยี่ห้อ/รุ่น',s.brand+' '+s.model)+tile('ปลายทาง',s.dest)+
         tile('ระยะจริง',Number(s.distActual||0).toFixed(1),'กม.')+tile('ขาไป/ขากลับ',s.lightKm.toFixed(1)+'/'+s.heavyKm.toFixed(1),'กม.')+
         tile('น้ำมันเติม',s.litersFilled.toFixed(1),'ล.')+tile('อัตราจริง',(s.distActual/s.litersFilled).toFixed(2),'กม./ล.')+
@@ -1095,17 +1109,26 @@
 
   // ── ดึงออเดอร์จริงมาแทนตัวอย่าง (โหมด "ดึงจากออเดอร์") — ต้อง login LINE (แอดมิน) ──
   // ยิง getWageOrders พร้อม timeout — GAS cold-start จะได้ไม่ค้าง/หลุดเงียบ
+  // ── ช่วงวัน (กรองออเดอร์) — '' = ล่าสุด 60 · 'week' = สัปดาห์นี้ (จ.–วันนี้) · 'month' = เดือนนี้ (1–วันนี้) ──
+  function _fmtLocal(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  function _rangeQS(){
+    var mode=window._ordRange||'',now=new Date(),from;
+    if(mode==='week'){var dow=(now.getDay()+6)%7;from=new Date(now);from.setDate(now.getDate()-dow);}   // จันทร์=ต้นสัปดาห์
+    else if(mode==='month'){from=new Date(now.getFullYear(),now.getMonth(),1);}
+    else return '';
+    return '&from='+_fmtLocal(from)+'&to='+_fmtLocal(now);
+  }
   function _wageOrdersFetch(uid){
-    var url=GAS_URL+'?action=getWageOrders&userId='+encodeURIComponent(uid)+'&limit=60';
+    var url=GAS_URL+'?action=getWageOrders&userId='+encodeURIComponent(uid)+'&limit=60'+_rangeQS();
     if(typeof AbortController==='undefined')return fetch(url).then(function(r){return r.json();});
     var c=new AbortController(),t=setTimeout(function(){c.abort();},25000);
     return fetch(url,{signal:c.signal}).then(function(r){return r.json();}).finally(function(){clearTimeout(t);});
   }
   function _pullOrders(uid){
-    if(!uid)return;
+    if(!uid)return; window._wageUid=uid;
     function attempt(n){
       return _wageOrdersFetch(uid).then(function(d){
-        if(d&&d.ok&&d.orders&&d.orders.length){
+        if(d&&d.ok&&d.orders){   // ตอบสำเร็จ (รวมกรณีช่วงนี้ว่าง = array ว่าง) → ไม่ retry
           ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'ISUZU',model:String(o.model||'360'),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.distActual||0,heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0};});
           window._ordersReal=true; T.ordIdx=0;
           if(T.mode==='order'){buildSource();renderLegs();render();}
