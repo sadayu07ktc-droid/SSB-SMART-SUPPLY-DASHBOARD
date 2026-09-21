@@ -312,7 +312,7 @@
   function buildSource(){
     var s=src();picker.innerHTML='';body.innerHTML='';
     if(T.mode==='order'){
-      head.textContent='🗂️ เลือกออเดอร์ ('+(window._ordersReal?(ORDERS.length+' รายการ'):('ตัวอย่าง '+ORDERS.length+' รายการ · ยังไม่ได้ดึงจริง'))+')';
+      head.textContent='🗂️ เลือกออเดอร์ ('+(window._ordersReal?(ORDERS.length+' รายการ'):(window._ordersDenied?('ตัวอย่าง '+ORDERS.length+' รายการ · uid ไม่ใช่แอดมิน'):('ตัวอย่าง '+ORDERS.length+' รายการ · ยังไม่ได้ดึงจริง')))+')';
       var h='<select class="sel" id="ordSel">';
       ORDERS.forEach(function(o,i){h+='<option value="'+i+'"'+(i===T.ordIdx?' selected':'')+'>'+o.id+' · '+o.driver+'</option>';});
       picker.innerHTML=h+'</select>';
@@ -1101,29 +1101,33 @@
     var c=new AbortController(),t=setTimeout(function(){c.abort();},25000);
     return fetch(url,{signal:c.signal}).then(function(r){return r.json();}).finally(function(){clearTimeout(t);});
   }
+  function _pullOrders(uid){
+    if(!uid)return;
+    function attempt(n){
+      return _wageOrdersFetch(uid).then(function(d){
+        if(d&&d.ok&&d.orders&&d.orders.length){
+          ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'ISUZU',model:String(o.model||'360'),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.distActual||0,heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0};});
+          window._ordersReal=true; T.ordIdx=0;
+          if(T.mode==='order'){buildSource();renderLegs();render();}
+          return;
+        }
+        if(d&&d.denied){ window._ordersDenied=true; if(T.mode==='order')buildSource(); return; }   // ไม่ใช่แอดมิน
+        if(n<3) return new Promise(function(res){setTimeout(res,700*n);}).then(function(){return attempt(n+1);});
+      }).catch(function(e){
+        console.warn('getWageOrders retry',n,e);
+        if(n<3) return new Promise(function(res){setTimeout(res,700*n);}).then(function(){return attempt(n+1);});
+      });
+    }
+    return attempt(1);
+  }
   function loadRealOrders(){
+    // 🆕 อ่าน uid จาก URL ก่อน (เปิดบน desktop/เบราว์เซอร์) — ไม่งั้น fallback LIFF login (ในไลน์)
+    var urlUid=''; try{ urlUid=new URLSearchParams(location.search).get('uid')||''; }catch(e){}
+    if(urlUid){ _pullOrders(urlUid); return; }
     if(typeof liff==='undefined')return;
     liff.init({liffId:LIFF_ID}).then(function(){
       if(!liff.isLoggedIn())return;   // ไม่บังคับ login — ใช้ตัวอย่างไปก่อน
-      return liff.getProfile().then(function(p){
-        var uid=p.userId||'';
-        function attempt(n){
-          return _wageOrdersFetch(uid).then(function(d){
-            if(d&&d.ok&&d.orders&&d.orders.length){
-              ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'ISUZU',model:String(o.model||'360'),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.distActual||0,heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0};});
-              window._ordersReal=true; T.ordIdx=0;
-              if(T.mode==='order'){buildSource();renderLegs();render();}
-              return;
-            }
-            if(d&&d.denied)return;   // ไม่ใช่แอดมิน — ใช้ตัวอย่าง
-            if(n<3) return new Promise(function(res){setTimeout(res,700*n);}).then(function(){return attempt(n+1);});
-          }).catch(function(e){
-            console.warn('getWageOrders retry',n,e);
-            if(n<3) return new Promise(function(res){setTimeout(res,700*n);}).then(function(){return attempt(n+1);});
-          });
-        }
-        return attempt(1);
-      });
+      return liff.getProfile().then(function(p){ return _pullOrders(p.userId||''); });
     }).catch(function(e){ console.warn('loadRealOrders',e); });
   }
   loadRealOrders();
