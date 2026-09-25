@@ -347,17 +347,18 @@ function renderDp(){
   const box=$('dpCard'); if(!box)return;
   let h='<div class="card"><div class="ch">⏱️ เวลารอลงของ ตาม DP Type</div>'
     +'<div class="note">ค่ารอ = <b>ชม.รอ × เรทค่ารอลงของ</b> ('+dpRate()+' บ./ชม. จากค่าตั้งกลางด้านบน) · เลือก DP Type ให้แต่ละสถานีที่หน้า <b>📍 ค่ากลาง</b> · สถานีที่ไม่มี DP Type = ไม่คิดค่ารอ<br>'
+    +'"จำนวนสถานีที่เลือกใช้" = สถานีในหน้า 📍 ค่ากลาง ที่เลือก DP Type นั้น (ยังไม่มี = ยังไม่มีออเดอร์ไหนคิดค่ารอด้วย DP นี้)<br>'
     +'ตารางนี้บันทึกแยกด้วยปุ่มในการ์ด · เปลี่ยนชื่อ DP Type แล้วสถานีที่ผูกไว้เปลี่ยนตาม</div>';
   if(DPW.err)h+='<div class="msg" style="padding:12px">โหลดไม่ได้ — '+esc(DPW.err)+' <button type="button" class="tbtn" onclick="loadDp()">↻ ลองใหม่</button></div>';
   else if(!DPW.loaded)h+='<div class="msg" style="padding:12px">กำลังโหลดเวลารอ…</div>';
   else{
     const rate=dpRate();
-    h+='<table><thead><tr><th>DP Type</th><th>ชม.รอ</th><th>ค่ารอ (บ.)</th><th>ใช้กับสถานี</th><th></th></tr></thead><tbody>';
+    h+='<table><thead><tr><th>DP Type</th><th>ชม.รอ</th><th>ค่ารอ (บ.)</th><th title="จำนวนสถานีในหน้า 📍 ค่ากลาง ที่เลือก DP Type นี้">จำนวนสถานีที่เลือกใช้</th><th></th></tr></thead><tbody>';
     DPW.rows.forEach((r,i)=>{
       h+='<tr><td><input style="width:100%;text-align:left" value="'+esc(r.dp_type)+'" placeholder="เช่น แม็คโคร" oninput="DPW.rows['+i+'].dp_type=this.value"></td>'
         +'<td><input type="number" step="0.25" min="0" value="'+r.wait_hours+'" oninput="DPW.rows['+i+'].wait_hours=this.value;this.closest(\'tr\').children[2].textContent=((parseFloat(this.value)||0)*'+rate+').toLocaleString(\'th-TH\')"></td>'
         +'<td>'+((parseFloat(r.wait_hours)||0)*rate).toLocaleString('th-TH')+'</td>'
-        +'<td>'+(r.id?(r.stations?r.stations+' แห่ง':'—'):'<span class="tag">ใหม่</span>')+'</td>'
+        +'<td>'+(r.id?(r.stations?r.stations+' แห่ง':'<span style="color:var(--txt2)">ยังไม่มี</span>'):'<span class="tag">ใหม่</span>')+'</td>'
         +'<td>'+(r.confirmDel
           ?'<button type="button" onclick="dpDel('+i+',true)" style="border:0;background:var(--danger);color:#fff;border-radius:7px;font:inherit;font-size:11.5px;padding:4px 8px;cursor:pointer">ยืนยันลบ</button>'
           :'<button type="button" onclick="dpDel('+i+')" title="ลบ" style="border:0;background:transparent;color:var(--danger);font-size:15px;cursor:pointer;padding:2px 6px">✕</button>')+'</td></tr>';
