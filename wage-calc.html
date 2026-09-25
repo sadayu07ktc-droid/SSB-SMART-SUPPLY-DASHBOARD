@@ -277,9 +277,11 @@
     function zi(d){for(var i=0;i<4;i++){if(d<=ZONE13_HI[i])return i;}return 3;}
     var L=0; if(distH>0&&Z.h[zi(distH)]>0)L+=distH/Z.h[zi(distH)]; if(distL>0&&Z.l[zi(distL)]>0)L+=distL/Z.l[zi(distL)]; return L;}
   // 🆕 หนักเบา-เกลี่ยในช่วง (คุณน้องเพิ่ม 2026-09-25 · ไม่มีใน Excel) — กม./ล. ไล่เส้นตรงจากเรทช่วงก่อน (ที่ขอบบนช่วงก่อน) → เรทช่วงนี้ (ที่เพดาน)
-  //    ช่วงแรก/ช่วงสุดท้าย (ไม่จำกัด) = เรทคงที่ · ตรง computeTripWage _bench13Blend_
-  function blendKmpl(d,kk){var i=0;while(i<3&&d>ZONE13_HI[i])i++;if(i===0||i===3)return kk[i];
-    var a=ZONE13_HI[i-1],t=(d-a)/((ZONE13_HI[i]-a)||1);t=Math.max(0,Math.min(1,t));return kk[i-1]+t*(kk[i]-kk[i-1]);}
+  //    ช่วงแรก = เรทคงที่ · ช่วงสุดท้าย (ไม่จำกัด) = เกลี่ยจนเต็มเรทที่ BLEND_LAST_TO กม. แล้วคงที่ · ตรง computeTripWage _bench13Blend_
+  var BLEND_LAST_TO=600;
+  function blendKmpl(d,kk){var i=0;while(i<3&&d>ZONE13_HI[i])i++;if(i===0)return kk[i];
+    var a=ZONE13_HI[i-1],top=(i===3)?BLEND_LAST_TO:ZONE13_HI[i];if(!(top>a))return kk[i];
+    var t=(d-a)/((top-a)||1);t=Math.max(0,Math.min(1,t));return kk[i-1]+t*(kk[i]-kk[i-1]);}
   function bench13Blend(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
     var L=0,rh=distH>0?blendKmpl(distH,Z.h):0,rl=distL>0?blendKmpl(distL,Z.l):0;if(rh>0)L+=distH/rh;if(rl>0)L+=distL/rl;return L;}
   function tierIdx(d){for(var i=0;i<SPEED_TIERS.length;i++){if(d<=SPEED_TIERS[i].max)return i;}return SPEED_TIERS.length-1;}
@@ -1063,6 +1065,7 @@
     P.tarpFee=_n(p.tarp_fee,P.tarpFee); P.hookliftFee=_n(p.hooklift_fee,P.hookliftFee);
     P.waitRate=_n(p.wait_rate_per_hr,P.waitRate); P.hardshipFee=_n(p.hardship_fee,P.hardshipFee);
     P.givePerHr=Math.round(_n(p.give_per_hr,P.givePerHr)*100)/100;
+    BLEND_LAST_TO=_n(p.fuel_zone_blend_to,BLEND_LAST_TO);   // ⑬ เกลี่ยในช่วง: เพดานช่วงสุดท้าย
     // ── toggle R.5 ──
     T.weight=_n(tg.weight_on,1)!==0;
     T.speedCalc=(function(v){return v===2?'interp':(v===1?'flat':'stair');})(_n(tg.time_mode,2));  // R.5 = interp
