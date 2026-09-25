@@ -170,18 +170,35 @@ function closeOv(id){$(id).classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')['ovAsk','ovPick','ovEdit'].forEach(id=>{if($(id).classList.contains('on')){closeOv(id);}});});
 function codeName(c){const x=(DATA.codes||[]).find(k=>k.code===c);return x?x.name:'';}
 
+/* เรียก GAS แบบทนทาน — GAS บางครั้งสะดุดแล้วส่งหน้า error เป็น HTML แทน JSON
+ * tries>1 = ลองใหม่อัตโนมัติ (ใช้กับการอ่านเท่านั้น · การบันทึกลองครั้งเดียว กันบันทึกซ้ำ) */
+async function gasJSON(url,opt,tries,onRetry){
+  let last;
+  for(let n=1;n<=tries;n++){
+    try{
+      const c=new AbortController(), t=setTimeout(()=>c.abort(),45000);
+      const r=await fetch(url,Object.assign({signal:c.signal},opt||{}));
+      const txt=await r.text(); clearTimeout(t);
+      try{return JSON.parse(txt);}catch(e){
+        const m=txt.match(/<title>([^<]*)<\/title>/i);
+        last=new Error('หลังบ้านตอบผิดรูปแบบ'+(m&&m[1].trim()?' ('+m[1].trim()+')':''));
+      }
+    }catch(e){last=(e&&e.name==='AbortError')?new Error('หลังบ้านไม่ตอบภายใน 45 วินาที'):e;}
+    if(n<tries){if(onRetry)onRetry(n+1);await new Promise(r=>setTimeout(r,1500*n));}
+  }
+  throw last;
+}
 async function api(body){
-  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},body))});
-  return r.json();
+  return gasJSON(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},body))},1);
 }
 async function load(){
   try{
-    const r=await fetch(GAS_URL+'?action=getCentralDistances&userId='+encodeURIComponent(MY_UID));
-    const d=await r.json();
+    const d=await gasJSON(GAS_URL+'?action=getCentralDistances&userId='+encodeURIComponent(MY_UID),null,3,
+      n=>{if(!DATA)$('body').innerHTML='<div class="ldr"><div class="ring"></div>หลังบ้านตอบช้า กำลังลองใหม่ (ครั้งที่ '+n+'/3)</div>';});
     if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
     if(!d.ok){$('body').innerHTML='<div class="msg">โหลดไม่ได้: '+esc(d.error||'ผิดพลาด')+' <button class="btn sm" onclick="load()">↻ ลองใหม่</button></div>';return;}
     DATA=d; render();
-  }catch(e){$('body').innerHTML='<div class="msg">โหลดไม่ได้ ('+esc(e)+') <button class="btn sm" onclick="load()">↻ ลองใหม่</button></div>';}
+  }catch(e){$('body').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e&&e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="$(\'body\').innerHTML=\'<div class=ldr><div class=ring></div>กำลังโหลดค่ากลาง</div>\';load()">↻ ลองใหม่</button></div>';}
 }
 
 function render(){
