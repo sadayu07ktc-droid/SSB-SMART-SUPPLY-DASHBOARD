@@ -128,11 +128,14 @@ const HELP={
     +'⚠️ "GPS จริง" <b>ยังไม่ได้ทำในระบบคิดค่าแรง</b> — เลือกแล้วไม่มีผล ระบบใช้ตารางเสมอ',
   dist_source:()=>'<ul><li><b>จริง</b> — ระยะจากเลขไมล์ที่คนขับกรอกแต่ละจุด</li>'
     +'<li><b>ค่ากลาง</b> — ระยะเที่ยวเดียวจากหน้า 📍 ค่ากลาง × 2 (ไป-กลับ) แล้วแบ่งขาหนัก/เบาตามสัดส่วนเลขไมล์จริง · หาค่ากลางไม่เจอ = ใช้ระยะจริง · ตัวอย่าง ลานคลองหาด ค่ากลาง 136.25 → คิด <b>272.5 กม.</b> (วิ่งจริง 273)</li></ul>',
-  fuel_bench:()=>{const z=zoneOf('พ่วง'),f=fwOf('พ่วง'),r2=v=>(Math.round(v*10)/10).toLocaleString('th-TH');
-    const zh=z.length?(150/(z[0].kmpl_heavy||1)+29/(z[1].kmpl_heavy||1)):0, rh=z.length?180/(z[1].kmpl_heavy||1):0;
-    return '<b>ลิตรตามเกณฑ์</b> (ตัวอย่าง รถพ่วง วิ่งหนัก 180 กม. · เบา 180 กม.) → ใช้เทียบกับลิตรที่เติมจริง = เพิ่ม/หักน้ำมัน<ul>'
-    +'<li><b>ตามระยะหนักเบา</b> (R.11 ตาราง⑬) — แยกระยะหนัก/เบา แล้วกระจายแต่ละก้อนลง 4 ช่วงแบบขั้นบันได แต่ละส่วน ÷ กม./ล. ของช่วงนั้น · หนัก 180 = 150÷'+(z[0]||{}).kmpl_heavy+' + 29÷'+(z[1]||{}).kmpl_heavy+' = <b>'+r2(zh)+' ล.</b> (เบาคิดแบบเดียวกัน)</li>'
-    +'<li><b>หนักเบา-เรทช่วง</b> (ตาราง⑬) — ระยะหนักทั้งก้อนตกช่วงไหน ใช้ กม./ล. ช่วงนั้นทั้งก้อน · หนัก 180 ตกช่วง 151–200 → 180÷'+(z[1]||{}).kmpl_heavy+' = <b>'+r2(rh)+' ล.</b></li>'
+  fuel_bench:()=>{const z=zoneOf('พ่วง'),f=fwOf('พ่วง'),r2=v=>(Math.round(v*10)/10).toLocaleString('th-TH'),D=180;
+    // คิดตัวอย่างจากขอบช่วง/กม./ล. ที่ตั้งอยู่จริง (สูตรเดียวกับระบบ: ส่วนในช่วง = min(ระยะ, ถึง) − ตั้งแต่)
+    const parts=z.map(x=>({p:Math.min(D,+x.to_km)-(+x.from_km),k:+x.kmpl_heavy})).filter(x=>x.p>0&&x.k>0);
+    const zh=parts.reduce((a,x)=>a+x.p/x.k,0), hit=z.find(x=>D<=+x.to_km)||z[z.length-1]||{}, rh=hit.kmpl_heavy?D/hit.kmpl_heavy:0;
+    const hitLbl=(+hit.to_km>=9999)?(hit.from_km+' ขึ้นไป'):(hit.from_km+'–'+hit.to_km);
+    return '<b>ลิตรตามเกณฑ์</b> (ตัวอย่าง รถพ่วง วิ่งหนัก '+D+' กม. · เบา '+D+' กม.) → ใช้เทียบกับลิตรที่เติมจริง = เพิ่ม/หักน้ำมัน<ul>'
+    +'<li><b>ตามระยะหนักเบา</b> (R.11 ตาราง⑬) — แยกระยะหนัก/เบา แล้วกระจายแต่ละก้อนลงช่วงแบบขั้นบันได แต่ละส่วน ÷ กม./ล. ของช่วงนั้น · หนัก '+D+' = '+(parts.map(x=>r2(x.p)+'÷'+x.k).join(' + ')||'—')+' = <b>'+r2(zh)+' ล.</b> (เบาคิดแบบเดียวกัน)</li>'
+    +'<li><b>หนักเบา-เรทช่วง</b> (ตาราง⑬) — ระยะหนักทั้งก้อนตกช่วงไหน ใช้ กม./ล. ช่วงนั้นทั้งก้อน · หนัก '+D+' ตกช่วง '+hitLbl+' → '+D+'÷'+(hit.kmpl_heavy||0)+' = <b>'+r2(rh)+' ล.</b></li>'
     +'<li><b>ค่าเดียว</b> — ระยะรวม ÷ กม./ล.ค่าเดียวของประเภทรถ · 360÷'+(f.kmpl_single||0)+' = <b>'+r2(360/(f.kmpl_single||1))+' ล.</b></li>'
     +'<li><b>หนัก-เบา</b> — ระยะหนัก ÷ กม./ล.หนัก + ระยะเบา ÷ กม./ล.เบา (ค่าเดียวทุกระยะ) · 180÷'+(f.kmpl_heavy||0)+' + 180÷'+(f.kmpl_light||0)+' = <b>'+r2(180/(f.kmpl_heavy||1)+180/(f.kmpl_light||1))+' ล.</b></li>'
     +'<li><b>ตามช่วงระยะ</b> — ระยะรวมหั่นตาม "ตารางช่วงระยะ" แต่ละท่อน ÷ กม./ล. ช่วงนั้น (ไม่แยกหนัก/เบา)</li></ul>';},
@@ -269,9 +272,13 @@ function render(){
   // ②b R.11 ตาราง⑬ — เกณฑ์น้ำมันหนัก/เบา แยก 4 ช่วงระยะ (rate_fuel_zone · fuel_bench 3/4)
   const zAll=(d.fuelZones||[]), zUse=(fb===3||fb===4);
   const zSeqs=[...new Set(zAll.map(z=>z.seq))].sort((a,b)=>a-b);
-  const zLbl=s=>{const z=zAll.find(x=>x.seq===s)||{};return (+z.to_km>=9999)?(z.from_km+'+'):(z.from_km+'–'+z.to_km);};
-  h+=`<div class="card"><div class="ch">📐 เกณฑ์น้ำมันหนัก/เบา แยกช่วงระยะ (ตาราง⑬) ${useTag(zUse)}</div><div class="note">ใช้เมื่อเกณฑ์น้ำมัน = <b>ตามระยะหนักเบา</b> หรือ <b>หนักเบา-เรทช่วง</b> · ช่วงระยะนับจากระยะหนัก (หรือเบา) รวมของเที่ยว · ค่าเริ่มต้นตาม Excel R.11 · แก้ได้เฉพาะ กม./ล. (ขอบช่วงคงที่)</div>`;
-  h+='<div style="overflow-x:auto"><table><thead><tr><th>ประเภทรถ</th><th></th>'+zSeqs.map(s=>`<th>${zLbl(s)} กม.</th>`).join('')+'</tr></thead><tbody>';
+  // หัวคอลัมน์ = ขอบช่วง (ใช้ร่วมทุกประเภทรถ) · แก้ "ถึง กม." → ช่วงถัดไปเริ่มที่ +1 อัตโนมัติ (แบบ Excel 0-150 / 151-200) · ช่วงสุดท้าย = ขึ้นไป
+  const zB=s=>zAll.find(x=>x.seq===s)||{};
+  const zHead=(s,i)=>{const z=zB(s);return i<zSeqs.length-1
+    ?`<th style="white-space:nowrap">ตั้งแต่ ${nv(z.from_km)}<br>ถึง <input type="number" step="1" min="1" data-zb="${s}" value="${nv(z.to_km)}" onchange="setZoneTo(${s},this.value)" aria-label="ช่วงที่ ${i+1} ถึง กม." style="width:70px"> กม.</th>`
+    :`<th style="white-space:nowrap">${nv(z.from_km)} กม.<br>ขึ้นไป</th>`;};
+  h+=`<div class="card"><div class="ch">📐 เกณฑ์น้ำมันหนัก/เบา แยกช่วงระยะ (ตาราง⑬) ${useTag(zUse)}</div><div class="note">ใช้เมื่อเกณฑ์น้ำมัน = <b>ตามระยะหนักเบา</b> หรือ <b>หนักเบา-เรทช่วง</b> · ช่วงระยะนับจากระยะหนัก (หรือเบา) รวมของเที่ยว · ค่าเริ่มต้นตาม Excel R.11<br>แก้ขอบช่วงที่หัวตาราง ("ถึง กม.") — ใช้ร่วมทุกประเภทรถ ช่วงถัดไปเริ่มที่ +1 ให้เอง · ช่วงสุดท้ายไม่จำกัด</div>`;
+  h+='<div style="overflow-x:auto"><table><thead><tr><th>ประเภทรถ</th><th></th>'+zSeqs.map(zHead).join('')+'</tr></thead><tbody>';
   VTYPES.forEach(([t])=>{
     [['kmpl_heavy','หนัก'],['kmpl_light','เบา']].forEach(([k,lbl],ri)=>{
       h+='<tr>'+(ri===0?`<td rowspan="2">${t}</td>`:'')+`<td>${lbl}</td>`
@@ -519,6 +526,19 @@ function syncAll(){
 }
 function addTier(m){syncAll();const sq=DATA.speedTier.filter(t=>t.model===m).map(t=>+t.seq);DATA.speedTier.push({model:m,seq:(sq.length?Math.max(...sq):0)+1,max_km:null,speed_kmph:null,kmpl_trailer:null,kmpl_single:null,kmpl_6wheel:null,kmpl_4wheel:null});render();}
 function delTier(m,seq){syncAll();DATA.speedTier=DATA.speedTier.filter(t=>!(t.model===m&&String(t.seq)===String(seq)));render();}
+// แก้ขอบช่วงตาราง⑬: ช่วง seq สิ้นสุดที่ val → ช่วงถัดไปเริ่ม val+1 · ใช้กับทุกประเภทรถ
+function setZoneTo(seq,val){
+  syncAll();
+  const Z=DATA.fuelZones||[], seqs=[...new Set(Z.map(z=>z.seq))].sort((a,b)=>a-b), i=seqs.indexOf(seq);
+  const b=s=>Z.find(x=>x.seq===s)||{}, v=parseFloat(val);
+  const from=+b(seq).from_km, nextTo=i<seqs.length-1?+b(seqs[i+1]).to_km:Infinity;
+  if(!(v>from)||!(v+1<nextTo)){
+    toast('⚠️ ช่วงที่ '+(i+1)+' ต้องมากกว่า '+from+' และน้อยกว่า '+(nextTo===Infinity?'∞':(nextTo-1))+' กม.');
+    render(); return;
+  }
+  Z.forEach(z=>{ if(z.seq===seq)z.to_km=v; if(z.seq===seqs[i+1])z.from_km=v+1; });
+  render();
+}
 function addInterp(){syncAll();const a=DATA.speedInterp||[];a.push({seq:a.length+1,dist_km:null,avg_speed:null,note:''});DATA.speedInterp=a;render();}
 function delInterp(ix){syncAll();DATA.speedInterp.splice(ix,1);DATA.speedInterp.forEach((p,i)=>p.seq=i+1);render();}
 
