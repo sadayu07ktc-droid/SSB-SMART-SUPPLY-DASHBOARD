@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ค่ากลาง · SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<style>
+  :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--accent:#0d6efd;--warn:#b8860b;--danger:#c8352f;--radius:8px}
+  @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--accent:#4a9bff;--warn:#e0b84a;--danger:#e5645d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 40px}
+  .wrap{max-width:960px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 14px}
+  .back{border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer;flex:none}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;flex:none}
+  h1{font-size:17px;margin:0;font-weight:700}.sub{font-size:12px;color:var(--txt2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .ch{font-size:14px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+  .note{font-size:12px;color:var(--txt2);line-height:1.7}
+  .note b{color:var(--txt)}
+  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .stat{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .stat .k{font-size:11px;color:var(--txt2)}
+  .stat .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums}
+  .stat.bad .v{color:var(--danger)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px}
+  .search{flex:1 1 220px;padding:9px 12px;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--txt);font:inherit;font-size:14px}
+  .seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:var(--card)}
+  .seg button{border:0;padding:8px 12px;font:inherit;font-size:12.5px;cursor:pointer;background:transparent;color:var(--txt2)}
+  .seg button.on{background:var(--primary);color:#fff}
+  .btn{padding:9px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt);font-weight:500}
+  .btn.danger{background:var(--danger)}
+  .btn.sm{padding:5px 10px;font-size:12px;border-radius:8px}
+  .btn:disabled{opacity:.5;cursor:default}
+  .btn:focus-visible,.seg button:focus-visible,.row:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* รายการ */
+  .list{display:flex;flex-direction:column;gap:6px}
+  .row{display:grid;grid-template-columns:minmax(0,1fr) 92px 150px 22px;gap:10px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 12px;cursor:pointer}
+  .row:hover{border-color:var(--line2)}
+  .row.off{opacity:.55}
+  .st{font-size:14px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+  .meta{font-size:11.5px;color:var(--txt2);display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+  .km{text-align:right;font-variant-numeric:tabular-nums}
+  .km b{font-size:15px}
+  .km span{display:block;font-size:11px;color:var(--txt2)}
+  .code{font-size:12px}
+  .code b{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  .code .nm{display:block;color:var(--txt2);font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pill{display:inline-block;font-size:10.5px;padding:1px 8px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--txt2)}
+  .pill.warn{background:rgba(184,134,11,.14);border-color:transparent;color:var(--warn)}
+  .pill.ok{background:rgba(46,165,103,.14);border-color:transparent;color:var(--primary)}
+  .pill.bad{background:rgba(200,53,47,.12);border-color:transparent;color:var(--danger)}
+  .chev{color:var(--txt2);text-align:right}
+  .miss{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 12px;align-items:center;padding:9px 0;border-top:1px dashed var(--line)}
+  .miss:first-of-type{border-top:0}
+  .miss .t{font-size:13.5px;font-weight:600}
+  .miss .s{font-size:11.5px;color:var(--txt2)}
+  .miss .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+  .empty{text-align:center;color:var(--txt2);padding:22px;font-size:13px}
+  @media(max-width:620px){
+    .row{grid-template-columns:minmax(0,1fr) 84px;grid-template-areas:"s k" "c c"}
+    .row>.cA{grid-area:s}.row>.kA{grid-area:k}.row>.code{grid-area:c}.row>.chev{display:none}
+    .miss{grid-template-columns:1fr}.miss .acts{justify-content:flex-start}
+    .stats .v{font-size:17px}
+  }
+  /* โหลด */
+  .ldr{display:flex;flex-direction:column;align-items:center;gap:12px;padding:46px 16px;color:var(--txt2);font-size:13px}
+  .ring{width:40px;height:40px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--primary);animation:sp 1s linear infinite}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  @media(prefers-reduced-motion:reduce){.ring{animation-duration:3s}}
+  .msg{text-align:center;color:var(--txt2);padding:30px}
+  /* modal */
+  .ov{position:fixed;inset:0;background:rgba(10,20,30,.45);display:none;align-items:flex-end;justify-content:center;z-index:40;padding:0}
+  .ov.on{display:flex}
+  .dlg{background:var(--card);width:100%;max-width:520px;border-radius:16px 16px 0 0;padding:16px 16px 18px;max-height:92vh;overflow:auto;box-shadow:0 -6px 30px rgba(0,0,0,.2)}
+  @media(min-width:640px){.ov{align-items:center}.dlg{border-radius:16px}}
+  .dlg h2{font-size:16px;margin:0 0 12px}
+  .f{margin-bottom:11px}
+  .f label{font-size:12px;color:var(--txt2);display:block;margin-bottom:3px}
+  .f input,.f select,.f textarea{width:100%;padding:9px 10px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--card2);color:var(--txt);font:inherit;font-size:14px}
+  .f input::placeholder{color:var(--txt2);opacity:.7;font-size:13px}
+  .f .hint{font-size:11.5px;color:var(--txt2);margin-top:3px}
+  .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0 12px}
+  .chk input{width:18px;height:18px}
+  .dact{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
+  .dact .sp{margin-right:auto}
+  .warnbox{background:rgba(184,134,11,.12);color:var(--warn);border-radius:8px;padding:8px 10px;font-size:12px;margin-bottom:10px;display:none}
+  .pick{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:8px}
+  .pick div{padding:9px 11px;border-top:1px solid var(--line);cursor:pointer;font-size:13px;display:flex;justify-content:space-between;gap:10px}
+  .pick div:first-child{border-top:0}
+  .pick div:hover{background:var(--card2)}
+  .pick small{color:var(--txt2);white-space:nowrap}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:60;opacity:0;transition:.3s;pointer-events:none;max-width:92vw}
+  .toast.on{opacity:1}
+  .toast.err{background:var(--danger)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button class="back" onclick="goBack()" aria-label="ย้อนกลับ">←</button>
+    <div class="logo">📍</div>
+    <div><h1>ค่ากลาง (ระยะกลาง)</h1><div class="sub">ระยะเที่ยวเดียว SSB → สถานี · ใช้คิดค่าแรงแทนระยะจริง</div></div>
+  </div>
+  <div id="body"><div class="ldr"><div class="ring"></div>กำลังโหลดค่ากลาง</div></div>
+</div>
+
+<!-- แก้/เพิ่มสถานี -->
+<div class="ov" id="ovEdit" onclick="if(event.target===this)closeOv('ovEdit')">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="edTitle">
+    <h2 id="edTitle">แก้ค่ากลาง</h2>
+    <div class="warnbox" id="edWarn"></div>
+    <div class="f"><label for="edStation">ชื่อสถานี</label><input id="edStation" placeholder="เช่น ลาน คลองพลู"></div>
+    <div class="f2">
+      <div class="f"><label for="edKm">ระยะเที่ยวเดียว (กม.)</label><input id="edKm" type="number" step="0.01" min="0" inputmode="decimal" oninput="kmHint()"><div class="hint" id="edKmHint"></div></div>
+      <div class="f"><label for="edType">ประเภทงาน</label>
+        <select id="edType"><option value="">— ไม่ระบุ —</option><option>สวน</option><option>ลาน</option><option>Packing</option><option>Bulk</option><option>ส่งน้ำ</option><option>อื่นๆ</option></select></div>
+    </div>
+    <div class="f"><label for="edCode">รหัสสวน / ลาน ที่ใช้ค่ากลางนี้</label>
+      <select id="edCode" onchange="fillPickups();dupCheck()"></select>
+      <div class="hint">ออเดอร์ของรหัสนี้จะใช้ระยะนี้คิดค่าแรง · ว่าง = ยังไม่ผูก (ไม่มีออเดอร์ไหนใช้)</div></div>
+    <div class="f"><label for="edPickup">จุดรับ (ใส่เฉพาะสวนที่มีหลายจุดรับ ระยะต่างกัน)</label>
+      <input id="edPickup" list="pkList" placeholder="เว้นว่าง = ใช้กับทุกจุดรับของสวนนี้" oninput="dupCheck()"><datalist id="pkList"></datalist></div>
+    <div class="f"><label for="edNote">หมายเหตุ</label><input id="edNote" placeholder="ไม่บังคับ"></div>
+    <label class="chk"><input type="checkbox" id="edActive" checked> ใช้งาน (ปิด = ระบบไม่เอาไปคิด)</label>
+    <div class="dact">
+      <button class="btn ghost sp danger-text" id="edDel" onclick="askDelete()" style="color:var(--danger);border-color:var(--danger)">ลบ</button>
+      <button class="btn ghost" onclick="closeOv('ovEdit')">ยกเลิก</button>
+      <button class="btn" id="edSave" onclick="saveEdit()">บันทึก</button>
+    </div>
+  </div>
+</div>
+
+<!-- ผูกรหัสกับสถานีที่มีอยู่ -->
+<div class="ov" id="ovPick" onclick="if(event.target===this)closeOv('ovPick')">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="pkTitle">
+    <h2 id="pkTitle">เลือกสถานี</h2>
+    <div class="note" id="pkSub"></div>
+    <input class="search" id="pkQ" placeholder="ค้นชื่อสถานี…" oninput="renderPick()" style="width:100%;margin-top:8px">
+    <div class="pick" id="pkBox"></div>
+    <div class="dact"><button class="btn ghost" onclick="closeOv('ovPick')">ปิด</button></div>
+  </div>
+</div>
+
+<!-- ยืนยัน -->
+<div class="ov" id="ovAsk" onclick="if(event.target===this)closeOv('ovAsk')">
+  <div class="dlg" role="alertdialog" aria-modal="true" aria-labelledby="askT" style="max-width:400px">
+    <h2 id="askT"></h2><div class="note" id="askM"></div>
+    <div class="dact"><button class="btn ghost" onclick="closeOv('ovAsk')">ยกเลิก</button><button class="btn danger" id="askOk">ยืนยัน</button></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
+const LIFF_ID='2010274217-Ot7vGhri';
+let MY_UID='', DATA=null, FILTER='all', ED=null, PICK=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const nf=(n,d)=>{const x=parseFloat(n);return isNaN(x)?'–':x.toLocaleString('th-TH',{minimumFractionDigits:d||0,maximumFractionDigits:d==null?2:d});};
+const norm=s=>String(s||'').replace(/\s+/g,'').toLowerCase();
+function toast(t,err){const e=$('toast');e.textContent=t;e.className='toast on'+(err?' err':'');setTimeout(()=>e.className='toast',2600);}
+function goBack(){ if(history.length>1)history.back(); else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
+function openOv(id){$(id).classList.add('on');}
+function closeOv(id){$(id).classList.remove('on');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')['ovAsk','ovPick','ovEdit'].forEach(id=>{if($(id).classList.contains('on')){closeOv(id);}});});
+function codeName(c){const x=(DATA.codes||[]).find(k=>k.code===c);return x?x.name:'';}
+
+async function api(body){
+  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},body))});
+  return r.json();
+}
+async function load(){
+  try{
+    const r=await fetch(GAS_URL+'?action=getCentralDistances&userId='+encodeURIComponent(MY_UID));
+    const d=await r.json();
+    if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
+    if(!d.ok){$('body').innerHTML='<div class="msg">โหลดไม่ได้: '+esc(d.error||'ผิดพลาด')+' <button class="btn sm" onclick="load()">↻ ลองใหม่</button></div>';return;}
+    DATA=d; render();
+  }catch(e){$('body').innerHTML='<div class="msg">โหลดไม่ได้ ('+esc(e)+') <button class="btn sm" onclick="load()">↻ ลองใหม่</button></div>';}
+}
+
+function render(){
+  const rows=DATA.rows||[], miss=DATA.missing||[];
+  const linked=rows.filter(r=>r.garden_code).length;
+  const missOrders=miss.reduce((a,m)=>a+m.orders,0);
+  let h='<div class="card"><div class="ch">วิธีใช้ค่ากลาง</div><div class="note">'
+    +'ระยะในตาราง = <b>เที่ยวเดียว SSB → สถานี</b> (จุดออก SSB ทุกจุดนับเป็นจุดเดียว) · ตอนคิดค่าแรง ระบบใช้ <b>× 2 เป็นไป-กลับ</b><br>'
+    +'ระบบรู้ว่าออเดอร์ไหนใช้ระยะไหนจาก <b>รหัสสวน/ลาน</b> ที่ผูกไว้ · สวนที่มีหลายจุดรับระยะต่างกัน ให้ใส่ <b>จุดรับ</b> แยกแถว<br>'
+    +'ออเดอร์ที่หาค่ากลางไม่เจอ ระบบใช้<b>ระยะจริง</b>ไปก่อน · แก้แล้วมีผลกับค่าแรงเที่ยวที่คิดใหม่ (เที่ยวที่ล็อกแล้วไม่เปลี่ยน)</div>'
+    +'<div class="stats"><div class="stat"><div class="k">สถานีทั้งหมด</div><div class="v">'+rows.length+'</div></div>'
+    +'<div class="stat"><div class="k">ผูกรหัสแล้ว</div><div class="v">'+linked+'</div></div>'
+    +'<div class="stat'+(missOrders?' bad':'')+'"><div class="k">ออเดอร์ที่ยังไม่มีค่ากลาง (90 วัน)</div><div class="v">'+missOrders+'</div></div></div></div>';
+
+  if(miss.length){
+    h+='<div class="card"><div class="ch">⚠️ สวน/ลานที่ยังไม่มีค่ากลาง</div><div class="note" style="margin-bottom:4px">เรียงตามจำนวนออเดอร์ · ผูกกับสถานีที่มีอยู่ หรือเพิ่มสถานีใหม่</div>';
+    miss.forEach((m,i)=>{
+      h+='<div class="miss"><div><div class="t">'+esc(m.code)+' · '+esc(m.name||'')+'</div>'
+        +'<div class="s">จุดรับ: '+esc(m.pickup||'—')+' · <b>'+m.orders+'</b> ออเดอร์</div></div>'
+        +'<div class="acts"><button class="btn ghost sm" onclick="openPick('+i+')">ผูกกับสถานีที่มี</button>'
+        +'<button class="btn sm" onclick="openNewFromMiss('+i+')">+ เพิ่มสถานีใหม่</button></div></div>';
+    });
+    h+='</div>';
+  }
+
+  h+='<div class="tools"><input class="search" id="q" placeholder="🔎 ค้นสถานี / รหัส / ชื่อสวน…" oninput="renderList()" aria-label="ค้นหา">'
+    +'<div class="seg" role="group" aria-label="กรอง">'
+    +[['all','ทั้งหมด'],['linked','ผูกแล้ว'],['unlinked','ยังไม่ผูก']].map(f=>'<button type="button" data-f="'+f[0]+'" class="'+(FILTER===f[0]?'on':'')+'" onclick="setF(\''+f[0]+'\')">'+f[1]+'</button>').join('')
+    +'</div><button class="btn" onclick="openEdit(null)">+ เพิ่มสถานี</button></div>'
+    +'<div class="list" id="list"></div>';
+  $('body').innerHTML=h;
+  renderList();
+}
+function setF(f){FILTER=f;document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));renderList();}
+function renderList(){
+  const q=norm(($('q')||{}).value);
+  let rows=(DATA.rows||[]).slice();
+  if(FILTER==='linked')rows=rows.filter(r=>r.garden_code);
+  if(FILTER==='unlinked')rows=rows.filter(r=>!r.garden_code);
+  if(q)rows=rows.filter(r=>norm(r.station+' '+(r.garden_code||'')+' '+codeName(r.garden_code)+' '+(r.pickup_point||'')+' '+(r.job_type||'')).indexOf(q)>=0);
+  if(!rows.length){$('list').innerHTML='<div class="empty">ไม่พบสถานีที่ตรงเงื่อนไข</div>';return;}
+  $('list').innerHTML=rows.map(r=>{
+    const nm=codeName(r.garden_code);
+    return '<div class="row'+(r.active===false?' off':'')+'" tabindex="0" role="button" onclick="openEdit('+r.id+')" onkeydown="if(event.key===\'Enter\')openEdit('+r.id+')">'
+      +'<div class="cA"><div class="st">'+esc(r.station)+'</div><div class="meta">'
+        +(r.job_type?'<span class="pill">'+esc(r.job_type)+'</span>':'')
+        +(r.pickup_point?'<span class="pill warn">จุดรับ: '+esc(r.pickup_point)+'</span>':'')
+        +(r.active===false?'<span class="pill bad">ปิดใช้</span>':'')+'</div></div>'
+      +'<div class="km kA"><b>'+nf(r.km,2)+'</b> กม.<span>ไป-กลับ '+nf(r.km*2,1)+'</span></div>'
+      +'<div class="code">'+(r.garden_code?'<span class="pill ok">ผูกแล้ว</span> <b>'+esc(r.garden_code)+'</b><span class="nm">'+esc(nm)+'</span>':'<span class="pill">ยังไม่ผูกรหัส</span>')+'</div>'
+      +'<div class="chev">›</div></div>';
+  }).join('');
+}
+
+/* ── แก้/เพิ่ม ── */
+function fillCodes(sel){
+  const o=['<option value="">— ยังไม่ผูก —</option>'].concat((DATA.codes||[]).map(c=>'<option value="'+esc(c.code)+'">'+esc(c.code)+' · '+esc(c.name||'')+'</option>'));
+  $('edCode').innerHTML=o.join('');
+  if(sel&&!(DATA.codes||[]).some(c=>c.code===sel))$('edCode').insertAdjacentHTML('beforeend','<option value="'+esc(sel)+'">'+esc(sel)+'</option>');
+  $('edCode').value=sel||'';
+}
+function fillPickups(){
+  const c=(DATA.codes||[]).find(k=>k.code===$('edCode').value);
+  $('pkList').innerHTML=(c?c.pickups:[]).map(p=>'<option value="'+esc(p)+'">').join('');
+}
+function kmHint(){const k=parseFloat($('edKm').value);$('edKmHint').textContent=k>0?'คิดค่าแรงไป-กลับ '+nf(k*2,1)+' กม.':'';}
+function dupCheck(){
+  const code=$('edCode').value, pk=norm($('edPickup').value), id=ED&&ED.id;
+  const dup=code?(DATA.rows||[]).find(r=>r.id!==id&&r.active!==false&&r.garden_code===code&&norm(r.pickup_point)===pk):null;
+  const w=$('edWarn');
+  if(dup){w.style.display='block';w.textContent='⚠️ รหัส '+code+(pk?' จุดรับนี้':' (ทุกจุดรับ)')+' ผูกกับ "'+dup.station+'" อยู่แล้ว — ระบบจะใช้แถวที่เจอก่อน ควรแก้ให้เหลือแถวเดียว';}
+  else w.style.display='none';
+}
+function openEdit(id,preset){
+  ED=id?(DATA.rows||[]).find(r=>r.id===id):Object.assign({active:true},preset||{});
+  $('edTitle').textContent=id?'แก้ค่ากลาง':'เพิ่มสถานี';
+  $('edStation').value=ED.station||'';
+  $('edKm').value=ED.km!=null?ED.km:'';
+  $('edType').value=ED.job_type||'';
+  fillCodes(ED.garden_code||''); fillPickups();
+  $('edPickup').value=ED.pickup_point||'';
+  $('edNote').value=ED.note||'';
+  $('edActive').checked=ED.active!==false;
+  $('edDel').style.display=id?'':'none';
+  kmHint(); dupCheck(); openOv('ovEdit');
+  setTimeout(()=>$(id?'edKm':'edStation').focus(),50);
+}
+function openNewFromMiss(i){
+  const m=DATA.missing[i];
+  const c=m.code||'', t=/^LT-/i.test(c)?'ลาน':'สวน';
+  openEdit(null,{station:m.name||c,garden_code:c,pickup_point:m.pickup||'',job_type:t});
+}
+async function saveEdit(){
+  const row={id:ED&&ED.id||undefined,station:$('edStation').value.trim(),km:$('edKm').value,job_type:$('edType').value,
+    garden_code:$('edCode').value,pickup_point:$('edPickup').value.trim(),note:$('edNote').value.trim(),active:$('edActive').checked};
+  if(!row.station){toast('กรอกชื่อสถานี',true);$('edStation').focus();return;}
+  if(!(parseFloat(row.km)>0)){toast('กรอกระยะเที่ยวเดียว (มากกว่า 0)',true);$('edKm').focus();return;}
+  const b=$('edSave');b.disabled=true;b.textContent='กำลังบันทึก…';
+  try{
+    const d=await api({action:'saveCentralDistance',row});
+    if(d.ok){toast('✅ บันทึก '+row.station+' แล้ว');closeOv('ovEdit');await load();}
+    else toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'บันทึกไม่ได้')),true);
+  }catch(e){toast('❌ '+e,true);}
+  b.disabled=false;b.textContent='บันทึก';
+}
+function askDelete(){
+  $('askT').textContent='ลบ "'+ED.station+'" ?';
+  $('askM').textContent='ออเดอร์ที่ผูกกับสถานีนี้จะกลับไปใช้ระยะจริง · ถ้าแค่ไม่อยากให้ใช้ชั่วคราว ให้เอาติ๊ก "ใช้งาน" ออกแทน';
+  $('askOk').onclick=async()=>{
+    const b=$('askOk');b.disabled=true;
+    try{const d=await api({action:'deleteCentralDistance',id:ED.id});
+      if(d.ok){toast('🗑️ ลบแล้ว');closeOv('ovAsk');closeOv('ovEdit');await load();}
+      else toast('❌ '+(d.error||'ลบไม่ได้'),true);
+    }catch(e){toast('❌ '+e,true);}
+    b.disabled=false;
+  };
+  openOv('ovAsk');
+}
+
+/* ── ผูกรหัสที่ยังไม่มี เข้ากับสถานีที่มีอยู่ ── */
+function openPick(i){
+  PICK=DATA.missing[i];
+  $('pkTitle').textContent='ผูก '+PICK.code+' กับสถานี';
+  $('pkSub').innerHTML=esc(PICK.name||'')+(PICK.pickup?' · จุดรับ '+esc(PICK.pickup):'')+'<br>สถานีที่ยังไม่ผูกรหัสแสดงก่อน';
+  $('pkQ').value=''; renderPick(); openOv('ovPick'); setTimeout(()=>$('pkQ').focus(),50);
+}
+function renderPick(){
+  const q=norm($('pkQ').value);
+  const rows=(DATA.rows||[]).filter(r=>!q||norm(r.station).indexOf(q)>=0)
+    .sort((a,b)=>(a.garden_code?1:0)-(b.garden_code?1:0)||a.km-b.km);
+  $('pkBox').innerHTML=rows.map(r=>'<div onclick="pickRow('+r.id+')"><span>'+esc(r.station)+(r.garden_code?' <span class="pill">'+esc(r.garden_code)+'</span>':'')+'</span><small>'+nf(r.km,2)+' กม.</small></div>').join('')||'<div class="empty">ไม่พบ</div>';
+}
+function pickRow(id){
+  const r=(DATA.rows||[]).find(x=>x.id===id); if(!r)return;
+  closeOv('ovPick');
+  // สวนเดียวหลายจุดรับ → ใส่จุดรับให้เลย · ถ้ารหัสนี้มีจุดรับเดียว เว้นว่าง (ใช้ได้ทุกจุด)
+  const c=(DATA.codes||[]).find(k=>k.code===PICK.code);
+  const multi=c&&c.pickups.length>1;
+  const preset=Object.assign({},r,{garden_code:PICK.code,pickup_point:multi?(PICK.pickup||''):(r.pickup_point||'')});
+  if(r.garden_code&&r.garden_code!==PICK.code){
+    $('askT').textContent='"'+r.station+'" ผูกกับ '+r.garden_code+' อยู่แล้ว';
+    $('askM').textContent='ถ้าเปลี่ยนเป็น '+PICK.code+' ออเดอร์ของ '+r.garden_code+' จะไม่มีค่ากลาง · ถ้าเป็นสถานีเดียวกันจริง ให้เพิ่มแถวใหม่ระยะเท่ากันแทน';
+    $('askOk').onclick=()=>{closeOv('ovAsk');openEdit(r.id);ED=Object.assign({},ED);applyPreset(preset);};
+    openOv('ovAsk'); return;
+  }
+  openEdit(r.id); applyPreset(preset);
+}
+function applyPreset(p){fillCodes(p.garden_code);fillPickups();$('edPickup').value=p.pickup_point||'';dupCheck();}
+
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
+    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(!MY_UID){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
+    load();
+  }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+esc(e)+'</div>';}
+})();
+</script>
+</body>
+</html>
