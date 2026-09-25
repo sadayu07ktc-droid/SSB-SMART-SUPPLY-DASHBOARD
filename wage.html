@@ -57,6 +57,14 @@
   .sec{margin:12px 0 4px;font-size:12px;font-weight:700;color:var(--primary)}
   .big{display:flex;justify-content:space-between;align-items:baseline;border-top:1.5px solid var(--line);margin-top:10px;padding-top:10px}
   .big .amt{font-size:26px;font-weight:800;color:var(--primary)}
+  /* ตัวโหลดวงแหวน (ลิ้นชักรายละเอียดเที่ยว) */
+  .dload{display:flex;flex-direction:column;align-items:center;gap:12px;padding:48px 16px}
+  .dring{width:40px;height:40px;border-radius:50%;border:4px solid var(--line2);border-top-color:var(--primary);animation:dspin .8s linear infinite}
+  .dltx{font-size:13px;font-weight:600;color:var(--txt2)}
+  .dltx::after{content:'';display:inline-block;width:16px;text-align:left;animation:ddots 1.2s steps(4,end) infinite}
+  @keyframes dspin{to{transform:rotate(360deg)}}
+  @keyframes ddots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  @media(prefers-reduced-motion:reduce){.dring{animation-duration:2.4s}.dltx::after{animation:none;content:'…'}}
 </style>
 </head>
 <body>
@@ -233,25 +241,49 @@ function renderSummary(rows){
 }
 function pickDest(name){ ACTIVE_DEST=(ACTIVE_DEST===name)?'':name; applyView(); }
 
+/* ก้อนน้ำมัน: ลิตรเกณฑ์ (จากระยะที่ใช้คิด) + ลิตรค่าพิเศษ − ลิตรเติมจริง = ส่วนต่าง × เลทน้ำมัน */
+function fuelBlock(w,via,row){
+  const s=w.snapshot||{}, rate=+s.fuelRate||0, f1=v=>(+v||0).toLocaleString('th-TH',{minimumFractionDigits:1,maximumFractionDigits:1});
+  const bench=+w.benchLiters||0, vl=via?(+w.viaLiters||0):0, act=+w.litersActual||0, diff=bench+vl-act;
+  const BN={single:'ค่าเดียวต่อประเภทรถ',tier:'ตามช่วงระยะ',hlzone:'ตามระยะหนักเบา (ตาราง⑬)',hlrate:'หนักเบา-เรทช่วง (ตาราง⑬)',hlblend:'หนักเบา-เกลี่ยในช่วง (ตาราง⑬)',weight:'หนัก-เบา ค่าเดียว'};
+  const fb=(s.toggles&&s.toggles.fuelBench)||'';
+  const sub=x=>'<div style="font-size:11px;color:var(--txt2);margin-top:2px">'+x+'</div>';
+  let h='<div class="sec" style="margin-top:10px">⛽ น้ำมัน <span style="font-weight:400;color:var(--txt2);font-size:11px">เลท '+rate+' บ./ล. · เกณฑ์ '+(BN[fb]||fb||'—')+'</span></div>';
+  let bd='';
+  if(w.benchHeavyL!=null&&w.benchLightL!=null){
+    const kh=w.benchHeavyL>0?w.distHeavy/w.benchHeavyL:0, kl=w.benchLightL>0?w.distLight/w.benchLightL:0;
+    bd=sub('หนัก '+f1(w.distHeavy)+' กม. ÷ '+kh.toFixed(2)+' กม./ล. = '+f1(w.benchHeavyL)+' ล.<br>เบา '+f1(w.distLight)+' กม. ÷ '+kl.toFixed(2)+' กม./ล. = '+f1(w.benchLightL)+' ล.');
+  } else bd=sub('หนัก '+f1(w.distHeavy)+' กม. + เบา '+f1(w.distLight)+' กม.');
+  h+=row('ลิตรตามเกณฑ์ · '+(w.distMode==='central'?'ระยะกลาง ':'ระยะจริง ')+f1(w.distTotal)+' กม.'+bd,f1(bench)+' ล.');
+  if(vl>0)h+=row('+ ฮุคลิฟท์ + ให้เพิ่ม แปลงเป็นลิตร'+sub('('+money(w.hooklift)+' + '+money(w.give)+') ÷ '+rate),'+'+(+vl).toFixed(2)+' ล.');
+  h+=row('− เติมจริง (โรงงาน + ทาง)','−'+f1(act)+' ล.');
+  const tone=w.fuelAdj<0?'color:var(--danger)':'color:var(--primary)';
+  h+=row('<b>'+(w.fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+'</b>'+sub((diff>=0?'+':'')+diff.toFixed(2)+' ล. × '+rate+' บ./ล.'),'<b>'+(w.fuelAdj>=0?'+':'−')+money(Math.abs(w.fuelAdj))+' บ.</b>',tone);
+  return h;
+}
 function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
 
 async function openDetail(orderId){
   $('ov').classList.add('on');$('dr').classList.add('on');
-  $('drBody').innerHTML='<div class="msg">กำลังคิด…</div>';
+  $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังคิดค่าเที่ยว</span></div>';
   const res=await api({action:'getWageMonitor',userId:MY_UID,orderId});
   if(!res.ok){$('drBody').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
   const w=res.wage, c=res.cost;
   function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
   const place=[w.garden,w.dest].filter(Boolean).join(' → ');
-  let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate} · รุ่น ${w.model} · ${w.distTotal} กม.</div>`;
+  let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate} · ${w.model?('รุ่น '+w.model):(w.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. ×2×${l.pct}%`,money(l.runWage)+' บ.'));
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
   if(w.tarp>0)h+=row('ค่าคลุมผ้าใบ',money(w.tarp)+' บ.');
-  if(w.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์ ('+(w.lifts||0)+' ครั้ง)',money(w.hooklift)+' บ.');
-  if(w.overnight>0)h+=row('ค่ารอลงของ ('+(w.waitHrs||0)+' ชม.)',money(w.overnight)+' บ.');
-  h+=row((w.fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+' ×'+w.snapshot.fuelRate,(w.fuelAdj>=0?'+':'−')+money(Math.abs(w.fuelAdj))+' บ.',(w.fuelAdj<0?'color:var(--danger)':'color:var(--primary)'));
+  const via=!!(w.snapshot&&w.snapshot.toggles&&w.snapshot.toggles.viaLiters);
+  // แปลงเป็นลิตร = ฮุคลิฟท์/ให้เพิ่ม ไม่จ่ายเป็นบาท แต่ไปบวกในลิตรเกณฑ์ (ดูก้อนน้ำมันด้านล่าง)
+  if(!via&&w.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์',money(w.hooklift)+' บ.');
+  if(!via&&w.give>0)h+=row('ให้เพิ่มตามเวลาวิ่ง ('+(+w.totalHrs).toFixed(2)+' ชม.)',money(w.give)+' บ.');
+  if(w.hardship>0)h+=row('Hardship',money(w.hardship)+' บ.');
+  if(w.wait>0)h+=row('ค่ารอลงของ ('+(w.waitHrs||0)+' ชม.)',money(w.wait)+' บ.');
+  h+=fuelBlock(w,via,row);
   if(w.snapshot.bonusPct>0)h+=row('โบนัส '+w.snapshot.bonusPct+'%','+'+money(w.bonus)+' บ.');
   h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt"${Number(w.wage)<0?' style="color:var(--danger)"':''}>${money(w.wage)} บ.</span></div>`;
   if(c){
