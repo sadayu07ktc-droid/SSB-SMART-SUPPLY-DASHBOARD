@@ -32,6 +32,18 @@
   .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt2);font-weight:400}
   .formula{background:var(--card2);border-left:3px solid var(--primary);border-radius:6px;padding:10px 12px;font-size:12px;color:var(--txt2);line-height:1.8;font-family:"IBM Plex Mono",monospace}
   .msg{text-align:center;color:var(--txt2);padding:30px}
+  /* ตัวโหลดเฟือง 2 ตัวหมุนสวนกัน (CSS animation · ไม่ใช้ SMIL) */
+  :root{--gold:#BA7517} @media(prefers-color-scheme:dark){:root{--gold:#d9a03d}}
+  .gload{display:flex;flex-direction:column;align-items:center;gap:10px;padding:46px 16px}
+  .gload .cog-a{fill:var(--primary);transform-box:view-box;transform-origin:29px 28px;animation:gspin 3s linear infinite}
+  .gload .cog-b{fill:var(--gold);transform-box:view-box;transform-origin:44px 44px;animation:gspin 2.2s linear infinite reverse}
+  .gload .hole{fill:var(--bg)}
+  .gtx{font-size:14px;font-weight:600;color:var(--txt2)}
+  .gtx::after{content:'';display:inline-block;width:16px;text-align:left;animation:gdots 1.2s steps(4,end) infinite}
+  .gsub{font-size:12px;color:var(--txt2);opacity:.8;min-height:16px}
+  @keyframes gspin{to{transform:rotate(360deg)}}
+  @keyframes gdots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
+  @media(prefers-reduced-motion:reduce){.gload .cog-a,.gload .cog-b{animation-duration:9s}.gtx::after{animation:none;content:'…'}}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:50;opacity:0;transition:.3s;pointer-events:none}
   .toast.on{opacity:1}
   details.help{margin-top:5px;font-size:12px;color:var(--txt2)}
@@ -52,7 +64,7 @@
     <div><h1>ตั้งค่าต้นทุน / ค่าแรง</h1><div class="sub">แก้แล้วบันทึกกลับฐานข้อมูล — มีผลกับเที่ยว<b>ที่คิดใหม่</b>เท่านั้น</div></div>
   </div>
   <div id="tplbar"></div>
-  <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
+  <div id="body"><div class="gload" role="status" aria-live="polite"><svg viewBox="0 0 64 64" width="84" height="84" aria-hidden="true"><g class="cog-a"><path d="M26 8h6l1.2 5a12 12 0 0 1 3.5 1.5l4.3-2.6 4.2 4.2-2.6 4.3A12 12 0 0 1 44 24l5 1.2v6L44 32.4a12 12 0 0 1-1.4 3.4l2.6 4.3-4.2 4.2-4.3-2.6a12 12 0 0 1-3.5 1.4L32 48h-6l-1.2-5a12 12 0 0 1-3.5-1.4l-4.3 2.6-4.2-4.2 2.6-4.3A12 12 0 0 1 14 32.4L9 31.2v-6L14 24a12 12 0 0 1 1.4-3.6l-2.6-4.3 4.2-4.2 4.3 2.6A12 12 0 0 1 24.8 13z"/><circle cx="29" cy="28" r="6" class="hole"/></g><g class="cog-b"><path d="M42 30h4l.9 3.6a9 9 0 0 1 2.6 1.1l3.2-2 3 3-2 3.2a9 9 0 0 1 1 2.5l3.7.9v4l-3.6.9a9 9 0 0 1-1.1 2.6l2 3.2-3 3-3.2-2a9 9 0 0 1-2.5 1L46 58h-4l-.9-3.6a9 9 0 0 1-2.6-1.1l-3.2 2-3-3 2-3.2a9 9 0 0 1-1-2.5L29.6 46v-4l3.6-.9a9 9 0 0 1 1.1-2.6l-2-3.2 3-3 3.2 2a9 9 0 0 1 2.5-1z"/><circle cx="44" cy="44" r="4.5" class="hole"/></g></svg><div class="gtx">กำลังเข้าสู่ระบบ</div><div class="gsub" id="gsub"></div></div></div>
 </div>
 <style>
 #tplbar{margin:14px 0 2px}
@@ -170,9 +182,10 @@ function wbCard(){
 }
 
 async function load(){
-  if(!DATA)$('body').innerHTML='<div class="msg">กำลังโหลดตั้งค่า…</div>';
+  if(!DATA)$('body').innerHTML=gearLoader('กำลังโหลดตั้งค่า');
   let d;
-  try{ d=await gasTry(GAS_URL+'?action=getWageSettings&userId='+encodeURIComponent(MY_UID),null,3); }
+  try{ d=await gasTry(GAS_URL+'?action=getWageSettings&userId='+encodeURIComponent(MY_UID),null,3,
+        (n,N)=>{ const s=document.getElementById('gsub'); if(s&&!DATA) s.textContent=n>1?('หลังบ้านช้า · ลองรอบที่ '+n+' / '+N):''; }); }
   catch(e){
     // GAS ตอบหน้า error HTML/ไม่ตอบ ครบ 3 รอบ → บอกให้ชัด + ปุ่มลองใหม่ (เดิมค้าง "กำลังเข้าสู่ระบบ…" เงียบ)
     if(!DATA)$('body').innerHTML='<div class="msg" style="color:var(--danger)">โหลดตั้งค่าไม่สำเร็จ ('+String(e&&e.message||e)+')<br><button class="tbtn primary" style="margin-top:12px" onclick="load()">↻ ลองใหม่</button></div>';
@@ -334,9 +347,12 @@ function render(){
 // ค่ารอ = ชม.รอ × เรท "ค่ารอลงของ" · สถานีผูก DP Type ที่หน้า 📍 ค่ากลาง · state เก็บใน DPW (render() สร้างการ์ดใหม่ได้ไม่หาย)
 let DPW={rows:[],del:[],waitRate:0,loaded:false,err:null,busy:false};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-async function gasTry(url,opt,tries){   // GAS บางครั้งส่งหน้า error HTML แทน JSON → อ่านซ้ำได้ (เฉพาะการอ่าน)
+const GEAR_HTML="<div class=\"gload\" role=\"status\" aria-live=\"polite\"><svg viewBox=\"0 0 64 64\" width=\"84\" height=\"84\" aria-hidden=\"true\"><g class=\"cog-a\"><path d=\"M26 8h6l1.2 5a12 12 0 0 1 3.5 1.5l4.3-2.6 4.2 4.2-2.6 4.3A12 12 0 0 1 44 24l5 1.2v6L44 32.4a12 12 0 0 1-1.4 3.4l2.6 4.3-4.2 4.2-4.3-2.6a12 12 0 0 1-3.5 1.4L32 48h-6l-1.2-5a12 12 0 0 1-3.5-1.4l-4.3 2.6-4.2-4.2 2.6-4.3A12 12 0 0 1 14 32.4L9 31.2v-6L14 24a12 12 0 0 1 1.4-3.6l-2.6-4.3 4.2-4.2 4.3 2.6A12 12 0 0 1 24.8 13z\"/><circle cx=\"29\" cy=\"28\" r=\"6\" class=\"hole\"/></g><g class=\"cog-b\"><path d=\"M42 30h4l.9 3.6a9 9 0 0 1 2.6 1.1l3.2-2 3 3-2 3.2a9 9 0 0 1 1 2.5l3.7.9v4l-3.6.9a9 9 0 0 1-1.1 2.6l2 3.2-3 3-3.2-2a9 9 0 0 1-2.5 1L46 58h-4l-.9-3.6a9 9 0 0 1-2.6-1.1l-3.2 2-3-3 2-3.2a9 9 0 0 1-1-2.5L29.6 46v-4l3.6-.9a9 9 0 0 1 1.1-2.6l-2-3.2 3-3 3.2 2a9 9 0 0 1 2.5-1z\"/><circle cx=\"44\" cy=\"44\" r=\"4.5\" class=\"hole\"/></g></svg><div class=\"gtx\">MSG</div><div class=\"gsub\" id=\"gsub\">SUB</div></div>";
+function gearLoader(msg,sub){return GEAR_HTML.replace('MSG',msg).replace('SUB',sub||'');}
+async function gasTry(url,opt,tries,onTry){   // GAS บางครั้งส่งหน้า error HTML แทน JSON → อ่านซ้ำได้ (เฉพาะการอ่าน)
   let last;
   for(let n=1;n<=tries;n++){
+    if(onTry)try{onTry(n,tries);}catch(_){}
     try{const c=new AbortController(),t=setTimeout(()=>c.abort(),70000);
       const r=await fetch(url,Object.assign({signal:c.signal},opt||{})),txt=await r.text();clearTimeout(t);
       try{return JSON.parse(txt);}catch(e){last=new Error('หลังบ้านตอบผิดรูปแบบ');}
