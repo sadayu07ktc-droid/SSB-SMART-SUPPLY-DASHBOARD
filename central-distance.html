@@ -94,6 +94,11 @@
   .pick div:first-child{border-top:0}
   .pick div:hover{background:var(--card2)}
   .pick small{color:var(--txt2);white-space:nowrap}
+  .plist{max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:10px}
+  .plist div{padding:8px 11px;border-top:1px solid var(--line);font-size:13px}
+  .plist div:first-child{border-top:0}
+  .plist small{color:var(--txt2)}
+  .errbox{background:rgba(200,53,47,.12);color:var(--danger);border-radius:8px;padding:8px 10px;font-size:12px;margin-top:10px;line-height:1.7}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:60;opacity:0;transition:.3s;pointer-events:none;max-width:92vw}
   .toast.on{opacity:1}
   .toast.err{background:var(--danger)}
@@ -153,6 +158,14 @@
     <div class="dact"><button class="btn ghost" onclick="closeOv('ovAsk')">ยกเลิก</button><button class="btn danger" id="askOk">ยืนยัน</button></div>
   </div>
 </div>
+<!-- สรุปก่อนนำเข้าไฟล์ -->
+<div class="ov" id="ovImp" onclick="if(event.target===this)closeOv('ovImp')">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="impT">
+    <h2 id="impT">ตรวจก่อนนำเข้า</h2>
+    <div id="impBody"></div>
+    <div class="dact"><button class="btn ghost" onclick="closeOv('ovImp')">ยกเลิก</button><button class="btn" id="impOk" onclick="doImport()">นำเข้า</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -167,7 +180,7 @@ function toast(t,err){const e=$('toast');e.textContent=t;e.className='toast on'+
 function goBack(){ if(history.length>1)history.back(); else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
 function openOv(id){$(id).classList.add('on');}
 function closeOv(id){$(id).classList.remove('on');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')['ovAsk','ovPick','ovEdit'].forEach(id=>{if($(id).classList.contains('on')){closeOv(id);}});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')['ovAsk','ovImp','ovPick','ovEdit'].forEach(id=>{if($(id).classList.contains('on')){closeOv(id);}});});
 function codeName(c){const x=(DATA.codes||[]).find(k=>k.code===c);return x?x.name:'';}
 
 /* เรียก GAS แบบทนทาน — GAS บางครั้งสะดุดแล้วส่งหน้า error เป็น HTML แทน JSON
@@ -188,8 +201,16 @@ async function gasJSON(url,opt,tries,onRetry){
   }
   throw last;
 }
+/* บันทึก (POST) — GAS บางครั้ง "บันทึกสำเร็จแล้ว" แต่ส่งหน้า error กลับแทนคำตอบ (เจอบ่อยหลัง deploy)
+ * → ไม่บอกว่าล้มเหลว แต่คืน unsure:true ให้ผู้เรียกโหลดข้อมูลล่าสุดมาให้ตรวจ (ห้ามยิงซ้ำเอง กันบันทึกซ้ำ) */
 async function api(body){
-  return gasJSON(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},body))},1);
+  try{ return await gasJSON(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},body))},1); }
+  catch(e){ return {ok:false,unsure:true,error:(e&&e.message)||String(e)}; }
+}
+async function afterUnsure(){
+  ['ovAsk','ovImp','ovEdit'].forEach(closeOv);
+  toast('⚠️ หลังบ้านตอบไม่ชัด อาจบันทึกแล้ว — โหลดข้อมูลล่าสุดให้ตรวจ',true);
+  await load();
 }
 async function load(){
   try{
@@ -228,6 +249,10 @@ function render(){
     +'<div class="seg" role="group" aria-label="กรอง">'
     +[['all','ทั้งหมด'],['linked','ผูกแล้ว'],['unlinked','ยังไม่ผูก']].map(f=>'<button type="button" data-f="'+f[0]+'" class="'+(FILTER===f[0]?'on':'')+'" onclick="setF(\''+f[0]+'\')">'+f[1]+'</button>').join('')
     +'</div><button class="btn" onclick="openEdit(null)">+ เพิ่มสถานี</button></div>'
+    +'<div class="tools"><button class="btn ghost" onclick="exportCsv()">⬇️ ดาวน์โหลดไฟล์ (Excel)</button>'
+    +'<label class="btn ghost" for="impFile" style="display:inline-block">⬆️ นำเข้าไฟล์ที่แก้แล้ว</label>'
+    +'<input type="file" id="impFile" accept=".csv,.xlsx,text/csv" hidden onchange="importFile(this)">'
+    +'<span class="note">แก้หลายแถวทีเดียว: ดาวน์โหลด → แก้ใน Excel → นำเข้า (อัปเดตแถวเดิม ไม่เพิ่มซ้ำ)</span></div>'
     +'<div class="list" id="list"></div>';
   $('body').innerHTML=h;
   renderList();
@@ -302,6 +327,7 @@ async function saveEdit(){
   try{
     const d=await api({action:'saveCentralDistance',row});
     if(d.ok){toast('✅ บันทึก '+row.station+' แล้ว');closeOv('ovEdit');await load();}
+    else if(d.unsure){await afterUnsure();}
     else toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'บันทึกไม่ได้')),true);
   }catch(e){toast('❌ '+e,true);}
   b.disabled=false;b.textContent='บันทึก';
@@ -313,6 +339,7 @@ function askDelete(){
     const b=$('askOk');b.disabled=true;
     try{const d=await api({action:'deleteCentralDistance',id:ED.id});
       if(d.ok){toast('🗑️ ลบแล้ว');closeOv('ovAsk');closeOv('ovEdit');await load();}
+      else if(d.unsure){await afterUnsure();}
       else toast('❌ '+(d.error||'ลบไม่ได้'),true);
     }catch(e){toast('❌ '+e,true);}
     b.disabled=false;
@@ -349,6 +376,164 @@ function pickRow(id){
   openEdit(r.id); applyPreset(preset);
 }
 function applyPreset(p){fillCodes(p.garden_code);fillPickups();$('edPickup').value=p.pickup_point||'';dupCheck();}
+
+/* ── ดาวน์โหลด → แก้ใน Excel → นำเข้ากลับ ──
+ * ไฟล์มีคอลัมน์ id ประจำแถว → นำเข้าแล้วอัปเดตแถวเดิม (ไม่มี id แต่ชื่อตรง ก็อัปเดตแถวเดิม) · ชื่อใหม่ = เพิ่ม
+ * ไม่ลบแถวที่หายจากไฟล์ · แถวไม่กรอกระยะ = ข้าม · นำเข้าซ้ำไฟล์เดิมได้ ไม่เกิดแถวซ้ำ */
+const COLS=['id (ห้ามแก้)','สถานี','ระยะเที่ยวเดียว(กม.)','ประเภทงาน','รหัสสวน/ลาน','จุดรับ','หมายเหตุ','ใช้งาน(ใช่/ไม่)','ชื่อสวน/ลาน (อ้างอิง ไม่ต้องแก้)'];
+function csvCell(v){v=v==null?'':String(v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
+function exportCsv(){
+  const lines=[COLS.map(csvCell).join(',')], used={};
+  (DATA.rows||[]).forEach(r=>{used[norm(r.station)]=1;
+    lines.push([r.id,r.station,r.km,r.job_type,r.garden_code,r.pickup_point,r.note,r.active===false?'ไม่':'ใช่',codeName(r.garden_code)].map(csvCell).join(','));});
+  // ต่อท้าย: สวน/ลานที่ยังไม่มีค่ากลาง — กรอกระยะแล้วนำเข้าได้เลย (เว้นว่าง = ข้าม)
+  let nMiss=0;
+  (DATA.missing||[]).forEach(m=>{
+    const k=(DATA.codes||[]).find(x=>x.code===m.code), multi=k&&k.pickups.length>1;
+    let st=(m.name||m.code)+(multi&&m.pickup?' ('+m.pickup+')':'');
+    if(used[norm(st)])return; used[norm(st)]=1; nMiss++;
+    lines.push(['',st,'',/^LT-/i.test(m.code)?'ลาน':'สวน',m.code,multi?(m.pickup||''):'','','ใช่',(m.name||'')+' · ยังไม่มีค่ากลาง '+m.orders+' ออเดอร์ — กรอกระยะ'].map(csvCell).join(','));
+  });
+  const b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ค่ากลาง-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
+  toast('⬇️ ดาวน์โหลดแล้ว '+(DATA.rows||[]).length+' สถานี + '+nMiss+' แถวรอกรอกระยะ');
+}
+/* อ่าน CSV: UTF-8 (มี/ไม่มี BOM) หรือ windows-874 (Excel ไทยกด Save เป็น CSV ธรรมดา) */
+function decodeText(buf){
+  const u=new Uint8Array(buf);
+  if(u[0]===0xEF&&u[1]===0xBB&&u[2]===0xBF)return new TextDecoder('utf-8').decode(u.subarray(3));
+  try{return new TextDecoder('utf-8',{fatal:true}).decode(u);}catch(e){return new TextDecoder('windows-874').decode(u);}
+}
+function parseCsv(s){
+  const first=s.split(/\r?\n/)[0]||'', d=(first.split('\t').length>first.split(',').length)?'\t':((first.split(';').length>first.split(',').length)?';':',');
+  const rows=[];let row=[],cell='',q=false;
+  for(let i=0;i<s.length;i++){const ch=s[i];
+    if(q){if(ch==='"'){if(s[i+1]==='"'){cell+='"';i++;}else q=false;}else cell+=ch;continue;}
+    if(ch==='"')q=true; else if(ch===d){row.push(cell);cell='';}
+    else if(ch==='\n'||ch==='\r'){if(ch==='\r'&&s[i+1]==='\n')i++;row.push(cell);rows.push(row);row=[];cell='';}
+    else cell+=ch;}
+  if(cell!==''||row.length){row.push(cell);rows.push(row);}
+  return rows;
+}
+/* อ่าน .xlsx (ชีตแรก) โดยไม่ใช้ไลบรารี — แกะ zip + XML เอง */
+async function readXlsx(buf){
+  const b=new Uint8Array(buf), dv=new DataView(buf); let e=b.length-22;
+  while(e>=0&&dv.getUint32(e,true)!==0x06054b50)e--;
+  if(e<0)throw new Error('ไม่ใช่ไฟล์ .xlsx');
+  const files={}; let p=dv.getUint32(e+16,true);
+  for(let i=0,n=dv.getUint16(e+10,true);i<n;i++){
+    const m=dv.getUint16(p+10,true),cs=dv.getUint32(p+20,true),nl=dv.getUint16(p+28,true),el=dv.getUint16(p+30,true),cl=dv.getUint16(p+32,true),lo=dv.getUint32(p+42,true);
+    const name=new TextDecoder().decode(b.subarray(p+46,p+46+nl)), st=lo+30+dv.getUint16(lo+26,true)+dv.getUint16(lo+28,true);
+    files[name]={m,data:b.subarray(st,st+cs)}; p+=46+nl+el+cl;
+  }
+  async function get(name){const f=files[name];if(!f)return null;let d=f.data;
+    if(f.m===8){if(typeof DecompressionStream==='undefined')throw new Error('เบราว์เซอร์นี้อ่าน .xlsx ไม่ได้ ให้เซฟเป็น CSV แทน');
+      d=new Uint8Array(await new Response(new Blob([d]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer());}
+    return new DOMParser().parseFromString(new TextDecoder().decode(d),'application/xml');}
+  const ss=[], ssx=await get('xl/sharedStrings.xml');
+  if(ssx)[...ssx.getElementsByTagName('si')].forEach(si=>ss.push([...si.getElementsByTagName('t')].map(t=>t.textContent).join('')));
+  const wb=await get('xl/workbook.xml'), rels=await get('xl/_rels/workbook.xml.rels');
+  const sh0=wb.getElementsByTagName('sheet')[0];
+  const rid=sh0.getAttribute('r:id')||sh0.getAttributeNS('http://schemas.openxmlformats.org/officeDocument/2006/relationships','id');
+  let tgt=[...rels.getElementsByTagName('Relationship')].find(r=>r.getAttribute('Id')===rid).getAttribute('Target');
+  tgt=tgt.replace(/^\//,'').replace(/^(xl\/)?/,'xl/');
+  const sh=await get(tgt), out=[];
+  const colIdx=s=>[...s].reduce((a,c)=>a*26+c.charCodeAt(0)-64,0)-1;
+  [...sh.getElementsByTagName('row')].forEach(r=>{
+    const arr=[];
+    [...r.getElementsByTagName('c')].forEach(c=>{
+      const t=c.getAttribute('t'), vv=c.getElementsByTagName('v')[0];
+      let v=t==='s'?(vv?ss[+vv.textContent]||'':''):t==='inlineStr'?[...c.getElementsByTagName('t')].map(x=>x.textContent).join(''):(vv?vv.textContent:'');
+      arr[colIdx((c.getAttribute('r')||'A').replace(/\d+/g,''))]=v;
+    });
+    out[(+r.getAttribute('r')||out.length+1)-1]=Array.from(arr,x=>x==null?'':x);
+  });
+  return Array.from(out,x=>x||[]);
+}
+async function importFile(inp){
+  const f=inp.files&&inp.files[0]; inp.value=''; if(!f)return;
+  try{
+    const buf=await f.arrayBuffer();
+    buildPlan(/\.xlsx$/i.test(f.name)?await readXlsx(buf):parseCsv(decodeText(buf)));
+  }catch(e){toast('❌ อ่านไฟล์ไม่ได้: '+(e.message||e),true);}
+}
+let PLAN=null;
+function diffRow(o,n){
+  const d=[];
+  [['station','ชื่อ'],['km','ระยะ'],['job_type','ประเภท'],['garden_code','รหัส'],['pickup_point','จุดรับ'],['note','หมายเหตุ']].forEach(([k,l])=>{
+    const a=k==='km'?+o[k]:String(o[k]||'').trim(), b=k==='km'?+n[k]:String(n[k]||'').trim();
+    if(a!==b)d.push(l+': '+(a===''?'—':a)+' → '+(b===''?'—':b));
+  });
+  if((o.active!==false)!==n.active)d.push('ใช้งาน: '+(o.active!==false?'ใช่':'ไม่')+' → '+(n.active?'ใช่':'ไม่'));
+  return d;
+}
+function buildPlan(tbl){
+  let h=-1; for(let i=0;i<Math.min(tbl.length,10);i++){if((tbl[i]||[]).some(c=>/สถานี/.test(c))){h=i;break;}}
+  if(h<0){toast('❌ ไม่เจอหัวคอลัมน์ "สถานี" — ใช้ไฟล์ที่ดาวน์โหลดจากหน้านี้',true);return;}
+  const H=tbl[h].map(x=>String(x||'').trim()), find=re=>H.findIndex(x=>re.test(x));
+  // ชื่อสถานี: "สถานี" ตรงตัว > "สถานีที่2" (ไฟล์ DATABASE.xlsx ต้นฉบับ — สถานีที่1 คือจุดออก SSB) > มีคำว่าสถานี
+  let stI=H.findIndex(x=>x==='สถานี'); if(stI<0)stI=find(/สถานีที่\s*2/); if(stI<0)stI=find(/สถานี/);
+  const ix={id:find(/^id\b/i),station:stI,km:find(/ระยะ/),job_type:find(/ประเภท/),garden_code:find(/รหัส/),pickup_point:find(/จุดรับ/),note:find(/หมายเหตุ/),active:find(/ใช้งาน/)};
+  if(ix.km<0){toast('❌ ไม่เจอคอลัมน์ "ระยะ"',true);return;}
+  const cur={},curName={},known={};
+  (DATA.rows||[]).forEach(r=>{cur[r.id]=r;curName[norm(r.station)]=r;});
+  (DATA.codes||[]).forEach(c=>known[c.code]=1);
+  const P={upd:[],ins:[],same:0,skip:0,err:[],warn:[]}, seen={};
+  for(let i=h+1;i<tbl.length;i++){
+    const c=tbl[i]||[], g=k=>ix[k]<0?'':String(c[ix[k]]==null?'':c[ix[k]]).trim(), line=i+1;
+    const station=g('station'), kmS=g('km').replace(/,/g,'');
+    if(!station&&!kmS&&!g('id'))continue;          // แถวว่าง
+    if(!kmS){P.skip++;continue;}                   // ยังไม่กรอกระยะ
+    const km=parseFloat(kmS);
+    if(!station){P.err.push('แถว '+line+': ไม่มีชื่อสถานี');continue;}
+    if(!(km>0)||km>3000){P.err.push('แถว '+line+' ('+station+'): ระยะ "'+g('km')+'" ไม่ถูกต้อง');continue;}
+    const nk=norm(station);
+    if(seen[nk]){P.err.push('แถว '+line+': ชื่อ "'+station+'" ซ้ำกับแถว '+seen[nk]+' ในไฟล์');continue;}
+    seen[nk]=line;
+    const row={_line:line,station,km:Math.round(km*100)/100,job_type:g('job_type'),garden_code:g('garden_code'),pickup_point:g('pickup_point'),note:g('note'),active:!/^(ไม่|no|false|0|ปิด)/i.test(g('active'))};
+    const id=parseInt(g('id'),10); let base=null;
+    if(id>0){base=cur[id];if(!base){P.err.push('แถว '+line+': ไม่พบ id '+id+' ในระบบ (แถวใหม่ให้ลบเลข id ออก)');continue;}}
+    else if(curName[nk])base=curName[nk];
+    // คอลัมน์ที่ไม่มีในไฟล์ = ไม่แตะค่าเดิม (กันไฟล์ต้นฉบับที่ไม่มีคอลัมน์รหัสสวน ลบรหัสที่ผูกไว้ทิ้ง)
+    ['job_type','garden_code','pickup_point','note'].forEach(k=>{if(ix[k]<0)row[k]=base?String(base[k]||''):'';});
+    if(ix.active<0)row.active=base?base.active!==false:true;
+    if(base){
+      const other=curName[nk];
+      if(other&&other.id!==base.id){P.err.push('แถว '+line+': เปลี่ยนชื่อเป็น "'+station+'" ไม่ได้ ชื่อนี้มีอยู่แล้ว (id '+other.id+')');continue;}
+      const diff=diffRow(base,row); if(!diff.length){P.same++;continue;}
+      row.id=base.id; P.upd.push({row,diff});
+    }else P.ins.push({row});
+    if(row.garden_code&&!known[row.garden_code])P.warn.push('แถว '+line+': รหัส '+row.garden_code+' ไม่มีในระบบ (บันทึกได้ แต่ยังไม่มีออเดอร์ไหนใช้)');
+  }
+  showPlan(P);
+}
+function showPlan(P){
+  PLAN=P;
+  const st=(k,v,bad)=>'<div class="stat'+(bad?' bad':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';
+  let h='<div class="stats" style="margin-top:0">'+st('แก้แถวเดิม',P.upd.length)+st('เพิ่มใหม่',P.ins.length)+st('ไม่เปลี่ยน / ข้าม',P.same+P.skip)+'</div>';
+  if(P.err.length)h+='<div class="errbox"><b>ต้องแก้ไฟล์ก่อนนำเข้า ('+P.err.length+' แถว)</b><br>'+P.err.slice(0,30).map(esc).join('<br>')+'</div>';
+  if(P.warn.length)h+='<div class="warnbox" style="display:block;margin-top:10px">'+P.warn.slice(0,20).map(esc).join('<br>')+'</div>';
+  const list=P.upd.map(u=>'<div><b>'+esc(u.row.station)+'</b><br><small>'+u.diff.map(esc).join(' · ')+'</small></div>')
+    .concat(P.ins.map(x=>'<div><b>+ เพิ่ม '+esc(x.row.station)+'</b><br><small>'+nf(x.row.km,2)+' กม.'+(x.row.garden_code?' · '+esc(x.row.garden_code):' · ยังไม่ผูกรหัส')+(x.row.pickup_point?' · จุดรับ '+esc(x.row.pickup_point):'')+'</small></div>'));
+  if(list.length)h+='<div class="plist">'+list.join('')+'</div>';
+  if(P.skip)h+='<div class="note" style="margin-top:8px">ข้าม '+P.skip+' แถวที่ยังไม่กรอกระยะ · แถวที่ไม่อยู่ในไฟล์ไม่ถูกลบ</div>';
+  $('impBody').innerHTML=h;
+  const n=P.upd.length+P.ins.length, b=$('impOk');
+  b.disabled=!n||P.err.length>0; b.textContent=P.err.length?'แก้ไฟล์ก่อน':(n?'นำเข้า '+n+' แถว':'ไม่มีอะไรเปลี่ยน');
+  openOv('ovImp');
+}
+async function doImport(){
+  const rows=PLAN.upd.map(u=>u.row).concat(PLAN.ins.map(x=>x.row)), b=$('impOk');
+  b.disabled=true; b.textContent='กำลังนำเข้า…';
+  try{
+    const d=await api({action:'importCentralDistances',rows});
+    if(d.ok){toast('✅ นำเข้าแล้ว: แก้ '+d.updated+' · เพิ่ม '+d.inserted+' แถว');closeOv('ovImp');await load();return;}
+    if(d.unsure){await afterUnsure();return;}   // นำเข้าไฟล์เดิมซ้ำได้ แถวที่เข้าแล้วจะนับเป็น "ไม่เปลี่ยน"
+    toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'นำเข้าไม่ได้')),true);
+    if(d.errors)$('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+d.errors.map(esc).join('<br>')+'</div>');
+  }catch(e){toast('❌ '+(e.message||e)+' — ลองนำเข้าไฟล์เดิมซ้ำได้ ไม่เกิดแถวซ้ำ',true);}
+  b.disabled=false; b.textContent='นำเข้า '+rows.length+' แถว';
+}
 
 (async function(){
   try{
