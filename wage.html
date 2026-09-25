@@ -190,7 +190,7 @@ function renderTable(rows){
     const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Number(r.distActual)/Number(r.liters)):0;
     const vtMain=r.model?('รุ่น '+r.model):(r.vehicleType||'—');
     const vtSub=(r.model&&r.vehicleType)?`<div style="font-size:10px;color:var(--txt2)">${r.vehicleType}</div>`:'';
-    h+=`<tr class="row" data-i="${i}"><td style="white-space:nowrap">${fmtD(r.date)}</td><td style="white-space:nowrap">${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}${(!usedCentral(r)&&+r.distActual>0)?USEDCHIP:''}</td><td class="num">${centralCell(r)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
+    h+=`<tr class="row" data-i="${i}"><td style="white-space:nowrap">${fmtD(r.date)}</td><td style="white-space:nowrap">${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}${(!usedCentral(r)&&+r.distActual>0)?USEDCHIP:''}</td><td class="num">${centralCell(r)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td><td class="num"><b${Number(r.wage)<0?' style="color:var(--danger)"':''}>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i].orderId));
@@ -253,7 +253,7 @@ async function openDetail(orderId){
   if(w.overnight>0)h+=row('ค่ารอลงของ ('+(w.waitHrs||0)+' ชม.)',money(w.overnight)+' บ.');
   h+=row((w.fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+' ×'+w.snapshot.fuelRate,(w.fuelAdj>=0?'+':'−')+money(Math.abs(w.fuelAdj))+' บ.',(w.fuelAdj<0?'color:var(--danger)':'color:var(--primary)'));
   if(w.snapshot.bonusPct>0)h+=row('โบนัส '+w.snapshot.bonusPct+'%','+'+money(w.bonus)+' บ.');
-  h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt">${money(w.wage)} บ.</span></div>`;
+  h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt"${Number(w.wage)<0?' style="color:var(--danger)"':''}>${money(w.wage)} บ.</span></div>`;
   if(c){
     h+='<div class="sec">🏢 ต้นทุนบริษัท</div>';
     h+=row('ค่าแรงคนขับ',money(c.wage)+' บ.');
@@ -331,14 +331,19 @@ async function recomputeUnpaid(){
   if(!confirm('คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว (เฉพาะที่ยังไม่จ่าย) ตามเงื่อนไขปัจจุบัน?\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน'))return;
   const b=$('recalc');b.disabled=true;
   const CHUNK=8;
-  let done=0,skipped=0,failed=0,ok=true,err='';
+  let done=0,skipped=0,failed=0,ok=true,err='';const badChunks=[];
   try{
     for(let i=0;i<ids.length;i+=CHUNK){
       const part=ids.slice(i,i+CHUNK);
       b.textContent=`กำลังคิด… ${Math.min(i+CHUNK,ids.length)}/${ids.length}`;
-      const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:part})});
-      const txt=await r.text();
-      let d; try{ d=JSON.parse(txt); }catch(_){ ok=false; err='backend ตอบผิดรูปแบบ (อาจช้า/หลุด) — ลองใหม่อีกครั้ง'; break; }
+      // คิดใหม่ซ้ำได้ปลอดภัย (ผลเดิม · ที่จ่ายแล้วข้าม) → Google ตอบหน้า HTML/หลุด = ลองก้อนเดิมใหม่ 3 รอบ แล้วไปก้อนถัดไป (เดิมหยุดทั้งหมด เที่ยวที่เหลือไม่ถูกคิด)
+      let d=null;
+      for(let tr=1;tr<=3&&!d;tr++){
+        try{ const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:part})});
+          d=JSON.parse(await r.text()); }catch(_){ d=null; }
+        if(!d&&tr<3){ b.textContent=`ลองใหม่… ${Math.min(i+CHUNK,ids.length)}/${ids.length}`; await new Promise(z=>setTimeout(z,2000*tr)); }
+      }
+      if(!d){ badChunks.push(...part); continue; }
       if(!d.ok){ ok=false; err=d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด'); break; }
       done+=d.done||0; skipped+=d.skipped||0; failed+=d.failed||0;
     }
@@ -346,7 +351,8 @@ async function recomputeUnpaid(){
   b.textContent='🔄 คำนวณใหม่';b.disabled=false;
   if(!ok){ alert('❌ '+err+(done?'\n(คิดสำเร็จไปแล้ว '+done+' เที่ยวก่อนหยุด)':'')); if(done)await loadReport(); return; }
   await loadReport();
-  alert('✅ คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:''));
+  alert((badChunks.length?'⚠️ ':'✅ ')+'คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:'')
+    +(badChunks.length?'\nหลังบ้านไม่ตอบ '+badChunks.length+' เที่ยว — กด 🔄 คำนวณใหม่ อีกครั้ง\n('+badChunks.slice(0,6).join(', ')+(badChunks.length>6?' …':'')+')':''));
 }
 // ติ๊ก "จ่ายแล้ว" = ล็อกค่าแรง (คำนวณใหม่จะไม่ทับ) · เอาติ๊กออก = ปลดล็อก
 async function togglePaid(orderId,checked,el){
