@@ -165,17 +165,31 @@ function applyView(){
   renderSummary(searchRows);
   updatePaidAllBtn();
 }
+/* เที่ยวนี้คิดค่าแรงด้วยค่ากลางไหม — snapshot ใหม่บอกตรง (usedCentral) · snapshot เก่าเดาจาก ระยะที่ใช้คิด ≈ ค่ากลาง และ ≠ ระยะจริง */
+function usedCentral(r){
+  if(r.usedCentral===true||r.usedCentral===false)return r.usedCentral;
+  const c=+r.distCentral||0,u=+r.distUsed||0,a=+r.distActual||0;
+  return c>0&&Math.abs(u-c)<0.15&&Math.abs(u-a)>=0.15;
+}
+function centralCell(r){
+  const c=+r.distCentral||0,a=+r.distActual||0;
+  if(!(c>0))return '<span style="color:var(--txt2);font-size:11px">ยังไม่มี</span>';
+  const d=a-c, used=usedCentral(r);
+  return c.toLocaleString('th-TH',{maximumFractionDigits:1})
+    +(used?' <span style="font-size:10px;font-weight:700;color:#fff;background:var(--primary);border-radius:999px;padding:1px 6px">ใช้คิด</span>':'')
+    +(a>0?`<div style="font-size:10.5px;color:${Math.abs(d)>c*0.1?'var(--danger)':'var(--txt2)'}">จริง${d>=0?'+':''}${d.toLocaleString('th-TH',{maximumFractionDigits:1})}</div>`:'');
+}
 function renderTable(rows){
   if(!rows.length){$('tbl').innerHTML='<div class="msg">'+((SEARCH||ACTIVE_DEST)?'ไม่มีเที่ยวที่ตรงเงื่อนไข':'ไม่มีเที่ยวในช่วงที่เลือก')+'</div>';return;}
   const n1=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{maximumFractionDigits:1}):'—';};
   const n2=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';};
-  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ชนิดรถ</th><th>สวน / ปลายทาง</th><th class="num">ระยะ (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">กม./ล.</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ชนิดรถ</th><th>สวน / ปลายทาง</th><th class="num" title="จากเลขไมล์ที่คนขับกรอก">ระยะจริง (กม.)</th><th class="num" title="ค่ากลางไป-กลับ (หน้า 📍 ค่ากลาง × 2) · ป้าย ใช้คิด = เที่ยวนี้คิดค่าแรงด้วยค่ากลาง · จริง± = ระยะจริงต่างจากค่ากลาง (แดง = ต่างเกิน 10%)">ระยะกลาง (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">กม./ล.</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
   rows.forEach((r,i)=>{
     const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
     const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Number(r.distActual)/Number(r.liters)):0;
     const vtMain=r.model?('รุ่น '+r.model):(r.vehicleType||'—');
     const vtSub=(r.model&&r.vehicleType)?`<div style="font-size:10px;color:var(--txt2)">${r.vehicleType}</div>`:'';
-    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
+    h+=`<tr class="row" data-i="${i}"><td>${fmtD(r.date)}</td><td>${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}${(!usedCentral(r)&&+r.distActual>0)?' <span style="font-size:10px;font-weight:700;color:#fff;background:var(--primary);border-radius:999px;padding:1px 6px">ใช้คิด</span>':''}</td><td class="num">${centralCell(r)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td><td class="num"><b>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i].orderId));
@@ -208,6 +222,7 @@ function renderSummary(rows){
       ${on?`<div class="sumdetail">
         ${_sline('ค่าเที่ยว',_stat(gr.rows,r=>r.wage),'บ.',0)}
         ${_sline('ระยะจริง',_stat(gr.rows,r=>r.distActual),'กม.',1)}
+        ${_sline('ระยะกลาง',_stat(gr.rows,r=>r.distCentral),'กม.',1)}
         ${_sline('น้ำมัน',_stat(gr.rows,r=>r.liters),'ล.',1)}
         ${_sline('กม./ล.',_stat(gr.rows,r=>{const l=+r.liters,d=+r.distActual;return(l>0&&d>0)?d/l:0;}),'',2)}
       </div>`:''}
@@ -296,13 +311,13 @@ $('ov').onclick=closeDr;
 
 function exportCsv(){
   if(!VIEW.length)return;
-  const head=['วันที่','ออเดอร์','คนขับ','ชนิดรถ','ทะเบียน','สวน','ปลายทาง','ระยะทาง(กม.)','น้ำมันเติม(ล.)','กม./ล.','ค่าวิ่ง','ขึ้น-ลง','ผ้าใบ','ฮุคลิฟท์','ค้างคืน','น้ำมัน(บ.)','โบนัส','ค่าแรงสุทธิ','สถานะ'];
+  const head=['วันที่','ออเดอร์','คนขับ','ชนิดรถ','ทะเบียน','สวน','ปลายทาง','ระยะจริง(กม.)','ระยะกลาง(กม.)','ระยะที่ใช้คิด(กม.)','คิดด้วย','น้ำมันเติม(ล.)','กม./ล.','ค่าวิ่ง','ขึ้น-ลง','ผ้าใบ','ฮุคลิฟท์','ค้างคืน','น้ำมัน(บ.)','โบนัส','ค่าแรงสุทธิ','สถานะ'];
   const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
   const r1=v=>Math.round((Number(v)||0)*10)/10;
   const lines=[head.map(q).join(',')];
   VIEW.forEach(r=>{const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Math.round(Number(r.distActual)/Number(r.liters)*100)/100):'';
     const vt=(r.model?('รุ่น '+r.model):'')+(r.vehicleType?((r.model?' · ':'')+r.vehicleType):'');
-    lines.push([fmtD(r.date),r.orderId,r.driver,vt,r.plate,r.garden,r.dest,r1(r.distActual),r1(r.liters),kmpl,Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(','));});
+    lines.push([fmtD(r.date),r.orderId,r.driver,vt,r.plate,r.garden,r.dest,r1(r.distActual),(+r.distCentral>0?r1(r.distCentral):''),r1(r.distUsed),(usedCentral(r)?'ค่ากลาง':'ระยะจริง'),r1(r.liters),kmpl,Math.round(r.runWage),Math.round(r.loadWage),Math.round(r.tarp||0),Math.round(r.hooklift||0),Math.round(r.overnight||0),Math.round(r.fuelAdj),Math.round(r.bonus||0),Math.round(r.wage),r.locked?'จ่ายแล้ว':'คำนวณ'].map(q).join(','));});
   const blob=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='รายงานค่าแรง.csv';a.click();
 }
