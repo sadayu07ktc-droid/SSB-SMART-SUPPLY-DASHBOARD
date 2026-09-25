@@ -272,7 +272,9 @@ function openEdit(id,preset){
 function openNewFromMiss(i){
   const m=DATA.missing[i];
   const c=m.code||'', t=/^LT-/i.test(c)?'ลาน':'สวน';
-  openEdit(null,{station:m.name||c,garden_code:c,pickup_point:m.pickup||'',job_type:t});
+  // ใส่จุดรับเฉพาะสวนที่มีหลายจุดรับ · จุดเดียว = เว้นว่าง (ใช้ได้ทุกจุด ไม่พังถ้าชื่อจุดรับถูกแก้ทีหลัง)
+  const k=(DATA.codes||[]).find(x=>x.code===c), multi=k&&k.pickups.length>1;
+  openEdit(null,{station:m.name||c,garden_code:c,pickup_point:multi?(m.pickup||''):'',job_type:t});
 }
 async function saveEdit(){
   const row={id:ED&&ED.id||undefined,station:$('edStation').value.trim(),km:$('edKm').value,job_type:$('edType').value,
