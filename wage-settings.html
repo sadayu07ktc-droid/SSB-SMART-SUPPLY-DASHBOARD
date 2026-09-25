@@ -34,6 +34,14 @@
   .msg{text-align:center;color:var(--txt2);padding:30px}
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:50;opacity:0;transition:.3s;pointer-events:none}
   .toast.on{opacity:1}
+  details.help{margin-top:5px;font-size:12px;color:var(--txt2)}
+  details.help summary{cursor:pointer;color:var(--primary);font-weight:600;font-size:12px;list-style:none;display:inline-block;padding:2px 0}
+  details.help summary::-webkit-details-marker{display:none}
+  details.help summary:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
+  details.help[open] summary{margin-bottom:4px}
+  details.help>div{background:var(--card2);border-left:3px solid var(--primary);border-radius:6px;padding:8px 11px;line-height:1.7}
+  details.help ul{margin:4px 0;padding-left:18px}
+  details.help b{color:var(--txt)}
 </style>
 </head>
 <body>
@@ -91,9 +99,9 @@ const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct',
 const TOGDEF=[
   ['weight_on','ถ่วงหนัก/เบา',[[1,'เปิด'],[0,'ปิด']],'ปิด = ทุกขาคิดเต็ม 100% ไม่แบ่ง 70/30'],
   ['time_mode','วิธีคิดเวลาวิ่ง',[[2,'ไล่ระดับ'],[0,'ขั้นบันได'],[1,'เหมาช่วงเดียว']],'ไล่ระดับ = ใช้ตาราง "ความเร็วไล่ระดับ" (สูตรปัจจุบัน) · ขั้นบันได/เหมาช่วงเดียว = ใช้ความเร็วในตาราง "ช่วงระยะ"'],
-  ['speed_mode','ความเร็วที่ใช้',[[0,'เลทตามช่วง'],[1,'GPS จริง']],'เลทตามช่วง = ใช้ตารางความเร็วนี้ · GPS จริง = ใช้เวลาวิ่งจริงจาก timeline (เมื่อมีข้อมูล)'],
+  ['speed_mode','ความเร็วที่ใช้',[[0,'เลทตามช่วง'],[1,'GPS จริง (ยังไม่รองรับ)']],'⚠️ ระบบคิดค่าแรงยังไม่รองรับ "GPS จริง" — ตอนนี้ใช้ความเร็วจากตารางเสมอ ไม่ว่าเลือกอะไร'],
   ['dist_source','ระยะที่ใช้คิด',[[0,'จริง'],[1,'ค่ากลาง']],'ค่ากลาง = ใช้ระยะจากหน้า 📍 ค่ากลาง (ผูกรหัสสวน) · ออเดอร์ที่หาค่ากลางไม่เจอ ใช้ระยะจริง'],
-  ['fuel_bench','เกณฑ์น้ำมัน',[[0,'หนัก-เบา'],[1,'ตามช่วงระยะ'],[2,'ค่าเดียว']],'ใช้ กม./ล. แบบไหนคิดลิตรตามเกณฑ์'],
+  ['fuel_bench','เกณฑ์น้ำมัน',[[3,'ตามระยะหนักเบา'],[4,'หนักเบา-เรทช่วง'],[2,'ค่าเดียว'],[0,'หนัก-เบา'],[1,'ตามช่วงระยะ']],'ใช้ กม./ล. แบบไหนคิดลิตรตามเกณฑ์ · สูตร R.11 ใช้ "ตามระยะหนักเบา" (ตาราง⑬)'],
   ['fuel_adj_on','เพิ่ม/หักน้ำมัน',[[1,'เปิด'],[0,'ปิด']],'ปิด = ไม่คิดเพิ่ม/หักน้ำมันเลย'],
   ['tarp_on','ค่าคลุมผ้าใบ',[[1,'เปิด'],[0,'ปิด']],'เปิดแล้วยังดูต่อประเภทงาน (ตารางล่าง) ว่าคิดไหม'],
   ['bonus_on','โบนัส',[[1,'เปิด'],[0,'ปิด']],'ปิด = ไม่คิดโบนัส %'],
@@ -107,6 +115,35 @@ const TOGDEF=[
   ['via_liters','จ่ายฮุคลิฟท์ + ให้เพิ่ม',[[1,'แปลงเป็นลิตรน้ำมัน'],[0,'จ่ายเป็นบาท']],'แปลงเป็นลิตร = บาท ÷ เลทน้ำมันคิดค่าแรง แล้วบวกเข้าลิตรตามเกณฑ์ (ไปอยู่ในยอดเพิ่ม/หักน้ำมัน) · จ่ายเป็นบาท = บวกตรงเข้าค่าแรง']
 ];
 let TOG={};
+// ⓘ คำอธิบายวิธีคิดแต่ละแบบ (กดเปิดใต้สวิตช์ — ใช้ได้ทั้งมือถือ/คอม) · ตัวอย่างคิดจากค่าที่ตั้งอยู่ตอนนี้
+const HELP={
+  time_mode:()=>'<b>แปลงระยะเป็นชั่วโมงวิ่ง</b> (ตัวอย่างระยะไป-กลับ 50 กม.)<ul>'
+    +'<li><b>ไล่ระดับ</b> — หาความเร็วจากตาราง "ความเร็วไล่ระดับ" ตามระยะรวม ไล่เส้นตรงระหว่างจุด · 50 กม. อยู่ระหว่าง 40→38 กับ 60→42 = 40 กม./ชม. → 50 ÷ 40 = <b>1.25 ชม.</b></li>'
+    +'<li><b>ขั้นบันได</b> — หั่นระยะตาม "ตารางช่วงระยะ" แต่ละท่อนใช้ความเร็วช่วงตัวเอง (เหมือนขั้นภาษี) · 25÷30 + 15÷38 + 10÷42 = <b>1.47 ชม.</b></li>'
+    +'<li><b>เหมาช่วงเดียว</b> — ทั้งระยะใช้ความเร็วของช่วงที่ระยะรวมตกอยู่ · 50 กม. ตกช่วง 40–60 (42) → 50 ÷ 42 = <b>1.19 ชม.</b></li></ul>'
+    +'จากนั้น ค่าวิ่ง = เลทค่าวิ่ง × ชม. (แบ่งให้แต่ละขา) × 2 × %หนัก/เบา',
+  speed_mode:()=>'<b>ต่างจาก "วิธีคิดเวลาวิ่ง" ยังไง</b><ul>'
+    +'<li><b>วิธีคิดเวลาวิ่ง</b> = สูตรแปลงระยะเป็นชั่วโมง (ไล่ระดับ / ขั้นบันได / เหมาช่วง)</li>'
+    +'<li><b>ความเร็วที่ใช้</b> = เอาความเร็วมาจากไหน: <b>เลทตามช่วง</b> = จากตาราง · <b>GPS จริง</b> = ตั้งใจให้ใช้เวลาวิ่งจริงจาก GPS แทนการคำนวณ</li></ul>'
+    +'⚠️ "GPS จริง" <b>ยังไม่ได้ทำในระบบคิดค่าแรง</b> — เลือกแล้วไม่มีผล ระบบใช้ตารางเสมอ',
+  dist_source:()=>'<ul><li><b>จริง</b> — ระยะจากเลขไมล์ที่คนขับกรอกแต่ละจุด</li>'
+    +'<li><b>ค่ากลาง</b> — ระยะเที่ยวเดียวจากหน้า 📍 ค่ากลาง × 2 (ไป-กลับ) แล้วแบ่งขาหนัก/เบาตามสัดส่วนเลขไมล์จริง · หาค่ากลางไม่เจอ = ใช้ระยะจริง · ตัวอย่าง ลานคลองหาด ค่ากลาง 136.25 → คิด <b>272.5 กม.</b> (วิ่งจริง 273)</li></ul>',
+  fuel_bench:()=>{const z=zoneOf('พ่วง'),f=fwOf('พ่วง'),r2=v=>(Math.round(v*10)/10).toLocaleString('th-TH');
+    const zh=z.length?(150/(z[0].kmpl_heavy||1)+29/(z[1].kmpl_heavy||1)):0, rh=z.length?180/(z[1].kmpl_heavy||1):0;
+    return '<b>ลิตรตามเกณฑ์</b> (ตัวอย่าง รถพ่วง วิ่งหนัก 180 กม. · เบา 180 กม.) → ใช้เทียบกับลิตรที่เติมจริง = เพิ่ม/หักน้ำมัน<ul>'
+    +'<li><b>ตามระยะหนักเบา</b> (R.11 ตาราง⑬) — แยกระยะหนัก/เบา แล้วกระจายแต่ละก้อนลง 4 ช่วงแบบขั้นบันได แต่ละส่วน ÷ กม./ล. ของช่วงนั้น · หนัก 180 = 150÷'+(z[0]||{}).kmpl_heavy+' + 29÷'+(z[1]||{}).kmpl_heavy+' = <b>'+r2(zh)+' ล.</b> (เบาคิดแบบเดียวกัน)</li>'
+    +'<li><b>หนักเบา-เรทช่วง</b> (ตาราง⑬) — ระยะหนักทั้งก้อนตกช่วงไหน ใช้ กม./ล. ช่วงนั้นทั้งก้อน · หนัก 180 ตกช่วง 151–200 → 180÷'+(z[1]||{}).kmpl_heavy+' = <b>'+r2(rh)+' ล.</b></li>'
+    +'<li><b>ค่าเดียว</b> — ระยะรวม ÷ กม./ล.ค่าเดียวของประเภทรถ · 360÷'+(f.kmpl_single||0)+' = <b>'+r2(360/(f.kmpl_single||1))+' ล.</b></li>'
+    +'<li><b>หนัก-เบา</b> — ระยะหนัก ÷ กม./ล.หนัก + ระยะเบา ÷ กม./ล.เบา (ค่าเดียวทุกระยะ) · 180÷'+(f.kmpl_heavy||0)+' + 180÷'+(f.kmpl_light||0)+' = <b>'+r2(180/(f.kmpl_heavy||1)+180/(f.kmpl_light||1))+' ล.</b></li>'
+    +'<li><b>ตามช่วงระยะ</b> — ระยะรวมหั่นตาม "ตารางช่วงระยะ" แต่ละท่อน ÷ กม./ล. ช่วงนั้น (ไม่แยกหนัก/เบา)</li></ul>';},
+  weight_on:()=>'<b>เปิด</b> — ขาที่รถหนัก (มีของ) ได้ '+pvN('heavy_pct',70)+'% ขาเบาได้ '+pvN('light_pct',30)+'% ของ (เลทค่าวิ่ง × ชม. × 2) · ปกติไปเบา-กลับหนัก รวมได้ 100% · <b>ปิด</b> — ทุกขาได้เต็ม',
+  via_liters:()=>'ตัวอย่างค่าฮุคลิฟท์ '+pvN('hooklift_fee',100)+' บ. · เลทน้ำมัน '+pvN('fuel_rate_wage',25)+' บ./ล.<ul>'
+    +'<li><b>แปลงเป็นลิตรน้ำมัน</b> — '+pvN('hooklift_fee',100)+' ÷ '+pvN('fuel_rate_wage',25)+' = <b>'+(pvN('hooklift_fee',100)/(pvN('fuel_rate_wage',25)||1)).toFixed(1)+' ลิตร</b> บวกเข้าลิตรตามเกณฑ์ (คนขับได้เป็นส่วนเพิ่ม/หักน้ำมัน)</li>'
+    +'<li><b>จ่ายเป็นบาท</b> — บวก '+pvN('hooklift_fee',100)+' บ. ตรงเข้าค่าแรง</li></ul>'
+};
+function pvN(k,d){const i=document.querySelector('[data-p="'+k+'"]');const v=i?parseFloat(i.value):NaN;return !isNaN(v)?v:(DATA&&DATA.params[k]?+DATA.params[k].value:d);}
+function zoneOf(t){return ((DATA&&DATA.fuelZones)||[]).filter(z=>z.vehicle_type===t).sort((a,b)=>a.seq-b.seq);}
+function fwOf(t){return ((DATA&&DATA.fuelWeight)||[]).find(f=>f.model===t)||{};}
 // ประเภทรถ (แทนรุ่น 360/240) → คอลัมน์ กม./ล. ในตารางช่วงระยะ rate_speed_tier (model R5)
 const VTYPES=[['พ่วง','kmpl_trailer'],['เดี่ยว','kmpl_single'],['6ล้อ','kmpl_6wheel'],['4ล้อ','kmpl_4wheel']];
 const TIER_MODEL='R5';
@@ -149,7 +186,7 @@ function summaryHtml(){
   r+=row('ถ่วงหนัก/เบา', on('weight_on')?`เปิด · หนัก ${pv('heavy_pct',70)}% / เบา ${pv('light_pct',30)}%`:'ปิด · ทุกขาเต็ม 100%', on('weight_on')?'on':'off');
   r+=row('วิธีคิดเวลาวิ่ง', ({0:'ขั้นบันไดตามระยะ',1:'เหมาช่วงเดียว',2:'ไล่ระดับ (ตารางความเร็วไล่ระดับ)'})[Number(T.time_mode)]||'ขั้นบันไดตามระยะ', 'mode');
   r+=row('ระยะที่ใช้คิด', Number(T.dist_source)===1?'ค่ากลาง':'ระยะจริง (เลขไมล์)', 'mode');
-  r+=row('เกณฑ์น้ำมัน', ({0:'ตามหนัก-เบา',1:'ตามช่วงระยะ',2:'ค่าเดียวต่อประเภทรถ'})[Number(T.fuel_bench)]||'ตามหนัก-เบา', 'mode');
+  r+=row('เกณฑ์น้ำมัน', ({0:'ตามหนัก-เบา',1:'ตามช่วงระยะ',2:'ค่าเดียวต่อประเภทรถ',3:'ตามระยะหนักเบา (ตาราง⑬)',4:'หนักเบา-เรทช่วง (ตาราง⑬)'})[Number(T.fuel_bench)]||'ตามหนัก-เบา', 'mode');
   r+=row('เพิ่ม/หักน้ำมัน', on('fuel_adj_on')?`เปิด · เลท ${pv('fuel_rate_wage',28)} บ./ล.`:'ปิด (ไม่คิดน้ำมัน)', on('fuel_adj_on')?'on':'off');
   r+=row('ค่าคลุมผ้าใบ', on('tarp_on')?`เปิด · ${pv('tarp_fee',100)} บ. (เฉพาะงานที่ติ๊ก)`:'ปิด', on('tarp_on')?'on':'off');
   r+=row('โบนัส', on('bonus_on')?`เปิด · ${pv('bonus_pct',10)}% · ฐาน${Number(T.bonus_base)===1?'ค่าวิ่ง+ขึ้นลง':'หลังน้ำมัน'}`:'ปิด', on('bonus_on')?'on':'off');
@@ -195,8 +232,11 @@ function render(){
     const [key,label,opts,desc]=t;
     const cur=TOG[key];
     h+=`<div style="margin-bottom:11px"><div style="font-size:12.5px;font-weight:600;margin-bottom:4px">${label}</div><div class="seg">`;
-    opts.forEach(o=>{ const off=(o[1]==='ปิด'); h+=`<button type="button" data-tog="${key}" data-val="${o[0]}" class="${Number(cur)===o[0]?'on':''} ${off?'off':''}">${o[1]}</button>`; });
-    h+=`</div><div class="note" style="margin:3px 0 0">${desc}</div></div>`;
+    opts.forEach(o=>{ const off=(o[1]==='ปิด'), na=(key==='speed_mode'&&o[0]===1&&Number(cur)!==1);   // GPS จริง: ยังไม่มีในระบบคิดค่าแรง
+      h+=`<button type="button" ${na?'disabled title="ยังไม่รองรับ" style="opacity:.45;cursor:not-allowed"':`data-tog="${key}" data-val="${o[0]}"`} class="${Number(cur)===o[0]?'on':''} ${off?'off':''}">${o[1]}</button>`; });
+    h+=`</div><div class="note" style="margin:3px 0 0">${desc}</div>`;
+    if(HELP[key])h+=`<details class="help"><summary>ⓘ วิธีคิดแต่ละแบบ</summary><div>${HELP[key]()}</div></details>`;
+    h+='</div>';
   });
   h+='</div>';
 
@@ -221,10 +261,24 @@ function render(){
   const fwBy={}; (d.fuelWeight||[]).forEach(f=>fwBy[f.model]=f);
   const fbCols={0:['kmpl_heavy','kmpl_light'],2:['kmpl_single']}[fb]||[];
   const th=(k,t)=>`<th${fbCols.includes(k)?' style="color:var(--primary)"':''}>${t}${fbCols.includes(k)?' ✓':''}</th>`;
-  h+=`<div class="card"><div class="ch">🚚 เกณฑ์น้ำมันตามประเภทรถ (กม./ล.)</div><div class="note">ใช้คิดลิตรตามเกณฑ์ · คอลัมน์ ✓ = ที่ใช้อยู่ตามสวิตช์ "เกณฑ์น้ำมัน" · ถ้าเลือก "ตามช่วงระยะ" จะใช้ กม./ล. ในตารางช่วงระยะด้านล่างแทน · <b>0 = ยังไม่ได้ตั้ง</b> (รถประเภทนั้นคิดน้ำมันไม่ได้)</div>`;
+  h+=`<div class="card"><div class="ch">🚚 เกณฑ์น้ำมันตามประเภทรถ (กม./ล.)</div><div class="note">ใช้คิดลิตรตามเกณฑ์ · คอลัมน์ ✓ = ที่ใช้อยู่ตามสวิตช์ "เกณฑ์น้ำมัน" · "ตามระยะหนักเบา" / "หนักเบา-เรทช่วง" ใช้ตาราง⑬ ด้านล่าง · "ตามช่วงระยะ" ใช้ตารางช่วงระยะ · <b>0 = ยังไม่ได้ตั้ง</b> (รถประเภทนั้นคิดน้ำมันไม่ได้)</div>`;
   h+='<table><thead><tr><th>ประเภทรถ</th>'+th('kmpl_heavy','รถหนัก')+th('kmpl_light','รถเบา')+th('kmpl_single','ค่าเดียว')+'</tr></thead><tbody>';
   VTYPES.forEach(([t])=>{ const f=fwBy[t]||{}; h+=`<tr><td>${t}</td>`+['kmpl_heavy','kmpl_light','kmpl_single'].map(k=>`<td><input type="number" step="0.05" data-fw="${t}|${k}" value="${nv(f[k])}"${!(parseFloat(f[k])>0)?' style="border-color:var(--danger)"':''}></td>`).join('')+'</tr>'; });
   h+='</tbody></table></div>';
+
+  // ②b R.11 ตาราง⑬ — เกณฑ์น้ำมันหนัก/เบา แยก 4 ช่วงระยะ (rate_fuel_zone · fuel_bench 3/4)
+  const zAll=(d.fuelZones||[]), zUse=(fb===3||fb===4);
+  const zSeqs=[...new Set(zAll.map(z=>z.seq))].sort((a,b)=>a-b);
+  const zLbl=s=>{const z=zAll.find(x=>x.seq===s)||{};return (+z.to_km>=9999)?(z.from_km+'+'):(z.from_km+'–'+z.to_km);};
+  h+=`<div class="card"><div class="ch">📐 เกณฑ์น้ำมันหนัก/เบา แยกช่วงระยะ (ตาราง⑬) ${useTag(zUse)}</div><div class="note">ใช้เมื่อเกณฑ์น้ำมัน = <b>ตามระยะหนักเบา</b> หรือ <b>หนักเบา-เรทช่วง</b> · ช่วงระยะนับจากระยะหนัก (หรือเบา) รวมของเที่ยว · ค่าเริ่มต้นตาม Excel R.11 · แก้ได้เฉพาะ กม./ล. (ขอบช่วงคงที่)</div>`;
+  h+='<div style="overflow-x:auto"><table><thead><tr><th>ประเภทรถ</th><th></th>'+zSeqs.map(s=>`<th>${zLbl(s)} กม.</th>`).join('')+'</tr></thead><tbody>';
+  VTYPES.forEach(([t])=>{
+    [['kmpl_heavy','หนัก'],['kmpl_light','เบา']].forEach(([k,lbl],ri)=>{
+      h+='<tr>'+(ri===0?`<td rowspan="2">${t}</td>`:'')+`<td>${lbl}</td>`
+        +zSeqs.map(s=>{const z=zAll.find(x=>x.vehicle_type===t&&x.seq===s);return z?`<td><input type="number" step="0.01" data-fz="${t}|${s}|${k}" value="${nv(z[k])}"${!(parseFloat(z[k])>0)?' style="border-color:var(--danger)"':''}></td>`:'<td>—</td>';}).join('')+'</tr>';
+    });
+  });
+  h+='</tbody></table></div></div>';
 
   // ③ ช่วงระยะ (rate_speed_tier model R5) — ความเร็ว (ขั้นบันได/เหมาช่วง) + กม./ล.ตามช่วง ต่อประเภทรถ
   const tiers=(d.speedTier||[]).filter(t=>t.model===TIER_MODEL).sort((a,b)=>a.seq-b.seq);
@@ -354,7 +408,11 @@ function gatherConfig(){
   document.querySelectorAll('[data-jth]').forEach(i=>{const j=i.dataset.jth;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].hooklift=i.checked;});
   document.querySelectorAll('[data-jhs]').forEach(i=>{const j=i.dataset.jhs;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].hardship=i.checked;});   // overnight (ค้างคืน) เลิกใช้ ไม่ส่ง = คงค่าเดิมในฐาน
   const jobTypes=Object.values(jtMap);
-  return {params,speedTier,speedInterp,fuelWeight,jobTypes};
+  // ตาราง⑬ — ส่งทุกแถว (ขอบช่วงเดิม + กม./ล. จากฟอร์ม)
+  const fzIn={}; document.querySelectorAll('[data-fz]').forEach(i=>{fzIn[i.dataset.fz]=i.value;});
+  const fuelZones=(DATA.fuelZones||[]).map(z=>{const g=k=>{const v=fzIn[z.vehicle_type+'|'+z.seq+'|'+k];return v===undefined?z[k]:(v===''?0:parseFloat(v));};
+    return {vehicle_type:z.vehicle_type,seq:z.seq,from_km:z.from_km,to_km:z.to_km,kmpl_heavy:g('kmpl_heavy'),kmpl_light:g('kmpl_light')};});
+  return {params,speedTier,speedInterp,fuelWeight,fuelZones,jobTypes};
 }
 async function save(){
   const cfg=gatherConfig();
@@ -455,6 +513,7 @@ function syncAll(){
   syncTiers(); syncInterp();
   document.querySelectorAll('[data-p]').forEach(i=>{const k=i.dataset.p;DATA.params[k]=Object.assign({},DATA.params[k]||{},{value:parseFloat(i.value)||0});});
   document.querySelectorAll('[data-fw]').forEach(i=>{const[m,f]=i.dataset.fw.split('|');let r=DATA.fuelWeight.find(x=>x.model===m);if(!r){r={model:m};DATA.fuelWeight.push(r);}r[f]=parseFloat(i.value)||0;});
+  document.querySelectorAll('[data-fz]').forEach(i=>{const[t,s,f]=i.dataset.fz.split('|');const r=(DATA.fuelZones||[]).find(x=>x.vehicle_type===t&&String(x.seq)===s);if(r)r[f]=parseFloat(i.value)||0;});
   document.querySelectorAll('[data-jt]').forEach(i=>{const[j,f]=i.dataset.jt.split('|');const r=DATA.jobTypes.find(x=>x.job_type===j);if(r)r[f]=parseInt(i.value)||0;});
   [['data-jtt','tarp'],['data-jth','hooklift'],['data-jhs','hardship']].forEach(([a,f])=>document.querySelectorAll('['+a+']').forEach(i=>{const r=DATA.jobTypes.find(x=>x.job_type===i.getAttribute(a));if(r)r[f]=i.checked;}));
 }
