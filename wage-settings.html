@@ -82,7 +82,10 @@ function goBack(){ if(history.length>1){history.back();} else {location.href='ht
 
 // ป้ายชื่อ param กลาง
 const PLBL={run_rate_per_hr:'เลทค่าวิ่ง (บ./ชม.)',load_rate_per_hr:'ค่าขึ้น-ลง (บ./ชม.)',fuel_rate_wage:'เลทน้ำมันคิดค่าแรง (บ./ล.)',heavy_pct:'ถ่วงหนัก (%)',light_pct:'ถ่วงเบา (%)',bonus_pct:'โบนัส % ค่าเที่ยว',tarp_fee:'ค่าคลุมผ้าใบ (บ.)',hooklift_fee:'ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง)',hooklift_liters:'ฮุคลิฟท์ +น้ำมัน (ลิตร/ครั้ง · เทปาล์ม)',give_per_hr:'ให้เพิ่มตามเวลาวิ่ง (บ./ชม.ไป-กลับ)',wait_rate_per_hr:'ค่ารอลงของ (บ./ชม. · × ชม.รอต่อปลายทาง)',overnight_fee:'ค่ารอขึ้นของข้ามคืน (บ./คืน · เลิกใช้)'};
-const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct','light_pct','bonus_pct','tarp_fee','hooklift_liters','give_per_hr','wait_rate_per_hr'];
+// R.5: ฮุคลิฟท์ = hooklift_fee (บ./ครั้ง · แปลงเป็นลิตรเมื่อเปิด "จ่ายผ่านลิตร") — hooklift_liters (V.2) เลิกใช้ ไม่มีโค้ดอ่านแล้ว
+PLBL.hooklift_fee='ค่าฮุคลิฟท์ (บ./ครั้ง)';
+PLBL.hardship_fee='Hardship ค่าความยาก (บ./เที่ยว)';
+const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct','light_pct','bonus_pct','tarp_fee','hooklift_fee','hardship_fee','give_per_hr','wait_rate_per_hr'];
 
 // นิยาม toggle: [key, ป้าย, [[ค่า,ป้ายตัวเลือก],...], คำอธิบาย]
 const TOGDEF=[
@@ -94,7 +97,14 @@ const TOGDEF=[
   ['fuel_adj_on','เพิ่ม/หักน้ำมัน',[[1,'เปิด'],[0,'ปิด']],'ปิด = ไม่คิดเพิ่ม/หักน้ำมันเลย'],
   ['tarp_on','ค่าคลุมผ้าใบ',[[1,'เปิด'],[0,'ปิด']],'เปิดแล้วยังดูต่อประเภทงาน (ตารางล่าง) ว่าคิดไหม'],
   ['bonus_on','โบนัส',[[1,'เปิด'],[0,'ปิด']],'ปิด = ไม่คิดโบนัส %'],
-  ['bonus_base','ฐานคิดโบนัส',[[0,'หลังน้ำมัน'],[1,'ก่อน (ค่าวิ่ง+ขึ้นลง)']],'ก่อน = คิด % จากค่าวิ่ง+ขึ้นลงเท่านั้น']
+  ['bonus_base','ฐานคิดโบนัส',[[0,'หลังน้ำมัน'],[1,'ก่อน (ค่าวิ่ง+ขึ้นลง)']],'ก่อน = คิด % จากค่าวิ่ง+ขึ้นลงเท่านั้น'],
+  // R.5 — ระบบคิดค่าแรงใช้อยู่ (เดิมหน้านี้ไม่มีให้ตั้ง)
+  ['load_on','ค่าขึ้น-ลง',[[1,'เปิด'],[0,'ปิด']],'เลทค่าขึ้น-ลง × (นาทีขึ้น+ลง ตามประเภทงาน) ÷ 60'],
+  ['hooklift_on','ค่าฮุคลิฟท์',[[1,'เปิด'],[0,'ปิด']],'คิดเฉพาะประเภทงานที่ติ๊ก "ฮุคลิฟท์" ในตารางล่าง'],
+  ['hardship_on','Hardship ค่าความยาก',[[1,'เปิด'],[0,'ปิด']],'คิดเฉพาะประเภทงานที่ติ๊ก "Hardship" ในตารางล่าง'],
+  ['give_on','ให้เพิ่มตามเวลาวิ่ง',[[1,'เปิด'],[0,'ปิด']],'ให้เพิ่ม บ./ชม. × ชั่วโมงวิ่งทั้งเที่ยว · ทุกงาน'],
+  ['wait_on','ค่ารอลงของ',[[1,'เปิด'],[0,'ปิด']],'ชม.รอตาม DP Type ของสถานี × เลทค่ารอลงของ'],
+  ['via_liters','จ่ายฮุคลิฟท์ + ให้เพิ่ม',[[1,'แปลงเป็นลิตรน้ำมัน'],[0,'จ่ายเป็นบาท']],'แปลงเป็นลิตร = บาท ÷ เลทน้ำมันคิดค่าแรง แล้วบวกเข้าลิตรตามเกณฑ์ (ไปอยู่ในยอดเพิ่ม/หักน้ำมัน) · จ่ายเป็นบาท = บวกตรงเข้าค่าแรง']
 ];
 let TOG={};
 // ประเภทรถ (แทนรุ่น 360/240) → คอลัมน์ กม./ล. ในตารางช่วงระยะ rate_speed_tier (model R5)
@@ -121,6 +131,9 @@ async function load(){
   if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
   DATA=d;
   TOG=Object.assign({weight_on:1,time_mode:0,speed_mode:0,dist_source:0,fuel_bench:0,fuel_adj_on:1,tarp_on:1,bonus_on:1,bonus_base:0}, d.toggles||{});
+  // toggle R.5 ที่ getWageSettings ยังไม่ส่งใน toggles → อ่านจาก cost_params ตรง (ค่าเริ่มต้นเท่าที่ระบบคิดค่าแรงใช้)
+  const TDEF={load_on:1,hooklift_on:1,hardship_on:1,give_on:1,wait_on:1,via_liters:1};
+  Object.keys(TDEF).forEach(k=>{ TOG[k]=(d.params[k]&&d.params[k].value!=null)?Number(d.params[k].value):TDEF[k]; });
   WBITEMS.forEach(it=>WB[it[0]]=(d.toggles&&Number(d.toggles['wb_'+it[0]]))?1:0);
   render(); $('saveBar').style.display='flex';
   if(!DPW.loaded)loadDp();
@@ -140,10 +153,13 @@ function summaryHtml(){
   r+=row('เพิ่ม/หักน้ำมัน', on('fuel_adj_on')?`เปิด · เลท ${pv('fuel_rate_wage',28)} บ./ล.`:'ปิด (ไม่คิดน้ำมัน)', on('fuel_adj_on')?'on':'off');
   r+=row('ค่าคลุมผ้าใบ', on('tarp_on')?`เปิด · ${pv('tarp_fee',100)} บ. (เฉพาะงานที่ติ๊ก)`:'ปิด', on('tarp_on')?'on':'off');
   r+=row('โบนัส', on('bonus_on')?`เปิด · ${pv('bonus_pct',10)}% · ฐาน${Number(T.bonus_base)===1?'ค่าวิ่ง+ขึ้นลง':'หลังน้ำมัน'}`:'ปิด', on('bonus_on')?'on':'off');
-  const hf=pv('hooklift_liters',0), ov=pv('overnight_fee',0), gp=pv('give_per_hr',0);
-  r+=row('ฮุคลิฟท์ (เทปาล์ม)', hf>0?`+${hf} ลิตรน้ำมัน/ครั้ง · เฉพาะปาล์มที่ติ๊ก`:'ไม่คิด (0)', hf>0?'on':'none');
-  r+=row('ให้เพิ่มตามเวลาวิ่ง', gp>0?`${(+gp).toFixed(2)} บ./ชม.ไป-กลับ · ทุกเที่ยวทุกงาน`:'ไม่คิด (0)', gp>0?'on':'none');
-  r+=row('ค่ารอขึ้นของข้ามคืน', ov>0?`${ov} บ./คืน · เฉพาะงานที่ติ๊ก`:'ไม่คิด (0)', ov>0?'on':'none');
+  const hf=pv('hooklift_fee',0), hs=pv('hardship_fee',0), gp=pv('give_per_hr',0), wr=pv('wait_rate_per_hr',0), via=on('via_liters');
+  const jobsWith=f=>(DATA.jobTypes||[]).filter(j=>j[f]===true||j[f]==='t'||j[f]==='true').map(j=>j.job_type).join('/')||'ยังไม่ติ๊กงานไหน';
+  r+=row('ค่าขึ้น-ลง', on('load_on')?`เปิด · ${pv('load_rate_per_hr',100)} บ./ชม. × นาทีตามประเภทงาน`:'ปิด', on('load_on')?'on':'off');
+  r+=row('ค่าฮุคลิฟท์', !on('hooklift_on')?'ปิด':(hf>0?`${hf} บ./ครั้ง · ${jobsWith('hooklift')} · ${via?'แปลงเป็นลิตรน้ำมัน':'จ่ายเป็นบาท'}`:'ไม่คิด (0)'), !on('hooklift_on')?'off':(hf>0?'on':'none'));
+  r+=row('Hardship ค่าความยาก', !on('hardship_on')?'ปิด':(hs>0?`${hs} บ./เที่ยว · ${jobsWith('hardship')}`:'ไม่คิด (0)'), !on('hardship_on')?'off':(hs>0?'on':'none'));
+  r+=row('ให้เพิ่มตามเวลาวิ่ง', !on('give_on')?'ปิด':(gp>0?`${(+gp).toFixed(2)} บ./ชม.วิ่ง · ทุกงาน · ${via?'แปลงเป็นลิตรน้ำมัน':'จ่ายเป็นบาท'}`:'ไม่คิด (0)'), !on('give_on')?'off':(gp>0?'on':'none'));
+  r+=row('ค่ารอลงของ', !on('wait_on')?'ปิด':(wr>0?`${wr} บ./ชม. × ชม.รอตาม DP Type`:'ไม่คิด (0)'), !on('wait_on')?'off':(wr>0?'on':'none'));
   return `<div class="card"><div class="ch">📋 สรุปเกณฑ์ที่ใช้คิดตอนนี้</div><div class="note">อัปเดตสดตามสวิตช์ด้านล่าง — คือเกณฑ์ที่<b>ระบบจ่ายจริง</b>ใช้คิดค่าแรงเที่ยวใหม่</div>${r}</div>`;
 }
 
@@ -153,8 +169,9 @@ function render(){
 
   // สูตรอธิบาย
   h+='<div class="card"><div class="ch">🧮 คิดค่าแรงยังไง</div><div class="formula">'
-    +'ค่าวิ่งแต่ละขา = เลทค่าวิ่ง × ชม.(ขั้นบันไดตามระยะ) × 2 × %หนัก/เบา<br>'
-    +'+ ค่าขึ้น-ลง (ตามประเภทงาน) + ค่าคลุมผ้าใบ<br>'
+    +'ค่าวิ่งแต่ละขา = เลทค่าวิ่ง × ชม.วิ่งของขา × 2 × %หนัก/เบา  (ชม.วิ่งจากระยะ ÷ ความเร็วตามวิธีคิดเวลาวิ่ง)<br>'
+    +'+ ค่าขึ้น-ลง + ค่าคลุมผ้าใบ + Hardship + ค่ารอลงของ (ตามประเภทงาน / DP Type)<br>'
+    +'+ ค่าฮุคลิฟท์ + ให้เพิ่มตามเวลาวิ่ง (ถ้า "แปลงเป็นลิตรน้ำมัน" → ÷ เลทน้ำมัน ไปรวมในลิตรตามเกณฑ์)<br>'
     +'± น้ำมันคนขับ = (ลิตรตามเกณฑ์ − เติมจริง) × เลทน้ำมัน<br>'
     +'+ โบนัส % → <b>ค่าแรงสุทธิ</b> (ล็อก+snapshot ตอนจบงาน)'
     +'</div></div>';
@@ -223,8 +240,8 @@ function render(){
 
   // เวลาขึ้น-ลง + รายการบวกต่อประเภทงาน (ผ้าใบ/ฮุคลิฟท์/ค้างคืน)
   const jbool=v=>(v===true||v==='t'||v==='true');
-  h+='<div class="card"><div class="ch">⏱️ เวลาขึ้น-ลง + รายการบวก ต่อประเภทงาน</div><div class="note">ขึ้น/ลง = นาที · ติ๊ก = งานนี้คิดรายการนั้นไหม (ต้องเปิดสวิตช์/ตั้งค่าเงินด้วย) · ฮุคลิฟท์=งานปาล์ม · ค้างคืน=งาน Packing</div><table><thead><tr><th>งาน</th><th>ขึ้น</th><th>ลง</th><th>ผ้าใบ</th><th>ฮุคลิฟท์</th><th>ค้างคืน</th></tr></thead><tbody>';
-  d.jobTypes.forEach(j=>{ h+=`<tr><td>${j.job_type}</td><td><input type="number" data-jt="${j.job_type}|up_min" value="${j.up_min}"></td><td><input type="number" data-jt="${j.job_type}|down_min" value="${j.down_min}"></td><td><input type="checkbox" data-jtt="${j.job_type}" ${jbool(j.tarp)?'checked':''} style="width:20px;height:20px"></td><td><input type="checkbox" data-jth="${j.job_type}" ${jbool(j.hooklift)?'checked':''} style="width:20px;height:20px"></td><td><input type="checkbox" data-jto="${j.job_type}" ${jbool(j.overnight)?'checked':''} style="width:20px;height:20px"></td></tr>`; });
+  h+='<div class="card"><div class="ch">⏱️ เวลาขึ้น-ลง + รายการบวก ต่อประเภทงาน</div><div class="note">ขึ้น/ลง = นาที · ติ๊ก = งานนี้คิดรายการนั้นไหม (ต้องเปิดสวิตช์และตั้งจำนวนเงินด้านบนด้วย) · ค่าฮุคลิฟท์ = '+(d.params.hooklift_fee?d.params.hooklift_fee.value:0)+' บ./ครั้ง · Hardship = '+(d.params.hardship_fee?d.params.hardship_fee.value:0)+' บ./เที่ยว</div><table><thead><tr><th>งาน</th><th>ขึ้น</th><th>ลง</th><th>ผ้าใบ</th><th>ฮุคลิฟท์</th><th>Hardship</th></tr></thead><tbody>';
+  d.jobTypes.forEach(j=>{ h+=`<tr><td>${j.job_type}</td><td><input type="number" data-jt="${j.job_type}|up_min" value="${j.up_min}"></td><td><input type="number" data-jt="${j.job_type}|down_min" value="${j.down_min}"></td><td><input type="checkbox" data-jtt="${j.job_type}" ${jbool(j.tarp)?'checked':''} style="width:20px;height:20px"></td><td><input type="checkbox" data-jth="${j.job_type}" ${jbool(j.hooklift)?'checked':''} style="width:20px;height:20px"></td><td><input type="checkbox" data-jhs="${j.job_type}" ${jbool(j.hardship)?'checked':''} style="width:20px;height:20px"></td></tr>`; });
   h+='</tbody></table></div>';
 
   // ราคาน้ำมันกลางวันนี้
@@ -335,7 +352,7 @@ function gatherConfig(){
   const jtMap={}; document.querySelectorAll('[data-jt]').forEach(i=>{const[j,f]=i.dataset.jt.split('|');jtMap[j]=jtMap[j]||{job_type:j};jtMap[j][f]=parseInt(i.value)||0;});
   document.querySelectorAll('[data-jtt]').forEach(i=>{const j=i.dataset.jtt;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].tarp=i.checked;});
   document.querySelectorAll('[data-jth]').forEach(i=>{const j=i.dataset.jth;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].hooklift=i.checked;});
-  document.querySelectorAll('[data-jto]').forEach(i=>{const j=i.dataset.jto;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].overnight=i.checked;});
+  document.querySelectorAll('[data-jhs]').forEach(i=>{const j=i.dataset.jhs;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].hardship=i.checked;});   // overnight (ค้างคืน) เลิกใช้ ไม่ส่ง = คงค่าเดิมในฐาน
   const jobTypes=Object.values(jtMap);
   return {params,speedTier,speedInterp,fuelWeight,jobTypes};
 }
@@ -439,7 +456,7 @@ function syncAll(){
   document.querySelectorAll('[data-p]').forEach(i=>{const k=i.dataset.p;DATA.params[k]=Object.assign({},DATA.params[k]||{},{value:parseFloat(i.value)||0});});
   document.querySelectorAll('[data-fw]').forEach(i=>{const[m,f]=i.dataset.fw.split('|');let r=DATA.fuelWeight.find(x=>x.model===m);if(!r){r={model:m};DATA.fuelWeight.push(r);}r[f]=parseFloat(i.value)||0;});
   document.querySelectorAll('[data-jt]').forEach(i=>{const[j,f]=i.dataset.jt.split('|');const r=DATA.jobTypes.find(x=>x.job_type===j);if(r)r[f]=parseInt(i.value)||0;});
-  [['data-jtt','tarp'],['data-jth','hooklift'],['data-jto','overnight']].forEach(([a,f])=>document.querySelectorAll('['+a+']').forEach(i=>{const r=DATA.jobTypes.find(x=>x.job_type===i.getAttribute(a));if(r)r[f]=i.checked;}));
+  [['data-jtt','tarp'],['data-jth','hooklift'],['data-jhs','hardship']].forEach(([a,f])=>document.querySelectorAll('['+a+']').forEach(i=>{const r=DATA.jobTypes.find(x=>x.job_type===i.getAttribute(a));if(r)r[f]=i.checked;}));
 }
 function addTier(m){syncAll();const sq=DATA.speedTier.filter(t=>t.model===m).map(t=>+t.seq);DATA.speedTier.push({model:m,seq:(sq.length?Math.max(...sq):0)+1,max_km:null,speed_kmph:null,kmpl_trailer:null,kmpl_single:null,kmpl_6wheel:null,kmpl_4wheel:null});render();}
 function delTier(m,seq){syncAll();DATA.speedTier=DATA.speedTier.filter(t=>!(t.model===m&&String(t.seq)===String(seq)));render();}
