@@ -276,6 +276,12 @@
   function bench13Rate(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
     function zi(d){for(var i=0;i<4;i++){if(d<=ZONE13_HI[i])return i;}return 3;}
     var L=0; if(distH>0&&Z.h[zi(distH)]>0)L+=distH/Z.h[zi(distH)]; if(distL>0&&Z.l[zi(distL)]>0)L+=distL/Z.l[zi(distL)]; return L;}
+  // 🆕 หนักเบา-เกลี่ยในช่วง (คุณน้องเพิ่ม 2026-09-25 · ไม่มีใน Excel) — กม./ล. ไล่เส้นตรงจากเรทช่วงก่อน (ที่ขอบบนช่วงก่อน) → เรทช่วงนี้ (ที่เพดาน)
+  //    ช่วงแรก/ช่วงสุดท้าย (ไม่จำกัด) = เรทคงที่ · ตรง computeTripWage _bench13Blend_
+  function blendKmpl(d,kk){var i=0;while(i<3&&d>ZONE13_HI[i])i++;if(i===0||i===3)return kk[i];
+    var a=ZONE13_HI[i-1],t=(d-a)/((ZONE13_HI[i]-a)||1);t=Math.max(0,Math.min(1,t));return kk[i-1]+t*(kk[i]-kk[i-1]);}
+  function bench13Blend(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
+    var L=0,rh=distH>0?blendKmpl(distH,Z.h):0,rl=distL>0?blendKmpl(distL,Z.l):0;if(rh>0)L+=distH/rh;if(rl>0)L+=distL/rl;return L;}
   function tierIdx(d){for(var i=0;i<SPEED_TIERS.length;i++){if(d<=SPEED_TIERS[i].max)return i;}return SPEED_TIERS.length-1;}
   function speedFor(d){return SPEED_TIERS[tierIdx(d)].speed;}
   // 🆕 V.2 "ให้เพิ่มตามเวลาวิ่ง" — ตารางความเร็วตามระยะ (interpolate) ตรง Mastersheet ชีต ความเร็ววตามระยะทาง · คนละตารางกับ SPEED_TIERS
@@ -555,7 +561,7 @@
   var toggles=[   // R.5
     {k:'distMode',label:'ระยะที่ใช้คิด',opts:[['central','ค่ากลาง'],['actual','จริง']]},
     {k:'speedCalc',label:'วิธีคิดเวลาวิ่ง',opts:[['interp','ไล่ระดับ'],['stair','ขั้นบันได'],['flat','เหมาช่วง']]},
-    {k:'fuelBench',label:'เกณฑ์น้ำมัน',opts:[['hlzone','ตามระยะหนักเบา'],['hlrate','หนักเบา-เรทช่วง'],['single','ค่าเดียว'],['tier','ตามช่วง'],['weight','หนัก/เบา']]},
+    {k:'fuelBench',label:'เกณฑ์น้ำมัน',opts:[['hlzone','ตามระยะหนักเบา'],['hlrate','หนักเบา-เรทช่วง'],['hlblend','หนักเบา-เกลี่ยในช่วง'],['single','ค่าเดียว'],['tier','ตามช่วง'],['weight','หนัก/เบา']]},
     {k:'fuelPenalty',label:'เพิ่ม/หักน้ำมัน',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'via',label:'จ่ายผ่านลิตร (ฮุค+ให้เพิ่ม→ลิตร)',opts:[[true,'เปิด'],[false,'ปิด']]},
     {k:'weight',label:'ถ่วงหนัก/เบา',opts:[[true,'เปิด'],[false,'ปิด']]},
@@ -675,6 +681,7 @@
     else if(T.fuelBench==='tier')benchL=stairLiters(distTotal,veh);
     else if(T.fuelBench==='hlzone')benchL=bench13Zone(distHeavy,distLight,veh);   // 🆕 ⑬ ตามระยะหนักเบา
     else if(T.fuelBench==='hlrate')benchL=bench13Rate(distHeavy,distLight,veh);   // 🆕 ⑬ หนักเบา-เรทช่วง
+    else if(T.fuelBench==='hlblend')benchL=bench13Blend(distHeavy,distLight,veh); // 🆕 ⑬ หนักเบา-เกลี่ยในช่วง
     else benchL=distHeavy/(fw.heavy||1)+distLight/(fw.light||1);           // weight = หนัก/เบา ค่าเดียว
     var viaL=T.via?(hooklift+give)/(P.fuelRate||1):0;                      // AM
     var benchKmpl=benchL>0?fuelDist/benchL:single;
@@ -1060,7 +1067,7 @@
     T.weight=_n(tg.weight_on,1)!==0;
     T.speedCalc=(function(v){return v===2?'interp':(v===1?'flat':'stair');})(_n(tg.time_mode,2));  // R.5 = interp
     T.distMode=_n(tg.dist_source,1)===1?'central':'actual';                                        // R.5 = central
-    T.fuelBench=(function(v){return v===2?'single':(v===1?'tier':'weight');})(_n(tg.fuel_bench,2)); // R.5 = single
+    T.fuelBench=({0:'weight',1:'tier',2:'single',3:'hlzone',4:'hlrate',5:'hlblend'})[_n(tg.fuel_bench,2)]||'single'; // ตรง computeTripWage (R.5 = 2 single)
     T.fuelPenalty=_n(tg.fuel_adj_on,1)!==0; T.tarp=_n(tg.tarp_on,1)!==0;
     T.bonus10=_n(tg.bonus_on,0)!==0; T.bonusBase=_n(tg.bonus_base,0)===1?'base':'total';
     T.giveOn=_n(tg.give_on,1)!==0; T.wait=_n(tg.wait_on,1)!==0; T.hooklift=_n(tg.hooklift_on,1)!==0;
