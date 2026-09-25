@@ -170,8 +170,15 @@ function wbCard(){
 }
 
 async function load(){
-  const r=await fetch(GAS_URL+'?action=getWageSettings&userId='+encodeURIComponent(MY_UID));
-  const d=await r.json();
+  if(!DATA)$('body').innerHTML='<div class="msg">กำลังโหลดตั้งค่า…</div>';
+  let d;
+  try{ d=await gasTry(GAS_URL+'?action=getWageSettings&userId='+encodeURIComponent(MY_UID),null,3); }
+  catch(e){
+    // GAS ตอบหน้า error HTML/ไม่ตอบ ครบ 3 รอบ → บอกให้ชัด + ปุ่มลองใหม่ (เดิมค้าง "กำลังเข้าสู่ระบบ…" เงียบ)
+    if(!DATA)$('body').innerHTML='<div class="msg" style="color:var(--danger)">โหลดตั้งค่าไม่สำเร็จ ('+String(e&&e.message||e)+')<br><button class="tbtn primary" style="margin-top:12px" onclick="load()">↻ ลองใหม่</button></div>';
+    else toast('❌ โหลดตั้งค่าใหม่ไม่สำเร็จ — ค่าบนจอยังเป็นชุดเดิม');
+    return;
+  }
   if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
   if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
   DATA=d;
@@ -180,7 +187,8 @@ async function load(){
   const TDEF={load_on:1,hooklift_on:1,hardship_on:1,give_on:1,wait_on:1,via_liters:1};
   Object.keys(TDEF).forEach(k=>{ TOG[k]=(d.params[k]&&d.params[k].value!=null)?Number(d.params[k].value):TDEF[k]; });
   WBITEMS.forEach(it=>WB[it[0]]=(d.toggles&&Number(d.toggles['wb_'+it[0]]))?1:0);
-  render(); $('saveBar').style.display='flex';
+  try{ render(); }catch(e){ $('body').innerHTML='<div class="msg" style="color:var(--danger)">แสดงหน้าตั้งค่าไม่ได้: '+String(e&&e.message||e)+'</div>'; return; }
+  $('saveBar').style.display='flex';
   if(!DPW.loaded)loadDp();
 }
 
@@ -447,7 +455,7 @@ async function save(){
 let TEMPLATES=[], ACTIVE_ID='';
 const escT=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function loadTemplates(){
-  try{const r=await fetch(GAS_URL+'?action=getWageTemplates&userId='+encodeURIComponent(MY_UID));const d=await r.json();
+  try{const d=await gasTry(GAS_URL+'?action=getWageTemplates&userId='+encodeURIComponent(MY_UID),null,3);
     if(d&&d.ok){TEMPLATES=d.templates||[];ACTIVE_ID=d.activeId||'';}}catch(e){}
   renderTemplates();
 }
