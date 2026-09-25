@@ -120,6 +120,7 @@ async function load(){
   TOG=Object.assign({weight_on:1,time_mode:0,speed_mode:0,dist_source:0,fuel_bench:0,fuel_adj_on:1,tarp_on:1,bonus_on:1,bonus_base:0}, d.toggles||{});
   WBITEMS.forEach(it=>WB[it[0]]=(d.toggles&&Number(d.toggles['wb_'+it[0]]))?1:0);
   render(); $('saveBar').style.display='flex';
+  if(!DPW.loaded)loadDp();
 }
 
 // สรุปเกณฑ์ที่ใช้ตอนนี้ (อ่านจาก TOG + params) — chip สี: เขียว=เปิด แดง=ปิด น้ำเงิน=โหมด เทา=ไม่คิด
@@ -160,8 +161,11 @@ function render(){
 
   // param กลาง
   h+='<div class="card"><div class="ch">💵 ค่าตั้งกลาง (cost_params)</div><div class="grid">';
-  PORDER.forEach(k=>{ const val=d.params[k]?d.params[k].value:0; h+=`<label>${PLBL[k]||k}<input type="number" step="any" data-p="${k}" value="${val}"></label>`; });
+  PORDER.forEach(k=>{ const val=d.params[k]?d.params[k].value:0; h+=`<label>${PLBL[k]||k}<input type="number" step="any" data-p="${k}" value="${val}"${k==='wait_rate_per_hr'?' oninput="renderDp()"':''}></label>`; });
   h+='</div></div>';
+
+  // ⏱️ เวลารอลงของ ตาม DP Type — บันทึกแยกด้วยปุ่มในการ์ด (ไม่ผูกกับปุ่มบันทึกล่าง)
+  h+='<div id="dpCard"></div>';
 
   // ⑥ สวิตช์วิธีคิด (toggle) — คุมทั้งสูตรจริง + เครื่องคิดเลข
   h+='<style>.seg{display:inline-flex;flex-wrap:wrap;gap:6px}.seg button{border:1px solid var(--line2);background:transparent;color:var(--txt2);border-radius:8px;padding:6px 12px;font:inherit;font-size:12.5px;cursor:pointer}.seg button.on{background:var(--primary);color:#fff;border-color:var(--primary);font-weight:700}.seg button.on.off{background:var(--danger);border-color:var(--danger)}</style>';
@@ -207,6 +211,84 @@ function render(){
   h+='</div>';
 
   $('body').innerHTML=h;
+  renderDp();
+}
+
+// ═══════ ⏱️ เวลารอลงของ ตาม DP Type (= ตาราง K-L ใน DATABASE.xlsx) ═══════
+// ค่ารอ = ชม.รอ × เรท "ค่ารอลงของ" · สถานีผูก DP Type ที่หน้า 📍 ค่ากลาง · state เก็บใน DPW (render() สร้างการ์ดใหม่ได้ไม่หาย)
+let DPW={rows:[],del:[],waitRate:0,loaded:false,err:null,busy:false};
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function gasTry(url,opt,tries){   // GAS บางครั้งส่งหน้า error HTML แทน JSON → อ่านซ้ำได้ (เฉพาะการอ่าน)
+  let last;
+  for(let n=1;n<=tries;n++){
+    try{const c=new AbortController(),t=setTimeout(()=>c.abort(),70000);
+      const r=await fetch(url,Object.assign({signal:c.signal},opt||{})),txt=await r.text();clearTimeout(t);
+      try{return JSON.parse(txt);}catch(e){last=new Error('หลังบ้านตอบผิดรูปแบบ');}
+    }catch(e){last=e&&e.name==='AbortError'?new Error('หลังบ้านไม่ตอบภายใน 70 วินาที'):e;}
+    if(n<tries)await new Promise(r=>setTimeout(r,1500*n));
+  }
+  throw last;
+}
+async function loadDp(){
+  DPW.err=null; renderDp();
+  try{
+    const d=await gasTry(GAS_URL+'?action=getDpWaitTimes&userId='+encodeURIComponent(MY_UID),null,3);
+    if(!d.ok)throw new Error(d.denied?'ไม่มีสิทธิ์':(d.error||'โหลดไม่ได้'));
+    DPW.rows=d.rows.map(r=>({id:r.id,dp_type:r.dp_type,wait_hours:r.wait_hours,note:r.note||'',active:r.active!==false,stations:r.stations||0}));
+    DPW.del=[]; DPW.waitRate=d.waitRate; DPW.loaded=true;
+  }catch(e){DPW.err=(e&&e.message)||String(e);}
+  renderDp();
+}
+function dpRate(){const i=document.querySelector('[data-p="wait_rate_per_hr"]');const v=i?parseFloat(i.value):NaN;return isNaN(v)?DPW.waitRate:v;}
+function renderDp(){
+  const box=$('dpCard'); if(!box)return;
+  let h='<div class="card"><div class="ch">⏱️ เวลารอลงของ ตาม DP Type</div>'
+    +'<div class="note">ค่ารอ = <b>ชม.รอ × เรทค่ารอลงของ</b> ('+dpRate()+' บ./ชม. จากค่าตั้งกลางด้านบน) · เลือก DP Type ให้แต่ละสถานีที่หน้า <b>📍 ค่ากลาง</b> · สถานีที่ไม่มี DP Type = ไม่คิดค่ารอ<br>'
+    +'ตารางนี้บันทึกแยกด้วยปุ่มในการ์ด · เปลี่ยนชื่อ DP Type แล้วสถานีที่ผูกไว้เปลี่ยนตาม</div>';
+  if(DPW.err)h+='<div class="msg" style="padding:12px">โหลดไม่ได้ — '+esc(DPW.err)+' <button type="button" class="tbtn" onclick="loadDp()">↻ ลองใหม่</button></div>';
+  else if(!DPW.loaded)h+='<div class="msg" style="padding:12px">กำลังโหลดเวลารอ…</div>';
+  else{
+    const rate=dpRate();
+    h+='<table><thead><tr><th>DP Type</th><th>ชม.รอ</th><th>ค่ารอ (บ.)</th><th>ใช้กับสถานี</th><th></th></tr></thead><tbody>';
+    DPW.rows.forEach((r,i)=>{
+      h+='<tr><td><input style="width:100%;text-align:left" value="'+esc(r.dp_type)+'" placeholder="เช่น แม็คโคร" oninput="DPW.rows['+i+'].dp_type=this.value"></td>'
+        +'<td><input type="number" step="0.25" min="0" value="'+r.wait_hours+'" oninput="DPW.rows['+i+'].wait_hours=this.value;this.closest(\'tr\').children[2].textContent=((parseFloat(this.value)||0)*'+rate+').toLocaleString(\'th-TH\')"></td>'
+        +'<td>'+((parseFloat(r.wait_hours)||0)*rate).toLocaleString('th-TH')+'</td>'
+        +'<td>'+(r.id?(r.stations?r.stations+' แห่ง':'—'):'<span class="tag">ใหม่</span>')+'</td>'
+        +'<td>'+(r.confirmDel
+          ?'<button type="button" onclick="dpDel('+i+',true)" style="border:0;background:var(--danger);color:#fff;border-radius:7px;font:inherit;font-size:11.5px;padding:4px 8px;cursor:pointer">ยืนยันลบ</button>'
+          :'<button type="button" onclick="dpDel('+i+')" title="ลบ" style="border:0;background:transparent;color:var(--danger);font-size:15px;cursor:pointer;padding:2px 6px">✕</button>')+'</td></tr>';
+      if(r.confirmDel&&r.stations)h+='<tr><td colspan="5" style="text-align:left;color:var(--danger);font-size:11.5px">ลบแล้ว '+r.stations+' สถานีที่ใช้ "'+esc(r.dp_type)+'" จะไม่คิดค่ารอ</td></tr>';
+    });
+    if(!DPW.rows.length)h+='<tr><td colspan="5" style="text-align:center;color:var(--txt2)">ยังไม่มี DP Type</td></tr>';
+    h+='</tbody></table>';
+    if(DPW.del.length)h+='<div class="note" style="margin:8px 0 0;color:var(--danger)">รอลบตอนกดบันทึก: '+DPW.del.map(x=>esc(x.dp_type)).join(', ')+'</div>';
+    h+='<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">'
+      +'<button type="button" onclick="dpAdd()" style="border:1px dashed var(--line2);background:transparent;color:var(--primary);font:inherit;font-size:12.5px;font-weight:600;border-radius:9px;padding:6px 14px;cursor:pointer">➕ เพิ่ม DP Type</button>'
+      +'<button type="button" class="tbtn primary" id="dpSave" onclick="saveDp()"'+(DPW.busy?' disabled':'')+'>'+(DPW.busy?'กำลังบันทึก…':'💾 บันทึกเวลารอ')+'</button>'
+      +'<button type="button" class="tbtn" onclick="loadDp()">↺ ยกเลิกที่แก้</button></div>';
+  }
+  box.innerHTML=h+'</div>';
+}
+function dpAdd(){DPW.rows.push({dp_type:'',wait_hours:0,note:'',active:true,stations:0});renderDp();const ins=document.querySelectorAll('#dpCard tbody tr td:first-child input');if(ins.length)ins[ins.length-1].focus();}
+function dpDel(i,sure){
+  const r=DPW.rows[i];
+  if(r.id&&!sure){DPW.rows.forEach(x=>x.confirmDel=false);r.confirmDel=true;renderDp();return;}
+  if(r.id)DPW.del.push({id:r.id,dp_type:r.dp_type});
+  DPW.rows.splice(i,1);renderDp();
+}
+async function saveDp(){
+  const rows=DPW.rows.map(r=>({id:r.id||undefined,dp_type:String(r.dp_type||'').trim(),wait_hours:r.wait_hours,note:r.note,active:r.active}));
+  const bad=rows.find(r=>!r.dp_type||isNaN(parseFloat(r.wait_hours))||parseFloat(r.wait_hours)<0);
+  if(bad){toast('⚠️ กรอกชื่อ DP Type และชม.รอ (0 ขึ้นไป) ให้ครบทุกแถว');return;}
+  DPW.busy=true;renderDp();
+  let d;
+  try{d=await gasTry(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveDpWaitTimes',userId:MY_UID,rows,deleteIds:DPW.del.map(x=>x.id)})},1);}
+  catch(e){d={ok:false,unsure:true};}
+  DPW.busy=false;
+  if(d.ok){toast('✅ บันทึกเวลารอแล้ว');await loadDp();}
+  else if(d.unsure){toast('⚠️ หลังบ้านตอบไม่ชัด อาจบันทึกแล้ว — โหลดข้อมูลล่าสุดให้ตรวจ');await loadDp();}
+  else{toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'บันทึกไม่ได้')));renderDp();}
 }
 
 // รวบรวมค่าตั้งค่าปัจจุบันจากฟอร์ม → config 1 ชุด (ใช้ทั้ง save() และ template)
