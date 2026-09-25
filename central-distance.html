@@ -176,14 +176,14 @@ async function gasJSON(url,opt,tries,onRetry){
   let last;
   for(let n=1;n<=tries;n++){
     try{
-      const c=new AbortController(), t=setTimeout(()=>c.abort(),45000);
+      const c=new AbortController(), t=setTimeout(()=>c.abort(),70000);
       const r=await fetch(url,Object.assign({signal:c.signal},opt||{}));
       const txt=await r.text(); clearTimeout(t);
       try{return JSON.parse(txt);}catch(e){
         const m=txt.match(/<title>([^<]*)<\/title>/i);
         last=new Error('หลังบ้านตอบผิดรูปแบบ'+(m&&m[1].trim()?' ('+m[1].trim()+')':''));
       }
-    }catch(e){last=(e&&e.name==='AbortError')?new Error('หลังบ้านไม่ตอบภายใน 45 วินาที'):e;}
+    }catch(e){last=(e&&e.name==='AbortError')?new Error('หลังบ้านไม่ตอบภายใน 70 วินาที'):e;}
     if(n<tries){if(onRetry)onRetry(n+1);await new Promise(r=>setTimeout(r,1500*n));}
   }
   throw last;
