@@ -266,7 +266,12 @@ function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[
 async function openDetail(orderId){
   $('ov').classList.add('on');$('dr').classList.add('on');
   $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังคิดค่าเที่ยว</span></div>';
-  const res=await api({action:'getWageMonitor',userId:MY_UID,orderId});
+  let res;
+  try{ res=await api({action:'getWageMonitor',userId:MY_UID,orderId}); }
+  catch(e){   // หมดเวลา 90 วิ / หลังบ้านตอบหน้า HTML → อย่าให้วงแหวนหมุนค้าง
+    $('drBody').innerHTML='<div class="msg">โหลดรายละเอียดไม่สำเร็จ ('+(e&&e.name==='AbortError'?'หลังบ้านไม่ตอบใน 90 วินาที':'หลังบ้านตอบผิดรูปแบบ')+')<br><button class="btn ghost" style="margin-top:12px" onclick="openDetail(\''+orderId+'\')">↻ ลองใหม่</button></div>';
+    return;
+  }
   if(!res.ok){$('drBody').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
   const w=res.wage, c=res.cost;
   function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
