@@ -87,7 +87,7 @@ const PORDER=['run_rate_per_hr','load_rate_per_hr','fuel_rate_wage','heavy_pct',
 // นิยาม toggle: [key, ป้าย, [[ค่า,ป้ายตัวเลือก],...], คำอธิบาย]
 const TOGDEF=[
   ['weight_on','ถ่วงหนัก/เบา',[[1,'เปิด'],[0,'ปิด']],'ปิด = ทุกขาคิดเต็ม 100% ไม่แบ่ง 70/30'],
-  ['time_mode','วิธีคิดเวลาวิ่ง',[[0,'ขั้นบันได'],[1,'เหมาช่วงเดียว']],'ขั้นบันได = หั่นระยะตามช่วง (แนะนำ)'],
+  ['time_mode','วิธีคิดเวลาวิ่ง',[[2,'ไล่ระดับ'],[0,'ขั้นบันได'],[1,'เหมาช่วงเดียว']],'ไล่ระดับ = ใช้ตาราง "ความเร็วไล่ระดับ" (สูตรปัจจุบัน) · ขั้นบันได/เหมาช่วงเดียว = ใช้ความเร็วในตาราง "ช่วงระยะ"'],
   ['speed_mode','ความเร็วที่ใช้',[[0,'เลทตามช่วง'],[1,'GPS จริง']],'เลทตามช่วง = ใช้ตารางความเร็วนี้ · GPS จริง = ใช้เวลาวิ่งจริงจาก timeline (เมื่อมีข้อมูล)'],
   ['dist_source','ระยะที่ใช้คิด',[[0,'จริง'],[1,'ค่ากลาง']],'ค่ากลาง = ใช้ระยะจากหน้า 📍 ค่ากลาง (ผูกรหัสสวน) · ออเดอร์ที่หาค่ากลางไม่เจอ ใช้ระยะจริง'],
   ['fuel_bench','เกณฑ์น้ำมัน',[[0,'หนัก-เบา'],[1,'ตามช่วงระยะ'],[2,'ค่าเดียว']],'ใช้ กม./ล. แบบไหนคิดลิตรตามเกณฑ์'],
@@ -97,6 +97,9 @@ const TOGDEF=[
   ['bonus_base','ฐานคิดโบนัส',[[0,'หลังน้ำมัน'],[1,'ก่อน (ค่าวิ่ง+ขึ้นลง)']],'ก่อน = คิด % จากค่าวิ่ง+ขึ้นลงเท่านั้น']
 ];
 let TOG={};
+// ประเภทรถ (แทนรุ่น 360/240) → คอลัมน์ กม./ล. ในตารางช่วงระยะ rate_speed_tier (model R5)
+const VTYPES=[['พ่วง','kmpl_trailer'],['เดี่ยว','kmpl_single'],['6ล้อ','kmpl_6wheel'],['4ล้อ','kmpl_4wheel']];
+const TIER_MODEL='R5';
 // drag-drop: ก้อนไหนอยู่ในฐานถ่วง 70/30
 const WBITEMS=[['load','ค่าขึ้น-ลง'],['tarp','ค่าผ้าใบ'],['fuel','±น้ำมัน'],['hooklift','ค่ายกกระบะ'],['overnight','ค่าค้างคืน']];
 let WB={load:0,tarp:0,fuel:0,hooklift:0,overnight:0}, DRAGKEY=null;
@@ -131,9 +134,9 @@ function summaryHtml(){
   const row=(label,val,tone)=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--line)"><span style="font-size:12.5px;color:var(--txt2)">${label}</span>${chip(val,tone)}</div>`;
   let r='';
   r+=row('ถ่วงหนัก/เบา', on('weight_on')?`เปิด · หนัก ${pv('heavy_pct',70)}% / เบา ${pv('light_pct',30)}%`:'ปิด · ทุกขาเต็ม 100%', on('weight_on')?'on':'off');
-  r+=row('วิธีคิดเวลาวิ่ง', Number(T.time_mode)===1?'เหมาช่วงเดียว':'ขั้นบันไดตามระยะ', 'mode');
+  r+=row('วิธีคิดเวลาวิ่ง', ({0:'ขั้นบันไดตามระยะ',1:'เหมาช่วงเดียว',2:'ไล่ระดับ (ตารางความเร็วไล่ระดับ)'})[Number(T.time_mode)]||'ขั้นบันไดตามระยะ', 'mode');
   r+=row('ระยะที่ใช้คิด', Number(T.dist_source)===1?'ค่ากลาง':'ระยะจริง (เลขไมล์)', 'mode');
-  r+=row('เกณฑ์น้ำมัน', ({0:'ตามหนัก-เบา',1:'ตามช่วงระยะ',2:'ค่าเดียวต่อรุ่น'})[Number(T.fuel_bench)]||'ตามหนัก-เบา', 'mode');
+  r+=row('เกณฑ์น้ำมัน', ({0:'ตามหนัก-เบา',1:'ตามช่วงระยะ',2:'ค่าเดียวต่อประเภทรถ'})[Number(T.fuel_bench)]||'ตามหนัก-เบา', 'mode');
   r+=row('เพิ่ม/หักน้ำมัน', on('fuel_adj_on')?`เปิด · เลท ${pv('fuel_rate_wage',28)} บ./ล.`:'ปิด (ไม่คิดน้ำมัน)', on('fuel_adj_on')?'on':'off');
   r+=row('ค่าคลุมผ้าใบ', on('tarp_on')?`เปิด · ${pv('tarp_fee',100)} บ. (เฉพาะงานที่ติ๊ก)`:'ปิด', on('tarp_on')?'on':'off');
   r+=row('โบนัส', on('bonus_on')?`เปิด · ${pv('bonus_pct',10)}% · ฐาน${Number(T.bonus_base)===1?'ค่าวิ่ง+ขึ้นลง':'หลังน้ำมัน'}`:'ปิด', on('bonus_on')?'on':'off');
@@ -183,18 +186,40 @@ function render(){
   // 🏋️ drag-drop ฐานถ่วง
   h+=wbCard();
 
-  // เกณฑ์น้ำมัน + ความเร็ว ตามช่วง×รุ่น
-  ['360','240'].forEach(m=>{
-    const tiers=d.speedTier.filter(t=>t.model===m).sort((a,b)=>(a.seq-b.seq));
-    const fw=d.fuelWeight.find(f=>f.model===m)||{};
-    h+=`<div class="card"><div class="ch">🚚 เกณฑ์รุ่น ${m} <span class="tag">ตามช่วงระยะ</span></div>`;
-    h+='<table><thead><tr><th>ช่วง (เพดาน กม.)</th><th>ความเร็ว</th><th>กม./ล.</th><th></th></tr></thead><tbody>';
-    tiers.forEach(t=>{ h+=`<tr><td><input type="number" data-st="${m}|${t.seq}|max_km" value="${t.max_km==null?'':t.max_km}" placeholder="∞"> กม.</td><td><input type="number" data-st="${m}|${t.seq}|speed_kmph" value="${t.speed_kmph==null?'':t.speed_kmph}"></td><td><input type="number" step="0.05" data-st="${m}|${t.seq}|kmpl" value="${t.kmpl==null?'':t.kmpl}"></td><td><button type="button" onclick="delTier('${m}',${t.seq})" title="ลบช่วง" style="border:0;background:transparent;color:var(--danger);font-size:15px;cursor:pointer;padding:2px 6px">✕</button></td></tr>`; });
-    h+='</tbody></table>';
-    h+=`<button type="button" onclick="addTier('${m}')" style="margin-top:6px;border:1px dashed var(--line2);background:transparent;color:var(--primary);font:inherit;font-size:12.5px;font-weight:600;border-radius:9px;padding:6px 14px;cursor:pointer">➕ เพิ่มช่วง</button>`;
-    h+=`<div class="grid" style="margin-top:10px"><label>เกณฑ์รถหนัก (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_heavy" value="${fw.kmpl_heavy||''}"></label><label>เกณฑ์รถเบา (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_light" value="${fw.kmpl_light||''}"></label><label>เกณฑ์ค่าเดียว (กม./ล.)<input type="number" step="0.05" data-fw="${m}|kmpl_single" value="${fw.kmpl_single||''}"></label></div>`;
-    h+='</div>';
+  // ── ความเร็ว + เกณฑ์น้ำมัน ตามประเภทรถ (พ่วง/เดี่ยว/6ล้อ/4ล้อ) — เลิกรุ่น 360/240 (ระบบคิดค่าแรงไม่ได้ใช้แล้ว)
+  const tm=Number(TOG.time_mode), fb=Number(TOG.fuel_bench);
+  const nv=v=>(v==null?'':v);
+  const delB=fn=>`<button type="button" onclick="${fn}" title="ลบ" style="border:0;background:transparent;color:var(--danger);font-size:15px;cursor:pointer;padding:2px 6px">✕</button>`;
+  const addB=(fn,t)=>`<button type="button" onclick="${fn}" style="margin-top:6px;border:1px dashed var(--line2);background:transparent;color:var(--primary);font:inherit;font-size:12.5px;font-weight:600;border-radius:9px;padding:6px 14px;cursor:pointer">${t}</button>`;
+  const useTag=on=>`<span class="tag" style="${on?'background:var(--primary);color:#fff':''}">${on?'ใช้อยู่':'ไม่ได้ใช้ตอนนี้'}</span>`;
+
+  // ① ความเร็วไล่ระดับ (rate_speed_interp)
+  const ip=(d.speedInterp||[]).slice().sort((a,b)=>a.seq-b.seq);
+  h+=`<div class="card"><div class="ch">🏁 ความเร็วไล่ระดับ ${useTag(tm===2)}</div><div class="note">ใช้คิดชั่วโมงวิ่งเมื่อ "วิธีคิดเวลาวิ่ง = ไล่ระดับ" · ระยะรวมไป-กลับอยู่ระหว่างจุดไหน ความเร็วไล่ตามเส้นตรงระหว่างจุดนั้น · ต่ำกว่าจุดแรก / เกินจุดสุดท้าย = ใช้ความเร็วของจุดนั้นคงที่ · ใช้ร่วมทุกประเภทรถ</div>`;
+  h+='<table><thead><tr><th>ระยะรวม (กม.)</th><th>ความเร็วเฉลี่ย (กม./ชม.)</th><th></th></tr></thead><tbody>';
+  ip.forEach((p,i)=>{ h+=`<tr><td><input type="number" step="any" data-si="${i}|dist_km" value="${nv(p.dist_km)}"></td><td><input type="number" step="any" data-si="${i}|avg_speed" value="${nv(p.avg_speed)}"></td><td>${delB('delInterp('+i+')')}</td></tr>`; });
+  h+='</tbody></table>'+addB('addInterp()','➕ เพิ่มจุด')+'</div>';
+
+  // ② เกณฑ์น้ำมันตามประเภทรถ (rate_fuel_weight)
+  const fwBy={}; (d.fuelWeight||[]).forEach(f=>fwBy[f.model]=f);
+  const fbCols={0:['kmpl_heavy','kmpl_light'],2:['kmpl_single']}[fb]||[];
+  const th=(k,t)=>`<th${fbCols.includes(k)?' style="color:var(--primary)"':''}>${t}${fbCols.includes(k)?' ✓':''}</th>`;
+  h+=`<div class="card"><div class="ch">🚚 เกณฑ์น้ำมันตามประเภทรถ (กม./ล.)</div><div class="note">ใช้คิดลิตรตามเกณฑ์ · คอลัมน์ ✓ = ที่ใช้อยู่ตามสวิตช์ "เกณฑ์น้ำมัน" · ถ้าเลือก "ตามช่วงระยะ" จะใช้ กม./ล. ในตารางช่วงระยะด้านล่างแทน · <b>0 = ยังไม่ได้ตั้ง</b> (รถประเภทนั้นคิดน้ำมันไม่ได้)</div>`;
+  h+='<table><thead><tr><th>ประเภทรถ</th>'+th('kmpl_heavy','รถหนัก')+th('kmpl_light','รถเบา')+th('kmpl_single','ค่าเดียว')+'</tr></thead><tbody>';
+  VTYPES.forEach(([t])=>{ const f=fwBy[t]||{}; h+=`<tr><td>${t}</td>`+['kmpl_heavy','kmpl_light','kmpl_single'].map(k=>`<td><input type="number" step="0.05" data-fw="${t}|${k}" value="${nv(f[k])}"${!(parseFloat(f[k])>0)?' style="border-color:var(--danger)"':''}></td>`).join('')+'</tr>'; });
+  h+='</tbody></table></div>';
+
+  // ③ ช่วงระยะ (rate_speed_tier model R5) — ความเร็ว (ขั้นบันได/เหมาช่วง) + กม./ล.ตามช่วง ต่อประเภทรถ
+  const tiers=(d.speedTier||[]).filter(t=>t.model===TIER_MODEL).sort((a,b)=>a.seq-b.seq);
+  h+=`<div class="card"><div class="ch">📏 ตารางช่วงระยะ</div><div class="note">ความเร็ว ${tm===2?'<b>ไม่ได้ใช้ตอนนี้</b> (ใช้ความเร็วไล่ระดับ)':'<b>ใช้อยู่</b>'} · กม./ล. ตามช่วง ${fb===1?'<b>ใช้อยู่</b>':'<b>ไม่ได้ใช้ตอนนี้</b>'} (ใช้เมื่อเกณฑ์น้ำมัน = ตามช่วงระยะ) · ช่วงสุดท้ายเว้นว่าง = ไม่จำกัด</div>`;
+  h+='<div style="overflow-x:auto"><table><thead><tr><th>ช่วงถึง (กม.)</th><th>ความเร็ว</th>'+VTYPES.map(([t])=>`<th>กม./ล. ${t}</th>`).join('')+'<th></th></tr></thead><tbody>';
+  tiers.forEach(t=>{
+    const mx=(t.max_km!=null&&+t.max_km>=999999)?'':nv(t.max_km);
+    h+=`<tr><td><input type="number" data-st="${TIER_MODEL}|${t.seq}|max_km" value="${mx}" placeholder="∞"></td><td><input type="number" data-st="${TIER_MODEL}|${t.seq}|speed_kmph" value="${nv(t.speed_kmph)}"></td>`
+      +VTYPES.map(([,col])=>`<td><input type="number" step="0.05" data-st="${TIER_MODEL}|${t.seq}|${col}" value="${nv(t[col])}"></td>`).join('')
+      +`<td>${delB(`delTier('${TIER_MODEL}',${t.seq})`)}</td></tr>`;
   });
+  h+='</tbody></table></div>'+addB(`addTier('${TIER_MODEL}')`,'➕ เพิ่มช่วง')+'</div>';
 
   // เวลาขึ้น-ลง + รายการบวกต่อประเภทงาน (ผ้าใบ/ฮุคลิฟท์/ค้างคืน)
   const jbool=v=>(v===true||v==='t'||v==='true');
@@ -301,7 +326,10 @@ function gatherConfig(){
   // re-sequence ต่อรุ่น (เรียงตาม max_km · ∞/ว่าง ท้ายสุด) — รองรับ เพิ่ม/ลบ ช่วง
   const byM={}; Object.values(stMap).forEach(t=>{(byM[t.model]=byM[t.model]||[]).push(t);});
   const speedTier=[];
-  Object.keys(byM).forEach(m=>{byM[m].sort((a,b)=>((a.max_km==null?Infinity:a.max_km)-(b.max_km==null?Infinity:b.max_km)));byM[m].forEach((t,i)=>{t.seq=i+1;speedTier.push(t);});});
+  Object.keys(byM).forEach(m=>{byM[m].sort((a,b)=>((a.max_km==null?Infinity:a.max_km)-(b.max_km==null?Infinity:b.max_km)));byM[m].forEach((t,i,arr)=>{t.seq=i+1;t.from_km=i?(arr[i-1].max_km||0):0;speedTier.push(t);});});
+  // ความเร็วไล่ระดับ (ส่งทั้งตาราง · แถวว่างทั้งแถวข้าม)
+  const siMap={}; document.querySelectorAll('[data-si]').forEach(i=>{const[ix,f]=i.dataset.si.split('|');siMap[ix]=siMap[ix]||{};siMap[ix][f]=(i.value===''?null:parseFloat(i.value));});
+  const speedInterp=Object.keys(siMap).sort((a,b)=>a-b).map(k=>siMap[k]).filter(p=>p.dist_km!=null||p.avg_speed!=null).map(p=>({dist_km:p.dist_km,avg_speed:p.avg_speed,note:''}));
   const fwMap={}; document.querySelectorAll('[data-fw]').forEach(i=>{const[m,f]=i.dataset.fw.split('|');fwMap[m]=fwMap[m]||{model:m};fwMap[m][f]=parseFloat(i.value)||0;});
   const fuelWeight=Object.values(fwMap);
   const jtMap={}; document.querySelectorAll('[data-jt]').forEach(i=>{const[j,f]=i.dataset.jt.split('|');jtMap[j]=jtMap[j]||{job_type:j};jtMap[j][f]=parseInt(i.value)||0;});
@@ -309,7 +337,7 @@ function gatherConfig(){
   document.querySelectorAll('[data-jth]').forEach(i=>{const j=i.dataset.jth;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].hooklift=i.checked;});
   document.querySelectorAll('[data-jto]').forEach(i=>{const j=i.dataset.jto;jtMap[j]=jtMap[j]||{job_type:j};jtMap[j].overnight=i.checked;});
   const jobTypes=Object.values(jtMap);
-  return {params,speedTier,fuelWeight,jobTypes};
+  return {params,speedTier,speedInterp,fuelWeight,jobTypes};
 }
 async function save(){
   const cfg=gatherConfig();
@@ -404,12 +432,23 @@ async function deleteTpl(id){
 }
 // เพิ่ม/ลบ ช่วงความเร็ว (sync ค่าปัจจุบันเข้า DATA ก่อน render ใหม่ กันค่าที่แก้หาย)
 function syncTiers(){document.querySelectorAll('[data-st]').forEach(i=>{const[m,seq,f]=i.dataset.st.split('|');const t=DATA.speedTier.find(x=>x.model===m&&String(x.seq)===seq);if(t)t[f]=(i.value===''?null:parseFloat(i.value));});}
-function addTier(m){syncTiers();const sq=DATA.speedTier.filter(t=>t.model===m).map(t=>+t.seq);DATA.speedTier.push({model:m,seq:(sq.length?Math.max(...sq):0)+1,max_km:null,speed_kmph:null,kmpl:null});render();}
-function delTier(m,seq){syncTiers();DATA.speedTier=DATA.speedTier.filter(t=>!(t.model===m&&String(t.seq)===String(seq)));render();}
+// เก็บค่าที่กำลังแก้ในฟอร์มกลับเข้า DATA ก่อนวาดหน้าใหม่ (เพิ่ม/ลบแถว) — กันตัวเลขที่ยังไม่บันทึกหาย
+function syncInterp(){const a=(DATA.speedInterp||[]).slice().sort((x,y)=>x.seq-y.seq);document.querySelectorAll('[data-si]').forEach(i=>{const[ix,f]=i.dataset.si.split('|');if(a[+ix])a[+ix][f]=(i.value===''?null:parseFloat(i.value));});DATA.speedInterp=a;}
+function syncAll(){
+  syncTiers(); syncInterp();
+  document.querySelectorAll('[data-p]').forEach(i=>{const k=i.dataset.p;DATA.params[k]=Object.assign({},DATA.params[k]||{},{value:parseFloat(i.value)||0});});
+  document.querySelectorAll('[data-fw]').forEach(i=>{const[m,f]=i.dataset.fw.split('|');let r=DATA.fuelWeight.find(x=>x.model===m);if(!r){r={model:m};DATA.fuelWeight.push(r);}r[f]=parseFloat(i.value)||0;});
+  document.querySelectorAll('[data-jt]').forEach(i=>{const[j,f]=i.dataset.jt.split('|');const r=DATA.jobTypes.find(x=>x.job_type===j);if(r)r[f]=parseInt(i.value)||0;});
+  [['data-jtt','tarp'],['data-jth','hooklift'],['data-jto','overnight']].forEach(([a,f])=>document.querySelectorAll('['+a+']').forEach(i=>{const r=DATA.jobTypes.find(x=>x.job_type===i.getAttribute(a));if(r)r[f]=i.checked;}));
+}
+function addTier(m){syncAll();const sq=DATA.speedTier.filter(t=>t.model===m).map(t=>+t.seq);DATA.speedTier.push({model:m,seq:(sq.length?Math.max(...sq):0)+1,max_km:null,speed_kmph:null,kmpl_trailer:null,kmpl_single:null,kmpl_6wheel:null,kmpl_4wheel:null});render();}
+function delTier(m,seq){syncAll();DATA.speedTier=DATA.speedTier.filter(t=>!(t.model===m&&String(t.seq)===String(seq)));render();}
+function addInterp(){syncAll();const a=DATA.speedInterp||[];a.push({seq:a.length+1,dist_km:null,avg_speed:null,note:''});DATA.speedInterp=a;render();}
+function delInterp(ix){syncAll();DATA.speedInterp.splice(ix,1);DATA.speedInterp.forEach((p,i)=>p.seq=i+1);render();}
 
 $('saveBtn').onclick=save;
 // สลับ toggle (delegated — #body คงอยู่ถึง innerHTML เปลี่ยน)
-$('body').addEventListener('click',e=>{const b=e.target.closest('[data-tog]');if(!b)return;TOG[b.dataset.tog]=Number(b.dataset.val);render();});
+$('body').addEventListener('click',e=>{const b=e.target.closest('[data-tog]');if(!b)return;syncAll();TOG[b.dataset.tog]=Number(b.dataset.val);render();});
 // drag-drop ฐานถ่วง + แตะสลับฝั่ง (มือถือ)
 $('body').addEventListener('dragstart',e=>{const c=e.target.closest('[data-wb]');if(c){DRAGKEY=c.dataset.wb;if(e.dataTransfer)e.dataTransfer.effectAllowed='move';}});
 $('body').addEventListener('dragover',e=>{const z=e.target.closest('.wbzone');if(z){e.preventDefault();z.classList.add('hl');}});
