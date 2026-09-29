@@ -351,11 +351,11 @@
         if(window._wageUid){head.textContent='🗂️ กำลังดึง…';_pullOrders(window._wageUid);}else buildSource();
       };});
       document.getElementById('ordSel').onchange=function(e){if(!ORDERS.length)return;T.ordIdx=+e.target.value;P.benchmark=FUEL_BENCH[src().model]||3.2;syncBench();buildSource();render();};
-      body.innerHTML=tile('คนขับ',s.driver)+tile('ทะเบียน',s.plate)+tile('ยี่ห้อ/รุ่น',s.brand+' '+s.model)+tile('ปลายทาง',s.dest)+
-        tile('ระยะจริง',Number(s.distActual||0).toFixed(1),'กม.')+tile('ขาไป/ขากลับ',s.lightKm.toFixed(1)+'/'+s.heavyKm.toFixed(1),'กม.')+
-        tile('น้ำมันเติม',s.litersFilled.toFixed(1),'ล.')+tile('อัตราจริง',(s.distActual/s.litersFilled).toFixed(2),'กม./ล.')+
+      body.innerHTML=tile('คนขับ',s.driver)+tile('ทะเบียน',s.plate)+tile('ประเภทรถ',((s.brand?s.brand+' ':'')+s.model)||'—')+tile('ปลายทาง',s.dest)+
+        tile('ระยะจริง',Number(s.distActual||0).toFixed(1),'กม.')+tile('ระยะกลาง',(s.distCentral>0?Number(s.distCentral).toFixed(1)+' <span class="u">กม.</span>':'<span style="font-size:13px;color:var(--txt2)">ยังไม่มี</span>')+'<div id="cenNote" style="font-size:10.5px;color:var(--txt2);margin-top:2px"></div>')+tile('ขาไป/ขากลับ',s.lightKm.toFixed(1)+'/'+s.heavyKm.toFixed(1),'กม.')+
+        tile('น้ำมันเติม',s.litersFilled.toFixed(1),'ล.')+(s.litersFilled>0?tile('อัตราจริง',(s.distActual/s.litersFilled).toFixed(2),'กม./ล.'):tile('อัตราจริง','<span style="font-size:13px;color:var(--txt2)">— ยังไม่กรอกน้ำมัน</span>'))+
         tile('ปริมาณ',(s.qty||0).toLocaleString('th-TH'),'กก.')+
-        '<div class="tile"><div class="k">เกณฑ์รุ่น</div><div class="v"><span id="benchDisp">'+P.benchmark+'</span> <span class="u">กม./ล.</span></div></div>';
+        '<div class="tile"><div class="k">เกณฑ์น้ำมัน <span id="benchLbl" style="font-weight:400"></span></div><div class="v"><span id="benchDisp">'+P.benchmark+'</span> <span class="u">กม./ล.</span></div></div>';
     }else{
       head.textContent='✏️ เติมเลขจำลอง';
       var h='<label style="font-size:12px;color:var(--txt2)">ประเภทรถ (เกณฑ์กินน้ำมัน)<select class="sel" id="mModel" style="margin-top:4px">';
@@ -741,7 +741,10 @@
   function row(l,v,c){return '<div class="row"><span class="l">'+l+'</span><span'+(c?' style="'+c+'"':'')+'>'+v+'</span></div>';}
   function render(){
     var s=src(),c=calc();var h='';
-    var bd=document.getElementById('benchDisp');if(bd)bd.textContent=(+P.benchmark).toFixed(2);
+    // เกณฑ์น้ำมันเฉลี่ยของเที่ยวนี้ตามโหมดที่เลือก (ระยะที่ใช้คิด ÷ ลิตรเกณฑ์) · ระยะกลาง: ใช้คิดไหม
+    var bd=document.getElementById('benchDisp');if(bd)bd.textContent=(c.benchKmpl>0&&isFinite(c.benchKmpl)?c.benchKmpl:+P.benchmark).toFixed(2);
+    var bl=document.getElementById('benchLbl');if(bl)bl.textContent='('+(({tier:'ตามช่วง',weight:'หนัก/เบา',single:'ค่าเดียว',hlzone:'⑬ตามระยะ',hlrate:'⑬เรทช่วง',hlblend:'⑬เกลี่ย'})[T.fuelBench]||'')+' · เฉลี่ย)';
+    var cn=document.getElementById('cenNote');if(cn)cn.innerHTML=!(s.distCentral>0)?'ใช้ระยะจริงแทน':(T.distMode==='central'?'<b style="color:var(--primary)">ใช้คิด</b> · จริง'+((s.distActual-s.distCentral)>=0?'+':'')+(s.distActual-s.distCentral).toFixed(1):'ไม่ได้ใช้ (เลือกระยะจริง)');
     h+=row('คนขับ',s.driver);
     h+=row('วันที่',s.date?fmtDMY(s.date):'—');
     h+=row('รถ',s.brand+' '+s.model+' · '+(s.id||'—'));
