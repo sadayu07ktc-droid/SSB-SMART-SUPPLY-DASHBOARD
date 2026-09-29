@@ -188,7 +188,7 @@
   var FONT = '"Leelawadee UI","Noto Sans Thai","Segoe UI",Tahoma,sans-serif';
   var C = { green: '#1B4332', gold: '#C9A227', ink: '#1a2530', mute: '#6b7785', line: '#e2e6ea', zebra: '#f6f8fa', red: '#c8352f', redbg: '#fdecea', ok: '#1f8a52', warn: '#b26a00', totbg: '#e8f3ec' };
   var DCOLS = [
-    { k: 'date', t: 'วันที่', w: 92 }, { k: 'orderId', t: 'ออเดอร์', w: 168 }, { k: 'driver', t: 'คนขับ', w: 170 }, { k: 'plate', t: 'ทะเบียน', w: 100 },
+    { k: 'date', t: 'วันที่', w: 112 }, { k: 'orderId', t: 'ออเดอร์', w: 168 }, { k: 'driver', t: 'คนขับ', w: 170 }, { k: 'plate', t: 'ทะเบียน', w: 100 },
     { k: 'place', t: 'สวน / ปลายทาง', w: 0 }, { k: 'actual', t: 'ระยะจริง', w: 78, n: 1 }, { k: 'central', t: 'ระยะกลาง', w: 82, n: 1 }, { k: 'by', t: 'คิดด้วย', w: 76 },
     { k: 'liters', t: 'น้ำมัน ล.', w: 74, n: 1 }, { k: 'run', t: 'ค่าวิ่ง', w: 76, n: 0 }, { k: 'load', t: 'ขึ้น-ลง', w: 68, n: 0 }, { k: 'other', t: 'อื่นๆ', w: 64, n: 0 },
     { k: 'fuel', t: 'ปรับน้ำมัน', w: 88, n: 0 }, { k: 'net', t: 'สุทธิ', w: 96, n: 0, b: 1 }, { k: 'status', t: 'สถานะ', w: 86 }
