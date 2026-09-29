@@ -357,7 +357,7 @@
       + '.xm-nav{border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:9px;width:36px;height:36px;font-size:16px;cursor:pointer}'
       + '.xm select{width:100%;margin:0}'
       + '.xm-prev{background:var(--card2);border-radius:10px;padding:10px 12px;font-size:13px;min-height:44px;display:flex;flex-direction:column;justify-content:center;gap:3px}'
-      + '.xm-prev .big{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}.xm-prev .neg{color:var(--danger)}'
+      + '.xm-prev .xm-big{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}.xm-prev .neg{color:var(--danger)}'
       + '.xm-bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:4px}.xm-bar i{display:block;height:100%;width:40%;background:var(--primary);animation:ldslide 1.1s ease-in-out infinite}'
       + '.xm-f{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}'
       + '@keyframes xmIn{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.xm-ov{animation:none}.xm-bar i{animation-duration:3s}}';
@@ -421,7 +421,7 @@
     $('xmGo').disabled = !R.length;
     $('xmPv').innerHTML = !R.length ? '<span style="color:var(--txt2)">ไม่มีเที่ยวใน ' + r.label + (XM.driver ? ' ของ ' + XM.driver : '') + '</span>'
       : '<span style="color:var(--txt2)">' + r.label + ' · ' + (XM.driver || 'ทุกคน') + '</span>'
-      + '<span><span class="big">' + R.length + '</span> เที่ยว · ค่าแรงรวม <span class="big' + (tot < 0 ? ' neg' : '') + '">' + Math.round(tot).toLocaleString('th-TH') + '</span> บ.</span>'
+      + '<span><span class="xm-big">' + R.length + '</span> เที่ยว · ค่าแรงรวม <span class="xm-big' + (tot < 0 ? ' neg' : '') + '">' + Math.round(tot).toLocaleString('th-TH') + '</span> บ.</span>'
       + '<span style="font-size:12px;color:var(--txt2)">ยังไม่จ่าย ' + unpaid + ' เที่ยว' + (neg ? ' · <span class="neg">ติดลบ ' + neg + ' เที่ยว</span>' : '') + '</span>';
   }
   var lastFocus = null;
