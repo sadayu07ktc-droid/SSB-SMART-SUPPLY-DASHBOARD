@@ -448,7 +448,8 @@ function gatherConfig(){
   // ตาราง⑬ — ส่งทุกแถว (ขอบช่วงเดิม + กม./ล. จากฟอร์ม)
   const fzIn={}; document.querySelectorAll('[data-fz]').forEach(i=>{fzIn[i.dataset.fz]=i.value;});
   const fuelZones=(DATA.fuelZones||[]).map(z=>{const g=k=>{const v=fzIn[z.vehicle_type+'|'+z.seq+'|'+k];return v===undefined?z[k]:(v===''?0:parseFloat(v));};
-    return {vehicle_type:z.vehicle_type,seq:z.seq,from_km:z.from_km,to_km:z.to_km,kmpl_heavy:g('kmpl_heavy'),kmpl_light:g('kmpl_light')};});
+    const prev=(DATA.fuelZones||[]).filter(x=>x.vehicle_type===z.vehicle_type&&+x.seq<+z.seq).sort((a,b)=>b.seq-a.seq)[0];
+    return {vehicle_type:z.vehicle_type,seq:z.seq,from_km:prev?+prev.to_km:0,to_km:z.to_km,kmpl_heavy:g('kmpl_heavy'),kmpl_light:g('kmpl_light')};});   // ต้นช่วง = ปลายช่วงก่อน
   return {params,speedTier,speedInterp,fuelWeight,fuelZones,jobTypes};
 }
 async function save(){
@@ -556,17 +557,17 @@ function syncAll(){
 }
 function addTier(m){syncAll();const sq=DATA.speedTier.filter(t=>t.model===m).map(t=>+t.seq);DATA.speedTier.push({model:m,seq:(sq.length?Math.max(...sq):0)+1,max_km:null,speed_kmph:null,kmpl_trailer:null,kmpl_single:null,kmpl_6wheel:null,kmpl_4wheel:null});render();}
 function delTier(m,seq){syncAll();DATA.speedTier=DATA.speedTier.filter(t=>!(t.model===m&&String(t.seq)===String(seq)));render();}
-// แก้ขอบช่วงตาราง⑬: ช่วง seq สิ้นสุดที่ val → ช่วงถัดไปเริ่ม val+1 · ใช้กับทุกประเภทรถ
+// แก้ขอบช่วงตาราง⑬: ช่วง seq สิ้นสุดที่ val → ช่วงถัดไปเริ่มที่ val เลย (ต่อกัน ไม่หาย 1 กม.) · ใช้กับทุกประเภทรถ
 function setZoneTo(seq,val){
   syncAll();
   const Z=DATA.fuelZones||[], seqs=[...new Set(Z.map(z=>z.seq))].sort((a,b)=>a-b), i=seqs.indexOf(seq);
   const b=s=>Z.find(x=>x.seq===s)||{}, v=parseFloat(val);
   const from=+b(seq).from_km, nextTo=i<seqs.length-1?+b(seqs[i+1]).to_km:Infinity;
-  if(!(v>from)||!(v+1<nextTo)){
-    toast('⚠️ ช่วงที่ '+(i+1)+' ต้องมากกว่า '+from+' และน้อยกว่า '+(nextTo===Infinity?'∞':(nextTo-1))+' กม.');
+  if(!(v>from)||!(v<nextTo)){
+    toast('⚠️ ช่วงที่ '+(i+1)+' ต้องมากกว่า '+from+' และน้อยกว่า '+(nextTo===Infinity?'∞':nextTo)+' กม.');
     render(); return;
   }
-  Z.forEach(z=>{ if(z.seq===seq)z.to_km=v; if(z.seq===seqs[i+1])z.from_km=v+1; });
+  Z.forEach(z=>{ if(z.seq===seq)z.to_km=v; if(z.seq===seqs[i+1])z.from_km=v; });
   render();
 }
 function addInterp(){syncAll();const a=DATA.speedInterp||[];a.push({seq:a.length+1,dist_km:null,avg_speed:null,note:''});DATA.speedInterp=a;render();}
