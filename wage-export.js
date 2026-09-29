@@ -23,8 +23,9 @@
   /* ── ข้อมูลรายงาน: แถวเดียวกับตาราง · ก้อนเงินบวกครบ = สุทธิ ── */
   function num(v) { v = Number(v); return isFinite(v) ? v : 0; }
   function r1(v) { return Math.round(num(v) * 10) / 10; }
+  var CTX = null;   // { rows, from, to, driver, label } จาก popup เลือกรอบ
   function rows() {
-    return VIEW.map(function (r) {
+    return (CTX ? CTX.rows : VIEW).map(function (r) {
       var via = !!r.via, other = num(r.tarp) + num(r.wait) + num(r.hardship) + num(r.bonus) + (via ? 0 : num(r.hooklift) + num(r.give));
       var g = String(r.garden || '').trim(), d = String(r.dest || '').trim();
       return {
@@ -58,6 +59,7 @@
   }
   function dmy(iso) { return iso ? fmtD(iso).replace(/-/g, '/') : ''; }
   function info() {
+    if (CTX) return 'รอบ ' + CTX.label + ' (' + dmy(CTX.from) + '–' + dmy(CTX.to) + ') · คนขับ: ' + (CTX.driver || 'ทุกคน');
     var f = $('from').value, t = $('to').value, dv = $('driver').value, bits = [];
     bits.push('ช่วง ' + (f ? dmy(f) : '—') + ' ถึง ' + (t ? dmy(t) : '—'));
     bits.push('คนขับ: ' + (dv || 'ทุกคน'));
@@ -66,7 +68,17 @@
     return bits.join(' · ');
   }
   function stamp() { var d = new Date(), p = function (n) { return ('0' + n).slice(-2); }; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
-  function fname(ext) { return 'รายงานค่าแรง_' + ($('from').value || 'เริ่ม') + '_ถึง_' + ($('to').value || 'ล่าสุด') + ($('driver').value ? '_' + $('driver').value : '') + '.' + ext; }
+  function fname(ext) {
+    if (CTX) return 'รายงานค่าแรง_' + CTX.from + '_ถึง_' + CTX.to + (CTX.driver ? '_' + CTX.driver : '_ทุกคน') + '.' + ext;
+    return 'รายงานค่าแรง_' + ($('from').value || 'เริ่ม') + '_ถึง_' + ($('to').value || 'ล่าสุด') + ($('driver').value ? '_' + $('driver').value : '') + '.' + ext;
+  }
+  // CSV สำรอง (โหลดตัวสร้าง Excel ไม่ได้) — ขอบเขตเดียวกับรายงาน
+  function csv() {
+    var R = rows(), q = function (s) { return '"' + String(s == null ? '' : s).replace(/"/g, '""') + '"'; };
+    var head = ['วันที่', 'ออเดอร์', 'คนขับ', 'ประเภทรถ', 'ทะเบียน', 'สวน / ปลายทาง', 'ระยะจริง', 'ระยะกลาง', 'คิดด้วย', 'น้ำมัน(ล.)', 'ค่าวิ่ง', 'ขึ้น-ลง', 'อื่นๆ', 'ปรับน้ำมัน', 'ค่าแรงสุทธิ', 'สถานะ'];
+    var L = [head.map(q).join(',')].concat(R.map(function (r) { return [dmy(r.date), r.orderId, r.driver, r.veh, r.plate, r.place, r.actual, r.central, r.by, r.liters, r.run, r.load, r.other, r.fuel, r.net, r.status].map(q).join(','); }));
+    save(new Blob(['\ufeff' + L.join('\r\n')], { type: 'text/csv;charset=utf-8;' }), fname('csv'));
+  }
   function save(blob, name) { var a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500); }
 
   /* ════════ 📊 Excel ════════ */
@@ -299,15 +311,133 @@
 
   /* ── ปุ่ม ⬇️ ดาวน์โหลด ▾ ── */
   var busy = false;
-  function run(kind) {
-    if (busy) return; if (!VIEW.length) { alert('ไม่มีเที่ยวในช่วงที่เลือก'); return; }
-    var b = $('dlBtn'), label = b.textContent; busy = true; b.disabled = true;
+  function run(kind, btn) {
+    if (busy) return Promise.resolve(false); if (!(CTX ? CTX.rows : VIEW).length) { alert('ไม่มีเที่ยวในรอบที่เลือก'); return Promise.resolve(false); }
+    var b = btn || $('dlBtn'), label = b.textContent; busy = true; b.disabled = true;
     b.textContent = { xlsx: 'กำลังสร้าง Excel…', pdf: 'กำลังสร้าง PDF…', jpg: 'กำลังสร้างรูป…' }[kind];
-    var job = kind === 'xlsx' ? xlsx().catch(function (e) { if (/ไลบรารี/.test(e.message)) { exportCsv(); alert('โหลดตัวสร้าง Excel ไม่ได้ — ดาวน์โหลดเป็น CSV แทน'); return; } throw e; })
+    var job = kind === 'xlsx' ? xlsx().catch(function (e) { if (/ไลบรารี/.test(e.message)) { csv(); alert('โหลดตัวสร้าง Excel ไม่ได้ — ดาวน์โหลดเป็น CSV แทน'); return; } throw e; })
       : kind === 'pdf' ? pdf() : jpeg();
-    job.catch(function (e) { alert('❌ สร้างไฟล์ไม่สำเร็จ: ' + (e && e.message || e)); })
-      .then(function () { busy = false; b.disabled = false; b.textContent = label; });
+    return job.then(function () { return true; }, function (e) { alert('❌ สร้างไฟล์ไม่สำเร็จ: ' + (e && e.message || e)); return false; })
+      .then(function (ok) { busy = false; b.disabled = false; b.textContent = label; return ok; });
   }
+
+  /* ════════ popup เลือกรอบจ่าย (เดือน × รอบ 1–15 / 16–สิ้นเดือน / ทั้งเดือน) + คนขับ ════════
+   *   ดึงรายงานช่วงนั้นเอง (ไม่ขึ้นกับตัวกรองบนหน้า) · แคชต่อช่วง · โชว์ยอดก่อนกดดาวน์โหลด */
+  var TH_M = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.', 'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+  var FMT = { xlsx: '📊 Excel', pdf: '📄 PDF', jpg: '🖼️ JPEG' };
+  var XM = { fmt: 'xlsx', month: '', round: 'h1', driver: '', cache: {}, seq: 0, data: null };
+  function pad(n) { return ('0' + n).slice(-2); }
+  function lastDay(ym) { var p = ym.split('-'); return new Date(+p[0], +p[1], 0).getDate(); }
+  function range() {
+    var ld = lastDay(XM.month), a = XM.round === 'h2' ? 16 : 1, b = XM.round === 'h1' ? 15 : ld;
+    var mm = +XM.month.split('-')[1], yy = XM.month.split('-')[0];
+    var lbl = (XM.round === 'full' ? 'ทั้งเดือน ' : (XM.round === 'h1' ? 'รอบ 1 · ' : 'รอบ 2 · ')) + a + '–' + b + ' ' + TH_M[mm - 1] + ' ' + yy;
+    return { from: XM.month + '-' + pad(a), to: XM.month + '-' + pad(b), label: lbl, ld: ld };
+  }
+  function defaults() {   // วันนี้ ≤ 15 → รอบ 2 ของเดือนก่อน (รอบที่เพิ่งจบ) · หลัง 15 → รอบ 1 ของเดือนนี้
+    var d = new Date();
+    if (d.getDate() <= 15) { var p = new Date(d.getFullYear(), d.getMonth() - 1, 1); XM.month = p.getFullYear() + '-' + pad(p.getMonth() + 1); XM.round = 'h2'; }
+    else { XM.month = d.getFullYear() + '-' + pad(d.getMonth() + 1); XM.round = 'h1'; }
+  }
+  function css() {
+    if ($('xmCss')) return;
+    var s = document.createElement('style'); s.id = 'xmCss';
+    s.textContent = '.xm-ov{position:fixed;inset:0;z-index:60;background:rgba(10,20,15,.45);display:flex;align-items:center;justify-content:center;padding:16px;animation:xmIn .18s ease-out}'
+      + '.xm-ov[hidden]{display:none}'
+      + '.xm{width:100%;max-width:440px;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 50px rgba(0,0,0,.28);padding:18px 18px 16px;max-height:calc(100vh - 32px);overflow:auto}'
+      + '.xm-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}.xm-h b{font-size:16px}'
+      + '.xm-x{border:0;background:transparent;color:var(--txt2);font-size:18px;cursor:pointer;border-radius:8px;width:32px;height:32px}.xm-x:hover{background:var(--card2)}'
+      + '.xm-sec{margin-bottom:13px}.xm-lb{display:block;font-size:12px;color:var(--txt2);margin-bottom:6px}'
+      + '.xm-chips{display:flex;flex-wrap:wrap;gap:6px}'
+      + '.xm-chip{border:1px solid var(--line2);background:var(--card);color:var(--txt);font:inherit;font-size:13px;padding:7px 12px;border-radius:999px;cursor:pointer;line-height:1.3;text-align:left}'
+      + '.xm-chip small{display:block;font-size:11px;color:var(--txt2)}'
+      + '.xm-chip[aria-pressed=true]{background:var(--primary);border-color:var(--primary);color:#fff}.xm-chip[aria-pressed=true] small{color:rgba(255,255,255,.85)}'
+      + '.xm-chip:focus-visible,.xm-x:focus-visible,.xm-nav:focus-visible{outline:2px solid var(--primary);outline-offset:2px}'
+      + '.xm-mrow{display:flex;gap:6px;align-items:center}.xm-mrow input{flex:1;margin:0}'
+      + '.xm-nav{border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:9px;width:36px;height:36px;font-size:16px;cursor:pointer}'
+      + '.xm select{width:100%;margin:0}'
+      + '.xm-prev{background:var(--card2);border-radius:10px;padding:10px 12px;font-size:13px;min-height:44px;display:flex;flex-direction:column;justify-content:center;gap:3px}'
+      + '.xm-prev .big{font-size:18px;font-weight:800;font-variant-numeric:tabular-nums}.xm-prev .neg{color:var(--danger)}'
+      + '.xm-bar{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:4px}.xm-bar i{display:block;height:100%;width:40%;background:var(--primary);animation:ldslide 1.1s ease-in-out infinite}'
+      + '.xm-f{display:flex;justify-content:flex-end;gap:8px;margin-top:14px}'
+      + '@keyframes xmIn{from{opacity:0}to{opacity:1}}@media(prefers-reduced-motion:reduce){.xm-ov{animation:none}.xm-bar i{animation-duration:3s}}';
+    document.head.appendChild(s);
+  }
+  function build() {
+    if ($('xmOv')) return; css();
+    var ov = document.createElement('div'); ov.id = 'xmOv'; ov.className = 'xm-ov'; ov.hidden = true;
+    ov.innerHTML = '<div class="xm" role="dialog" aria-modal="true" aria-labelledby="xmT">'
+      + '<div class="xm-h"><b id="xmT">ดาวน์โหลดรายงานค่าแรง</b><button class="xm-x" id="xmX" aria-label="ปิด">✕</button></div>'
+      + '<div class="xm-sec"><span class="xm-lb">รูปแบบไฟล์</span><div class="xm-chips" id="xmFmt"></div></div>'
+      + '<div class="xm-sec"><label class="xm-lb" for="xmMonth">เดือน</label><div class="xm-mrow"><button class="xm-nav" id="xmPrevM" aria-label="เดือนก่อน">‹</button><input type="month" id="xmMonth"><button class="xm-nav" id="xmNextM" aria-label="เดือนถัดไป">›</button></div></div>'
+      + '<div class="xm-sec"><span class="xm-lb">รอบจ่าย</span><div class="xm-chips" id="xmRound"></div></div>'
+      + '<div class="xm-sec"><label class="xm-lb" for="xmDrv">คนขับ</label><select id="xmDrv"><option value="">ทุกคน</option></select></div>'
+      + '<div class="xm-prev" id="xmPv" role="status" aria-live="polite"></div>'
+      + '<div class="xm-f"><button class="btn ghost" id="xmCancel">ยกเลิก</button><button class="btn" id="xmGo">⬇️ ดาวน์โหลด</button></div></div>';
+    document.body.appendChild(ov);
+    ov.addEventListener('click', function (e) { if (e.target === ov) closeModal(); });
+    $('xmX').onclick = closeModal; $('xmCancel').onclick = closeModal;
+    $('xmFmt').onclick = function (e) { var c = e.target.closest('[data-v]'); if (c) { XM.fmt = c.dataset.v; paint(); } };
+    $('xmRound').onclick = function (e) { var c = e.target.closest('[data-v]'); if (c) { XM.round = c.dataset.v; paint(); fetchRange(); } };
+    $('xmMonth').onchange = function () { if (this.value) { XM.month = this.value; paint(); fetchRange(); } };
+    $('xmPrevM').onclick = function () { shiftM(-1); }; $('xmNextM').onclick = function () { shiftM(1); };
+    $('xmDrv').onchange = function () { XM.driver = this.value; preview(); };
+    $('xmGo').onclick = go;
+  }
+  function shiftM(n) { var p = XM.month.split('-'), d = new Date(+p[0], +p[1] - 1 + n, 1); XM.month = d.getFullYear() + '-' + pad(d.getMonth() + 1); paint(); fetchRange(); }
+  function chip(v, on, html) { return '<button class="xm-chip" data-v="' + v + '" aria-pressed="' + on + '">' + html + '</button>'; }
+  function paint() {
+    var r = range(), mm = TH_M[+XM.month.split('-')[1] - 1];
+    $('xmFmt').innerHTML = Object.keys(FMT).map(function (k) { return chip(k, XM.fmt === k, FMT[k]); }).join('');
+    $('xmMonth').value = XM.month;
+    $('xmRound').innerHTML = chip('h1', XM.round === 'h1', 'รอบ 1<small>1–15 ' + mm + '</small>') + chip('h2', XM.round === 'h2', 'รอบ 2<small>16–' + r.ld + ' ' + mm + '</small>') + chip('full', XM.round === 'full', 'ทั้งเดือน<small>1–' + r.ld + ' ' + mm + '</small>');
+    $('xmGo').textContent = '⬇️ ดาวน์โหลด ' + FMT[XM.fmt].replace(/^\S+\s/, '');
+  }
+  function fetchRange() {
+    var r = range(), key = r.from + '|' + r.to, my = ++XM.seq;
+    if (XM.cache[key]) { XM.data = XM.cache[key]; fillDrivers(); preview(); return; }
+    XM.data = null; $('xmGo').disabled = true;
+    $('xmPv').innerHTML = '<div class="xm-bar" aria-hidden="true"><i></i></div><span style="color:var(--txt2)">กำลังดึงข้อมูล ' + r.label + '…</span>';
+    api({ action: 'getWageReport', userId: MY_UID, from: r.from, to: r.to, driver: '' }).then(function (d) {
+      if (my !== XM.seq) return;   // เปลี่ยนรอบไปแล้ว ทิ้งผลเก่า
+      if (!d || !d.ok) throw new Error(d && (d.error || (d.denied ? 'ไม่มีสิทธิ์' : '')) || 'หลังบ้านตอบผิดพลาด');
+      XM.cache[key] = XM.data = d.rows || []; fillDrivers(); preview();
+    }).catch(function (e) {
+      if (my !== XM.seq) return;
+      $('xmPv').innerHTML = '<span class="neg">ดึงข้อมูลไม่สำเร็จ (' + (e && e.name === 'AbortError' ? 'หลังบ้านไม่ตอบใน 90 วินาที' : (e && e.message || e)) + ')</span> <button class="xm-chip" id="xmRetry" style="margin-top:6px;align-self:flex-start">↻ ลองใหม่</button>';
+      $('xmRetry').onclick = fetchRange; $('xmGo').disabled = true;
+    });
+  }
+  function fillDrivers() {
+    var cnt = {}; (XM.data || []).forEach(function (r) { var k = r.driver || '—'; cnt[k] = (cnt[k] || 0) + 1; });
+    var names = Object.keys(cnt).sort(function (a, b) { return a.localeCompare(b, 'th'); });
+    if (XM.driver && !cnt[XM.driver]) XM.driver = '';
+    $('xmDrv').innerHTML = '<option value="">ทุกคน (' + names.length + ' คน)</option>' + names.map(function (n) { return '<option value="' + n.replace(/"/g, '&quot;') + '"' + (n === XM.driver ? ' selected' : '') + '>' + n + ' · ' + cnt[n] + ' เที่ยว</option>'; }).join('');
+  }
+  function picked() { return (XM.data || []).filter(function (r) { return !XM.driver || (r.driver || '—') === XM.driver; }); }
+  function preview() {
+    var R = picked(), r = range(), tot = 0, neg = 0, unpaid = 0;
+    R.forEach(function (x) { var w = num(x.wage); tot += w; if (w < 0) neg++; if (!x.locked) unpaid++; });
+    $('xmGo').disabled = !R.length;
+    $('xmPv').innerHTML = !R.length ? '<span style="color:var(--txt2)">ไม่มีเที่ยวใน ' + r.label + (XM.driver ? ' ของ ' + XM.driver : '') + '</span>'
+      : '<span style="color:var(--txt2)">' + r.label + ' · ' + (XM.driver || 'ทุกคน') + '</span>'
+      + '<span><span class="big">' + R.length + '</span> เที่ยว · ค่าแรงรวม <span class="big' + (tot < 0 ? ' neg' : '') + '">' + Math.round(tot).toLocaleString('th-TH') + '</span> บ.</span>'
+      + '<span style="font-size:12px;color:var(--txt2)">ยังไม่จ่าย ' + unpaid + ' เที่ยว' + (neg ? ' · <span class="neg">ติดลบ ' + neg + ' เที่ยว</span>' : '') + '</span>';
+  }
+  var lastFocus = null;
+  function openModal(fmt) {
+    if (typeof MY_UID === 'undefined' || !MY_UID) { alert('ยังไม่ได้เข้าสู่ระบบ'); return; }
+    build(); if (!XM.month) defaults(); if (fmt) XM.fmt = fmt;
+    lastFocus = document.activeElement; $('xmOv').hidden = false; paint(); fetchRange();
+    setTimeout(function () { var c = $('xmRound').querySelector('[aria-pressed=true]'); if (c) c.focus(); }, 30);
+  }
+  function closeModal() { var o = $('xmOv'); if (!o || o.hidden) return; o.hidden = true; if (lastFocus && lastFocus.focus) lastFocus.focus(); }
+  function go() {
+    var R = picked(), r = range(); if (!R.length) return;
+    CTX = { rows: R, from: r.from, to: r.to, driver: XM.driver, label: r.label };
+    run(XM.fmt, $('xmGo')).then(function (ok) { CTX = null; if (ok) closeModal(); });
+  }
+
   function init() {
     var b = $('dlBtn'), m = $('dlMenu'); if (!b || !m) return;
     b.onclick = function (e) {
@@ -316,10 +446,10 @@
       var r = b.getBoundingClientRect(), mw = m.offsetWidth || 250;
       if (r.left + mw > window.innerWidth - 8) { m.style.left = 'auto'; m.style.right = '0'; } else { m.style.left = '0'; m.style.right = 'auto'; }
     };
-    m.addEventListener('click', function (e) { var it = e.target.closest('[data-f]'); if (!it) return; m.hidden = true; run(it.dataset.f); });
+    m.addEventListener('click', function (e) { var it = e.target.closest('[data-f]'); if (!it) return; m.hidden = true; openModal(it.dataset.f); });   // เลือกรูปแบบ → popup เลือกรอบ/คนขับ
     document.addEventListener('click', function (e) { if (!m.hidden && !e.target.closest('.dlwrap')) m.hidden = true; });
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') m.hidden = true; });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') { m.hidden = true; closeModal(); } });
   }
-  window.wageExport = { run: run, rows: rows };
+  window.wageExport = { run: run, rows: rows, open: openModal };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
 })();
