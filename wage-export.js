@@ -59,7 +59,7 @@
   }
   function dmy(iso) { return iso ? fmtD(iso).replace(/-/g, '/') : ''; }
   function info() {
-    if (CTX) return 'รอบ ' + CTX.label + ' (' + dmy(CTX.from) + '–' + dmy(CTX.to) + ') · คนขับ: ' + (CTX.driver || 'ทุกคน');
+    if (CTX) return CTX.label + ' (' + dmy(CTX.from) + '–' + dmy(CTX.to) + ') · คนขับ: ' + (CTX.driver === '—' ? '(ไม่มีชื่อคนขับ)' : (CTX.driver || 'ทุกคน'));
     var f = $('from').value, t = $('to').value, dv = $('driver').value, bits = [];
     bits.push('ช่วง ' + (f ? dmy(f) : '—') + ' ถึง ' + (t ? dmy(t) : '—'));
     bits.push('คนขับ: ' + (dv || 'ทุกคน'));
@@ -69,7 +69,7 @@
   }
   function stamp() { var d = new Date(), p = function (n) { return ('0' + n).slice(-2); }; return p(d.getDate()) + '/' + p(d.getMonth() + 1) + '/' + d.getFullYear() + ' ' + p(d.getHours()) + ':' + p(d.getMinutes()); }
   function fname(ext) {
-    if (CTX) return 'รายงานค่าแรง_' + CTX.from + '_ถึง_' + CTX.to + (CTX.driver ? '_' + CTX.driver : '_ทุกคน') + '.' + ext;
+    if (CTX) return 'รายงานค่าแรง_' + CTX.from + '_ถึง_' + CTX.to + (CTX.driver ? '_' + (CTX.driver === '—' ? 'ไม่มีชื่อคนขับ' : CTX.driver) : '_ทุกคน') + '.' + ext;
     return 'รายงานค่าแรง_' + ($('from').value || 'เริ่ม') + '_ถึง_' + ($('to').value || 'ล่าสุด') + ($('driver').value ? '_' + $('driver').value : '') + '.' + ext;
   }
   // CSV สำรอง (โหลดตัวสร้าง Excel ไม่ได้) — ขอบเขตเดียวกับรายงาน
@@ -411,9 +411,9 @@
   }
   function fillDrivers() {
     var cnt = {}; (XM.data || []).forEach(function (r) { var k = r.driver || '—'; cnt[k] = (cnt[k] || 0) + 1; });
-    var names = Object.keys(cnt).sort(function (a, b) { return a.localeCompare(b, 'th'); });
+    var names = Object.keys(cnt).sort(function (a, b) { return a === '—' ? 1 : b === '—' ? -1 : a.localeCompare(b, 'th'); });   // ไม่มีชื่อคนขับ ไว้ท้าย
     if (XM.driver && !cnt[XM.driver]) XM.driver = '';
-    $('xmDrv').innerHTML = '<option value="">ทุกคน (' + names.length + ' คน)</option>' + names.map(function (n) { return '<option value="' + n.replace(/"/g, '&quot;') + '"' + (n === XM.driver ? ' selected' : '') + '>' + n + ' · ' + cnt[n] + ' เที่ยว</option>'; }).join('');
+    $('xmDrv').innerHTML = '<option value="">ทุกคน (' + names.length + ' คน)</option>' + names.map(function (n) { return '<option value="' + n.replace(/"/g, '&quot;') + '"' + (n === XM.driver ? ' selected' : '') + '>' + (n === '—' ? '(ไม่มีชื่อคนขับ)' : n) + ' · ' + cnt[n] + ' เที่ยว</option>'; }).join('');
   }
   function picked() { return (XM.data || []).filter(function (r) { return !XM.driver || (r.driver || '—') === XM.driver; }); }
   function preview() {
@@ -422,7 +422,7 @@
     R.forEach(function (x) { var w = num(x.wage); tot += w; if (w < 0) neg++; if (!x.locked) unpaid++; });
     $('xmGo').disabled = !R.length;
     $('xmPv').innerHTML = !R.length ? '<span style="color:var(--txt2)">ไม่มีเที่ยวใน ' + r.label + (XM.driver ? ' ของ ' + XM.driver : '') + '</span>'
-      : '<span style="color:var(--txt2)">' + r.label + ' · ' + (XM.driver || 'ทุกคน') + '</span>'
+      : '<span style="color:var(--txt2)">' + r.label + ' · ' + (XM.driver === '—' ? '(ไม่มีชื่อคนขับ)' : (XM.driver || 'ทุกคน')) + '</span>'
       + '<span><span class="xm-big">' + R.length + '</span> เที่ยว · ค่าแรงรวม <span class="xm-big' + (tot < 0 ? ' neg' : '') + '">' + Math.round(tot).toLocaleString('th-TH') + '</span> บ.</span>'
       + '<span style="font-size:12px;color:var(--txt2)">ยังไม่จ่าย ' + unpaid + ' เที่ยว' + (neg ? ' · <span class="neg">ติดลบ ' + neg + ' เที่ยว</span>' : '') + '</span>';
   }
