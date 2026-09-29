@@ -395,13 +395,14 @@
   }
   function fetchRange() {
     var r = range(), key = r.from + '|' + r.to, my = ++XM.seq;
-    if (XM.cache[key]) { XM.data = XM.cache[key]; fillDrivers(); preview(); return; }
-    XM.data = null; $('xmGo').disabled = true;
+    if (XM.cache[key]) { XM.data = XM.cache[key]; $('xmDrv').disabled = false; fillDrivers(); preview(); return; }
+    XM.data = null; $('xmGo').disabled = true; $('xmDrv').disabled = true;
     $('xmPv').innerHTML = '<div class="xm-bar" aria-hidden="true"><i></i></div><span style="color:var(--txt2)">กำลังดึงข้อมูล ' + r.label + '…</span>';
-    api({ action: 'getWageReport', userId: MY_UID, from: r.from, to: r.to, driver: '' }).then(function (d) {
+    // GAS บางครั้งตอบหน้า HTML แทน JSON → อ่านซ้ำได้ 3 รอบ (อ่านอย่างเดียว ปลอดภัย)
+    (function tryGet(n) { return api({ action: 'getWageReport', userId: MY_UID, from: r.from, to: r.to, driver: '' }).catch(function (e) { if (n >= 3 || my !== XM.seq) throw e; return new Promise(function (z) { setTimeout(z, 1500 * n); }).then(function () { return tryGet(n + 1); }); }); })(1).then(function (d) {
       if (my !== XM.seq) return;   // เปลี่ยนรอบไปแล้ว ทิ้งผลเก่า
       if (!d || !d.ok) throw new Error(d && (d.error || (d.denied ? 'ไม่มีสิทธิ์' : '')) || 'หลังบ้านตอบผิดพลาด');
-      XM.cache[key] = XM.data = d.rows || []; fillDrivers(); preview();
+      XM.cache[key] = XM.data = d.rows || []; $('xmDrv').disabled = false; fillDrivers(); preview();
     }).catch(function (e) {
       if (my !== XM.seq) return;
       $('xmPv').innerHTML = '<span class="neg">ดึงข้อมูลไม่สำเร็จ (' + (e && e.name === 'AbortError' ? 'หลังบ้านไม่ตอบใน 90 วินาที' : (e && e.message || e)) + ')</span> <button class="xm-chip" id="xmRetry" style="margin-top:6px;align-self:flex-start">↻ ลองใหม่</button>';
@@ -416,6 +417,7 @@
   }
   function picked() { return (XM.data || []).filter(function (r) { return !XM.driver || (r.driver || '—') === XM.driver; }); }
   function preview() {
+    if (XM.data === null) return;   // ยังโหลดอยู่/โหลดพัง — อย่าทับสถานะด้วย "ไม่มีเที่ยว"
     var R = picked(), r = range(), tot = 0, neg = 0, unpaid = 0;
     R.forEach(function (x) { var w = num(x.wage); tot += w; if (w < 0) neg++; if (!x.locked) unpaid++; });
     $('xmGo').disabled = !R.length;
