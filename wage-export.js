@@ -310,7 +310,12 @@
   }
   function init() {
     var b = $('dlBtn'), m = $('dlMenu'); if (!b || !m) return;
-    b.onclick = function (e) { e.stopPropagation(); m.hidden = !m.hidden; };
+    b.onclick = function (e) {
+      e.stopPropagation(); m.hidden = !m.hidden; if (m.hidden) return;
+      // เปิดไปฝั่งที่มีที่ (ปุ่มอยู่ขวาสุดบนจอกว้าง / ตกลงซ้ายบนจอแคบ) กันเมนูล้นจอ
+      var r = b.getBoundingClientRect(), mw = m.offsetWidth || 250;
+      if (r.left + mw > window.innerWidth - 8) { m.style.left = 'auto'; m.style.right = '0'; } else { m.style.left = '0'; m.style.right = 'auto'; }
+    };
     m.addEventListener('click', function (e) { var it = e.target.closest('[data-f]'); if (!it) return; m.hidden = true; run(it.dataset.f); });
     document.addEventListener('click', function (e) { if (!m.hidden && !e.target.closest('.dlwrap')) m.hidden = true; });
     document.addEventListener('keydown', function (e) { if (e.key === 'Escape') m.hidden = true; });
