@@ -65,6 +65,13 @@
   @keyframes dspin{to{transform:rotate(360deg)}}
   @keyframes ddots{0%{content:''}25%{content:'.'}50%{content:'..'}75%{content:'...'}}
   @media(prefers-reduced-motion:reduce){.dring{animation-duration:2.4s}.dltx::after{animation:none;content:'…'}}
+  /* เมนูดาวน์โหลด Excel / PDF / JPEG */
+  .dlwrap{position:relative}
+  .dlmenu{position:absolute;right:0;top:calc(100% + 6px);z-index:30;min-width:250px;background:var(--card);border:1px solid var(--line2);border-radius:12px;box-shadow:0 10px 28px rgba(20,40,60,.18);padding:6px}
+  .dlmenu[hidden]{display:none}
+  .dlmenu button{display:block;width:100%;text-align:left;border:0;background:transparent;color:var(--txt);font:inherit;font-size:13.5px;font-weight:600;padding:9px 11px;border-radius:8px;cursor:pointer}
+  .dlmenu button:hover,.dlmenu button:focus-visible{background:var(--card2);outline:none}
+  .dlmenu small{display:block;font-size:11px;font-weight:400;color:var(--txt2);margin-top:1px}
 </style>
 </head>
 <body>
@@ -83,7 +90,12 @@
       <button class="btn" id="load">ค้นหา</button>
       <button class="btn ghost" id="recalc" title="คิดค่าแรงใหม่ตามเงื่อนไขปัจจุบัน เฉพาะเที่ยวที่ยังไม่จ่าย">🔄 คำนวณใหม่</button>
       <button class="btn ghost" id="paidAll" title="ทำเครื่องหมายจ่ายแล้ว/ยกเลิก ทุกเที่ยวที่แสดงอยู่">☑️ จ่ายแล้วทั้งหมด</button>
-      <button class="btn ghost" id="csv">⬇️ Excel</button>
+      <div class="dlwrap"><button class="btn ghost" id="dlBtn" aria-haspopup="menu">⬇️ ดาวน์โหลด ▾</button>
+        <div class="dlmenu" id="dlMenu" role="menu" hidden>
+          <button role="menuitem" data-f="xlsx">📊 Excel (.xlsx)<small>ทุกเที่ยว + สรุปรายคนขับ · ติดลบสีแดง</small></button>
+          <button role="menuitem" data-f="pdf">📄 PDF<small>A4 แนวนอน พร้อมพิมพ์ · มีเลขหน้า</small></button>
+          <button role="menuitem" data-f="jpg">🖼️ JPEG<small>รูปเดียว ส่งต่อใน LINE</small></button>
+        </div></div>
     </div>
     <div class="kpis">
       <div class="kpi"><div class="k">จำนวนเที่ยว</div><div class="v" id="kTrips">—</div></div>
@@ -428,7 +440,6 @@ async function togglePaidAll(){
 $('load').onclick=loadReport;
 $('recalc').onclick=recomputeUnpaid;
 $('paidAll').onclick=togglePaidAll;
-$('csv').onclick=exportCsv;
 // 🔎 ค้นหา (กรองตาราง+สรุป) · เริ่มพิมพ์ = ล้างการเลือกปลายทาง
 $('sumSearch').addEventListener('input',e=>{SEARCH=e.target.value;ACTIVE_DEST='';applyView();});
 // จิ้มการ์ดสรุป = กางรายละเอียด + กรองตารางเฉพาะปลายทางนั้น (จิ้มชิป/การ์ดที่เลือกอยู่ = ล้าง)
@@ -455,5 +466,6 @@ $('summary').addEventListener('click',e=>{
   }catch(e){deny('LIFF error: '+e);}
 })();
 </script>
+<script src="wage-export.js?v=20260929"></script>
 </body>
 </html>
