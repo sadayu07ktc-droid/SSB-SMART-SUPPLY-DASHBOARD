@@ -289,6 +289,8 @@ function fuelBlock(w,via,row){
   if(vl>0)h+=row('+ ฮุคลิฟท์ + ให้เพิ่ม แปลงเป็นลิตร'+sub('('+money(w.hooklift)+' + '+money(w.give)+') ÷ '+rate),'+'+(+vl).toFixed(2)+' ล.');
   h+=row('− เติมจริง (โรงงาน + ทาง)','−'+f1(act)+' ล.');
   const tone=w.fuelAdj<0?'color:var(--danger)':'color:var(--primary)';
+  // ตอนคิดปิด "เพิ่ม/หักน้ำมัน" ไว้ (ค่าเก่า) → บอกตรงๆ ไม่ให้เห็น "+5.6 ล. × 25 = +0"
+  if(s.toggles&&s.toggles.fuelAdjOn===false){h+=row('<b>ไม่คิดเพิ่ม/หักน้ำมัน</b>'+sub('ตอนคิดค่าแรงปิดไว้ (ส่วนต่าง '+(diff>=0?'+':'')+diff.toFixed(2)+' ล. ไม่ได้นำมาคิด)'),'<b>0 บ.</b>','color:var(--txt2)');return h;}
   h+=row('<b>'+(w.fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+'</b>'+sub((diff>=0?'+':'')+diff.toFixed(2)+' ล. × '+rate+' บ./ล.'),'<b>'+(w.fuelAdj>=0?'+':'−')+money(Math.abs(w.fuelAdj))+' บ.</b>',tone);
   return h;
 }
@@ -331,7 +333,8 @@ async function openDetail(orderId){
   $('ov').classList.add('on');$('dr').classList.add('on');
   $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังคิดค่าเที่ยว</span></div>';
   let res;
-  try{ res=await api({action:'getWageMonitor',userId:MY_UID,orderId}); }
+  // GAS บางครั้งตอบหน้า HTML (บ่อยหลัง deploy) → อ่านซ้ำได้ 3 รอบ (อ่านอย่างเดียว ปลอดภัย)
+  try{ for(let n=1;;n++){ try{ res=await api({action:'getWageMonitor',userId:MY_UID,orderId}); break; }catch(e){ if(n>=3||(e&&e.name==='AbortError'))throw e; await new Promise(z=>setTimeout(z,1500*n)); } } }
   catch(e){   // หมดเวลา 90 วิ / หลังบ้านตอบหน้า HTML → อย่าให้วงแหวนหมุนค้าง
     $('drBody').innerHTML='<div class="msg">โหลดรายละเอียดไม่สำเร็จ ('+(e&&e.name==='AbortError'?'หลังบ้านไม่ตอบใน 90 วินาที':'หลังบ้านตอบผิดรูปแบบ')+')<br><button class="btn ghost" style="margin-top:12px" onclick="openDetail(\''+orderId+'\')">↻ ลองใหม่</button></div>';
     return;
@@ -342,6 +345,9 @@ async function openDetail(orderId){
   const isStored=!!(st&&st.snapshot);
   const w=isStored?Object.assign({driver:live.driver,plate:live.plate,garden:live.garden,dest:live.dest},st.snapshot,{wage:st.fee,snapshot:st.snapshot.params||{},model:''}):live;
   if(!w.snapshot)w.snapshot={};
+  // snapshot เก่า (ส.ค.) ไม่มี distTotal/distMode → คิดจากขา
+  if(w.distTotal==null){const dl=(w.legs||[]).reduce((a,l)=>a+(+l.distKm||0),0);w.distTotal=Math.round(((+w.distHeavy||0)+(+w.distLight||0)||dl)*10)/10;}
+  if(w.distHeavy==null&&w.legs){w.distHeavy=(w.legs||[]).filter(l=>l.weight==='หนัก').reduce((a,l)=>a+(+l.distKm||0),0);w.distLight=w.distTotal-w.distHeavy;}
   function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
   const place=[w.garden,w.dest].filter(Boolean).join(' → ');
   let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate||''} · ${w.vehType||(live.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
