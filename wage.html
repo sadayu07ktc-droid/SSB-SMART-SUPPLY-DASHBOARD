@@ -292,6 +292,39 @@ function fuelBlock(w,via,row){
   h+=row('<b>'+(w.fuelAdj>=0?'ได้คืนน้ำมัน':'หักน้ำมัน')+'</b>'+sub((diff>=0?'+':'')+diff.toFixed(2)+' ล. × '+rate+' บ./ล.'),'<b>'+(w.fuelAdj>=0?'+':'−')+money(Math.abs(w.fuelAdj))+' บ.</b>',tone);
   return h;
 }
+/* กล่องสถานะหัวลิ้นชัก: คำนวณล่าสุดเมื่อไร · จ่ายแล้วไหม · ถ้าคิดใหม่ตอนนี้ได้เท่าไร (ต่างเพราะอะไร) + ปุ่มคิดใหม่เที่ยวนี้ */
+function fmtAt(iso){if(!iso)return'—';const d=new Date(iso);if(isNaN(d))return iso;const p=n=>('0'+n).slice(-2);return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());}
+function calcStatus(orderId,w,live,st,isStored){
+  const box=(bg,bd,inner)=>`<div style="background:${bg};border:1px solid ${bd};border-radius:10px;padding:9px 11px;margin:0 0 10px;font-size:12.5px;line-height:1.6">${inner}</div>`;
+  if(!isStored)return box('var(--card2)','var(--line2)','🧮 <b>ยังไม่เคยบันทึกค่าแรงเที่ยวนี้</b> — ตัวเลขด้านล่างคิดสดตามตั้งค่าปัจจุบัน');
+  let s='🕒 คำนวณล่าสุด <b>'+fmtAt(st.at)+'</b>'+(st.locked?' · <b style="color:var(--primary)">🔒 จ่ายแล้ว</b>'+(st.paidAt?' ('+fmtAt(st.paidAt)+')':''):' · ยังไม่จ่าย');
+  const diff=Math.round(Number(live.wage)-Number(st.fee));
+  if(!diff)return box('var(--card2)','var(--line2)',s+'<br><span style="color:var(--primary)">✓ ตรงกับตั้งค่าปัจจุบัน</span>');
+  // ทำไมต่าง — เทียบสิ่งที่ตอนคิดใช้ กับตอนนี้
+  const why=[],a=(w.snapshot&&w.snapshot.toggles)||{},b=(live.snapshot&&live.snapshot.toggles)||{};
+  const BN={single:'ค่าเดียว',tier:'ตามช่วงระยะ',weight:'หนัก/เบา',hlzone:'⑬ตามระยะหนักเบา',hlrate:'⑬เรทช่วง',hlblend:'⑬เกลี่ยในช่วง'};
+  if((w.distMode||'actual')!==live.distMode)why.push(live.distMode==='central'?'ตอนนั้นคิดด้วยระยะจริง '+w.distTotal+' กม. · ตอนนี้มีค่ากลาง '+live.distTotal+' กม.':'ระยะที่ใช้คิดเปลี่ยน '+w.distTotal+' → '+live.distTotal+' กม.');
+  else if(Math.abs((+w.distTotal||0)-(+live.distTotal||0))>=0.1)why.push('ระยะที่ใช้คิด '+w.distTotal+' → '+live.distTotal+' กม.');
+  if(w.vehType&&live.vehType&&w.vehType!==live.vehType)why.push('ประเภทรถ '+w.vehType+' → '+live.vehType);
+  if(a.fuelBench&&b.fuelBench&&a.fuelBench!==b.fuelBench)why.push('เกณฑ์น้ำมัน '+(BN[a.fuelBench]||a.fuelBench)+' → '+(BN[b.fuelBench]||b.fuelBench));
+  const ra=w.snapshot&&w.snapshot.runRate, rb=live.snapshot&&live.snapshot.runRate;
+  if(ra&&rb&&+ra!==+rb)why.push('เลทค่าวิ่ง '+ra+' → '+rb+' บ./ชม.');
+  if(!why.length)why.push('ตั้งค่าค่าแรงเปลี่ยนหลังวันที่คิด');
+  s+='<br><span style="color:var(--danger)">⚠️ ถ้าคิดใหม่ตามตั้งค่าปัจจุบัน = <b>'+money(live.wage)+' บ.</b> ('+(diff>0?'+':'−')+money(Math.abs(diff))+')</span>'
+    +'<ul style="margin:3px 0 0;padding-left:18px;color:var(--txt2)">'+why.map(x=>'<li>'+x+'</li>').join('')+'</ul>'
+    +(st.locked?'<div style="color:var(--txt2);margin-top:4px">จ่ายแล้ว — ล็อกไว้ ไม่คิดใหม่ (เอาติ๊ก "จ่ายแล้ว" ออกก่อนถ้าต้องการคิดใหม่)</div>'
+      :'<button class="btn" id="recalcOne" style="margin-top:8px;padding:7px 14px;font-size:12.5px" onclick="recalcOne(\''+orderId+'\',this)">🔄 คิดใหม่เที่ยวนี้</button>');
+  return box('var(--card2)','var(--danger)',s);
+}
+async function recalcOne(orderId,btn){
+  btn.disabled=true;btn.textContent='กำลังคิด…';
+  let d=null;
+  for(let tr=1;tr<=3&&!d;tr++){   // คิดซ้ำได้ปลอดภัย (ผลเดิม) → GAS ตอบ HTML = ลองใหม่
+    try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:[orderId]})});d=JSON.parse(await r.text());}catch(_){d=null;await new Promise(z=>setTimeout(z,1500*tr));}
+  }
+  if(!d||!d.ok||!d.done){btn.disabled=false;btn.textContent='🔄 คิดใหม่เที่ยวนี้';alert('❌ คิดใหม่ไม่สำเร็จ'+(d&&d.results&&d.results[0]&&d.results[0].error?': '+d.results[0].error:''));return;}
+  await loadReport(); openDetail(orderId);
+}
 function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
 
 async function openDetail(orderId){
@@ -304,11 +337,16 @@ async function openDetail(orderId){
     return;
   }
   if(!res.ok){$('drBody').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
-  const w=res.wage, c=res.cost;
+  // ลิ้นชักโชว์ "ค่าที่บันทึกไว้" = ตัวเดียวกับตาราง/รายงาน (ไม่ใช่คิดสด) · ค่าสดใช้เทียบ ถ้าต่าง = บอก + ปุ่มคิดใหม่
+  const live=res.wage, st=res.stored, c=res.cost;
+  const isStored=!!(st&&st.snapshot);
+  const w=isStored?Object.assign({driver:live.driver,plate:live.plate,garden:live.garden,dest:live.dest},st.snapshot,{wage:st.fee,snapshot:st.snapshot.params||{},model:''}):live;
+  if(!w.snapshot)w.snapshot={};
   function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
   const place=[w.garden,w.dest].filter(Boolean).join(' → ');
-  let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate} · ${w.model?('รุ่น '+w.model):(w.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
+  let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate||''} · ${w.vehType||(live.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
+  h+=calcStatus(orderId,w,live,st,isStored);
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. ×2×${l.pct}%`,money(l.runWage)+' บ.'));
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
@@ -320,18 +358,20 @@ async function openDetail(orderId){
   if(w.hardship>0)h+=row('Hardship',money(w.hardship)+' บ.');
   if(w.wait>0)h+=row('ค่ารอลงของ ('+(w.waitHrs||0)+' ชม.)',money(w.wait)+' บ.');
   h+=fuelBlock(w,via,row);
-  if(w.snapshot.bonusPct>0)h+=row('โบนัส '+w.snapshot.bonusPct+'%','+'+money(w.bonus)+' บ.');
+  if(Number(w.bonus))h+=row('โบนัส '+(w.snapshot.bonusPct||'')+'%','+'+money(w.bonus)+' บ.');
   h+=`<div class="big"><span style="font-weight:700">ค่าแรงสุทธิ</span><span class="amt"${Number(w.wage)<0?' style="color:var(--danger)"':''}>${money(w.wage)} บ.</span></div>`;
   if(c){
     h+='<div class="sec">🏢 ต้นทุนบริษัท</div>';
-    h+=row('ค่าแรงคนขับ',money(c.wage)+' บ.');
+    // ต้นทุนใช้ค่าแรงที่บันทึกไว้ (ตัวเดียวกับด้านบน/ตาราง) แทนค่าแรงคิดสด
+    const cw=Number(w.wage)||0, ctot=Number(c.total)-Number(c.wage||0)+cw, cper=(c.qty>0)?Math.round(ctot/c.qty*100)/100:c.perUnit;
+    h+=row('ค่าแรงคนขับ',money(cw)+' บ.');
     h+=row('น้ำมันต้นทุน ('+w.litersActual+'ล.×'+c.fuelPriceDaily+')',money(c.fuelCost)+' บ.');
     h+=row('ต้นทุนคงที่ (รวมค่าเสื่อม)',money(c.fixedCost)+' บ.');
     h+=row('ต้นทุนผันแปร',money(c.varCost)+' บ.');
     h+=row('ค่าดำเนินงาน',money(c.opsCost)+' บ.');
     if(c.extraCost)h+=row('ค่าใช้จ่ายรายเที่ยว',money(c.extraCost)+' บ.');
-    h+=`<div class="big"><span style="font-weight:700">ต้นทุนรวม</span><span class="amt" style="color:var(--txt)">${money(c.total)} บ.</span></div>`;
-    if(c.perUnit!=null)h+=row('ต่อหน่วย ('+money(c.qty)+' '+c.unit+')','<b>'+c.perUnit+'</b> บ./'+c.unit,'font-size:14px');
+    h+=`<div class="big"><span style="font-weight:700">ต้นทุนรวม</span><span class="amt" style="color:var(--txt)">${money(ctot)} บ.</span></div>`;
+    if(c.perUnit!=null)h+=row('ต่อหน่วย ('+money(c.qty)+' '+c.unit+')','<b>'+cper+'</b> บ./'+c.unit,'font-size:14px');
   }
   // 📋 ข้อมูลดิบที่คนขับกรอก — ให้แอดมินตรวจ (เลขไมล์/ดุม/น้ำหนัก/น้ำมัน/ค่าใช้จ่าย/รูป)
   if(res.raw && Object.keys(res.raw).length){
