@@ -40,7 +40,7 @@
         + '<div class="uim-f">' + (o.kind === 'alert' ? '' : '<button class="uim-b no" data-r="0">' + esc(o.cancelText || 'ยกเลิก') + '</button>')
         + '<button class="uim-b ok' + (o.danger ? ' danger' : '') + '" data-r="1">' + esc(o.okText || 'ตกลง') + '</button></div></div>';
       document.body.appendChild(ov);
-      requestAnimationFrame(function () { ov.classList.add('on'); });
+      setTimeout(function () { ov.classList.add('on'); }, 10);   // ไม่ใช้ rAF — แท็บพื้นหลัง/WebView บางตัวไม่ยิง ทำให้กล่องจางค้าง
       var inp = ov.querySelector('#uimIn');
       setTimeout(function () { if (inp) { inp.focus(); inp.select(); } else ov.querySelector('.uim-b.ok').focus(); }, 30);
       function done(ok) {
@@ -75,7 +75,7 @@
     window.toast = function (msg) {
       addCss(); var t = document.getElementById('uit'); if (!t) { t = document.createElement('div'); t.id = 'uit'; t.className = 'uit'; t.setAttribute('role', 'status'); t.setAttribute('aria-live', 'polite'); document.body.appendChild(t); }
       var s = String(msg || ''); t.textContent = s; t.className = 'uit' + (/^❌|ไม่สำเร็จ/.test(s) ? ' err' : /^✅/.test(s) ? ' ok' : '');
-      requestAnimationFrame(function () { t.classList.add('on'); }); clearTimeout(tm); tm = setTimeout(function () { t.classList.remove('on'); }, 2600);
+      setTimeout(function () { t.classList.add('on'); }, 10); clearTimeout(tm); tm = setTimeout(function () { t.classList.remove('on'); }, 2600);
     };
   }
 })();
