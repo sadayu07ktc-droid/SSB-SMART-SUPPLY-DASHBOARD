@@ -286,8 +286,8 @@ function fuelBlock(w,via,row){
     bd=sub('หนัก '+f1(w.distHeavy)+' กม. ÷ '+kh.toFixed(2)+' กม./ล. = '+f1(w.benchHeavyL)+' ล.<br>เบา '+f1(w.distLight)+' กม. ÷ '+kl.toFixed(2)+' กม./ล. = '+f1(w.benchLightL)+' ล.');
   } else bd=sub('หนัก '+f1(w.distHeavy)+' กม. + เบา '+f1(w.distLight)+' กม.');
   h+=row('ลิตรตามเกณฑ์ · '+(w.distMode==='central'?'ระยะกลาง ':'ระยะจริง ')+f1(w.distTotal)+' กม.'+bd,f1(bench)+' ล.');
-  if(vl>0)h+=row('+ ฮุคลิฟท์ + ให้เพิ่ม แปลงเป็นลิตร'+sub('('+money(w.hooklift)+' + '+money(w.give)+') ÷ '+rate),'+'+(+vl).toFixed(2)+' ล.');
-  h+=row('− เติมจริง (โรงงาน + ทาง)','−'+f1(act)+' ล.');
+  if(vl>0)h+=row('+ ฮุคลิฟท์ + ให้เพิ่ม แปลงเป็นลิตร'+sub('('+money(w.hooklift)+' + '+money(w.give)+(w.bz&&+w.bz!==1?' [ให้เพิ่ม × BZ '+(+w.bz).toFixed(2)+']':'')+') ÷ '+rate),'+'+(+vl).toFixed(2)+' ล.');
+  h+=row('− เติมจริง (โรงงาน + ทาง)'+(w.tripOrders>1?sub('รถคันเดียวกันทั้งทริป '+w.tripOrders+' ออเดอร์ รวม '+f1(w.tripLiters)+' ล. × '+Math.round(w.tripShare*100)+'% (ตามค่ากลาง)'):''),'−'+f1(act)+' ล.');
   const tone=w.fuelAdj<0?'color:var(--danger)':'color:var(--primary)';
   // ตอนคิดปิด "เพิ่ม/หักน้ำมัน" ไว้ (ค่าเก่า) → บอกตรงๆ ไม่ให้เห็น "+5.6 ล. × 25 = +0"
   if(s.toggles&&s.toggles.fuelAdjOn===false){h+=row('<b>ไม่คิดเพิ่ม/หักน้ำมัน</b>'+sub('ตอนคิดค่าแรงปิดไว้ (ส่วนต่าง '+(diff>=0?'+':'')+diff.toFixed(2)+' ล. ไม่ได้นำมาคิด)'),'<b>0 บ.</b>','color:var(--txt2)');return h;}
@@ -354,7 +354,7 @@ async function openDetail(orderId){
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
   h+=calcStatus(orderId,w,live,st,isStored);
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
-  (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. ×2×${l.pct}%`,money(l.runWage)+' บ.'));
+  (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. × ${l.pct}% ÷ 50`,money(l.runWage)+' บ.'));
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
   if(w.tarp>0)h+=row('ค่าคลุมผ้าใบ',money(w.tarp)+' บ.');
   const via=!!(w.snapshot&&w.snapshot.toggles&&w.snapshot.toggles.viaLiters);

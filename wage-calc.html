@@ -272,28 +272,29 @@
   // เกณฑ์น้ำมันแยกหนัก/เบา ต่อรุ่น (ข้อมูลจริง: 360 หนัก 3.0-3.4 เบา 4.5-5.2 · 240 หนัก 3.8-4.2 เบา 5.0-5.5)
   // เกณฑ์หนัก/เบา ต่อรุ่น (user เคาะ 2026-07-17): 360 หนัก2.75 เบา4 · 240 หนัก3.75 เบา5
   var FUEL_WEIGHT={'พ่วง':{heavy:2.75,light:4},'เดี่ยว':{heavy:3.75,light:5},'4ล้อ':{heavy:5.75,light:7},'6ล้อ':{heavy:4.75,light:6}};
-  // 🆕 R.11 ⑬ เกณฑ์น้ำมัน หนัก/เบา × 4 โซนระยะ × ประเภทรถ (โซน lo/hi ตรง Excel: 0-150/151-200/201-400/401+)
-  var ZONE13_LO=[0,150,200,400], ZONE13_HI=[150,200,400,9999];   // ต้นช่วง = ปลายช่วงก่อน (ต่อกัน ไม่หาย 1 กม.)
+  // ⑬ เกณฑ์น้ำมัน หนัก/เบา × N ช่วงระยะ × ประเภทรถ — R.13 (BULK) 8 ช่วง ใช้ทุกงาน (คุณน้องเคาะ 2026-10-02)
+  //    ค่าจริงโหลดจากหน้าตั้งค่า (getWageConfig.fuelZones) · ด้านล่าง = ค่าเริ่มต้นเมื่อโหลดไม่ได้ · ต้นช่วง = ปลายช่วงก่อน (ต่อกัน ไม่ +1)
+  var ZONE13_HI=[20,40,75,120,170,350,700,9999];
+  var ZONE13_LO=ZONE13_HI.map(function(h,i,a){return i?a[i-1]:0;});
   var TABLE13={
-    'พ่วง':{h:[2.78,3.45,3.39,3.37], l:[4.00,4.90,4.97,4.98]},
-    'เดี่ยว':{h:[2.50,2.65,2.80,2.90], l:[2.95,3.10,3.25,3.40]},
-    '4ล้อ':{h:[7.00,7.50,8.30,8.60], l:[7.95,8.50,9.40,9.75]},
-    '6ล้อ':{h:[4.50,4.80,5.15,5.80], l:[5.15,5.50,5.90,6.60]}
+    'พ่วง':{h:[1.60,2.48,2.71,2.94,3.17,3.39,3.62,3.85], l:[1.95,3.03,3.31,3.59,3.87,4.15,4.43,4.71]},
+    'เดี่ยว':{h:[1.65,3.60,4.10,4.70,5.10,5.10,5.10,5.10], l:[2.00,4.40,5.00,5.75,6.20,6.20,6.20,6.20]},
+    '4ล้อ':{h:[7.00,7.00,7.00,7.00,7.50,8.30,8.60,8.60], l:[7.95,7.95,7.95,7.95,8.50,9.40,9.75,9.75]},
+    '6ล้อ':{h:[4.50,4.50,4.50,4.50,4.80,5.15,5.80,5.80], l:[5.15,5.15,5.15,5.15,5.50,5.90,6.60,6.60]}
   };
   // ตามระยะหนักเบา: กระจายระยะหนัก/เบา ลงโซน (ขั้นบันได เริ่มจาก 0) แต่ละส่วน ÷ kmpl โซนนั้น (ตรง Excel AL)
   function bench13Zone(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
-    function split(d,kk){var L=0;for(var i=0;i<4;i++){var p=Math.min(d,ZONE13_HI[i])-ZONE13_LO[i];if(p>0&&kk[i]>0)L+=p/kk[i];}return L;}
+    function split(d,kk){var L=0;for(var i=0;i<ZONE13_HI.length;i++){var p=Math.min(d,ZONE13_HI[i])-ZONE13_LO[i];if(p>0&&kk[i]>0)L+=p/kk[i];}return L;}
     return split(distH,Z.h)+split(distL,Z.l);}
-  // หนักเบา-เรทช่วง: ระยะหนัก/เบา ก้อนเดียว ตกโซนไหน ใช้ kmpl โซนนั้นทั้งก้อน
+  // หนักเบา-เรทช่วง: ระยะหนัก/เบา ก้อนเดียว ตกโซนไหน ใช้ kmpl โซนนั้นทั้งก้อน · เกินทุกช่วง = ช่วงสุดท้าย
   function bench13Rate(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
-    function zi(d){for(var i=0;i<4;i++){if(d<=ZONE13_HI[i])return i;}return 3;}
+    function zi(d){for(var i=0;i<ZONE13_HI.length;i++){if(d<=ZONE13_HI[i])return i;}return ZONE13_HI.length-1;}
     var L=0; if(distH>0&&Z.h[zi(distH)]>0)L+=distH/Z.h[zi(distH)]; if(distL>0&&Z.l[zi(distL)]>0)L+=distL/Z.l[zi(distL)]; return L;}
-  // 🆕 หนักเบา-เกลี่ยในช่วง (คุณน้องเพิ่ม 2026-09-25 · ไม่มีใน Excel) — กม./ล. ไล่เส้นตรงจากเรทช่วงก่อน (ที่ขอบบนช่วงก่อน) → เรทช่วงนี้ (ที่เพดาน)
-  //    ช่วงแรก = เรทคงที่ · ช่วงสุดท้าย (ไม่จำกัด) = เกลี่ยจนเต็มเรทที่ BLEND_LAST_TO กม. แล้วคงที่ · ตรง computeTripWage _bench13Blend_
-  var BLEND_LAST_TO=600;
-  function blendKmpl(d,kk){var i=0;while(i<3&&d>ZONE13_HI[i])i++;if(!(kk[i]>0))return 0;if(i===0)return kk[i];if(!(kk[i-1]>0))return kk[i];   // เรท 0/ว่าง = 0 ลิตร · ช่วงก่อนว่าง = ไม่เกลี่ยจาก 0
-    
-    var a=ZONE13_HI[i-1],top=(i===3)?BLEND_LAST_TO:ZONE13_HI[i];if(!(top>a))return kk[i];
+  // หนักเบา-เกลี่ยในช่วง — กม./ล. ไล่เส้นตรงจากเรทช่วงก่อน (ที่ขอบบนช่วงก่อน) → เรทช่วงนี้ (ที่ขอบบนช่วงนี้)
+  //    ช่วงแรก = เรทคงที่ · ช่วงสุดท้าย (≥9999) = เกลี่ยจนเต็มเรทที่ BLEND_LAST_TO (R.13 = 1000) แล้วคงที่ · ตรง computeTripWage _blendKmpl_
+  var BLEND_LAST_TO=1000;
+  function blendKmpl(d,kk){var N=ZONE13_HI.length,i=0;while(i<N-1&&d>ZONE13_HI[i])i++;if(!(kk[i]>0))return 0;if(i===0)return kk[i];if(!(kk[i-1]>0))return kk[i];   // เรท 0/ว่าง = 0 ลิตร · ช่วงก่อนว่าง = ไม่เกลี่ยจาก 0
+    var a=ZONE13_HI[i-1],top=(i===N-1&&ZONE13_HI[i]>=9999)?BLEND_LAST_TO:ZONE13_HI[i];if(!(top>a))return kk[i];
     var t=(d-a)/((top-a)||1);t=Math.max(0,Math.min(1,t));return kk[i-1]+t*(kk[i]-kk[i-1]);}
   function bench13Blend(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
     var L=0,rh=distH>0?blendKmpl(distH,Z.h):0,rl=distL>0?blendKmpl(distL,Z.l):0;if(rh>0)L+=distH/rh;if(rl>0)L+=distL/rl;return L;}
@@ -1114,9 +1115,13 @@
     if(cfg.fuelZones&&cfg.fuelZones.length){var TZ={},lo=null,hi=null;
       cfg.fuelZones.slice().sort(function(a,b){return (+a.seq)-(+b.seq);}).forEach(function(z){var v=String(z.vehicle_type);if(!TZ[v])TZ[v]={h:[],l:[],lo:[],hi:[]};TZ[v].h.push(+z.kmpl_heavy||0);TZ[v].l.push(+z.kmpl_light||0);TZ[v].hi.push(+z.to_km||9999);});
       Object.keys(TZ).forEach(function(v){TZ[v].lo=TZ[v].hi.map(function(h,i,a){return i?a[i-1]:0;});});   // ต้นช่วง = ปลายช่วงก่อน (ไม่ใช้ from_km 151/201/401)
-      Object.keys(TZ).forEach(function(v){if(TZ[v].h.length===4){TABLE13[v]={h:TZ[v].h,l:TZ[v].l};if(!lo){lo=TZ[v].lo;hi=TZ[v].hi;}}});
-      if(lo){ZONE13_LO=lo;ZONE13_HI=hi;}}
-    T.special=_n(p.special_on,0)!==0;   // ถ่วง "ให้เพิ่ม" หนัก/เบา (BZ) — ระบบจ่ายจริงยังไม่มี → ปิดให้ตรงระบบ
+      // กี่ช่วงก็ได้ (R.13 = 8) · ขอบช่วงยึดของพ่วง (หน้าตั้งค่าแก้ขอบพร้อมกันทุกประเภทรถ) · ประเภทที่จำนวนช่วงไม่เท่า = ข้าม (ใช้ค่าเริ่มต้น)
+      var ref=TZ['พ่วง']||TZ[Object.keys(TZ)[0]]; lo=ref.lo; hi=ref.hi;
+      var NEW13={}; Object.keys(TZ).forEach(function(v){if(TZ[v].h.length===hi.length)NEW13[v]={h:TZ[v].h,l:TZ[v].l};});
+      if(hi.length){ZONE13_LO=lo;ZONE13_HI=hi;Object.keys(TABLE13).forEach(function(v){if(!NEW13[v]||TABLE13[v].h.length!==hi.length)delete TABLE13[v];});Object.keys(NEW13).forEach(function(v){TABLE13[v]=NEW13[v];});}}
+    // R.11/R.13 ถ่วง "ให้เพิ่ม" หนัก/เบา (BZ) — ตามสวิตช์ในหน้าตั้งค่า (หลังบ้านคิดแบบเดียวกันแล้ว 2026-10-02)
+    T.special=_n(tg.special_on!=null?tg.special_on:p.special_on,0)!==0;
+    P.specialHeavy=_n(p.special_heavy,P.specialHeavy); P.specialLight=_n(p.special_light,P.specialLight); P.specialAvg=_n(p.special_avg,P.specialAvg);
     // ④ job_types + hardship
     if(cfg.jobTypes&&cfg.jobTypes.length){JOB_TYPES={};JOB_TARP={};JOB_HOOKLIFT={};JOB_HARDSHIP={};cfg.jobTypes.forEach(function(j){var b=function(v){return v===true||v==='t'||v==='true';};JOB_TYPES[j.job_type]={up:+j.up_min,down:+j.down_min};JOB_TARP[j.job_type]=b(j.tarp);JOB_HOOKLIFT[j.job_type]=b(j.hooklift);JOB_HARDSHIP[j.job_type]=b(j.hardship);});}
     P.benchmark=FUEL_BENCH[src().model]||FUEL_BENCH['เดี่ยว']||5.95;
@@ -1130,8 +1135,8 @@
   function resetOfficial(){ if(!OFFICIAL)return; Object.keys(OFFICIAL.P).forEach(function(k){P[k]=OFFICIAL.P[k];}); Object.keys(OFFICIAL.T).forEach(function(k){T[k]=OFFICIAL.T[k];}); refreshUI(); }
   function updateBadge(){
     var b=document.getElementById('offBadge'); if(!b||!OFFICIAL)return;
-    var kp=['runRate','loadRate','fuelRate','heavyPct','lightPct','bonusPct','tarpFee','hookliftFee','waitRate','hardshipFee','givePerHr'];
-    var kt=['weight','speedCalc','distMode','fuelBench','fuelPenalty','tarp','bonus10','bonusBase','giveOn','wait','hooklift','load','hardship','via'];
+    var kp=['runRate','loadRate','fuelRate','heavyPct','lightPct','bonusPct','tarpFee','hookliftFee','waitRate','hardshipFee','givePerHr','specialHeavy','specialLight','specialAvg'];
+    var kt=['weight','speedCalc','distMode','fuelBench','fuelPenalty','tarp','bonus10','bonusBase','giveOn','wait','hooklift','load','hardship','via','special'];
     var dirty=kp.some(function(k){return +P[k]!==+OFFICIAL.P[k];})||kt.some(function(k){return String(T[k])!==String(OFFICIAL.T[k]);});
     b.textContent=dirty?'⚠️ กำลังจำลอง (ไม่ใช่ค่าจริงระบบ)':'✓ ค่าทางการ';
     b.style.background=dirty?'#c8352f':'var(--primary,#1f8a52)';
@@ -1173,7 +1178,8 @@
     return fetch(url,{signal:c.signal}).then(function(r){return r.json();}).finally(function(){clearTimeout(t);});
   }
   // ประเภทรถ (พ่วง/เดี่ยว/4ล้อ/6ล้อ) — snapshot เก่าเก็บรุ่น 360/240 → 360=พ่วง · 240=เดี่ยว (ตาราง⑬ ใช้ประเภทรถ)
-  function vehOf(v){v=String(v||'').trim();if(TABLE13[v])return v;if(/360|พ่วง|trailer/i.test(v))return 'พ่วง';if(/240|เดี่ยว/.test(v))return 'เดี่ยว';if(/4s*ล้อ/.test(v))return '4ล้อ';if(/6s*ล้อ/.test(v))return '6ล้อ';return 'พ่วง';}
+  // รุ่น 240/360 ไม่ได้บอกเดี่ยว/พ่วง (รถ SSB เป็นพ่วงทั้ง 240 และ 360 — ตารางรถ "พ่วง(Trailer) 240") → นับเป็นพ่วง · เดี่ยวเฉพาะที่เขียนว่าเดี่ยว
+  function vehOf(v){v=String(v||'').trim();if(TABLE13[v])return v;if(/เดี่ยว|single/i.test(v))return 'เดี่ยว';if(/4\s*ล้อ/.test(v))return '4ล้อ';if(/6\s*ล้อ/.test(v))return '6ล้อ';return 'พ่วง';}
   function _pullOrders(uid){
     if(!uid)return; window._wageUid=uid;
     function attempt(n){
