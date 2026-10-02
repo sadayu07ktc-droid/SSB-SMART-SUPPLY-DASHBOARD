@@ -138,6 +138,7 @@
   <div id="drBody"><div class="msg">กำลังโหลด…</div></div>
 </aside>
 
+<script src="wage-ui.js?v=20261002"></script>
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -324,7 +325,7 @@ async function recalcOne(orderId,btn){
   for(let tr=1;tr<=3&&!d;tr++){   // คิดซ้ำได้ปลอดภัย (ผลเดิม) → GAS ตอบ HTML = ลองใหม่
     try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:[orderId]})});d=JSON.parse(await r.text());}catch(_){d=null;await new Promise(z=>setTimeout(z,1500*tr));}
   }
-  if(!d||!d.ok||!d.done){btn.disabled=false;btn.textContent='🔄 คิดใหม่เที่ยวนี้';alert('❌ คิดใหม่ไม่สำเร็จ'+(d&&d.results&&d.results[0]&&d.results[0].error?': '+d.results[0].error:''));return;}
+  if(!d||!d.ok||!d.done){btn.disabled=false;btn.textContent='🔄 คิดใหม่เที่ยวนี้';uiAlert('❌ คิดใหม่ไม่สำเร็จ'+(d&&d.results&&d.results[0]&&d.results[0].error?': '+d.results[0].error:''));return;}
   await loadReport(); openDetail(orderId);
 }
 function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
@@ -441,8 +442,8 @@ function exportCsv(){
 //   ⚠️ แบ่งส่งเป็นก้อน (chunk) กัน request เดียวนานเกินจน Google คืนหน้า HTML error
 async function recomputeUnpaid(){
   const ids=VIEW.filter(r=>!r.locked).map(r=>r.orderId);   // เฉพาะที่แสดงอยู่ (ตามค้นหา/กรอง)
-  if(!ids.length){alert('ไม่มีเที่ยวที่ยังไม่จ่ายให้คิดใหม่ (ที่จ่ายแล้วจะไม่ถูกแตะ)');return;}
-  if(!confirm('คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว (เฉพาะที่ยังไม่จ่าย) ตามเงื่อนไขปัจจุบัน?\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน'))return;
+  if(!ids.length){uiAlert('ไม่มีเที่ยวที่ยังไม่จ่ายให้คิดใหม่ (ที่จ่ายแล้วจะไม่ถูกแตะ)');return;}
+  if(!(await uiConfirm({title:'คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว?',msg:'เฉพาะที่ยังไม่จ่าย · คิดตามตั้งค่าปัจจุบัน\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน',okText:'คำนวณใหม่',icon:'🔄'})))return;
   const b=$('recalc');b.disabled=true;
   const CHUNK=8;
   let done=0,skipped=0,failed=0,ok=true,err='';const badChunks=[];
@@ -463,9 +464,9 @@ async function recomputeUnpaid(){
     }
   }catch(e){ ok=false; err=String(e); }
   b.textContent='🔄 คำนวณใหม่';b.disabled=false;
-  if(!ok){ alert('❌ '+err+(done?'\n(คิดสำเร็จไปแล้ว '+done+' เที่ยวก่อนหยุด)':'')); if(done)await loadReport(); return; }
+  if(!ok){ uiAlert('❌ '+err+(done?'\n(คิดสำเร็จไปแล้ว '+done+' เที่ยวก่อนหยุด)':'')); if(done)await loadReport(); return; }
   await loadReport();
-  alert((badChunks.length?'⚠️ ':'✅ ')+'คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:'')
+  uiAlert((badChunks.length?'⚠️ ':'✅ ')+'คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:'')
     +(badChunks.length?'\nหลังบ้านไม่ตอบ '+badChunks.length+' เที่ยว — กด 🔄 คำนวณใหม่ อีกครั้ง\n('+badChunks.slice(0,6).join(', ')+(badChunks.length>6?' …':'')+')':''));
 }
 // ติ๊ก "จ่ายแล้ว" = ล็อกค่าแรง (คำนวณใหม่จะไม่ทับ) · เอาติ๊กออก = ปลดล็อก
@@ -475,8 +476,8 @@ async function togglePaid(orderId,checked,el){
     const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaid',userId:MY_UID,orderId,paid:checked})});
     const d=await r.json();
     if(d.ok){const row=ROWS.find(x=>x.orderId===orderId);if(row)row.locked=checked;const sp=el.parentNode.querySelector('span');if(sp){sp.textContent=checked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย';sp.style.color=checked?'var(--primary)':'var(--txt2)';}updatePaidAllBtn();}
-    else{el.checked=!checked;alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));}
-  }catch(e){el.checked=!checked;alert('❌ '+e);}
+    else{el.checked=!checked;uiAlert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));}
+  }catch(e){el.checked=!checked;uiAlert('❌ '+e);}
   el.disabled=false;
 }
 
@@ -491,14 +492,14 @@ async function togglePaidAll(){
   if(!VIEW.length)return;
   const paid=!VIEW.every(r=>r.locked);   // ยังไม่ครบ → จ่ายทั้งหมด · ครบแล้ว → ยกเลิกทั้งหมด
   const ids=VIEW.map(r=>r.orderId);
-  if(!confirm((paid?'ทำเครื่องหมาย "จ่ายแล้ว" ':'ยกเลิก "จ่ายแล้ว" ')+ids.length+' เที่ยวที่แสดงอยู่?'))return;
+  if(!(await uiConfirm({title:(paid?'ทำเครื่องหมาย "จ่ายแล้ว" ':'ยกเลิก "จ่ายแล้ว" ')+ids.length+' เที่ยว?',msg:paid?'เที่ยวที่จ่ายแล้วจะถูกล็อก ไม่ถูกคิดใหม่':'เที่ยวจะกลับไปคิดใหม่ได้',okText:paid?'จ่ายแล้ว':'ยกเลิกจ่าย',icon:paid?'☑️':'↩️',danger:!paid})))return;
   const b=$('paidAll');b.textContent='กำลังบันทึก…';b.disabled=true;
   try{
     const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaidBulk',userId:MY_UID,orderIds:ids,paid})});
     const d=await r.json();
     if(d.ok){ VIEW.forEach(r=>r.locked=paid); applyView(); }
-    else alert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
-  }catch(e){alert('❌ '+e);}
+    else uiAlert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
+  }catch(e){uiAlert('❌ '+e);}
   b.disabled=false;
 }
 
@@ -531,6 +532,6 @@ $('summary').addEventListener('click',e=>{
   }catch(e){deny('LIFF error: '+e);}
 })();
 </script>
-<script src="wage-export.js?v=20260929g"></script>
+<script src="wage-export.js?v=20261002"></script>
 </body>
 </html>

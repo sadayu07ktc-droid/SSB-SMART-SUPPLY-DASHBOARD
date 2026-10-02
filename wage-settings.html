@@ -92,6 +92,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
+<script src="wage-ui.js?v=20261002"></script>
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -508,7 +509,7 @@ function renderTemplates(){
 }
 async function activateTpl(id){
   const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
-  if(!confirm('เปิดใช้ชุด "'+t.name+'"?\n\nระบบจะคิดค่าแรง "เที่ยวที่คิดใหม่" ตามชุดนี้\n(เที่ยวที่จ่าย/ล็อกแล้วไม่เปลี่ยน)'))return;
+  if(!(await uiConfirm({title:'เปิดใช้ชุด "'+t.name+'"?',msg:'ระบบจะคิดค่าแรง "เที่ยวที่คิดใหม่" ตามชุดนี้\nเที่ยวที่จ่าย/ล็อกแล้วไม่เปลี่ยน',okText:'เปิดใช้',icon:'🧮'})))return;
   toast('กำลังเปิดใช้…');
   try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'activateWageTemplate',userId:MY_UID,id})});const d=await r.json();
     if(d&&d.ok){ACTIVE_ID=id;toast('✅ เปิดใช้ชุด "'+t.name+'" แล้ว');await load();await loadTemplates();}
@@ -516,7 +517,7 @@ async function activateTpl(id){
   }catch(e){toast('❌ '+e);}
 }
 async function saveAsTpl(){
-  const name=prompt('ตั้งชื่อชุดใหม่ (เช่น สูตรปกติ / หน้าฝน / ลูกค้า A):','ชุดที่ '+(TEMPLATES.length+1));
+  const name=await uiPrompt({title:'ตั้งชื่อชุดใหม่',msg:'เก็บค่าตั้งปัจจุบันทั้งหมดเป็นชุดใหม่',value:'ชุดที่ '+(TEMPLATES.length+1),placeholder:'เช่น สูตรปกติ / หน้าฝน / ลูกค้า A',okText:'บันทึกชุด',icon:'➕'});
   if(name===null)return;
   toast('กำลังบันทึก…');
   try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,name,config:gatherConfig()})});const d=await r.json();
@@ -526,7 +527,7 @@ async function saveAsTpl(){
 }
 async function overwriteTpl(){
   const t=TEMPLATES.find(x=>x.id===ACTIVE_ID); if(!t)return saveAsTpl();
-  if(!confirm('บันทึกค่าปัจจุบันลงชุด "'+t.name+'"?\n(ชุดนี้กำลังใช้อยู่ → ค่าแรงเที่ยวใหม่จะใช้ค่านี้ทันที)'))return;
+  if(!(await uiConfirm({title:'บันทึกค่าปัจจุบันลงชุด "'+t.name+'"?',msg:'ชุดนี้กำลังใช้อยู่ → ค่าแรงเที่ยวใหม่จะใช้ค่านี้ทันที',okText:'บันทึกลงชุด',icon:'💾'})))return;
   toast('กำลังบันทึก…');
   try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:t.name,config:gatherConfig()})});const d=await r.json();
     if(d&&d.ok){toast('✅ บันทึกลงชุด "'+t.name+'" แล้ว');await loadTemplates();}
@@ -535,14 +536,14 @@ async function overwriteTpl(){
 }
 async function renameTpl(id){
   const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
-  const name=prompt('เปลี่ยนชื่อชุด:',t.name); if(name===null||!name.trim())return;
+  const name=await uiPrompt({title:'เปลี่ยนชื่อชุด',value:t.name,okText:'บันทึกชื่อ'}); if(name===null||!name.trim())return;
   try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:name.trim(),config:t.config||gatherConfig()})});const d=await r.json();
     if(d&&d.ok){toast('✅ เปลี่ยนชื่อแล้ว');await loadTemplates();}else toast('❌ '+((d&&d.error)||''));
   }catch(e){toast('❌ '+e);}
 }
 async function deleteTpl(id){
   const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
-  if(!confirm('ลบชุด "'+t.name+'"? ลบแล้วกู้คืนไม่ได้'))return;
+  if(!(await uiConfirm({title:'ลบชุด "'+t.name+'"?',msg:'ลบแล้วกู้คืนไม่ได้',okText:'ลบชุด',danger:true})))return;
   try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'deleteWageTemplate',userId:MY_UID,id})});const d=await r.json();
     if(d&&d.ok){toast('ลบแล้ว');await loadTemplates();}else toast('❌ '+((d&&d.error)||''));
   }catch(e){toast('❌ '+e);}

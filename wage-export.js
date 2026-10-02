@@ -312,12 +312,12 @@
   /* ── ปุ่ม ⬇️ ดาวน์โหลด ▾ ── */
   var busy = false;
   function run(kind, btn) {
-    if (busy) return Promise.resolve(false); if (!(CTX ? CTX.rows : VIEW).length) { alert('ไม่มีเที่ยวในรอบที่เลือก'); return Promise.resolve(false); }
+    if (busy) return Promise.resolve(false); if (!(CTX ? CTX.rows : VIEW).length) { (window.uiAlert||window.alert)('ไม่มีเที่ยวในรอบที่เลือก'); return Promise.resolve(false); }
     var b = btn || $('dlBtn'), label = b.textContent; busy = true; b.disabled = true;
     b.textContent = { xlsx: 'กำลังสร้าง Excel…', pdf: 'กำลังสร้าง PDF…', jpg: 'กำลังสร้างรูป…' }[kind];
-    var job = kind === 'xlsx' ? xlsx().catch(function (e) { if (/ไลบรารี/.test(e.message)) { csv(); alert('โหลดตัวสร้าง Excel ไม่ได้ — ดาวน์โหลดเป็น CSV แทน'); return; } throw e; })
+    var job = kind === 'xlsx' ? xlsx().catch(function (e) { if (/ไลบรารี/.test(e.message)) { csv(); (window.uiAlert||window.alert)('โหลดตัวสร้าง Excel ไม่ได้ — ดาวน์โหลดเป็น CSV แทน'); return; } throw e; })
       : kind === 'pdf' ? pdf() : jpeg();
-    return job.then(function () { return true; }, function (e) { alert('❌ สร้างไฟล์ไม่สำเร็จ: ' + (e && e.message || e)); return false; })
+    return job.then(function () { return true; }, function (e) { (window.uiAlert||window.alert)('❌ สร้างไฟล์ไม่สำเร็จ: ' + (e && e.message || e)); return false; })
       .then(function (ok) { busy = false; b.disabled = false; b.textContent = label; return ok; });
   }
 
@@ -428,7 +428,7 @@
   }
   var lastFocus = null;
   function openModal(fmt) {
-    if (typeof MY_UID === 'undefined' || !MY_UID) { alert('ยังไม่ได้เข้าสู่ระบบ'); return; }
+    if (typeof MY_UID === 'undefined' || !MY_UID) { (window.uiAlert||window.alert)('ยังไม่ได้เข้าสู่ระบบ'); return; }
     build(); if (!XM.month) defaults(); if (fmt) XM.fmt = fmt;
     lastFocus = document.activeElement; $('xmOv').hidden = false; paint(); fetchRange();
     setTimeout(function () { var c = $('xmRound').querySelector('[aria-pressed=true]'); if (c) c.focus(); }, 30);

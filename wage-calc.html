@@ -209,6 +209,7 @@
 </aside>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="wage-ui.js?v=20261002"></script>
 <script>
 (function(){
   var GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
@@ -1054,13 +1055,13 @@
   var bDetail=document.getElementById('rpDetail');
   if(bDetail)bDetail.onclick=function(){
     var rows=[['วันที่','คนขับ','ทะเบียน','ออเดอร์','ระยะ(กม.)','ค่าวิ่ง','ค่าขึ้น-ลง','เพิ่ม/หักน้ำมัน','ค่าแรงสุทธิ'].map(q).join(',')];
-    var f=filtered();if(!f.length){alert('ไม่มีออเดอร์ในช่วงที่เลือก');return;}
+    var f=filtered();if(!f.length){(window.uiAlert||window.alert)('ไม่มีออเดอร์ในช่วงที่เลือก');return;}
     f.forEach(function(o){var w=orderWage(o);rows.push([fmtDMY(o.date),o.driver,o.plate,o.id,o.distActual,Math.round(w.travel),Math.round(w.updown),Math.round(w.fuel),Math.round(w.net)].map(q).join(','));});
     dl('รายงานค่าแรง-รายคน.csv',rows.join('\r\n'));
   };
   var bDaily=document.getElementById('rpDaily');
   if(bDaily)bDaily.onclick=function(){
-    var g={},f=filtered();if(!f.length){alert('ไม่มีออเดอร์ในช่วงที่เลือก');return;}
+    var g={},f=filtered();if(!f.length){(window.uiAlert||window.alert)('ไม่มีออเดอร์ในช่วงที่เลือก');return;}
     f.forEach(function(o){var w=orderWage(o);var k=o.date+'|'+o.driver;if(!g[k])g[k]={date:o.date,driver:o.driver,trips:0,net:0};g[k].trips++;g[k].net+=w.net;});
     var rows=[['วันที่','คนขับ','จำนวนเที่ยว','ค่าแรงรวม(บาท)'].map(q).join(',')];
     Object.keys(g).sort().forEach(function(k){var r=g[k];rows.push([fmtDMY(r.date),r.driver,r.trips,Math.round(r.net)].map(q).join(','));});
