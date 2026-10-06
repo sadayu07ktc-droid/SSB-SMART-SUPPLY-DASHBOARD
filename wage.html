@@ -187,7 +187,11 @@ async function loadReport(){
 
 const _escS=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 // ชื่อกลุ่ม: ถ้าจุดรับ (dest) ต่างจากชื่อสวน = ออเดอร์สวน → "ชื่อสวน · จุดรับ" · ถ้าเหมือนกัน = ลาน → ชื่อเดียว
-const _gkey=r=>{const g=(r.garden||'').toString().trim(),d=(r.dest||'').toString().trim();return (d&&g&&d!==g)?(g+' · '+d):(d||g||'—');};
+/* สวน/ลาน + จุดรับ → ข้อความเดียว · ชื่อซ้ำกัน (ไม่สนเว้นวรรค/ตัวพิมพ์ หรือชื่อหนึ่งอยู่ในอีกชื่อ) = โชว์ชื่อเดียว เช่น ลานคลองหาด → ลานคลองหาด = ลานคลองหาด */
+function _pn(s){return String(s||'').replace(/[\s\u200b]+/g,'').toLowerCase();}
+function placeOf(g,d,sep){g=String(g||'').trim();d=String(d||'').trim();if(!g||!d)return d||g;const a=_pn(g),b=_pn(d);if(a===b||a.includes(b)||b.includes(a))return a.length>=b.length?g:d;return g+(sep||' → ')+d;}
+window.placeOf=placeOf;
+const _gkey=r=>placeOf(r.garden,r.dest,' · ')||'—';
 
 /* กรอง (ค้นหา + ปลายทางที่เลือก) → เรนเดอร์ ตาราง + KPI + สรุป */
 function applyView(){
@@ -228,7 +232,7 @@ function renderTable(rows){
   const n2=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';};
   let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ชนิดรถ</th><th>สวน / ปลายทาง</th><th class="num" title="จากเลขไมล์ที่คนขับกรอก">ระยะจริง (กม.)</th><th class="num" title="ค่ากลางไป-กลับ (หน้า 📍 ค่ากลาง × 2) · ป้าย ใช้คิด = เที่ยวนี้คิดค่าแรงด้วยค่ากลาง · จริง± = ระยะจริงต่างจากค่ากลาง (แดง = ต่างเกิน 10%)">ระยะกลาง (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">กม./ล.</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
   rows.forEach((r,i)=>{
-    const place=[r.garden,r.dest].filter(Boolean).join(' → ')||'—';
+    const place=placeOf(r.garden,r.dest)||'—';
     const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Number(r.distActual)/Number(r.liters)):0;
     const vtMain=r.model?('รุ่น '+r.model):(r.vehicleType||'—');
     const vtSub=(r.model&&r.vehicleType)?`<div style="font-size:10px;color:var(--txt2)">${r.vehicleType}</div>`:'';
@@ -257,7 +261,7 @@ function renderSummary(rows){
   groups.forEach(gr=>{
     const on=ACTIVE_DEST===gr.name, r0=gr.r0, gg=(r0.garden||'').trim(), dd=(r0.dest||'').trim();
     // สวน (มีจุดรับ): [รหัสสวน] ชื่อสวน · [รหัสจุดรับ] จุดรับ · ลาน: [รหัสลาน] ชื่อลาน
-    const label=(dd&&gg&&dd!==gg)
+    const label=(dd&&gg&&placeOf(gg,dd)!==gg&&placeOf(gg,dd)!==dd)   // ชื่อซ้ำ (เช่น ลานคลองหาด/ลานคลองหาด) = ชื่อเดียว
       ? chip(r0.gardenCode)+_escS(gg)+' · '+chip(r0.pickupCode)+_escS(dd)
       : chip(r0.rampCode||r0.gardenCode||r0.pickupCode)+_escS(dd||gg||'—');
     h+=`<div class="sumcard ${on?'on':''}" data-dest="${_escS(gr.name)}">
@@ -352,7 +356,7 @@ async function openDetail(orderId){
   if(w.distTotal==null){const dl=(w.legs||[]).reduce((a,l)=>a+(+l.distKm||0),0);w.distTotal=Math.round(((+w.distHeavy||0)+(+w.distLight||0)||dl)*10)/10;}
   if(w.distHeavy==null&&w.legs){w.distHeavy=(w.legs||[]).filter(l=>l.weight==='หนัก').reduce((a,l)=>a+(+l.distKm||0),0);w.distLight=w.distTotal-w.distHeavy;}
   function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
-  const place=[w.garden,w.dest].filter(Boolean).join(' → ');
+  const place=placeOf(w.garden,w.dest);
   let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate||''} · ${w.vehType||(live.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
   h+=calcStatus(orderId,w,live,st,isStored);
@@ -535,6 +539,6 @@ $('summary').addEventListener('click',e=>{
   }catch(e){deny('LIFF error: '+e);}
 })();
 </script>
-<script src="wage-export.js?v=20261002"></script>
+<script src="wage-export.js?v=20261006"></script>
 </body>
 </html>

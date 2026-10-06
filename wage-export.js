@@ -31,7 +31,7 @@
       return {
         date: r.date || '', orderId: r.orderId || '', driver: r.driver || '', plate: r.plate || '',
         veh: r.vehType || r.vehicleType || (r.model ? 'รุ่น ' + r.model : ''),
-        place: (g && d && g !== d) ? g + ' → ' + d : (d || g || ''),
+        place: (window.placeOf ? placeOf(g, d) : ((g && d && g !== d) ? g + ' → ' + d : (d || g))) || '',   // ชื่อซ้ำ = ชื่อเดียว (เหมือนตาราง)
         actual: r1(r.distActual), central: num(r.distCentral) > 0 ? r1(r.distCentral) : null, used: r1(r.distUsed),
         by: usedCentral(r) ? 'ค่ากลาง' : 'ระยะจริง',
         liters: r1(r.liters), kmpl: (num(r.liters) > 0 && num(r.distActual) > 0) ? Math.round(num(r.distActual) / num(r.liters) * 100) / 100 : null,
