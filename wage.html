@@ -139,7 +139,7 @@
   <div id="drBody"><div class="msg">กำลังโหลด…</div></div>
 </aside>
 
-<script src="wage-ui.js?v=20261002b"></script>
+<script src="wage-ui.js?v=20261006"></script>
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -175,8 +175,9 @@ async function loadReport(){
     return;
   }
   ldHide();
-  if(res.denied){deny('ไม่มีสิทธิ์เข้าถึง (เฉพาะแอดมิน)');return;}
+  if(res.denied){if(window.uiProfile)uiProfile.set({status:'denied'});deny('ไม่มีสิทธิ์เข้าถึง (เฉพาะแอดมิน) — กดปุ่มโปรไฟล์มุมขวาบน เพื่อคัดลอก UID ขอสิทธิ์ หรือออกจากระบบแล้วเข้าด้วยบัญชีแอดมิน');return;}
   if(!res.ok){$('tbl').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+' <button class="btn" style="margin-left:8px" onclick="loadReport()">ลองใหม่</button></div>';return;}
+  if(window.uiProfile)uiProfile.set({status:'admin'});
   ROWS=res.rows||[]; ACTIVE_DEST='';
   // driver options (คงค่าเดิม)
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
@@ -528,6 +529,7 @@ $('summary').addEventListener('click',e=>{
     if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
     const p=await liff.getProfile();
     MY_UID=p.userId||'';
+    if(window.uiProfile)uiProfile({name:p.displayName,picture:p.pictureUrl,uid:MY_UID,status:'checking'});   // 👤 ปุ่มโปรไฟล์/ออกจากระบบ
     if(!MY_UID){deny('ไม่พบ LINE UID — เปิดผ่าน LINE อีกครั้ง');return;}
     loadReport();
   }catch(e){deny('LIFF error: '+e);}

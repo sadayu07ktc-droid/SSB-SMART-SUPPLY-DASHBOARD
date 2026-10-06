@@ -93,7 +93,7 @@
 </div>
 <div class="toast" id="toast"></div>
 
-<script src="wage-ui.js?v=20261002b"></script>
+<script src="wage-ui.js?v=20261006"></script>
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -197,8 +197,9 @@ async function load(){
     else toast('❌ โหลดตั้งค่าใหม่ไม่สำเร็จ — ค่าบนจอยังเป็นชุดเดิม');
     return;
   }
-  if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
+  if(d.denied){if(window.uiProfile)uiProfile.set({status:'denied'});$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)<br><span style="font-size:12.5px;color:var(--txt2)">กดปุ่มโปรไฟล์มุมขวาบน เพื่อคัดลอก UID ขอสิทธิ์ หรือออกจากระบบแล้วเข้าด้วยบัญชีแอดมิน</span></div>';return;}
   if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
+  if(window.uiProfile)uiProfile.set({status:'admin'});
   DATA=d;
   TOG=Object.assign({weight_on:1,time_mode:0,speed_mode:0,dist_source:0,fuel_bench:0,fuel_adj_on:1,tarp_on:1,bonus_on:1,bonus_base:0}, d.toggles||{});
   // toggle R.5 ที่ getWageSettings ยังไม่ส่งใน toggles → อ่านจาก cost_params ตรง (ค่าเริ่มต้นเท่าที่ระบบคิดค่าแรงใช้)
@@ -594,6 +595,7 @@ $('body').addEventListener('click',e=>{const c=e.target.closest('[data-wb]');if(
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
     const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(window.uiProfile)uiProfile({name:p.displayName,picture:p.pictureUrl,uid:MY_UID,status:'checking'});   // 👤 ปุ่มโปรไฟล์/ออกจากระบบ
     if(!MY_UID){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
     load(); loadTemplates();
   }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+e+'</div>';}

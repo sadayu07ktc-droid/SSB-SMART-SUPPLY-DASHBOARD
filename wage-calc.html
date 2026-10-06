@@ -212,7 +212,7 @@
 </aside>
 
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="wage-ui.js?v=20261002b"></script>
+<script src="wage-ui.js?v=20261006"></script>
 <script>
 (function(){
   var GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
@@ -1190,11 +1190,11 @@
       return _wageOrdersFetch(uid).then(function(d){
         if(d&&d.ok&&d.orders){   // ตอบสำเร็จ (รวมกรณีช่วงนี้ว่าง = array ว่าง) → ไม่ retry
           ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'',model:vehOf(o.vehType||o.model),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.centralKm||0,sysWage:(o.wage==null?null:+o.wage),heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0};});
-          window._ordersReal=true; T.ordIdx=0;
+          window._ordersReal=true; T.ordIdx=0; if(window.uiProfile)uiProfile.set({status:'admin'});
           if(T.mode==='order'){buildSource();renderLegs();render();}
           return;
         }
-        if(d&&d.denied){ window._ordersDenied=true; if(T.mode==='order')buildSource(); return; }   // ไม่ใช่แอดมิน
+        if(d&&d.denied){ if(window.uiProfile)uiProfile.set({status:'denied'}); window._ordersDenied=true; if(T.mode==='order')buildSource(); return; }   // ไม่ใช่แอดมิน
         if(n<3) return new Promise(function(res){setTimeout(res,700*n);}).then(function(){return attempt(n+1);});
       }).catch(function(e){
         console.warn('getWageOrders retry',n,e);
@@ -1207,11 +1207,11 @@
   function loadRealOrders(){
     // 🆕 อ่าน uid จาก URL ก่อน (เปิดบน desktop/เบราว์เซอร์) — ไม่งั้น fallback LIFF login (ในไลน์)
     var urlUid=''; try{ urlUid=new URLSearchParams(location.search).get('uid')||''; }catch(e){}
-    if(urlUid){ _pullOrders(urlUid); return; }
+    if(urlUid){ if(window.uiProfile)uiProfile({name:'UID จากลิงก์',uid:urlUid,status:'checking'}); _pullOrders(urlUid); return; }
     if(typeof liff==='undefined')return;
     liff.init({liffId:LIFF_ID}).then(function(){
-      if(!liff.isLoggedIn())return;   // ไม่บังคับ login — ใช้ตัวอย่างไปก่อน
-      return liff.getProfile().then(function(p){ return _pullOrders(p.userId||''); });
+      if(!liff.isLoggedIn()){ if(window.uiProfile)uiProfile({status:'guest'}); return; }   // ไม่บังคับ login — ใช้ตัวอย่างไปก่อน · มีปุ่ม "เข้าสู่ระบบ LINE"
+      return liff.getProfile().then(function(p){ if(window.uiProfile)uiProfile({name:p.displayName,picture:p.pictureUrl,uid:p.userId||'',status:'checking'}); return _pullOrders(p.userId||''); });
     }).catch(function(e){ console.warn('loadRealOrders',e); });
   }
   loadRealOrders();
