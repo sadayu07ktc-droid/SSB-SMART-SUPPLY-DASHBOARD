@@ -9,7 +9,7 @@
  *   โค้ดฝั่ง Supabase: D:\SSB Smart Supply\supabase\functions\ssb-read\index.ts */
 (function () {
   var EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/ssb-read';
-  var ACTIONS = { getOrderList: 1, getRampDaily: 1, getRampOrders: 1, getGardenDaily: 1, getScheduleBoard: 1, getWageBreakdown: 1 };
+  var ACTIONS = { getOrderList: 1, getRampDaily: 1, getRampOrders: 1, getGardenDaily: 1, getScheduleBoard: 1, getWageBreakdown: 1, getWageReport: 1 };
   window.ssbFetch = async function (url, init) {
     try {
       var method = String((init && init.method) || 'GET').toUpperCase();
