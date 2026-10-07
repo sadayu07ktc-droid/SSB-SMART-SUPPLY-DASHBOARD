@@ -8,20 +8,25 @@
  *   ผลลัพธ์เทียบกับ GAS แล้วตรงทุกฟิลด์ (parity test) — ถ้าแก้สูตรฝั่ง GAS ต้องแก้ ssb-read ให้ตรงกันด้วย
  *   โค้ดฝั่ง Supabase: D:\SSB Smart Supply\supabase\functions\ssb-read\index.ts */
 (function () {
-  var EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/ssb-read';
-  var ACTIONS = { getOrderList: 1, getRampDaily: 1, getRampOrders: 1, getGardenDaily: 1, getScheduleBoard: 1, getWageBreakdown: 1, getWageReport: 1 };
+  var BASE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/';
+  // action → Edge Function ที่ตอบ (ส่วนใหญ่ ssb-read · ลิ้นชักค่าแรงแยกตัวเล็ก wage-stored)
+  var ACTIONS = { getOrderList: 'ssb-read', getRampDaily: 'ssb-read', getRampOrders: 'ssb-read', getGardenDaily: 'ssb-read',
+    getScheduleBoard: 'ssb-read', getWageBreakdown: 'ssb-read', getWageReport: 'ssb-read', getWageStored: 'wage-stored' };
+  var EDGE_ONLY = { getWageStored: 1 };
   window.ssbFetch = async function (url, init) {
     try {
       var method = String((init && init.method) || 'GET').toUpperCase();
       var u = new URL(url, location.href);
       if (method === 'GET' && ACTIONS[u.searchParams.get('action')]) {
         var ac = new AbortController(), tm = setTimeout(function () { ac.abort(); }, 10000);
-        var r = await fetch(EDGE + '?' + u.searchParams.toString(), { signal: ac.signal });
+        var r = await fetch(BASE + ACTIONS[u.searchParams.get('action')] + '?' + u.searchParams.toString(), { signal: ac.signal });
         var t = await r.text(); clearTimeout(tm);
         var j = JSON.parse(t);
         if (j && j.ok) return new Response(t, { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
     } catch (e) { try { console.warn('ssb-read → GAS', e); } catch (_) {} }
+    // action ที่มีแต่ฝั่ง Supabase (GAS ไม่รู้จัก) → ไม่ต้องถอยไป GAS ให้เสียเวลา
+    try { if (EDGE_ONLY[new URL(url, location.href).searchParams.get('action')]) return new Response('{"ok":false,"error":"edge unavailable"}', { status: 200, headers: { 'Content-Type': 'application/json' } }); } catch (_) {}
     return fetch(url, init);
   };
 })();

@@ -6,7 +6,7 @@
 <title>ค่าแรง/ต้นทุน คนขับ · SSB</title>
 <link rel="icon" type="image/svg+xml" href="favicon-wage.svg?v=1">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261007b"></script>
+<script src="ssb-read.js?v=20261007c"></script>
 <style>
   :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
   @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}}
@@ -304,10 +304,12 @@ function fuelBlock(w,via,row){
 }
 /* กล่องสถานะหัวลิ้นชัก: คำนวณล่าสุดเมื่อไร · จ่ายแล้วไหม · ถ้าคิดใหม่ตอนนี้ได้เท่าไร (ต่างเพราะอะไร) + ปุ่มคิดใหม่เที่ยวนี้ */
 function fmtAt(iso){if(!iso)return'—';const d=new Date(iso);if(isNaN(d))return iso;const p=n=>('0'+n).slice(-2);return p(d.getDate())+'/'+p(d.getMonth()+1)+'/'+d.getFullYear()+' '+p(d.getHours())+':'+p(d.getMinutes());}
-function calcStatus(orderId,w,live,st,isStored){
+function calcStatus(orderId,w,live,st,isStored,pending){
   const box=(bg,bd,inner)=>`<div style="background:${bg};border:1px solid ${bd};border-radius:10px;padding:9px 11px;margin:0 0 10px;font-size:12.5px;line-height:1.6">${inner}</div>`;
   if(!isStored)return box('var(--card2)','var(--line2)','🧮 <b>ยังไม่เคยบันทึกค่าแรงเที่ยวนี้</b> — ตัวเลขด้านล่างคิดสดตามตั้งค่าปัจจุบัน');
   let s='🕒 คำนวณล่าสุด <b>'+fmtAt(st.at)+'</b>'+(st.locked?' · <b style="color:var(--primary)">🔒 จ่ายแล้ว</b>'+(st.paidAt?' ('+fmtAt(st.paidAt)+')':''):' · ยังไม่จ่าย');
+  // ⚡ ค่าที่บันทึกไว้โชว์ทันที (Supabase) · ค่าสดตามตั้งค่าปัจจุบันยังคิดอยู่ที่ GAS เบื้องหลัง
+  if(pending)return box('var(--card2)','var(--line2)',s+'<br><span style="color:var(--txt2)"><span class="dring" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:-2px;margin-right:6px"></span>กำลังเทียบกับตั้งค่าปัจจุบัน…</span>');
   const diff=Math.round(Number(live.wage)-Number(st.fee));
   if(!diff)return box('var(--card2)','var(--line2)',s+'<br><span style="color:var(--primary)">✓ ตรงกับตั้งค่าปัจจุบัน</span>');
   // ทำไมต่าง — เทียบสิ่งที่ตอนคิดใช้ กับตอนนี้
@@ -337,17 +339,44 @@ async function recalcOne(orderId,btn){
 }
 function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[1]+'-'+p[0];}
 
+/* ลิ้นชักเปิด 2 จังหวะ (2026-10-07):
+ *   ① ค่าที่บันทึกไว้ + ข้อมูลดิบ จาก Supabase (wage-stored · ~0.5 วิ) → วาดทันที
+ *   ② GAS getWageMonitor คิดสดเทียบ + ต้นทุนบริษัท (10-25 วิ) → วาดทับเมื่อมา (หน้าตาเดิมทุกอย่าง)
+ *   ยังไม่เคยบันทึกค่าแรง / Supabase ไม่ตอบ → รอ ② แบบเดิม */
+let DR_SEQ=0;
 async function openDetail(orderId){
+  const seq=++DR_SEQ;
   $('ov').classList.add('on');$('dr').classList.add('on');
-  $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังคิดค่าเที่ยว</span></div>';
+  $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังโหลดค่าเที่ยว</span></div>';
+  let fast=false;
+  const slow=(async()=>{   // ② เริ่มยิง GAS พร้อมกันเลย ไม่ต้องรอ ①
+    // GAS บางครั้งตอบหน้า HTML (บ่อยหลัง deploy) → อ่านซ้ำได้ 3 รอบ (อ่านอย่างเดียว ปลอดภัย)
+    for(let n=1;;n++){ try{ return await api({action:'getWageMonitor',userId:MY_UID,orderId}); }catch(e){ if(n>=3||(e&&e.name==='AbortError'))throw e; await new Promise(z=>setTimeout(z,1500*n)); } }
+  })();
+  slow.catch(()=>{});
+  try{
+    const q=await api({action:'getWageStored',userId:MY_UID,orderId});
+    if(seq===DR_SEQ&&q&&q.ok&&q.stored&&q.stored.snapshot){
+      renderDetail(orderId,{wage:q.info||{},stored:q.stored,cost:null,raw:q.raw},true);
+      fast=true;
+    }
+  }catch(_){}
+  if(!fast&&seq===DR_SEQ)$('drBody').querySelector('.dltx')&&($('drBody').querySelector('.dltx').textContent='กำลังคิดค่าเที่ยว');
   let res;
-  // GAS บางครั้งตอบหน้า HTML (บ่อยหลัง deploy) → อ่านซ้ำได้ 3 รอบ (อ่านอย่างเดียว ปลอดภัย)
-  try{ for(let n=1;;n++){ try{ res=await api({action:'getWageMonitor',userId:MY_UID,orderId}); break; }catch(e){ if(n>=3||(e&&e.name==='AbortError'))throw e; await new Promise(z=>setTimeout(z,1500*n)); } } }
+  try{ res=await slow; }
   catch(e){   // หมดเวลา 90 วิ / หลังบ้านตอบหน้า HTML → อย่าให้วงแหวนหมุนค้าง
-    $('drBody').innerHTML='<div class="msg">โหลดรายละเอียดไม่สำเร็จ ('+(e&&e.name==='AbortError'?'หลังบ้านไม่ตอบใน 90 วินาที':'หลังบ้านตอบผิดรูปแบบ')+')<br><button class="btn ghost" style="margin-top:12px" onclick="openDetail(\''+orderId+'\')">↻ ลองใหม่</button></div>';
+    if(seq!==DR_SEQ)return;
+    const why='('+(e&&e.name==='AbortError'?'หลังบ้านไม่ตอบใน 90 วินาที':'หลังบ้านตอบผิดรูปแบบ')+')';
+    const retry='<button class="btn ghost" style="margin-top:8px" onclick="openDetail(\''+orderId+'\')">↻ ลองใหม่</button>';
+    if(fast&&$('calcSt'))$('calcSt').innerHTML='<div style="border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin:0 0 10px;font-size:12.5px;color:var(--txt2)">เทียบกับตั้งค่าปัจจุบันไม่สำเร็จ '+why+' — ตัวเลขด้านล่างคือค่าที่บันทึกไว้<br>'+retry+'</div>';
+    else $('drBody').innerHTML='<div class="msg">โหลดรายละเอียดไม่สำเร็จ '+why+'<br>'+retry+'</div>';
     return;
   }
-  if(!res.ok){$('drBody').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>';return;}
+  if(seq!==DR_SEQ)return;
+  if(!res.ok){ if(!fast)$('drBody').innerHTML='<div class="msg">'+(res.error||'ผิดพลาด')+'</div>'; return; }
+  renderDetail(orderId,res,false);
+}
+function renderDetail(orderId,res,pending){
   // ลิ้นชักโชว์ "ค่าที่บันทึกไว้" = ตัวเดียวกับตาราง/รายงาน (ไม่ใช่คิดสด) · ค่าสดใช้เทียบ ถ้าต่าง = บอก + ปุ่มคิดใหม่
   const live=res.wage, st=res.stored, c=res.cost;
   const isStored=!!(st&&st.snapshot);
@@ -360,7 +389,7 @@ async function openDetail(orderId){
   const place=placeOf(w.garden,w.dest);
   let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate||''} · ${w.vehType||(live.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
-  h+=calcStatus(orderId,w,live,st,isStored);
+  h+='<div id="calcSt">'+calcStatus(orderId,w,live,st,isStored,pending)+'</div>';
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. × ${l.pct}% ÷ 50`,money(l.runWage)+' บ.'));
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
@@ -386,6 +415,8 @@ async function openDetail(orderId){
     if(c.extraCost)h+=row('ค่าใช้จ่ายรายเที่ยว',money(c.extraCost)+' บ.');
     h+=`<div class="big"><span style="font-weight:700">ต้นทุนรวม</span><span class="amt" style="color:var(--txt)">${money(ctot)} บ.</span></div>`;
     if(c.perUnit!=null)h+=row('ต่อหน่วย ('+money(c.qty)+' '+c.unit+')','<b>'+cper+'</b> บ./'+c.unit,'font-size:14px');
+  }else if(pending){
+    h+='<div class="sec">🏢 ต้นทุนบริษัท</div><div style="font-size:12.5px;color:var(--txt2);padding:4px 0 6px"><span class="dring" style="width:12px;height:12px;border-width:2px;display:inline-block;vertical-align:-2px;margin-right:6px"></span>กำลังคำนวณ…</div>';
   }
   // 📋 ข้อมูลดิบที่คนขับกรอก — ให้แอดมินตรวจ (เลขไมล์/ดุม/น้ำหนัก/น้ำมัน/ค่าใช้จ่าย/รูป)
   if(res.raw && Object.keys(res.raw).length){
