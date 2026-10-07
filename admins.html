@@ -1,5 +1,6 @@
 <title>สิทธิ์แอดมิน · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007e"></script>
 <style>
   :root{
     --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
@@ -239,7 +240,7 @@ const tkey=t=>TKEYS.indexOf(t)>=0?t:'none';
 const tstyle=t=>`--tc:var(--t-${tkey(t)});--tbg:var(--t-${tkey(t)}-bg)`;
 
 async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-  const r=await fetch(u); return r.json(); }
+  const r=await (window.ssbFetch||fetch)(u); return r.json(); }
 
 async function load(){
   const res=await api({action:'getAdminList',userId:MY_UID});

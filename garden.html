@@ -1,5 +1,6 @@
 <title>เจ้าของสวน · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007e"></script>
 <style>
   :root{
     --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
@@ -260,7 +261,7 @@ let _tt; function toast(m,err){ let t=$('#toast'); if(!t){t=document.createEleme
   t.textContent=m; t.className='show'+(err?' err':''); clearTimeout(_tt); _tt=setTimeout(()=>t.className='',2400); }
 
 async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
-  const r=await fetch(u); return r.json(); }
+  const r=await (window.ssbFetch||fetch)(u); return r.json(); }
 
 /* ══════════ รายชื่อสวน ══════════ */
 async function load(){

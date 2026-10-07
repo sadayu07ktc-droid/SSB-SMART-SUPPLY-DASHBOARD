@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ฐานต้นทุนรถ · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007e"></script>
 <style>
   :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--accent:#0d6efd;--warn:#b8860b;--danger:#c8352f;--radius:8px}
   @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--accent:#4a9bff;--warn:#e0b84a;--danger:#e5645d}}
@@ -111,7 +112,7 @@ function vehAge(sd){
 const fmtAge=y=>{const yy=Math.floor(y);const mm=Math.round((y-yy)*12);return yy+' ปี'+(mm?' '+mm+' ด.':'');};
 
 async function load(){
-  const r=await fetch(GAS_URL+'?action=getCostBase&userId='+encodeURIComponent(MY_UID));
+  const r=await (window.ssbFetch||fetch)(GAS_URL+'?action=getCostBase&userId='+encodeURIComponent(MY_UID));
   const d=await r.json();
   if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
   if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
