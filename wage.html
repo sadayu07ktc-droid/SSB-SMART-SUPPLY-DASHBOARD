@@ -281,6 +281,22 @@ function renderSummary(rows){
 function pickDest(name){ ACTIVE_DEST=(ACTIVE_DEST===name)?'':name; applyView(); }
 
 /* ก้อนน้ำมัน: ลิตรเกณฑ์ (จากระยะที่ใช้คิด) + ลิตรค่าพิเศษ − ลิตรเติมจริง = ส่วนต่าง × เลทน้ำมัน */
+/* อธิบาย "เลท กม./ล." ว่ามาจากตาราง⑬ ช่วงไหน (ตารางปัจจุบันของประเภทรถ · ตรงกับ computeTripWage _blendKmpl_/_bench13Rate_/_bench13Zone_)
+ *   ตัวเลขลิตรจริงยังใช้ค่าที่บันทึกไว้ — บรรทัดนี้แค่บอกที่มา */
+function zoneWhy(d,key,mode,zones,lastTo){
+  if(!(d>0)||!zones||!zones.length)return'';
+  const L=key==='h'?'หนัก':'เบา', f2=x=>(+x).toFixed(2), rng=z=>z.lo+'–'+(z.hi>=9999?'∞':z.hi)+' กม.';
+  let i=0;while(i<zones.length-1&&d>zones[i].hi)i++;
+  const z=zones[i], k=z[key];
+  if(mode==='hlrate')return 'ตาราง⑬ '+L+' ช่วง '+rng(z)+' · เลท '+f2(k)+' กม./ล. (ใช้ทั้งก้อน)';
+  if(mode==='hlzone')return 'ตาราง⑬ แบ่งตามช่วง: '+zones.filter(x=>Math.min(d,x.hi)-x.lo>0).map(x=>rng(x)+' @'+f2(x[key])).join(' · ');
+  if(mode!=='hlblend')return'';
+  if(i===0||!(zones[i-1][key]>0))return 'ตาราง⑬ '+L+' ช่วง '+rng(z)+' · เลท '+f2(k)+' กม./ล.';
+  const p=zones[i-1], a=p.hi; let top=z.hi;
+  if(i===zones.length-1&&z.hi>=9999)top=+lastTo||top;
+  const t=Math.max(0,Math.min(1,(d-a)/((top-a)||1)));
+  return 'ตาราง⑬ '+L+' ช่วง '+rng(z)+' · เลท '+f2(p[key])+' → '+f2(k)+' กม./ล. · '+d.toFixed(1)+' กม. = '+Math.round(t*100)+'% ของช่วง → '+f2(p[key]+t*(k-p[key]));
+}
 function fuelBlock(w,via,row){
   const s=w.snapshot||{}, rate=+s.fuelRate||0, f1=v=>(+v||0).toLocaleString('th-TH',{minimumFractionDigits:1,maximumFractionDigits:1});
   const bench=+w.benchLiters||0, vl=via?(+w.viaLiters||0):0, act=+w.litersActual||0, diff=bench+vl-act;
@@ -291,7 +307,9 @@ function fuelBlock(w,via,row){
   let bd='';
   if(w.benchHeavyL!=null&&w.benchLightL!=null){
     const kh=w.benchHeavyL>0?w.distHeavy/w.benchHeavyL:0, kl=w.benchLightL>0?w.distLight/w.benchLightL:0;
-    bd=sub('หนัก '+f1(w.distHeavy)+' กม. ÷ '+kh.toFixed(2)+' กม./ล. = '+f1(w.benchHeavyL)+' ล.<br>เบา '+f1(w.distLight)+' กม. ÷ '+kl.toFixed(2)+' กม./ล. = '+f1(w.benchLightL)+' ล.');
+    const why=(d,key)=>{const t=zoneWhy(d,key,fb,w.zones,s.blendLastTo);return t?'<div style="padding-left:12px;color:var(--txt2);opacity:.9">'+t+'</div>':'';};
+    bd=sub('หนัก '+f1(w.distHeavy)+' กม. ÷ '+kh.toFixed(2)+' กม./ล. = '+f1(w.benchHeavyL)+' ล.'+(why(+w.distHeavy,'h')||'<br>')
+      +'เบา '+f1(w.distLight)+' กม. ÷ '+kl.toFixed(2)+' กม./ล. = '+f1(w.benchLightL)+' ล.'+why(+w.distLight,'l'));
   } else bd=sub('หนัก '+f1(w.distHeavy)+' กม. + เบา '+f1(w.distLight)+' กม.');
   h+=row('ลิตรตามเกณฑ์ · '+(w.distMode==='central'?'ระยะกลาง ':'ระยะจริง ')+f1(w.distTotal)+' กม.'+bd,f1(bench)+' ล.');
   if(vl>0)h+=row('+ ฮุคลิฟท์ + ให้เพิ่ม แปลงเป็นลิตร'+sub('('+money(w.hooklift)+' + '+money(w.give)+(w.bz&&+w.bz!==1?' [ให้เพิ่ม × BZ '+(+w.bz).toFixed(2)+']':'')+') ÷ '+rate),'+'+(+vl).toFixed(2)+' ล.');
@@ -309,7 +327,15 @@ function calcStatus(orderId,w,live,st,isStored,pending){
   if(!isStored)return box('var(--card2)','var(--line2)','🧮 <b>ยังไม่เคยบันทึกค่าแรงเที่ยวนี้</b> — ตัวเลขด้านล่างคิดสดตามตั้งค่าปัจจุบัน');
   let s='🕒 คำนวณล่าสุด <b>'+fmtAt(st.at)+'</b>'+(st.locked?' · <b style="color:var(--primary)">🔒 จ่ายแล้ว</b>'+(st.paidAt?' ('+fmtAt(st.paidAt)+')':''):' · ยังไม่จ่าย');
   // ⚡ ค่าที่บันทึกไว้โชว์ทันที (Supabase) · การเทียบกับตั้งค่าปัจจุบัน = คิดสดที่ GAS (15-60 วิ) → กดเมื่ออยากรู้
-  if(pending)return box('var(--card2)','var(--line2)',s+'<br><button class="btn ghost" id="cmpBtn" style="margin-top:6px;padding:6px 12px;font-size:12.5px" onclick="compareLive(\''+orderId+'\',this)">🔍 เทียบกับตั้งค่าปัจจุบัน</button> <span style="color:var(--txt2);font-size:11.5px">คิดใหม่ตามตั้งค่าตอนนี้ ใช้เวลา 15-60 วิ</span>');
+  if(pending){
+    const cmp=(label,note)=>'<button class="btn ghost" id="cmpBtn" style="margin-top:6px;padding:6px 12px;font-size:12.5px" onclick="compareLive(\''+orderId+'\',this)">'+label+'</button> <span style="color:var(--txt2);font-size:11.5px">'+note+'</span>';
+    // คิดหลังตั้งค่า/สูตรแก้ล่าสุด = ใช้ตั้งค่าล่าสุดอยู่แล้ว ไม่ต้องกดเทียบ
+    if(st.settingsAt&&st.at&&new Date(st.at)>=new Date(st.settingsAt))
+      return box('var(--card2)','var(--line2)',s+'<br><span style="color:var(--primary)">✓ คิดด้วยตั้งค่าล่าสุดแล้ว</span> <span style="color:var(--txt2);font-size:11.5px">(ตั้งค่าแก้ล่าสุด '+fmtAt(st.settingsAt)+')</span>');
+    if(st.settingsAt)
+      return box('var(--card2)','var(--danger)',s+'<br><span style="color:var(--danger)">⚠️ ตั้งค่า/สูตรค่าแรงถูกแก้เมื่อ <b>'+fmtAt(st.settingsAt)+'</b> หลังวันที่คิด — ตัวเลขอาจเปลี่ยน</span><br>'+cmp('🔍 ดูว่าคิดใหม่จะได้เท่าไร','ใช้เวลา 15-60 วิ'));
+    return box('var(--card2)','var(--line2)',s+'<br>'+cmp('🔍 เทียบกับตั้งค่าปัจจุบัน','คิดใหม่ตามตั้งค่าตอนนี้ ใช้เวลา 15-60 วิ'));
+  }
   const diff=Math.round(Number(live.wage)-Number(st.fee));
   if(!diff)return box('var(--card2)','var(--line2)',s+'<br><span style="color:var(--primary)">✓ ตรงกับตั้งค่าปัจจุบัน</span>');
   // ทำไมต่าง — เทียบสิ่งที่ตอนคิดใช้ กับตอนนี้
@@ -343,15 +369,18 @@ function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[
  *   ① ค่าที่บันทึกไว้ + ต้นทุนบริษัท + ข้อมูลดิบ จาก Supabase (wage-stored · <1 วิ) → ครบทั้งลิ้นชัก
  *   ② "เทียบกับตั้งค่าปัจจุบัน" = GAS getWageMonitor คิดสด (15-60 วิ) → กดปุ่มเมื่อต้องการ (ไม่ยิงทุกครั้งที่เปิด = ประหยัดโควต้า GAS)
  *   ยังไม่เคยบันทึกค่าแรง / Supabase ไม่ตอบ → คิดสดที่ GAS อัตโนมัติแบบเดิม */
-let DR_SEQ=0;
+let DR_SEQ=0, DR_ZONES=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท
 async function openDetail(orderId){
-  const seq=++DR_SEQ;
+  const seq=++DR_SEQ; DR_ZONES=null;
   $('ov').classList.add('on');$('dr').classList.add('on');
   $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังโหลดค่าเที่ยว</span></div>';
   try{
     const q=await api({action:'getWageStored',userId:MY_UID,orderId});
     if(seq!==DR_SEQ)return;
-    if(q&&q.ok&&q.stored&&q.stored.snapshot){ renderDetail(orderId,{wage:q.info||{},stored:q.stored,cost:q.cost||null,raw:q.raw},true); return; }
+    if(q&&q.ok&&q.stored&&q.stored.snapshot){
+      DR_ZONES=q.zones||null; q.stored.settingsAt=q.settingsAt||'';
+      renderDetail(orderId,{wage:q.info||{},stored:q.stored,cost:q.cost||null,raw:q.raw},true); return;
+    }
   }catch(_){}
   if(seq!==DR_SEQ)return;
   const tx=$('drBody').querySelector('.dltx'); if(tx)tx.textContent='กำลังคิดค่าเที่ยว';
@@ -391,6 +420,7 @@ function renderDetail(orderId,res,pending){
   const isStored=!!(st&&st.snapshot);
   const w=isStored?Object.assign({driver:live.driver,plate:live.plate,garden:live.garden,dest:live.dest},st.snapshot,{wage:st.fee,snapshot:st.snapshot.params||{},model:''}):live;
   if(!w.snapshot)w.snapshot={};
+  w.zones=res.zones||DR_ZONES;
   // snapshot เก่า (ส.ค.) ไม่มี distTotal/distMode → คิดจากขา
   if(w.distTotal==null){const dl=(w.legs||[]).reduce((a,l)=>a+(+l.distKm||0),0);w.distTotal=Math.round(((+w.distHeavy||0)+(+w.distLight||0)||dl)*10)/10;}
   if(w.distHeavy==null&&w.legs){w.distHeavy=(w.legs||[]).filter(l=>l.weight==='หนัก').reduce((a,l)=>a+(+l.distKm||0),0);w.distLight=w.distTotal-w.distHeavy;}
