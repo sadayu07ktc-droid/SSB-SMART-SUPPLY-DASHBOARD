@@ -11,7 +11,7 @@
   var BASE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/';
   // action → Edge Function ที่ตอบ (ส่วนใหญ่ ssb-read · ลิ้นชักค่าแรงแยกตัวเล็ก wage-stored)
   var ACTIONS = { getOrderList: 'ssb-read', getRampDaily: 'ssb-read', getRampOrders: 'ssb-read', getGardenDaily: 'ssb-read',
-    getScheduleBoard: 'ssb-read', getWageBreakdown: 'ssb-read', getWageReport: 'ssb-read', getWageStored: 'wage-stored' };
+    getScheduleBoard: 'ssb-read', getWageBreakdown: 'ssb-read', getWageReport: 'ssb-read', getWageStored: 'wage-stored', getUser: 'get-user' };
   var EDGE_ONLY = { getWageStored: 1 };
   window.ssbFetch = async function (url, init) {
     try {
