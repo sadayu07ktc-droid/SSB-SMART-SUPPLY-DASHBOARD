@@ -426,6 +426,9 @@ function openJob(id){
   ].filter(Boolean);
   if(tiles.length) summary='<div class="tsumsec"><div class="tsh">สรุปทริป</div><div class="tsum">'+
     tiles.map(t=>`<div class="tsx"><div class="tsv">${t[1]}<small>${t[2]}</small></div><div class="tsk">${t[0]}</div></div>`).join('')+'</div></div>';
+  // ⚠️ เลขไมล์/ดุมล้อผิดปกติ (ระยะเกิน 2,000 กม./เที่ยว) — ระบบไม่เอาไปรวมยอด ให้แอดมินตามแก้ข้อมูล
+  if(o.distanceBad) summary+='<div style="margin:10px 0 0;padding:9px 12px;border-radius:10px;background:rgba(217,119,6,.12);color:#B45309;font-size:12.5px;line-height:1.5">'+
+    '⚠️ เลขไมล์/ดุมล้อของเที่ยวนี้ผิดปกติ (คำนวณได้เกิน 2,000 กม.) — ไม่นำไปรวมระยะทาง · ตรวจรูปเลขไมล์ของออเดอร์ '+String(o.orderId).replace(/[<>&"]/g,'')+'</div>';
 
   // ── ชิปสรุปค่าแรง (ในหัว drawer) ──
   const wageChip=(o.wage!=null)
