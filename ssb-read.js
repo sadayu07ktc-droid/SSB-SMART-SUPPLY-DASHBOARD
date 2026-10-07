@@ -22,7 +22,9 @@
     // ลิ้นชักคนขับ (หน้าจัดการคนขับ)
     getDriverHistory: 'driver-drawer', getLegs: 'driver-drawer', getTripStats: 'driver-drawer', getSummary: 'driver-drawer',
     // หน้ากราฟ (repo pages_chart_daily)
-    getOrderCostChart: 'chart-data', getDtcSummaryChart: 'chart-data', getDtcTodayChart: 'chart-today' };
+    getOrderCostChart: 'chart-data', getDtcSummaryChart: 'chart-data', getDtcTodayChart: 'chart-today',
+    // ตัวอ่านเล็กๆ หน้าสถานะออเดอร์ + หน้าจัดการผู้ใช้ (repo Order_Status / User_Management)
+    getPkSummary: 'ssb-misc', getPkWaiting: 'ssb-misc', getRampList: 'ssb-misc', getReassignDrivers: 'ssb-misc', getUsers: 'ssb-misc' };
   var EDGE_ONLY = { getWageStored: 1 };
   // action ที่ช้าเพราะรอระบบนอก (DTC ประวัติ/สรุป GPS 5–15 วิ) → รอ Edge นานกว่าค่าเริ่ม 10 วิ ก่อนถอยไป GAS
   var TIMEOUT = { getDriverRounds: 30000, getSummary: 30000, getDtcTodayChart: 60000 };   // กราฟระยะวิ่งจริง: ประวัติ GPS ทุกคัน ~30 วิ (GAS ~180 วิ)
