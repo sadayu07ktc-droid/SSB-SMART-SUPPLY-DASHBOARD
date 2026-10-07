@@ -164,7 +164,7 @@ let _ldT=null;
 function ldShow(msg){const b=$('ldBar');if(!b)return;$('ldTxt').textContent=msg;b.hidden=false;b.classList.remove('out');clearTimeout(_ldT);_ldT=setTimeout(ldHide,100000);}
 function ldHide(){const b=$('ldBar');if(!b)return;clearTimeout(_ldT);b.classList.add('out');setTimeout(()=>{if(b.classList.contains('out'))b.hidden=true;},380);}
 async function loadReport(){
-  ldShow('กำลังโหลดรายงานค่าแรง (ครั้งแรกหลังพักงานอาจช้า ~20-30 วิ)');
+  ldShow('กำลังโหลดรายงานค่าแรง…');   // อ่านจาก Supabase ~1 วิ (ssb-read) · ถอยไป GAS เฉพาะตอน Supabase พัง
   if(!ROWS.length)$('tbl').innerHTML='';   // มีข้อมูลเดิม = ปล่อยไว้ให้ดูระหว่างรอ
   let res;
   try{
