@@ -20,7 +20,9 @@
     // หน้าจัดการคนขับ (repo ManageDrivers โหลดไฟล์นี้ข้าม repo · รีเฟรชทุก 30 วิ)
     getDrivers: 'manage-drivers', getDriverRounds: 'manage-drivers',
     // ลิ้นชักคนขับ (หน้าจัดการคนขับ)
-    getDriverHistory: 'driver-drawer', getLegs: 'driver-drawer', getTripStats: 'driver-drawer', getSummary: 'driver-drawer' };
+    getDriverHistory: 'driver-drawer', getLegs: 'driver-drawer', getTripStats: 'driver-drawer', getSummary: 'driver-drawer',
+    // หน้ากราฟ (repo pages_chart_daily)
+    getOrderCostChart: 'chart-data', getDtcSummaryChart: 'chart-data' };
   var EDGE_ONLY = { getWageStored: 1 };
   // action ที่ช้าเพราะรอระบบนอก (DTC ประวัติ/สรุป GPS 5–15 วิ) → รอ Edge นานกว่าค่าเริ่ม 10 วิ ก่อนถอยไป GAS
   var TIMEOUT = { getDriverRounds: 30000, getSummary: 30000 };
