@@ -16,7 +16,9 @@
     getWageSettings: 'ssb-admin', getWageConfig: 'ssb-admin', getWageOrders: 'ssb-admin', getCostBase: 'ssb-admin',
     getCentralDistances: 'ssb-admin', getDpWaitTimes: 'ssb-admin', getAdminList: 'ssb-admin', getGardenList: 'ssb-admin',
     // หน้าติดตามสถานะออเดอร์ (repo Order_Status โหลดไฟล์นี้ข้าม repo)
-    getOrderTracker: 'order-tracker' };
+    getOrderTracker: 'order-tracker',
+    // หน้าจัดการคนขับ (repo ManageDrivers โหลดไฟล์นี้ข้าม repo · รีเฟรชทุก 30 วิ)
+    getDrivers: 'manage-drivers' };
   var EDGE_ONLY = { getWageStored: 1 };
   window.ssbFetch = async function (url, init) {
     try {
