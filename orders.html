@@ -223,8 +223,22 @@ const stBadge=s=>{const c=ST_COLOR[s]||['#6B7A70','#EEF1EE'];
 async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
   const r=await fetch(u); return r.json(); }
 
+/* ⚡ รายการออเดอร์อ่านจาก Supabase Edge Function ก่อน (เร็วกว่า GAS ~10 เท่า · ผลเหมือนกันทุกฟิลด์)
+ *    ไม่ตอบ/พัง/ไม่มีสิทธิ์ → ถอยไปเรียก GAS ตัวเดิม (หน้าไม่มีวันพังเพราะตัวใหม่) · 2026-10-07 */
+const EDGE_ORDER_LIST='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/get-order-list';
+async function getOrderList(){
+  try{
+    const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),10000);
+    const r=await fetch(EDGE_ORDER_LIST+'?userId='+encodeURIComponent(MY_UID),{signal:ac.signal});
+    clearTimeout(tm);
+    const j=await r.json();
+    if(j && j.ok) return j;
+  }catch(e){ console.warn('edge get-order-list → GAS',e); }
+  return api({action:'getOrderList',userId:MY_UID});
+}
+
 async function load(){
-  const res=await api({action:'getOrderList',userId:MY_UID});
+  const res=await getOrderList();
   if(res.denied){ $('#gate').innerHTML='<div class="box"><div class="deny">🚫</div><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>หน้านี้สำหรับแอดมินเท่านั้น</p></div>'; return; }
   $('#gate').style.display='none';
   if(!res.ok){ $('#list').innerHTML=`<div class="empty">${esc(res.error||'โหลดข้อมูลไม่สำเร็จ')}</div>`; return; }
