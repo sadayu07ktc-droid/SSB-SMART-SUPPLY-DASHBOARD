@@ -345,6 +345,7 @@ function draw(){
       ${D.active?'':' · <b style="color:#F2D28C">บัญชีถูกปิดใช้งาน</b>'}</div></div>
 
     <div class="sect"><h3>ประเภทแอดมิน</h3>
+      ${D.type?'':'<div style="font-size:12px;color:#B45309;margin:0 0 8px">⚠️ ยังไม่ได้ระบุประเภท — เลือก 1 แบบด้านล่าง (ไม่เลือกก็บันทึกสวิตช์สิทธิ์ได้)</div>'}
       ${TYPES.map(t=>`<div class="opt ${D.type===t.v?'sel':''}" style="${tstyle(t.v)}" onclick="setType('${t.v}')" role="button" tabindex="0">
         <span class="radio"></span><span style="flex:1">
         <span class="t">${esc(t.t)} <span class="code">${t.v}</span></span>
@@ -391,9 +392,12 @@ async function save(){
   if(BUSY) return;
   BUSY=true; draw();
   try{
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({
-      action:'saveAdminPerms', userId:MY_UID, targetUid:D.uid,
-      type:D.type, notify:D.notify, manage:D.manage })});
+    // ส่งเฉพาะช่องที่แก้จริง — แอดมินที่ยังไม่ระบุประเภท (ว่าง) แก้แค่สวิตช์ได้ โดยไม่ส่ง type ว่างไปให้หลังบ้านตีกลับ "ประเภทไม่ถูกต้อง"
+    const o=ADMINS[IDX], payload={action:'saveAdminPerms', userId:MY_UID, targetUid:D.uid};
+    if(D.type!==o.type) payload.type=D.type;
+    if(D.notify!==o.notify) payload.notify=D.notify;
+    if(D.manage!==o.manage) payload.manage=D.manage;
+    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
     const d=await r.json();
     if(d.ok){
       ADMINS[IDX]=Object.assign({},D,{packing:packOK(D.type,D.manage)});
