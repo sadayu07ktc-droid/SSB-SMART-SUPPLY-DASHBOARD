@@ -652,8 +652,12 @@
   function computeLegs(s){
     var distActual=LEGS.reduce(function(a,l){return a+(l.distKey?(s[l.distKey]||0):(l.dist||0));},0);
     var mult=(T.distMode==='central'&&s.distCentral>0&&distActual>0)?(s.distCentral/distActual):1;
+    // ค่ากลาง → แบ่งเท่ากันทุกขาที่วิ่งจริง (2 ขา = ครึ่ง/ครึ่ง) · ตรงกับ computeTripWage.gs legKm (2026-10-07)
+    var useC=(T.distMode==='central'&&s.distCentral>0&&distActual>0);
+    var nPos=LEGS.filter(function(l){return (l.distKey?(s[l.distKey]||0):(l.dist||0))>0;}).length||1;
     return LEGS.map(function(l,li){
-      var dist=(l.distKey?(s[l.distKey]||0):(l.dist||0))*mult;
+      var raw=(l.distKey?(s[l.distKey]||0):(l.dist||0));
+      var dist=useC?(raw>0?s.distCentral/nPos:0):raw*mult;
       var pct=T.weight?(l.weight==='heavy'?P.heavyPct:P.lightPct):100;
       var jt=JOB_TYPES[l.job]||{up:0,down:0};
       var upMin=l.doUp?jt.up:0,downMin=l.doDown?jt.down:0;
