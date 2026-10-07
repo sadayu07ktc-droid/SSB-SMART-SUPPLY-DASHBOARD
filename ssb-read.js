@@ -18,14 +18,16 @@
     // หน้าติดตามสถานะออเดอร์ (repo Order_Status โหลดไฟล์นี้ข้าม repo)
     getOrderTracker: 'order-tracker',
     // หน้าจัดการคนขับ (repo ManageDrivers โหลดไฟล์นี้ข้าม repo · รีเฟรชทุก 30 วิ)
-    getDrivers: 'manage-drivers' };
+    getDrivers: 'manage-drivers', getDriverRounds: 'manage-drivers' };
   var EDGE_ONLY = { getWageStored: 1 };
+  // action ที่ช้าเพราะรอระบบนอก (ประวัติ GPS DTC 5–15 วิ) → รอ Edge นานกว่าค่าเริ่ม 10 วิ ก่อนถอยไป GAS
+  var TIMEOUT = { getDriverRounds: 30000 };
   window.ssbFetch = async function (url, init) {
     try {
       var method = String((init && init.method) || 'GET').toUpperCase();
       var u = new URL(url, location.href);
       if (method === 'GET' && ACTIONS[u.searchParams.get('action')]) {
-        var ac = new AbortController(), tm = setTimeout(function () { ac.abort(); }, 10000);
+        var ac = new AbortController(), tm = setTimeout(function () { ac.abort(); }, TIMEOUT[u.searchParams.get('action')] || 10000);
         var r = await fetch(BASE + ACTIONS[u.searchParams.get('action')] + '?' + u.searchParams.toString(), { signal: ac.signal });
         var t = await r.text(); clearTimeout(tm);
         var j = JSON.parse(t);
