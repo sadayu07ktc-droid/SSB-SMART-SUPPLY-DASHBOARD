@@ -1,5 +1,6 @@
 <title>ออเดอร์ทั้งหมด · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007"></script>
 <style>
   :root{
     --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
@@ -223,18 +224,10 @@ const stBadge=s=>{const c=ST_COLOR[s]||['#6B7A70','#EEF1EE'];
 async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
   const r=await fetch(u); return r.json(); }
 
-/* ⚡ รายการออเดอร์อ่านจาก Supabase Edge Function ก่อน (เร็วกว่า GAS ~10 เท่า · ผลเหมือนกันทุกฟิลด์)
- *    ไม่ตอบ/พัง/ไม่มีสิทธิ์ → ถอยไปเรียก GAS ตัวเดิม (หน้าไม่มีวันพังเพราะตัวใหม่) · 2026-10-07 */
-const EDGE_ORDER_LIST='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/get-order-list';
+/* ⚡ รายการออเดอร์อ่านจาก Supabase ก่อน (ssb-read.js · เร็วกว่า GAS หลายเท่า · ผลเหมือนกันทุกฟิลด์) · พลาด → GAS เดิม */
 async function getOrderList(){
-  try{
-    const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),10000);
-    const r=await fetch(EDGE_ORDER_LIST+'?userId='+encodeURIComponent(MY_UID),{signal:ac.signal});
-    clearTimeout(tm);
-    const j=await r.json();
-    if(j && j.ok) return j;
-  }catch(e){ console.warn('edge get-order-list → GAS',e); }
-  return api({action:'getOrderList',userId:MY_UID});
+  const r=await ssbFetch(GAS_URL+'?action=getOrderList&userId='+encodeURIComponent(MY_UID));
+  return r.json();
 }
 
 async function load(){

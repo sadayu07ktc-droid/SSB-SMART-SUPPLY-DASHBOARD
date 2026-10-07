@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>แดชบอร์ดรับเข้าผลปาล์ม · SSB Smart Supply</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007"></script>
 <style>
   :root{
     --bg:#eef0ea; --panel:#f8f8f4; --card:#ffffff; --line:#dfe3da; --line2:#cdd3c6;
@@ -178,7 +179,7 @@ async function boot(){
     if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
     const p=await liff.getProfile(); MY_UID=p.userId||'';
     if(!MY_UID){$('#app').innerHTML='<div class="msg" style="color:var(--loss)">ไม่พบ LINE UID</div>';return;}
-    const r=await fetch(GAS_URL+'?action=getRampDaily&userId='+encodeURIComponent(MY_UID));
+    const r=await ssbFetch(GAS_URL+'?action=getRampDaily&userId='+encodeURIComponent(MY_UID));
     const d=await r.json();
     if(d.denied){$('#app').innerHTML='<div class="msg" style="color:var(--loss)">ไม่มีสิทธิ์ (เฉพาะแอดมิน/ผู้บริหาร)</div>';return;}
     if(!d.ok){$('#app').innerHTML='<div class="msg">'+(d.error||'โหลดข้อมูลไม่ได้')+'</div>';return;}
@@ -187,11 +188,11 @@ async function boot(){
     DATES=[...new Set(RECORDS.map(r=>r.date))].sort();
     BY={}; RAMPS.forEach(rn=>BY[rn]={}); RECORDS.forEach(rec=>{BY[rec.ramp][rec.date]=rec;});
     // ออเดอร์จริง (reconcile เที่ยว/รถนอก) — degrade ได้ถ้ายังไม่ deploy
-    try{ const or=await fetch(GAS_URL+'?action=getRampOrders&userId='+encodeURIComponent(MY_UID)); const od=await or.json();
+    try{ const or=await ssbFetch(GAS_URL+'?action=getRampOrders&userId='+encodeURIComponent(MY_UID)); const od=await or.json();
       if(od.ok){ ORD_BY_RAMP={}; (od.orders||[]).forEach(o=>{(ORD_BY_RAMP[o.ramp]=ORD_BY_RAMP[o.ramp]||[]).push(o);}); Object.keys(ORD_BY_RAMP).forEach(k=>ORD_BY_RAMP[k].sort((x,y)=>x.date<y.date?1:-1)); }
     }catch(e){}
     // 🌳 ปาล์มจากสวน ส่งตรงโรงงาน (degrade ได้ถ้ายังไม่ deploy endpoint)
-    try{ const gr=await fetch(GAS_URL+'?action=getGardenDaily&userId='+encodeURIComponent(MY_UID)); const gd=await gr.json();
+    try{ const gr=await ssbFetch(GAS_URL+'?action=getGardenDaily&userId='+encodeURIComponent(MY_UID)); const gd=await gr.json();
       if(gd.ok){ GARDEN_RECORDS=gd.records||[]; GARDENS=gd.gardens||[]; }
     }catch(e){}
     buildShell();

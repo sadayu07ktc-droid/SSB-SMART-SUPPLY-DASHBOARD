@@ -6,6 +6,7 @@
 <title>โบนัสหัวหน้าคนขับ — SSB</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -186,7 +187,7 @@ function dataSpan(){const ds=ALL_RECORDS.map(x=>String(x.date||'').slice(0,10)).
   }
   if(!uid){ $('#app').innerHTML='<div class="msg" style="color:var(--bad)">ไม่พบ LINE UID</div>'; return; }
   try{
-    const r=await fetch(GAS_URL+'?action=getRampDaily&userId='+encodeURIComponent(uid));
+    const r=await ssbFetch(GAS_URL+'?action=getRampDaily&userId='+encodeURIComponent(uid));
     const d=await r.json();
     if(!d.ok){ $('#app').innerHTML='<div class="msg" style="color:var(--bad)">'+(d.error||'โหลดข้อมูลไม่สำเร็จ')+'</div>'; return; }
     render(d.records||[]);

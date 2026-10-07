@@ -6,6 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>ตารางงานคนขับ — SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -213,7 +214,7 @@ async function load(){
   const {from,to}=rangeFor();
   LOADING=true; renderShell();
   try{
-    const r=await fetch(GAS_URL+'?action=getScheduleBoard&userId='+encodeURIComponent(MY_UID)+'&from='+iso(from)+'&to='+iso(to)+_CB);
+    const r=await ssbFetch(GAS_URL+'?action=getScheduleBoard&userId='+encodeURIComponent(MY_UID)+'&from='+iso(from)+'&to='+iso(to)+_CB);
     const d=await r.json();
     if(d.denied){ $('#app').innerHTML='<div class="msg" style="color:var(--st-cancel)">ไม่มีสิทธิ์ (เฉพาะแอดมิน/ผู้บริหาร)</div>'; return; }
     if(!d.ok){ $('#app').innerHTML='<div class="msg">'+(d.error||'โหลดข้อมูลไม่ได้')+'</div>'; return; }
@@ -470,7 +471,7 @@ async function openWageDetail(id){
   m.classList.add('on');
   const body=document.getElementById('wmBody'); body.innerHTML='<div class="wm-load">กำลังโหลด…</div>';
   try{
-    const r=await fetch(GAS_URL+'?action=getWageBreakdown&userId='+encodeURIComponent(MY_UID)+'&orderId='+encodeURIComponent(id)+_CB);
+    const r=await ssbFetch(GAS_URL+'?action=getWageBreakdown&userId='+encodeURIComponent(MY_UID)+'&orderId='+encodeURIComponent(id)+_CB);
     const d=await r.json();
     body.innerHTML = d.ok ? wageRows(d) : '<div class="wm-empty">'+(d.error||'ไม่มีข้อมูลค่าแรง')+'</div>';
   }catch(e){ body.innerHTML='<div class="wm-empty">เชื่อมต่อไม่ได้</div>'; }
