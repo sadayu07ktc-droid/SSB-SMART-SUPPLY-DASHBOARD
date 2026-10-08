@@ -1,6 +1,7 @@
 <title>ออเดอร์ทั้งหมด · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261007e"></script>
+<script src="ssb-read.js?v=20261008h"></script>
+<script src="ssb-ui.js?v=20261008h"></script>
 <style>
   :root{
     --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
@@ -290,30 +291,38 @@ function setF(s){ FILTER=s; render(); }
 function pick(id,on){ on?SEL.add(id):SEL.delete(id); render(); }
 function toggleAll(on){ visible().filter(o=>o.canDelete).forEach(o=>on?SEL.add(o.id):SEL.delete(o.id)); render(); }
 
+/* ยกเลิก/ลบ → Supabase Edge "orders-admin" ก่อน (ssb-read.js ssbPost) · เน็ตหลุด → GAS เดิม · ไม่ส่ง LINE ยิงซ้ำไม่เสียหาย */
 async function post(payload){
-  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},payload))});
-  return r.json();
+  return ssbPost('orders-admin', GAS_URL, Object.assign({userId:MY_UID},payload));
 }
 async function doCancel(id){
-  const why=prompt('ยกเลิกออเดอร์ '+id+'\nระบุเหตุผล (ไม่ใส่ก็ได้):','');
+  const o=ORDERS.find(x=>x.id===id);
+  const why=await ssbPrompt({title:'ยกเลิกออเดอร์ '+id, msg:'สถานะจะเปลี่ยนเป็น "ยกเลิก" — ข้อมูลยังเก็บไว้ในระบบ',
+    placeholder:'เหตุผล (ไม่ใส่ก็ได้)', okText:'ยกเลิกออเดอร์', cancelText:'ไม่ยกเลิก', danger:true,
+    warn: o&&o.driver ? 'มีคนขับรับงานแล้ว: '+o.driver+' — ระบบไม่แจ้งคนขับให้อัตโนมัติ ควรแจ้งเองด้วย' : ''});
   if(why===null) return;
   const d=await post({action:'cancelOrder',orderId:id,reason:why});
   if(d.ok){ toast('ยกเลิก '+id+' แล้ว'); load(); } else toast('❌ '+(d.error||''),true);
 }
 async function doDelete(id){
   const o=ORDERS.find(x=>x.id===id);
-  let msg='ลบออเดอร์ '+id+' ถาวร?\n\nกู้คืนไม่ได้';
-  if(o&&o.hasWeight) msg+='\n\n⚠️ ออเดอร์นี้มีใบชั่งน้ำหนักแล้ว — ข้อมูลชั่งจะไม่มีออเดอร์อ้างอิง';
-  if(!confirm(msg)) return;
+  const warns=[];
+  if(o&&o.driver) warns.push('มีคนขับรับงานแล้ว: '+o.driver);
+  if(o&&o.hasWeight) warns.push('มีใบชั่งน้ำหนักแล้ว — ข้อมูลชั่งจะไม่มีออเดอร์อ้างอิง');
+  if(!(await ssbConfirm({title:'ลบออเดอร์ '+id+' ถาวร?', msg:(o?(o.garden||'')+(o.pickup?' · '+o.pickup:'')+'\n':'')+'ลบแล้วกู้คืนไม่ได้',
+    warn:warns.join('\n'), okText:'ลบถาวร', cancelText:'ไม่ลบ', danger:true}))) return;
   const d=await post({action:'deleteOrder',orderId:id});
   if(d.ok){ toast('ลบ '+id+' แล้ว'); SEL.delete(id); load(); } else toast('❌ '+(d.error||''),true);
 }
 async function bulkDelete(){
   const ids=[...SEL]; if(!ids.length) return;
   const withW=ids.filter(id=>{const o=ORDERS.find(x=>x.id===id); return o&&o.hasWeight;});
-  let msg='ลบ '+ids.length+' ออเดอร์ถาวร?\n\nกู้คืนไม่ได้';
-  if(withW.length) msg+='\n\n⚠️ มี '+withW.length+' รายการที่มีใบชั่งน้ำหนักแล้ว';
-  if(!confirm(msg)) return;
+  const withD=ids.map(id=>ORDERS.find(x=>x.id===id)).filter(o=>o&&o.driver);
+  const warns=[];
+  if(withD.length) warns.push('มี '+withD.length+' รายการที่คนขับรับงานแล้ว: '+withD.map(o=>o.id+' ('+o.driver+')').join(', '));
+  if(withW.length) warns.push('มี '+withW.length+' รายการที่มีใบชั่งน้ำหนักแล้ว');
+  if(!(await ssbConfirm({title:'ลบ '+ids.length+' ออเดอร์ถาวร?', msg:ids.join(', ')+'\n\nลบแล้วกู้คืนไม่ได้',
+    warn:warns.join('\n'), okText:'ลบ '+ids.length+' รายการ', cancelText:'ไม่ลบ', danger:true}))) return;
   BUSY=true; render();
   const d=await post({action:'deleteOrders',orderIds:ids});
   BUSY=false;

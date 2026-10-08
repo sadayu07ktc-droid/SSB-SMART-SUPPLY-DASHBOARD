@@ -17,6 +17,8 @@
     getCentralDistances: 'ssb-admin', getDpWaitTimes: 'ssb-admin', getAdminList: 'ssb-admin', getGardenList: 'ssb-admin',
     // ลิ้นชักรายละเอียดสวน (garden.html) · ปุ่มบันทึกในหน้านั้นยิง garden-admin เอง
     getGardenDetail: 'garden-admin',
+    // สวิตช์ตรวจสิทธิ์เข้าดูแดชบอร์ด (admins.html)
+    getDashAuth: 'admin-perms',
     // หน้าติดตามสถานะออเดอร์ (repo Order_Status โหลดไฟล์นี้ข้าม repo)
     getOrderTracker: 'order-tracker',
     // หน้าจัดการคนขับ (repo ManageDrivers โหลดไฟล์นี้ข้าม repo · รีเฟรชทุก 30 วิ)
@@ -45,6 +47,22 @@
     // action ที่มีแต่ฝั่ง Supabase (GAS ไม่รู้จัก) → ไม่ต้องถอยไป GAS ให้เสียเวลา
     try { if (EDGE_ONLY[new URL(url, location.href).searchParams.get('action')]) return new Response('{"ok":false,"error":"edge unavailable"}', { status: 200, headers: { 'Content-Type': 'application/json' } }); } catch (_) {}
     return fetch(url, init);
+  };
+
+  /* ✍️ ปุ่มบันทึกที่ "ไม่ส่ง LINE" → Edge ก่อน · 2026-10-08
+   *   const d = await ssbPost('orders-admin', GAS_URL, { action:'deleteOrder', userId, orderId });
+   *   Edge ตอบกลับมา (สำเร็จหรือไม่ก็ตาม) = ใช้ผลนั้น · เน็ตหลุด/เกินเวลา/ตอบไม่ใช่ JSON → ส่ง GAS เดิม
+   *   ⚠️ ใช้เฉพาะ action ที่ยิงซ้ำแล้วไม่เสียหาย (ไม่ส่ง LINE · เขียนค่าเดิมซ้ำได้ / ลบซ้ำ = แค่ "ไม่พบ")
+   *      ปุ่มที่ส่ง LINE ห้ามใช้ตัวนี้ — ถอยไป GAS อาจแจ้งซ้ำ */
+  window.ssbPost = async function (fn, gasUrl, body, timeoutMs) {
+    try {
+      var ac = new AbortController(), tm = setTimeout(function () { ac.abort(); }, timeoutMs || 15000);
+      var r = await fetch(BASE + fn, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ac.signal });
+      var t = await r.text(); clearTimeout(tm);
+      return JSON.parse(t);
+    } catch (e) { try { console.warn(fn + ' → GAS', e); } catch (_) {} }
+    var g = await fetch(gasUrl, { method: 'POST', body: JSON.stringify(body) });
+    return g.json();
   };
 })();
 

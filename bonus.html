@@ -6,7 +6,8 @@
 <title>โบนัสหัวหน้าคนขับ — SSB</title>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261007e"></script>
+<script src="ssb-read.js?v=20261008h"></script>
+<script src="ssb-ui.js?v=20261008h"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -293,7 +294,7 @@ function confirmExport(){ const r=xrange(); if(doExport(r.from,r.to,r.label,r.fn
 function csvCell(v){ v=String(v==null?'':v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
 function doExport(fromISO,toISO,label,fname){
   const res=computeRange(ALL_RECORDS,fromISO,toISO);
-  if(!res.total){ alert('ไม่มีข้อมูลในช่วงที่เลือก'); return false; }
+  if(!res.total){ ssbAlert({icon:'📭', title:'ไม่มีข้อมูลในช่วงที่เลือก', msg:'ลองเลือกช่วงวันที่ใหม่ แล้วกดดาวน์โหลดอีกครั้ง'}); return false; }
   const L=[];
   L.push(['โบนัสหัวหน้าคนขับ — SSB Smart Supply']);
   L.push(['ช่วงวันที่', label]);

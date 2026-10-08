@@ -1,6 +1,7 @@
 <title>สิทธิ์แอดมิน · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261007e"></script>
+<script src="ssb-read.js?v=20261008h"></script>
+<script src="ssb-ui.js?v=20261008h"></script>
 <style>
   :root{
     --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
@@ -272,13 +273,12 @@ async function loadDashAuth(){
 async function toggleDashAuth(){
   if(AUTH_BUSY) return;
   const next=!DASH_AUTH;
-  if(!next && !confirm('ปิดการตรวจสอบสิทธิ์เข้าดูแดชบอร์ด?\n\n'+
-      '• ทุกคนที่ล็อกอิน LINE จะเปิดดูแดชบอร์ดได้ (อ่านอย่างเดียว)\n'+
-      '• ปุ่มแก้ไข/อนุมัติ/ลบ/ค่าแรง/ตั้งค่าสิทธิ์ ยังล็อกเฉพาะแอดมินเสมอ\n\nยืนยันเปิดให้ดู?')) return;
+  if(!next && !(await ssbConfirm({icon:'🔓', title:'ปิดการตรวจสอบสิทธิ์เข้าดูแดชบอร์ด?',
+      msg:'• ทุกคนที่ล็อกอิน LINE จะเปิดดูแดชบอร์ดได้ (อ่านอย่างเดียว)\n• ปุ่มแก้ไข/อนุมัติ/ลบ/ค่าแรง/ตั้งค่าสิทธิ์ ยังล็อกเฉพาะแอดมินเสมอ',
+      okText:'เปิดให้ดู', cancelText:'ไม่เปลี่ยน'}))) return;
   AUTH_BUSY=true; renderAuthTog();
   try{
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setDashAuth',userId:MY_UID,on:next})});
-    const d=await r.json();
+    const d=await ssbPost('admin-perms', GAS_URL, {action:'setDashAuth',userId:MY_UID,on:next});   // Edge ก่อน · ล่ม → GAS
     if(d&&d.ok){ DASH_AUTH=!!d.dashAuthOn;
       toast(DASH_AUTH?'🔒 จำกัดเฉพาะแอดมินแล้ว':'🔓 เปิดให้คนล็อกอิน LINE เข้าดูได้แล้ว'); }
     else if(d&&d.denied) toast('❌ ต้องเป็นแอดมินเท่านั้น',true);
@@ -397,8 +397,7 @@ async function save(){
     if(D.type!==o.type) payload.type=D.type;
     if(D.notify!==o.notify) payload.notify=D.notify;
     if(D.manage!==o.manage) payload.manage=D.manage;
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
-    const d=await r.json();
+    const d=await ssbPost('admin-perms', GAS_URL, payload);   // Edge ก่อน · ล่ม → GAS
     if(d.ok){
       ADMINS[IDX]=Object.assign({},D,{packing:packOK(D.type,D.manage)});
       if(typeof d.notifyCount==='number') NOTIFY_N=d.notifyCount;
