@@ -284,7 +284,7 @@
           <b>รายการแจ้งเตือน</b>
           <span id="notifyPopSub">กำลังโหลด...</span>
         </div>
-        <button onclick="openLink('https://liff.line.me/2010274217-O9sTtyuR')">ดูทั้งหมด</button>
+        <button onclick="openLink('https://sadayu07ktc-droid.github.io/admin_notifications/')">ดูทั้งหมด</button>
       </div>
       <div class="np-list" id="notifyPopList"></div>
     </div>
@@ -336,7 +336,7 @@
 
   const MENU = [
     {group:'ภาพรวม', items:[
-      {icon:'dash', label:'Command Center', sub:'สรุปงานขนส่งและสถานะรถแบบเรียลไทม์', url:'https://liff.line.me/2010274217-jaHQFGHG'},
+      {icon:'dash', label:'Command Center', sub:'สรุปงานขนส่งและสถานะรถแบบเรียลไทม์', url:'https://sadayu07ktc-droid.github.io/ManageDrivers/'},
       {icon:'pin', label:'ติดตามรถ', tag:'สด', sub:'ตำแหน่งและสถานะรถทุกคันบนแผนที่', children:[
         ['แผนที่รวมทุกคัน','ดูทั้งฟลีตพร้อมกัน'],['ติดตามรายคัน','เลือกคันเจาะลึก'],['รถใกล้โรงงาน','เข้า/ออกรัศมีโรงงาน']
       ]},
@@ -345,7 +345,7 @@
     {group:'งานขนส่ง', items:[
       {icon:'order', label:'ออเดอร์', sub:'งานรับ-ส่งปาล์มทั้งหมด', children:[
         ['ออเดอร์ทั้งหมด','ทุกสถานะ · ยกเลิก/ลบขยะ','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/orders.html'],
-        ['ติดตามสถานะ','ไทม์ไลน์รายออเดอร์','https://liff.line.me/2010274217-KGSFWvpp'],
+        ['ติดตามสถานะ','ไทม์ไลน์รายออเดอร์','https://sadayu07ktc-droid.github.io/Order_Status/'],
         ['สร้าง/มอบหมายงาน','assign คนขับ','https://liff.line.me/2010274217-BF41B8c2'],['รอลานเทยืนยัน','คิวค้างยืนยัน'],['ประวัติงาน','งานที่จบแล้ว']
       ]},
       {icon:'users', label:'จัดการคนขับ', sub:'ตารางงาน สถานะ เครื่องเดินเบา สรุปพฤติกรรม', children:[
@@ -388,7 +388,7 @@
       ]},
       {icon:'gear', label:'ตั้งค่า', sub:'เกณฑ์เดินเบา การแจ้งเตือน และผู้ใช้งาน', children:[
         ['เกณฑ์เดินเบา','IDLE_LIMIT_MIN'],['การแจ้งเตือน','ใครได้รับ alert'],
-        ['ผู้ใช้งาน/สิทธิ์','แอดมิน/ผู้บริหาร','https://liff.line.me/2010274217-rlXrxPJz'],
+        ['ผู้ใช้งาน/สิทธิ์','แอดมิน/ผู้บริหาร','https://sadayu07ktc-droid.github.io/User_Management/'],
         ['🔑 ตั้งค่าสิทธิ์แอดมิน','ประเภท · แจ้งเตือน · อนุมัติ','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/admins.html']
       ]}
     ]}
@@ -657,6 +657,7 @@
     if(c) c.style.display = show?'block':'none';
   }
   function logout(){
+    try{ window.ssbSession && ssbSession.clear(); }catch(e){}   // ล้างบัตร SSO → ทุกหน้ากลับไปล็อกอิน LINE เอง
     try{ if(window.liff && liff.logout && liff.isLoggedIn && liff.isLoggedIn()) liff.logout(); }catch(e){}
     location.reload();   // โหลดใหม่ → liff.login เด้งหน้าเข้าสู่ระบบอีกครั้ง
   }
@@ -727,7 +728,7 @@
     }
 
     list.innerHTML = items.slice(0, 6).map(x => `
-      <div class="np-item" onclick="openLink('https://liff.line.me/2010274217-O9sTtyuR')">
+      <div class="np-item" onclick="openLink('https://sadayu07ktc-droid.github.io/admin_notifications/')">
         <div class="np-ic">${x.icon}</div>
         <div>
           <div class="np-t">${escapeNotifyHtml(x.title)}</div>
@@ -738,7 +739,7 @@
 
     if(items.length > 6){
       list.innerHTML += `
-        <div class="np-item" onclick="openLink('https://liff.line.me/2010274217-O9sTtyuR')">
+        <div class="np-item" onclick="openLink('https://sadayu07ktc-droid.github.io/admin_notifications/')">
           <div class="np-ic">⋯</div>
           <div>
             <div class="np-t">ดูรายการทั้งหมด</div>
@@ -887,6 +888,11 @@ async function bootstrapStatus(){
       if(!DEV_OPEN && !(role === 'admin' || role === 'ผู้บริหาร' || role === 'executive')){
         deny('บัญชีนี้ไม่ใช่สิทธิ์แอดมิน / ผู้บริหาร');
         return;
+      }
+
+      // 🔑 ออกบัตร SSO (ssb-read.js) — หน้าอื่นใช้บัญชีนี้ต่อ ไม่ต้องล็อกอิน LINE ซ้ำทุกหน้า
+      if(role === 'admin' || role === 'ผู้บริหาร' || role === 'executive'){
+        try{ window.ssbSession && ssbSession.set({ uid: MY_UID, name: p.displayName || '', pic: p.pictureUrl || '', role: u.role || '' }); }catch(e){}
       }
 
       // ✅ ผ่านสิทธิ์แล้ว ค่อยแสดง Dashboard

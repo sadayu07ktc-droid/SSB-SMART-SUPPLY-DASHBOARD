@@ -45,3 +45,37 @@
     return fetch(url, init);
   };
 })();
+
+/* ── 🔑 ล็อกอินครั้งเดียว ใช้ได้ทุกหน้า (SSO) · 2026-10-08 ──────────────────────────────
+ *   ปัญหาเดิม: แต่ละหน้ามี LIFF ของตัวเอง → ต้องล็อกอิน LINE ใหม่ทุกหน้า และบางหน้าได้บัญชีคนละตัว
+ *   ทุกหน้าอยู่โดเมนเดียวกัน (sadayu07ktc-droid.github.io) → ใช้ localStorage ร่วมกันได้
+ *   • หน้าแดชบอร์ดหลัก (index.html) = ตัว "ออกบัตร": ล็อกอิน LINE + ตรวจสิทธิ์ผ่าน → ssbSession.set(...)
+ *   • หน้าอื่นที่โหลดไฟล์นี้ (ต่อจาก LIFF SDK): มีบัตร → liff.isLoggedIn()=true, liff.getProfile()=บัญชีในบัตร
+ *     ไม่ต้องเด้งล็อกอินซ้ำ · ไม่มีบัตร → ทำงานแบบ LIFF เดิมทุกอย่าง
+ *   • ออกจากระบบที่แดชบอร์ด → ssbSession.clear() (ทุกหน้าเลิกใช้บัตร) · บัตรหมดอายุเอง 7 วัน
+ *   • หน้าไหนไม่อยากใช้บัตร: ใส่ <script>window.SSB_SSO_OFF=1</script> ก่อนโหลดไฟล์นี้ */
+(function () {
+  var KEY = 'ssb_session_v1', TTL = 7 * 24 * 3600 * 1000;
+  window.ssbSession = {
+    get: function () {
+      try { var s = JSON.parse(localStorage.getItem(KEY) || 'null'); if (s && s.uid && Date.now() - (s.t || 0) < TTL) return s; } catch (e) {}
+      return null;
+    },
+    set: function (p) {
+      try { localStorage.setItem(KEY, JSON.stringify({ uid: p.uid, name: p.name || '', pic: p.pic || '', role: p.role || '', t: Date.now() })); } catch (e) {}
+    },
+    clear: function () { try { localStorage.removeItem(KEY); } catch (e) {} }
+  };
+  var isIssuer = /\/SSB-SMART-SUPPLY-DASHBOARD\/(index\.html)?$/.test(location.pathname);   // แดชบอร์ดหลักล็อกอินจริงเสมอ
+  var s = window.ssbSession.get(), L = window.liff;
+  if (!s || isIssuer || window.SSB_SSO_OFF || !L || L.__ssbSso) return;
+  L.__ssbSso = true;
+  var realInit = L.init.bind(L);
+  L.init = function (cfg) {   // init จริงไว้ (ฟีเจอร์อื่นของ LIFF ยังใช้ได้) แต่พังก็ไม่เป็นไร เพราะมีบัตรแล้ว
+    try { return Promise.resolve(realInit(cfg)).catch(function (e) { console.warn('liff.init (มีบัตร SSO แล้ว ข้ามได้)', e); }); }
+    catch (e) { return Promise.resolve(); }
+  };
+  L.isLoggedIn = function () { return true; };
+  L.login = function () {};
+  L.getProfile = function () { return Promise.resolve({ userId: s.uid, displayName: s.name, pictureUrl: s.pic, statusMessage: '' }); };
+})();
