@@ -3,7 +3,8 @@
  *
  *   if (!(await ssbConfirm({ title:'ลบออเดอร์?', msg:'กู้คืนไม่ได้', okText:'ลบ', danger:true }))) return;
  *   const why = await ssbPrompt({ title:'ยกเลิกออเดอร์', msg:'ระบุเหตุผล', placeholder:'ไม่ใส่ก็ได้' });   // null = กดยกเลิก
- *   await ssbAlert({ title:'ไม่มีข้อมูล', msg:'...' });
+ *   await ssbAlert({ title:'ไม่มีข้อมูล', msg:'...' });   หรือ ssbAlert('❌ บันทึกไม่สำเร็จ\nรายละเอียด')
+ *   repo อื่นโหลดข้ามได้ (โดเมนเดียวกัน): <script src="https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/ssb-ui.js?v=…"></script>
  *   msg ขึ้นบรรทัดใหม่ด้วย \n ได้ · Esc / แตะพื้นหลัง = ยกเลิก · Enter ในช่องพิมพ์ = ตกลง */
 (function () {
   var css = '' +
@@ -83,7 +84,16 @@
       requestAnimationFrame(function () { el.classList.add('on'); setTimeout(function () { (inp || (danger ? no : ok)).focus(); }, 60); });
     });
   }
-  window.ssbConfirm = function (o) { return open(o || {}, 'confirm').then(function (v) { return v === true; }); };
-  window.ssbPrompt = function (o) { return open(o || {}, 'prompt'); };
-  window.ssbAlert = function (o) { return open(o || {}, 'alert').then(function () {}); };
+  /* ส่งเป็นข้อความเฉยๆ ก็ได้ (แทน alert('...') ตรงตัว) — บรรทัดแรก = หัวข้อ · ที่เหลือ = รายละเอียด
+   *   ขึ้นต้น ❌ = หัวแดง · ✅ / ⚠️ = ใช้เป็นไอคอน */
+  function norm(o) {
+    if (o == null) return {};
+    if (typeof o !== 'string') return o;
+    var lines = String(o).split('\n'), first = lines.shift(), m = first.match(/^\s*(✅|❌|⚠️|⚠)\s*/);
+    return { title: m ? first.slice(m[0].length) : first, msg: lines.join('\n').replace(/^\s+|\s+$/g, ''),
+      icon: m ? (m[1] === '⚠' ? '⚠️' : m[1]) : undefined, danger: !!(m && m[1] === '❌') };
+  }
+  window.ssbConfirm = function (o) { return open(norm(o), 'confirm').then(function (v) { return v === true; }); };
+  window.ssbPrompt = function (o) { return open(norm(o), 'prompt'); };
+  window.ssbAlert = function (o) { return open(norm(o), 'alert').then(function () {}); };
 })();
