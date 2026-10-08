@@ -19,6 +19,8 @@
     getGardenDetail: 'garden-admin',
     // สวิตช์ตรวจสิทธิ์เข้าดูแดชบอร์ด (admins.html)
     getDashAuth: 'admin-perms',
+    // หน้าแจ้งเตือนแอดมิน (repo admin_notifications)
+    getAdminNotifications: 'admin-notify',
     // หน้าติดตามสถานะออเดอร์ (repo Order_Status โหลดไฟล์นี้ข้าม repo)
     getOrderTracker: 'order-tracker',
     // หน้าจัดการคนขับ (repo ManageDrivers โหลดไฟล์นี้ข้าม repo · รีเฟรชทุก 30 วิ)
