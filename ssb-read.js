@@ -15,6 +15,8 @@
     // ชุด 2 (หน้าแอดมิน) → ssb-admin
     getWageSettings: 'ssb-admin', getWageConfig: 'ssb-admin', getWageOrders: 'ssb-admin', getCostBase: 'ssb-admin',
     getCentralDistances: 'ssb-admin', getDpWaitTimes: 'ssb-admin', getAdminList: 'ssb-admin', getGardenList: 'ssb-admin',
+    // ลิ้นชักรายละเอียดสวน (garden.html) · ปุ่มบันทึกในหน้านั้นยิง garden-admin เอง
+    getGardenDetail: 'garden-admin',
     // หน้าติดตามสถานะออเดอร์ (repo Order_Status โหลดไฟล์นี้ข้าม repo)
     getOrderTracker: 'order-tracker',
     // หน้าจัดการคนขับ (repo ManageDrivers โหลดไฟล์นี้ข้าม repo · รีเฟรชทุก 30 วิ)

@@ -1,6 +1,6 @@
 <title>เจ้าของสวน · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261007e"></script>
+<script src="ssb-read.js?v=20261008g"></script>
 <style>
   :root{
     --bg:#EEF2EE; --surface:#FFFFFF; --surface-2:#F6F8F5; --surface-3:#EDF2ED;
@@ -263,6 +263,20 @@ let _tt; function toast(m,err){ let t=$('#toast'); if(!t){t=document.createEleme
 async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
   const r=await (window.ssbFetch||fetch)(u); return r.json(); }
 
+/* ปุ่มบันทึก (ชื่อในบิล/ทีมตัด/ลานเท/พิกัดสวน/จุดรับ) → Supabase Edge "garden-admin" ก่อน · 2026-10-08
+ *   Edge ตอบกลับมา (สำเร็จหรือไม่ก็ตาม) = ใช้ผลนั้น · เน็ตหลุด/เกิน 15 วิ/ตอบไม่ใช่ JSON → ส่ง GAS เดิม
+ *   ถอยได้ปลอดภัย: เขียนค่าซ้ำได้ผลเดิม และไม่มีส่ง LINE */
+const GARDEN_EDGE_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/garden-admin';
+async function gPost(body){
+  try{
+    const ac=new AbortController(), tm=setTimeout(()=>ac.abort(),15000);
+    const r=await fetch(GARDEN_EDGE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(body),signal:ac.signal});
+    const x=await r.text(); clearTimeout(tm);
+    return JSON.parse(x);
+  }catch(e){ try{console.warn('garden-admin → GAS',e);}catch(_){} }
+  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(body)}); return r.json();
+}
+
 /* ══════════ รายชื่อสวน ══════════ */
 async function load(){
   const res = await api({action:'getGardenList', userId:MY_UID});
@@ -393,8 +407,7 @@ function rampHTML(){
   return r.map(c=>`<span class="pill gold" style="margin-right:4px">${esc(rampName(c))}</span>`).join('');
 }
 async function saveFields(patch,msg){
-  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(Object.assign({action:'saveGardenFields',userId:MY_UID,code:CUR.garden.code},patch))});
-  const d=await r.json();
+  const d=await gPost(Object.assign({action:'saveGardenFields',userId:MY_UID,code:CUR.garden.code},patch));
   if(d.ok){ toast(msg); return true; }
   toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); return false;
 }
@@ -543,8 +556,7 @@ async function editGardenLoc(){
   const val=await askText('แก้ไขพิกัดสวน','วางลิงก์ Google Maps หรือพิมพ์ lat, lng — ระบบจะบันทึกเป็นตัวเลขให้','13.7563, 100.5018',cur);
   if(val===null) return;
   if(!String(val).trim()){ toast('กรุณากรอกพิกัด',true); return; }
-  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveGardenFields',userId:MY_UID,code:CUR.garden.code,loc:val})});
-  const d=await r.json();
+  const d=await gPost({action:'saveGardenFields',userId:MY_UID,code:CUR.garden.code,loc:val});
   if(d.ok&&d.saved){ CUR.garden.loc=d.saved.loc; CUR.garden.latlng=d.saved.loc; CUR.garden.geo=true; drawDetail(); toast('บันทึกพิกัดสวนแล้ว 📍'); }
   else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
 }
@@ -554,8 +566,7 @@ async function editPickup(pkId){
   const res=await askPickup('แก้ไขจุดรับ '+pkId, p.name, p.latlng||p.loc||'');
   if(res===null) return;
   if(!res.name){ toast('ต้องมีชื่อจุดรับ',true); return; }
-  const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'savePickupLoc',userId:MY_UID,pickupId:pkId,name:res.name,loc:res.loc})});
-  const d=await r.json();
+  const d=await gPost({action:'savePickupLoc',userId:MY_UID,pickupId:pkId,name:res.name,loc:res.loc});
   if(d.ok&&d.saved){ if(d.saved.name)p.name=d.saved.name; if(d.saved.loc){p.loc=d.saved.loc;p.latlng=d.saved.loc;p.geo=true;} drawDetail(); toast('บันทึกจุดรับแล้ว 📍'); }
   else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
 }
@@ -574,8 +585,7 @@ function billHTML(){
 }
 function refreshBills(){ $('#billBox').innerHTML=billHTML(); const c=$('#dw .sect h3 .cnt'); if(c)c.textContent=CUR.garden.bills.length; }
 async function saveBills(msg){
-  const r = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveGardenBills',userId:MY_UID,code:CUR.garden.code,bills:CUR.garden.bills})});
-  const d = await r.json();
+  const d = await gPost({action:'saveGardenBills',userId:MY_UID,code:CUR.garden.code,bills:CUR.garden.bills});
   if(d.ok){ toast(msg); const g=LIST.find(x=>x.code===CUR.garden.code); if(g)g.bills=d.bills.slice(); render(); }
   else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
   return d.ok;
