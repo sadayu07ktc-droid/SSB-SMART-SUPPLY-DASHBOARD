@@ -242,6 +242,8 @@ const TYPES=[
 const packOK=(ty,mg)=> ty==='ADMIN' ? true : ty==='MANAGER' ? !!mg : false;
 /* สีประจำประเภท — ถ้าประเภทไม่รู้จักใช้สีกลาง */
 const TKEYS=['ADMIN','MANAGER','ADMIN_PK','ADMIN_BULK','EXECUTIVE'];
+/* คนที่ได้แจ้งเตือน LINE จริง = เปิดแจ้งเตือน + Active + ไม่ใช่ ADMIN_BULK (utils.gs getAdminUids · 2026-10-08) */
+const notifyReal=()=>ADMINS.filter(a=>a.notify&&a.active&&a.type!=='ADMIN_BULK').length;
 const tkey=t=>TKEYS.indexOf(t)>=0?t:'none';
 const tstyle=t=>`--tc:var(--t-${tkey(t)});--tbg:var(--t-${tkey(t)}-bg)`;
 
@@ -253,7 +255,7 @@ async function load(){
   if(res.denied){ $('#gate').innerHTML='<div class="box"><div class="deny">🚫</div><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>หน้านี้สำหรับแอดมินเท่านั้น</p></div>'; return; }
   $('#gate').style.display='none';
   if(!res.ok){ $('#list').innerHTML=`<div class="empty">${esc(res.error||'โหลดข้อมูลไม่สำเร็จ')}</div>`; return; }
-  ADMINS=res.admins||[]; NOTIFY_N=res.notifyCount||0; render();
+  ADMINS=res.admins||[]; NOTIFY_N=notifyReal(); render();
   loadDashAuth();
 }
 
@@ -328,11 +330,11 @@ function effective(d){
     : d.type==='ADMIN_PK' ? {v:false,why:'ADMIN_PK เป็นผู้ส่งคำขอเอง'}
     : d.type==='ADMIN_BULK' ? {v:false,why:'ADMIN_BULK ดูแลงาน Bulk'}
     : {v:false,why:'EXECUTIVE ถูกตัดออกในโค้ด'};
-  const notifyReal = d.notify && d.active;
+  const notifyReal = d.notify && d.active && d.type!=='ADMIN_BULK';
   return [
     {ic:'🔑',lb:'เข้าหน้าแอดมินทุกหน้า',st:'y',tx:'ได้',note:'มีชื่อในตาราง admins = เข้าได้เลย'},
     {ic:'🔔',lb:'รับแจ้งเตือน LINE',st:notifyReal?'y':'n',tx:notifyReal?'ได้รับ':'ไม่ได้รับ',
-      note:!d.notify?'ปิดรับแจ้งเตือนอยู่':(!d.active?'เปิดไว้ แต่บัญชีถูกปิดใช้งาน → ระบบข้าม':'ออเดอร์ใหม่ · ชั่งเสร็จ · ลา · แจ้งซ่อม')},
+      note:d.type==='ADMIN_BULK'?'แอดมิน Bulk ยังไม่รับแจ้งเตือน (ตอนนี้มีแต่งานไร่) — เปิดเมื่อมีงาน Bulk':!d.notify?'ปิดรับแจ้งเตือนอยู่':(!d.active?'เปิดไว้ แต่บัญชีถูกปิดใช้งาน → ระบบข้าม':'ออเดอร์ใหม่ · ชั่งเสร็จ · ลา · แจ้งซ่อม')},
     {ic:'📦',lb:'ได้รับงาน Packing ให้อนุมัติ',st:pk.v?'y':'n',tx:pk.v?'ได้รับ':'ไม่ได้รับ',note:pk.why},
     {ic:'📊',lb:'เข้า Dashboard',st:'w',tx:'ไม่มีผล',note:'ค่าในฐาน: "'+(d.dashRaw||'(ว่าง)')+'" — ยังไม่มีโค้ดตรวจค่านี้'}
   ];
@@ -406,7 +408,7 @@ async function save(){
     const d=await ssbPost('admin-perms', GAS_URL, payload);   // Edge ก่อน · ล่ม → GAS
     if(d.ok){
       ADMINS[IDX]=Object.assign({},D,{packing:packOK(D.type,D.manage)});
-      if(typeof d.notifyCount==='number') NOTIFY_N=d.notifyCount;
+      NOTIFY_N=notifyReal();
       render(); toast('บันทึกสิทธิ์ '+(D.name||'')+' แล้ว');
       if(d.warn) setTimeout(()=>toast(d.warn,true),1200);
       BUSY=false; close_(); return;
