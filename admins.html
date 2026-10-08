@@ -144,6 +144,7 @@
     --t-ADMIN:#4F46E5;     --t-ADMIN-bg:#EEF0FE;
     --t-MANAGER:#A97516;   --t-MANAGER-bg:#FBEED3;
     --t-ADMIN_PK:#0E7490;  --t-ADMIN_PK-bg:#DEF2F6;
+    --t-ADMIN_BULK:#C2410C; --t-ADMIN_BULK-bg:#FDEBDD;
     --t-EXECUTIVE:#9F1239; --t-EXECUTIVE-bg:#FCE7EC;
     --t-none:#6B7A70;      --t-none-bg:#EEF1EE;
   }
@@ -151,18 +152,21 @@
     --t-ADMIN:#8B85F0;     --t-ADMIN-bg:#1E1C3A;
     --t-MANAGER:#D7A845;   --t-MANAGER-bg:#2E2413;
     --t-ADMIN_PK:#4FB6CE;  --t-ADMIN_PK-bg:#102A31;
+    --t-ADMIN_BULK:#F59E57; --t-ADMIN_BULK-bg:#33190A;
     --t-EXECUTIVE:#EE6B8B; --t-EXECUTIVE-bg:#351019;
     --t-none:#8A9B91;      --t-none-bg:#1E2A24;}}
   :root[data-theme="dark"]{
     --t-ADMIN:#8B85F0;     --t-ADMIN-bg:#1E1C3A;
     --t-MANAGER:#D7A845;   --t-MANAGER-bg:#2E2413;
     --t-ADMIN_PK:#4FB6CE;  --t-ADMIN_PK-bg:#102A31;
+    --t-ADMIN_BULK:#F59E57; --t-ADMIN_BULK-bg:#33190A;
     --t-EXECUTIVE:#EE6B8B; --t-EXECUTIVE-bg:#351019;
     --t-none:#8A9B91;      --t-none-bg:#1E2A24;}
   :root[data-theme="light"]{
     --t-ADMIN:#4F46E5;     --t-ADMIN-bg:#EEF0FE;
     --t-MANAGER:#A97516;   --t-MANAGER-bg:#FBEED3;
     --t-ADMIN_PK:#0E7490;  --t-ADMIN_PK-bg:#DEF2F6;
+    --t-ADMIN_BULK:#C2410C; --t-ADMIN_BULK-bg:#FDEBDD;
     --t-EXECUTIVE:#9F1239; --t-EXECUTIVE-bg:#FCE7EC;
     --t-none:#6B7A70;      --t-none-bg:#EEF1EE;}
 
@@ -232,11 +236,12 @@ const TYPES=[
   {v:'ADMIN',     t:'แอดมินปฏิบัติการ', d:'ทำงานประจำวันเต็มรูปแบบ · ได้รับงาน Packing ให้อนุมัติเสมอ'},
   {v:'MANAGER',   t:'ผู้จัดการ',        d:'เหมือนแอดมิน แต่ถ้าปิด “อนุมัติ/จัดการ” จะไม่ได้รับงาน Packing'},
   {v:'ADMIN_PK',  t:'แอดมิน Packing',   d:'เป็นฝ่ายส่งคำขอ Packing เอง — ระบบไม่ส่งงาน Packing กลับมาให้'},
+  {v:'ADMIN_BULK',t:'แอดมิน Bulk',      d:'ดูแลงาน Bulk — สร้างงานและมอบหมายคนขับกลุ่ม Bulk · ไม่ได้รับงาน Packing ให้อนุมัติ'},
   {v:'EXECUTIVE', t:'ผู้บริหาร',        d:'ดูภาพรวม · ไม่ได้รับงาน Packing ให้อนุมัติ'}
 ];
 const packOK=(ty,mg)=> ty==='ADMIN' ? true : ty==='MANAGER' ? !!mg : false;
 /* สีประจำประเภท — ถ้าประเภทไม่รู้จักใช้สีกลาง */
-const TKEYS=['ADMIN','MANAGER','ADMIN_PK','EXECUTIVE'];
+const TKEYS=['ADMIN','MANAGER','ADMIN_PK','ADMIN_BULK','EXECUTIVE'];
 const tkey=t=>TKEYS.indexOf(t)>=0?t:'none';
 const tstyle=t=>`--tc:var(--t-${tkey(t)});--tbg:var(--t-${tkey(t)}-bg)`;
 
@@ -321,6 +326,7 @@ function effective(d){
   const pk = d.type==='ADMIN' ? {v:true,why:'ADMIN ได้เสมอ'}
     : d.type==='MANAGER' ? (d.manage?{v:true,why:'MANAGER + เปิดอนุมัติ/จัดการ'}:{v:false,why:'MANAGER ที่ปิดอนุมัติ/จัดการ'})
     : d.type==='ADMIN_PK' ? {v:false,why:'ADMIN_PK เป็นผู้ส่งคำขอเอง'}
+    : d.type==='ADMIN_BULK' ? {v:false,why:'ADMIN_BULK ดูแลงาน Bulk'}
     : {v:false,why:'EXECUTIVE ถูกตัดออกในโค้ด'};
   const notifyReal = d.notify && d.active;
   return [
