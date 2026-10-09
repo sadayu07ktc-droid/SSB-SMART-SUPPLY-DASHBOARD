@@ -18,7 +18,7 @@
     // ลิ้นชักรายละเอียดสวน (garden.html) · ปุ่มบันทึกในหน้านั้นยิง garden-admin เอง
     getGardenDetail: 'garden-admin',
     // สวิตช์ตรวจสิทธิ์เข้าดูแดชบอร์ด (admins.html)
-    getDashAuth: 'admin-perms',
+    getDashAuth: 'admin-perms', getPermInfo: 'admin-perms',
     // หน้าแจ้งเตือนแอดมิน (repo admin_notifications)
     getAdminNotifications: 'admin-notify',
     // หน้าติดตามสถานะออเดอร์ (repo Order_Status โหลดไฟล์นี้ข้าม repo)
@@ -31,7 +31,7 @@
     getOrderCostChart: 'chart-data', getDtcSummaryChart: 'chart-data', getDtcTodayChart: 'chart-today',
     // ตัวอ่านเล็กๆ หน้าสถานะออเดอร์ + หน้าจัดการผู้ใช้ (repo Order_Status / User_Management)
     getPkSummary: 'ssb-misc', getPkWaiting: 'ssb-misc', getRampList: 'ssb-misc', getReassignDrivers: 'ssb-misc', getUsers: 'ssb-misc' };
-  var EDGE_ONLY = { getWageStored: 1 };
+  var EDGE_ONLY = { getWageStored: 1, getPermInfo: 1 };
   // action ที่ช้าเพราะรอระบบนอก (DTC ประวัติ/สรุป GPS 5–15 วิ) → รอ Edge นานกว่าค่าเริ่ม 10 วิ ก่อนถอยไป GAS
   var TIMEOUT = { getDriverRounds: 30000, getSummary: 30000, getDtcTodayChart: 60000 };   // กราฟระยะวิ่งจริง: ประวัติ GPS ทุกคัน ~30 วิ (GAS ~180 วิ)
   window.ssbFetch = async function (url, init) {

@@ -3,6 +3,7 @@
  *
  *   if (!(await ssbConfirm({ title:'ลบออเดอร์?', msg:'กู้คืนไม่ได้', okText:'ลบ', danger:true }))) return;
  *   const why = await ssbPrompt({ title:'ยกเลิกออเดอร์', msg:'ระบุเหตุผล', placeholder:'ไม่ใส่ก็ได้' });   // null = กดยกเลิก
+ *   const pin = await ssbPrompt({ title:'ใส่ PIN', type:'password', numeric:true, maxLength:6 });   // ช่องรหัส (ซ่อนตัวเลข · แป้นตัวเลข)
  *   await ssbAlert({ title:'ไม่มีข้อมูล', msg:'...' });   หรือ ssbAlert('❌ บันทึกไม่สำเร็จ\nรายละเอียด')
  *   repo อื่นโหลดข้ามได้ (โดเมนเดียวกัน): <script src="https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/ssb-ui.js?v=…"></script>
  *   msg ขึ้นบรรทัดใหม่ด้วย \n ได้ · Esc / แตะพื้นหลัง = ยกเลิก · Enter ในช่องพิมพ์ = ตกลง */
@@ -71,6 +72,9 @@
         inp = document.createElement(o.multiline ? 'textarea' : 'input');
         inp.className = 'sui-input'; inp.placeholder = o.placeholder || ''; inp.value = o.value || ''; inp.autocomplete = 'off';
         if (o.multiline) inp.rows = 3;
+        else if (o.type) inp.type = o.type;   // 'password' = ซ่อนตัวอักษร
+        if (o.numeric) { inp.inputMode = 'numeric'; inp.pattern = '[0-9]*'; inp.style.letterSpacing = '.4em'; inp.style.textAlign = 'center'; inp.style.fontSize = '20px'; }
+        if (o.maxLength) inp.maxLength = o.maxLength;
         inp.addEventListener('keydown', function (e) { if (e.key === 'Enter' && !(o.multiline && e.shiftKey)) { e.preventDefault(); close(inp.value); } });
         body.appendChild(inp);
       }

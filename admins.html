@@ -197,6 +197,12 @@
   .toggle:disabled{opacity:.45;cursor:wait}
   .banner{display:flex;gap:10px;background:var(--red-bg);border-left:3px solid var(--red);border-radius:10px;padding:11px 14px;font-size:13px;margin-bottom:16px;line-height:1.6}
   .banner b{color:var(--red)}
+  .permbar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:16px;line-height:1.55;background:var(--surface);border:1px solid var(--line)}
+  .permbar.ro{border-left:3px solid var(--slate);color:var(--ink-soft)}
+  .permbar.ed{border-left:3px solid var(--pine)}
+  .permbar .sp{flex:1}
+  .permbar button{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 12px;cursor:pointer}
+  .ro-lock .opt,.ro-lock .toggle{pointer-events:none;opacity:.55}
 </style>
 
 <header><div class="bar">
@@ -208,6 +214,7 @@
 </div></header>
 
 <main>
+  <div id="permBox"></div>
   <div id="alertBox"></div>
   <div class="hint"><span style="font-size:15px">👆</span>
     <div><b>จิ้มการ์ดแอดมินเพื่อตั้งค่าสิทธิ์</b> — บันทึกลงตาราง <span class="mono">admins</span> ทันที<br>
@@ -225,6 +232,10 @@ const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ
 const LIFF_ID='2010274217-Ot7vGhri';
 let MY_UID='', ADMINS=[], NOTIFY_N=0, IDX=-1, D=null, BUSY=false;
 let DASH_AUTH=true, AUTH_BUSY=false;   // 👁️ สวิตช์ตรวจสอบสิทธิ์เข้าดูแดชบอร์ด
+/* 🔐 แก้สิทธิ์ได้เฉพาะ DEV (app_config ADMIN_PERM_EDITORS) + PIN 6 หลัก · ตรวจจริงที่ Edge admin-perms (หน้าเว็บแค่ซ่อนปุ่ม)
+ *   PIN เก็บในหน่วยความจำของหน้านี้เท่านั้น (ไม่ลง localStorage) · ไม่ได้ใช้ 10 นาที = ถามใหม่ · 2026-10-09 */
+let PERM={canEdit:false,pinSet:false}, PIN='', PIN_AT=0;
+const PIN_TTL=10*60*1000;
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -233,8 +244,8 @@ let _t; function toast(m,err){ let e=$('#toast'); if(!e){e=document.createElemen
   e.textContent=m; e.className='show'+(err?' err':''); clearTimeout(_t); _t=setTimeout(()=>e.className='',2600); }
 
 const TYPES=[
-  {v:'ADMIN',     t:'แอดมินปฏิบัติการ', d:'ทำงานประจำวันเต็มรูปแบบ · ได้รับงาน Packing ให้อนุมัติเสมอ'},
-  {v:'MANAGER',   t:'ผู้จัดการ',        d:'เหมือนแอดมิน แต่ถ้าปิด “อนุมัติ/จัดการ” จะไม่ได้รับงาน Packing'},
+  {v:'ADMIN',     t:'แอดมินไร่',        d:'แอดมินปฏิบัติการฝ่ายไร่ · ทำงานประจำวันเต็มรูปแบบ · ได้รับงาน Packing ให้อนุมัติเสมอ'},
+  {v:'MANAGER',   t:'ผู้จัดการ',        d:'คุมทั้ง 3 แผนก (ไร่ · Bulk · Packing) เห็นงานทุกงาน · ถ้าปิด “อนุมัติ/จัดการ” จะไม่ได้รับงาน Packing'},
   {v:'ADMIN_PK',  t:'แอดมิน Packing',   d:'เป็นฝ่ายส่งคำขอ Packing เอง — ระบบไม่ส่งงาน Packing กลับมาให้'},
   {v:'ADMIN_BULK',t:'แอดมิน Bulk',      d:'ดูแลงาน Bulk — สร้างงานและมอบหมายคนขับกลุ่ม Bulk · ไม่ได้รับงาน Packing ให้อนุมัติ'},
   {v:'EXECUTIVE', t:'ผู้บริหาร',        d:'ดูภาพรวม · ไม่ได้รับงาน Packing ให้อนุมัติ'}
@@ -256,7 +267,48 @@ async function load(){
   $('#gate').style.display='none';
   if(!res.ok){ $('#list').innerHTML=`<div class="empty">${esc(res.error||'โหลดข้อมูลไม่สำเร็จ')}</div>`; return; }
   ADMINS=res.admins||[]; NOTIFY_N=notifyReal(); render();
-  loadDashAuth();
+  loadDashAuth(); loadPerm();
+}
+async function loadPerm(){
+  try{ const r=await api({action:'getPermInfo',userId:MY_UID}); if(r&&r.ok) PERM={canEdit:!!r.canEdit,pinSet:!!r.pinSet}; }catch(e){}
+  renderPerm(); renderAuthTog();
+}
+function renderPerm(){
+  $('#permBox').innerHTML = PERM.canEdit
+    ? `<div class="permbar ed"><span style="font-size:15px">🔐</span><span class="sp"><b>คุณแก้ไขสิทธิ์ได้ (DEV)</b> — ${PERM.pinSet?'ต้องใส่ PIN 6 หลักก่อนแก้':'ยังไม่ได้ตั้ง PIN — ตั้งก่อนแก้ครั้งแรก'}</span>
+       <button type="button" onclick="changePin()">${PERM.pinSet?'เปลี่ยน PIN':'ตั้ง PIN'}</button></div>`
+    : `<div class="permbar ro"><span style="font-size:15px">👁️</span><span class="sp"><b>ดูอย่างเดียว</b> — ตั้งค่าสิทธิ์แอดมินได้เฉพาะ DEV</span></div>`;
+}
+const pinErr=d=>d&&(d.pinBad||d.pinRequired||d.pinLocked);
+async function askPinTwice(title){
+  const a=await ssbPrompt({icon:'🔐',title,msg:'ตัวเลข 6 หลัก · ห้ามเลขซ้ำหรือเรียงกัน (เช่น 111111, 123456)',type:'password',numeric:true,maxLength:6,okText:'ถัดไป'});
+  if(a==null) return null;
+  if(!/^\d{6}$/.test(a)){ await ssbAlert('❌ PIN ต้องเป็นตัวเลข 6 หลัก'); return null; }
+  const b=await ssbPrompt({icon:'🔐',title:'ยืนยัน PIN อีกครั้ง',msg:'ใส่ PIN เดิมซ้ำเพื่อยืนยัน',type:'password',numeric:true,maxLength:6,okText:'ตั้ง PIN'});
+  if(b==null) return null;
+  if(a!==b){ await ssbAlert('❌ PIN 2 ครั้งไม่ตรงกัน\nลองใหม่อีกครั้ง'); return null; }
+  return a;
+}
+async function changePin(){
+  if(!PERM.canEdit) return;
+  let oldPin='';
+  if(PERM.pinSet){ oldPin=await ssbPrompt({icon:'🔑',title:'ใส่ PIN เดิม',type:'password',numeric:true,maxLength:6,okText:'ถัดไป'}); if(oldPin==null) return; }
+  const pin=await askPinTwice(PERM.pinSet?'ตั้ง PIN ใหม่':'ตั้ง PIN 6 หลัก'); if(pin==null) return;
+  const d=await ssbPost('admin-perms', GAS_URL, {action:'pinSetup',userId:MY_UID,pin,oldPin});
+  if(d&&d.ok){ PERM.pinSet=true; PIN=pin; PIN_AT=Date.now(); renderPerm(); toast('🔐 ตั้ง PIN แล้ว'); return true; }
+  await ssbAlert('❌ '+((d&&d.error)||'ตั้ง PIN ไม่สำเร็จ'));
+}
+/** ขอ PIN ก่อนแก้ — คืน true เมื่อพร้อม (ตรวจกับ Edge แล้ว) */
+async function ensurePin(){
+  if(!PERM.canEdit){ toast('ตั้งค่าสิทธิ์แอดมินได้เฉพาะ DEV',true); return false; }
+  if(PIN && Date.now()-PIN_AT<PIN_TTL){ PIN_AT=Date.now(); return true; }
+  PIN='';
+  if(!PERM.pinSet) return !!(await changePin());
+  const pin=await ssbPrompt({icon:'🔐',title:'ใส่ PIN 6 หลัก',msg:'เพื่อแก้ไขสิทธิ์แอดมิน',type:'password',numeric:true,maxLength:6,okText:'ปลดล็อก'});
+  if(pin==null) return false;
+  const d=await ssbPost('admin-perms', GAS_URL, {action:'pinCheck',userId:MY_UID,pin});
+  if(d&&d.ok){ PIN=pin; PIN_AT=Date.now(); return true; }
+  await ssbAlert('❌ '+((d&&d.error)||'ตรวจ PIN ไม่สำเร็จ')); return false;
 }
 
 /* 👁️ สวิตช์ตรวจสอบสิทธิ์เข้าดูแดชบอร์ด — ปิด=คนล็อกอิน LINE ดูได้ (อ่านอย่างเดียว) */
@@ -265,7 +317,7 @@ function renderAuthTog(){
   b.style.display='inline-flex';
   const on=DASH_AUTH;
   b.className='authtog '+(on?'on':'off');
-  b.disabled=AUTH_BUSY;
+  b.disabled=AUTH_BUSY||!PERM.canEdit;
   b.innerHTML=`<span style="font-size:14px">${on?'🔒':'🔓'}</span><span class="sw"></span>
     <span class="txt"><span>${on?'ตรวจสิทธิ์เข้าดู: เปิด':'เปิดให้ดู: ทุกคนล็อกอิน'}</span>
     <small>${on?'เฉพาะแอดมินเข้าดูแดชบอร์ด':'คนล็อกอิน LINE ดูได้ · จัดการยังล็อก'}</small></span>`;
@@ -279,16 +331,18 @@ async function loadDashAuth(){
 }
 async function toggleDashAuth(){
   if(AUTH_BUSY) return;
+  if(!(await ensurePin())) return;
   const next=!DASH_AUTH;
   if(!next && !(await ssbConfirm({icon:'🔓', title:'ปิดการตรวจสอบสิทธิ์เข้าดูแดชบอร์ด?',
       msg:'• ทุกคนที่ล็อกอิน LINE จะเปิดดูแดชบอร์ดได้ (อ่านอย่างเดียว)\n• ปุ่มแก้ไข/อนุมัติ/ลบ/ค่าแรง/ตั้งค่าสิทธิ์ ยังล็อกเฉพาะแอดมินเสมอ',
       okText:'เปิดให้ดู', cancelText:'ไม่เปลี่ยน'}))) return;
   AUTH_BUSY=true; renderAuthTog();
   try{
-    const d=await ssbPost('admin-perms', GAS_URL, {action:'setDashAuth',userId:MY_UID,on:next});   // Edge ก่อน · ล่ม → GAS
+    const d=await ssbPost('admin-perms', GAS_URL, {action:'setDashAuth',userId:MY_UID,on:next,pin:PIN});   // Edge ก่อน · ล่ม → GAS
     if(d&&d.ok){ DASH_AUTH=!!d.dashAuthOn;
       toast(DASH_AUTH?'🔒 จำกัดเฉพาะแอดมินแล้ว':'🔓 เปิดให้คนล็อกอิน LINE เข้าดูได้แล้ว'); }
-    else if(d&&d.denied) toast('❌ ต้องเป็นแอดมินเท่านั้น',true);
+    else if(pinErr(d)){ PIN=''; toast('❌ '+d.error,true); }
+    else if(d&&d.denied) toast('❌ '+(d.error||'ต้องเป็นแอดมินเท่านั้น'),true);
     else toast('❌ '+((d&&d.error)||'สลับไม่สำเร็จ'),true);
   }catch(e){ toast('❌ '+e,true); }
   AUTH_BUSY=false; renderAuthTog();
@@ -340,12 +394,15 @@ function effective(d){
   ];
 }
 
-function open_(i){ IDX=i; D=Object.assign({},ADMINS[i]);
+async function open_(i){
+  if(PERM.canEdit && !(await ensurePin())) return;
+  IDX=i; D=Object.assign({},ADMINS[i]);
   $('#dw').classList.add('on'); $('#scrim').classList.add('on'); document.body.style.overflow='hidden'; draw(); }
 
 function draw(){
   const eff=effective(D), o=ADMINS[IDX];
   const dirty = D.type!==o.type || D.notify!==o.notify || D.manage!==o.manage;
+  $('#dw').classList.toggle('ro-lock', !PERM.canEdit);
   $('#dw').innerHTML=`
     <div class="dwhead"><div class="top"><h2>${esc(D.name||'—')}</h2>
       <button class="xbtn" onclick="close_()" aria-label="ปิด">✕</button></div>
@@ -387,21 +444,22 @@ function draw(){
 
     <div class="savebar">
       <button class="btn ghost" onclick="close_()">${dirty?'ยกเลิก':'ปิด'}</button>
-      <button class="btn" onclick="save()" ${dirty&&!BUSY?'':'disabled style="opacity:.45;cursor:not-allowed"'}>
-        ${BUSY?'กำลังบันทึก…':'บันทึก'}</button>
+      ${PERM.canEdit?`<button class="btn" onclick="save()" ${dirty&&!BUSY?'':'disabled style="opacity:.45;cursor:not-allowed"'}>
+        ${BUSY?'กำลังบันทึก…':'บันทึก'}</button>`:'<span style="font-size:12px;color:var(--ink-faint);align-self:center">👁️ ดูอย่างเดียว — แก้ได้เฉพาะ DEV</span>'}
     </div>
     <div class="foot">บันทึกลงคอลัมน์: ประเภท · รับแจ้งเตือน · อนุมัติ/จัดการ (ตาราง admins)</div>`;
   $('#dw').focus();
 }
-function setType(v){ D.type=v; draw(); }
-function tog(k){ D[k]=!D[k]; draw(); }
+function setType(v){ if(!PERM.canEdit) return; D.type=v; draw(); }
+function tog(k){ if(!PERM.canEdit) return; D[k]=!D[k]; draw(); }
 
 async function save(){
   if(BUSY) return;
+  if(!(await ensurePin())) return;
   BUSY=true; draw();
   try{
     // ส่งเฉพาะช่องที่แก้จริง — แอดมินที่ยังไม่ระบุประเภท (ว่าง) แก้แค่สวิตช์ได้ โดยไม่ส่ง type ว่างไปให้หลังบ้านตีกลับ "ประเภทไม่ถูกต้อง"
-    const o=ADMINS[IDX], payload={action:'saveAdminPerms', userId:MY_UID, targetUid:D.uid};
+    const o=ADMINS[IDX], payload={action:'saveAdminPerms', userId:MY_UID, targetUid:D.uid, pin:PIN};
     if(D.type!==o.type) payload.type=D.type;
     if(D.notify!==o.notify) payload.notify=D.notify;
     if(D.manage!==o.manage) payload.manage=D.manage;
@@ -413,6 +471,7 @@ async function save(){
       if(d.warn) setTimeout(()=>toast(d.warn,true),1200);
       BUSY=false; close_(); return;
     }
+    if(pinErr(d)) PIN='';
     toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true);
   }catch(e){ toast('❌ '+e,true); }
   BUSY=false; draw();
