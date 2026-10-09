@@ -245,14 +245,14 @@ let _t; function toast(m,err){ let e=$('#toast'); if(!e){e=document.createElemen
 
 const TYPES=[
   {v:'ADMIN',     t:'แอดมินไร่',        d:'แอดมินปฏิบัติการฝ่ายไร่ · ทำงานประจำวันเต็มรูปแบบ · ได้รับงาน Packing ให้อนุมัติเสมอ'},
-  {v:'MANAGER',   t:'ผู้จัดการ',        d:'คุมทั้ง 3 แผนก (ไร่ · Bulk · Packing) เห็นงานทุกงาน · ถ้าปิด “อนุมัติ/จัดการ” จะไม่ได้รับงาน Packing'},
   {v:'ADMIN_PK',  t:'แอดมิน Packing',   d:'เป็นฝ่ายส่งคำขอ Packing เอง — ระบบไม่ส่งงาน Packing กลับมาให้'},
   {v:'ADMIN_BULK',t:'แอดมิน Bulk',      d:'ดูแลงาน Bulk — สร้างงานและมอบหมายคนขับกลุ่ม Bulk · ไม่ได้รับงาน Packing ให้อนุมัติ'},
+  {v:'MANAGER',   t:'ผู้จัดการ',        d:'คุมทั้ง 3 แผนก (ไร่ · Bulk · Packing) เห็นงานทุกงาน · ถ้าปิด “อนุมัติ/จัดการ” จะไม่ได้รับงาน Packing'},
   {v:'EXECUTIVE', t:'ผู้บริหาร',        d:'ดูภาพรวม · ไม่ได้รับงาน Packing ให้อนุมัติ'}
 ];
 const packOK=(ty,mg)=> ty==='ADMIN' ? true : ty==='MANAGER' ? !!mg : false;
 /* สีประจำประเภท — ถ้าประเภทไม่รู้จักใช้สีกลาง */
-const TKEYS=['ADMIN','MANAGER','ADMIN_PK','ADMIN_BULK','EXECUTIVE'];
+const TKEYS=['ADMIN','ADMIN_PK','ADMIN_BULK','MANAGER','EXECUTIVE'];
 /* คนที่ได้แจ้งเตือน LINE จริง = เปิดแจ้งเตือน + Active + ไม่ใช่ ADMIN_BULK (utils.gs getAdminUids · 2026-10-08) */
 const notifyReal=()=>ADMINS.filter(a=>a.notify&&a.active&&a.type!=='ADMIN_BULK').length;
 const tkey=t=>TKEYS.indexOf(t)>=0?t:'none';
