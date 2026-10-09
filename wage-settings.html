@@ -7,6 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="favicon-wage.svg?v=1">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="ssb-read.js?v=20261007e"></script>
+<script src="ssb-pin-gate.js?v=20261009a"></script>
 <style>
   :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
   @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}}
@@ -598,7 +599,7 @@ $('body').addEventListener('click',e=>{const c=e.target.closest('[data-wb]');if(
     const p=await liff.getProfile(); MY_UID=p.userId||'';
     if(window.uiProfile)uiProfile({name:p.displayName,picture:p.pictureUrl,uid:MY_UID,status:'checking'});   // 👤 ปุ่มโปรไฟล์/ออกจากระบบ
     if(!MY_UID){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
-    load(); loadTemplates();
+    if(await ssbPinGate(MY_UID)){ load(); loadTemplates(); }   // 🔐 PIN ก่อนเข้าดู (เฉพาะ DEV) · ssb-pin-gate.js
   }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+e+'</div>';}
 })();
 </script>
