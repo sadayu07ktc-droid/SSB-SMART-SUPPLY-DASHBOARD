@@ -7,16 +7,20 @@
  *   🆕 2026-10-14 ล็อกเฉพาะปุ่ม (ไม่ใช่ทั้งหน้า): ssbPinGate(uid, { action:true, text:'…' })
  *        ปุ่ม "‹ กลับ" = ปิดกล่อง + คืน false (อยู่หน้าเดิม) · ใช้ที่หน้าผู้ใช้งาน (ดาวน์โหลด/นำเข้าไฟล์)
  *   ssbPinInfo(uid) → { ok, canEdit, pinSet } ไว้ซ่อนปุ่มจากคนที่ไม่ใช่ DEV
+ *   🆕 2026-10-14 PIN ส่วนตัว "แอดมินทุกคน" (รายงานค่าแรง): ssbAdminPinInfo(uid) → {isAdmin,isDev,groups,pinSet}
+ *        await ssbAdminPin(uid, { text }) → true/false · ยังไม่มี PIN = ตั้งเองครั้งแรก (ใส่ 2 รอบ) · ปุ่มกลับ = ปิดกล่อง
+ *        จำแยกคีย์ (ssb_admin_pin_v1) — ผ่าน PIN แอดมินแล้ว "ไม่" ปลดล็อกหน้าเฉพาะ DEV (ssbPinGate ใช้คีย์ของตัวเอง)
  */
 (function () {
   var EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/admin-perms';
   var KEY = 'ssb_pin_gate_v1', TTL = 15 * 60 * 1000;
   var DASH = 'https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';
 
-  function remembered(uid) {
-    try { var s = JSON.parse(sessionStorage.getItem(KEY) || 'null'); return !!(s && s.uid === uid && s.until > Date.now()); } catch (e) { return false; }
+  var KEY_ADM = 'ssb_admin_pin_v1';
+  function remembered(uid, key) {
+    try { var s = JSON.parse(sessionStorage.getItem(key || KEY) || 'null'); return !!(s && s.uid === uid && s.until > Date.now()); } catch (e) { return false; }
   }
-  function remember(uid) { try { sessionStorage.setItem(KEY, JSON.stringify({ uid: uid, until: Date.now() + TTL })); } catch (e) {} }
+  function remember(uid, key) { try { sessionStorage.setItem(key || KEY, JSON.stringify({ uid: uid, until: Date.now() + TTL })); } catch (e) {} }
 
   function css() {
     if (document.getElementById('pg-css')) return;
@@ -100,4 +104,64 @@
       }
     });
   };
+  /* ── PIN ส่วนตัวแอดมินทุกคน ── */
+  window.ssbAdminPinInfo = function (uid) {
+    return fetch(EDGE + '?action=getPinInfo&userId=' + encodeURIComponent(String(uid || '').trim())).then(function (r) { return r.json(); });
+  };
+  window.ssbAdminPin = async function (uid, opts) {
+    opts = opts || {};
+    uid = String(uid || '').trim();
+    var closeWrap = function () { var w = document.getElementById('pg-wrap'); if (w) w.remove(); };
+    onBack = closeWrap;
+    if (!uid) { msgBox('🔒', 'เข้าไม่ได้', 'ไม่พบบัญชี LINE'); return false; }
+    if (remembered(uid, KEY_ADM) || remembered(uid, KEY)) { remember(uid, KEY_ADM); return true; }   // DEV ผ่าน PIN ชุดเดียวกันมาแล้ว = ใช้ได้
+    show('<div class="ic">🔐</div><h2>กำลังตรวจสิทธิ์</h2><p>รอสักครู่…</p>');
+    var info = opts.info || null;
+    if (!info) { try { info = await window.ssbAdminPinInfo(uid); } catch (e) {} }
+    if (!info || !info.ok) { msgBox('⚠️', 'ตรวจสิทธิ์ไม่สำเร็จ', 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง'); return false; }
+    if (!info.isAdmin) { msgBox('🔒', 'เฉพาะแอดมิน', 'บัญชีนี้ไม่ใช่แอดมิน'); return false; }
+    var setup = !info.pinSet;
+    return await new Promise(function (resolve) {
+      var first = '';
+      function screen(step, msg) {
+        var title = setup ? (step === 2 ? 'ใส่ PIN อีกครั้ง' : 'ตั้ง PIN 6 หลัก (ครั้งแรก)') : 'ใส่ PIN 6 หลัก';
+        var sub = setup
+          ? (step === 2 ? 'ใส่ให้ตรงกับรอบแรก เพื่อยืนยัน' : 'PIN ส่วนตัวของคุณ ใช้ทุกครั้งก่อนเข้า' + (opts.text ? ' ' + opts.text : '') + '<br>ห้ามเลขซ้ำ/เรียงกัน (เช่น 111111, 123456) · ห้ามบอกคนอื่น')
+          : (opts.text ? opts.text + '<br>' : '') + 'ใส่ PIN ส่วนตัวของคุณ · ลืม PIN ติดต่อ DEV ให้ล้างแล้วตั้งใหม่';
+        var w = show('<div class="ic">' + (setup ? '🆕' : '🔐') + '</div><h2>' + title + '</h2><p>' + sub + '</p>' +
+          '<input id="pg-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="••••••" aria-label="PIN 6 หลัก">' +
+          '<div id="pg-err" role="alert">' + (msg || (info.lockMin ? 'ใส่ PIN ผิดหลายครั้ง — ล็อกอีก ' + info.lockMin + ' นาที' : '')) + '</div>' +
+          '<button type="button" class="pg-btn pg-ok" id="pg-ok">' + (setup ? (step === 2 ? 'ยืนยันตั้ง PIN' : 'ถัดไป') : 'ปลดล็อก') + '</button>' +
+          '<button type="button" class="pg-btn pg-back" id="pg-back">‹ กลับ</button>');
+        var inp = w.querySelector('#pg-pin'), ok = w.querySelector('#pg-ok'), err = w.querySelector('#pg-err'), busy = false;
+        var label = ok.textContent;
+        w.querySelector('#pg-back').onclick = function () { closeWrap(); resolve(false); };
+        inp.addEventListener('input', function () { inp.value = inp.value.replace(/\D/g, '').slice(0, 6); if (inp.value.length === 6) submit(); });
+        inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
+        ok.onclick = submit;
+        setTimeout(function () { try { inp.focus(); } catch (e) {} }, 50);
+        async function submit() {
+          if (busy) return;
+          var pin = inp.value;
+          if (!/^\d{6}$/.test(pin)) { err.textContent = 'กรุณาใส่ตัวเลข 6 หลัก'; return; }
+          if (setup && step === 1) {
+            if (/^(\d)\1{5}$/.test(pin) || '0123456789'.indexOf(pin) >= 0 || '9876543210'.indexOf(pin) >= 0) { inp.value = ''; err.textContent = 'PIN ง่ายเกินไป (เลขซ้ำ/เรียงกัน) — ตั้งใหม่'; return; }
+            first = pin; screen(2); return;
+          }
+          if (setup && pin !== first) { first = ''; screen(1, 'PIN 2 รอบไม่ตรงกัน — ตั้งใหม่อีกครั้ง'); return; }
+          busy = true; ok.disabled = true; ok.textContent = 'กำลังตรวจ…'; err.textContent = '';
+          var d = null;
+          try {
+            d = await fetch(EDGE, { method: 'POST', body: JSON.stringify({ action: setup ? 'myPinSetup' : 'myPinCheck', userId: uid, pin: pin }) }).then(function (r) { return r.json(); });
+          } catch (e) { d = { ok: false, error: 'เชื่อมต่อไม่ได้ ลองใหม่อีกครั้ง' }; }
+          busy = false; ok.disabled = false; ok.textContent = label;
+          if (d && d.ok) { remember(uid, KEY_ADM); closeWrap(); resolve(true); return; }
+          if (setup) { first = ''; screen(1, (d && d.error) || 'ตั้ง PIN ไม่สำเร็จ'); return; }
+          inp.value = ''; err.textContent = (d && d.error) || 'PIN ไม่ถูกต้อง'; inp.focus();
+        }
+      }
+      screen(1);
+    });
+  };
 })();
+

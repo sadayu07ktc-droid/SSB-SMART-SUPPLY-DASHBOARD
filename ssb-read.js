@@ -33,7 +33,8 @@
     getOrderCostChart: 'chart-data', getDtcSummaryChart: 'chart-data', getDtcTodayChart: 'chart-today',
     // ตัวอ่านเล็กๆ หน้าสถานะออเดอร์ + หน้าจัดการผู้ใช้ (repo Order_Status / User_Management)
     getPkSummary: 'ssb-misc', getPkWaiting: 'ssb-misc', getRampList: 'ssb-misc', getReassignDrivers: 'ssb-misc', getUsers: 'ssb-misc' };
-  var EDGE_ONLY = { getWageStored: 1, getPermInfo: 1 };
+  // getWageReport: แยกกลุ่ม ไร่/Bulk/Packing ตามสิทธิ์แอดมิน (2026-10-14) — GAS ไม่กรองกลุ่ม ห้ามถอยไป GAS
+  var EDGE_ONLY = { getWageStored: 1, getPermInfo: 1, getWageReport: 1 };
   // action ที่ช้าเพราะรอระบบนอก (DTC ประวัติ/สรุป GPS 5–15 วิ) → รอ Edge นานกว่าค่าเริ่ม 10 วิ ก่อนถอยไป GAS
   var TIMEOUT = { getDriverRounds: 30000, getSummary: 30000, getDtcTodayChart: 60000 };   // กราฟระยะวิ่งจริง: ประวัติ GPS ทุกคัน ~30 วิ (GAS ~180 วิ)
   window.ssbFetch = async function (url, init) {
@@ -45,7 +46,7 @@
         var r = await fetch(BASE + ACTIONS[u.searchParams.get('action')] + '?' + u.searchParams.toString(), { signal: ac.signal });
         var t = await r.text(); clearTimeout(tm);
         var j = JSON.parse(t);
-        if (j && j.ok) return new Response(t, { status: 200, headers: { 'Content-Type': 'application/json' } });
+        if (j && (j.ok || EDGE_ONLY[u.searchParams.get('action')])) return new Response(t, { status: 200, headers: { 'Content-Type': 'application/json' } });   // edge-only: ส่งคำตอบ Edge (เช่น denied) ตรงๆ
       }
     } catch (e) { try { console.warn('ssb-read → GAS', e); } catch (_) {} }
     // action ที่มีแต่ฝั่ง Supabase (GAS ไม่รู้จัก) → ไม่ต้องถอยไป GAS ให้เสียเวลา

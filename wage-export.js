@@ -394,7 +394,7 @@
     $('xmGo').textContent = '⬇️ ดาวน์โหลด ' + FMT[XM.fmt].replace(/^\S+\s/, '');
   }
   function fetchRange() {
-    var r = range(), key = r.from + '|' + r.to, my = ++XM.seq;
+    var r = range(), key = r.from + '|' + r.to + '|' + (window.WAGE_GROUP || ''), my = ++XM.seq;   // แยกแคชตามกลุ่ม (api ใส่ group ให้เอง)
     if (XM.cache[key]) { XM.data = XM.cache[key]; $('xmDrv').disabled = false; fillDrivers(); preview(); return; }
     XM.data = null; $('xmGo').disabled = true; $('xmDrv').disabled = true;
     $('xmPv').innerHTML = '<div class="xm-bar" aria-hidden="true"><i></i></div><span style="color:var(--txt2)">กำลังดึงข้อมูล ' + r.label + '…</span>';
