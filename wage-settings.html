@@ -6,7 +6,7 @@
 <title>ตั้งค่าต้นทุน/ค่าแรง · SSB</title>
 <link rel="icon" type="image/svg+xml" href="favicon-wage.svg?v=1">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261007e"></script>
+<script src="ssb-read.js?v=20261014a"></script>
 <script src="ssb-pin-gate.js?v=20261009a"></script>
 <style>
   :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
@@ -358,6 +358,11 @@ let DPW={rows:[],del:[],waitRate:0,loaded:false,err:null,busy:false};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const GEAR_HTML="<div class=\"gload\" role=\"status\" aria-live=\"polite\"><svg viewBox=\"0 0 64 64\" width=\"84\" height=\"84\" aria-hidden=\"true\"><g class=\"cog-a\"><path d=\"M26 8h6l1.2 5a12 12 0 0 1 3.5 1.5l4.3-2.6 4.2 4.2-2.6 4.3A12 12 0 0 1 44 24l5 1.2v6L44 32.4a12 12 0 0 1-1.4 3.4l2.6 4.3-4.2 4.2-4.3-2.6a12 12 0 0 1-3.5 1.4L32 48h-6l-1.2-5a12 12 0 0 1-3.5-1.4l-4.3 2.6-4.2-4.2 2.6-4.3A12 12 0 0 1 14 32.4L9 31.2v-6L14 24a12 12 0 0 1 1.4-3.6l-2.6-4.3 4.2-4.2 4.3 2.6A12 12 0 0 1 24.8 13z\"/><circle cx=\"29\" cy=\"28\" r=\"6\" class=\"hole\"/></g><g class=\"cog-b\"><path d=\"M42 30h4l.9 3.6a9 9 0 0 1 2.6 1.1l3.2-2 3 3-2 3.2a9 9 0 0 1 1 2.5l3.7.9v4l-3.6.9a9 9 0 0 1-1.1 2.6l2 3.2-3 3-3.2-2a9 9 0 0 1-2.5 1L46 58h-4l-.9-3.6a9 9 0 0 1-2.6-1.1l-3.2 2-3-3 2-3.2a9 9 0 0 1-1-2.5L29.6 46v-4l3.6-.9a9 9 0 0 1 1.1-2.6l-2-3.2 3-3 3.2 2a9 9 0 0 1 2.5-1z\"/><circle cx=\"44\" cy=\"44\" r=\"4.5\" class=\"hole\"/></g></svg><div class=\"gtx\">MSG</div><div class=\"gsub\" id=\"gsub\">SUB</div></div>";
 function gearLoader(msg,sub){return GEAR_HTML.replace('MSG',msg).replace('SUB',sub||'');}
+// ✍️ ปุ่มบันทึก → Edge admin-writes ก่อน (เร็วกว่า) · Edge ล่ม/เกินเวลา → GAS เดิม (ssb-read.js ssbPost)
+function adminWrite(body){
+  return window.ssbPost ? ssbPost('admin-writes',GAS_URL,body,30000)
+    : fetch(GAS_URL,{method:'POST',body:JSON.stringify(body)}).then(r=>r.json());
+}
 async function gasTry(url,opt,tries,onTry){   // GAS บางครั้งส่งหน้า error HTML แทน JSON → อ่านซ้ำได้ (เฉพาะการอ่าน)
   let last;
   for(let n=1;n<=tries;n++){
@@ -425,7 +430,7 @@ async function saveDp(){
   if(bad){toast('⚠️ กรอกชื่อ DP Type และชม.รอ (0 ขึ้นไป) ให้ครบทุกแถว');return;}
   DPW.busy=true;renderDp();
   let d;
-  try{d=await gasTry(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveDpWaitTimes',userId:MY_UID,rows,deleteIds:DPW.del.map(x=>x.id)})},1);}
+  try{d=await adminWrite({action:'saveDpWaitTimes',userId:MY_UID,rows,deleteIds:DPW.del.map(x=>x.id)});}
   catch(e){d={ok:false,unsure:true};}
   DPW.busy=false;
   if(d.ok){toast('✅ บันทึกเวลารอแล้ว');await loadDp();}
@@ -467,8 +472,7 @@ async function save(){
   const payload=Object.assign({action:'saveWageSettings',userId:MY_UID,fuelDaily},cfg);
   $('saveBtn').textContent='กำลังบันทึก…';$('saveBtn').disabled=true;
   try{
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)});
-    const d=await r.json();
+    const d=await adminWrite(payload);
     if(d.ok){toast('✅ บันทึกเข้าฐานแล้ว');}
     else if(d.denied)toast('❌ ไม่มีสิทธิ์ (เฉพาะแอดมิน)');
     else toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'));
@@ -515,7 +519,7 @@ async function activateTpl(id){
   const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
   if(!(await uiConfirm({title:'เปิดใช้ชุด "'+t.name+'"?',msg:'ระบบจะคิดค่าแรง "เที่ยวที่คิดใหม่" ตามชุดนี้\nเที่ยวที่จ่าย/ล็อกแล้วไม่เปลี่ยน',okText:'เปิดใช้',icon:'🧮'})))return;
   toast('กำลังเปิดใช้…');
-  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'activateWageTemplate',userId:MY_UID,id})});const d=await r.json();
+  try{const d=await adminWrite({action:'activateWageTemplate',userId:MY_UID,id});
     if(d&&d.ok){ACTIVE_ID=id;toast('✅ เปิดใช้ชุด "'+t.name+'" แล้ว');await load();await loadTemplates();}
     else toast('❌ '+((d&&d.error)||'เปิดใช้ไม่สำเร็จ'));
   }catch(e){toast('❌ '+e);}
@@ -524,7 +528,7 @@ async function saveAsTpl(){
   const name=await uiPrompt({title:'ตั้งชื่อชุดใหม่',msg:'เก็บค่าตั้งปัจจุบันทั้งหมดเป็นชุดใหม่',value:'ชุดที่ '+(TEMPLATES.length+1),placeholder:'เช่น สูตรปกติ / หน้าฝน / ลูกค้า A',okText:'บันทึกชุด',icon:'➕'});
   if(name===null)return;
   toast('กำลังบันทึก…');
-  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,name,config:gatherConfig()})});const d=await r.json();
+  try{const d=await adminWrite({action:'saveWageTemplate',userId:MY_UID,name,config:gatherConfig()});
     if(d&&d.ok){toast('✅ บันทึกชุดใหม่แล้ว');await loadTemplates();}
     else toast('❌ '+((d&&d.error)||'บันทึกไม่สำเร็จ'));
   }catch(e){toast('❌ '+e);}
@@ -533,7 +537,7 @@ async function overwriteTpl(){
   const t=TEMPLATES.find(x=>x.id===ACTIVE_ID); if(!t)return saveAsTpl();
   if(!(await uiConfirm({title:'บันทึกค่าปัจจุบันลงชุด "'+t.name+'"?',msg:'ชุดนี้กำลังใช้อยู่ → ค่าแรงเที่ยวใหม่จะใช้ค่านี้ทันที',okText:'บันทึกลงชุด',icon:'💾'})))return;
   toast('กำลังบันทึก…');
-  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:t.name,config:gatherConfig()})});const d=await r.json();
+  try{const d=await adminWrite({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:t.name,config:gatherConfig()});
     if(d&&d.ok){toast('✅ บันทึกลงชุด "'+t.name+'" แล้ว');await loadTemplates();}
     else toast('❌ '+((d&&d.error)||'บันทึกไม่สำเร็จ'));
   }catch(e){toast('❌ '+e);}
@@ -541,14 +545,14 @@ async function overwriteTpl(){
 async function renameTpl(id){
   const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
   const name=await uiPrompt({title:'เปลี่ยนชื่อชุด',value:t.name,okText:'บันทึกชื่อ'}); if(name===null||!name.trim())return;
-  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:name.trim(),config:t.config||gatherConfig()})});const d=await r.json();
+  try{const d=await adminWrite({action:'saveWageTemplate',userId:MY_UID,id:t.id,name:name.trim(),config:t.config||gatherConfig()});
     if(d&&d.ok){toast('✅ เปลี่ยนชื่อแล้ว');await loadTemplates();}else toast('❌ '+((d&&d.error)||''));
   }catch(e){toast('❌ '+e);}
 }
 async function deleteTpl(id){
   const t=TEMPLATES.find(x=>x.id===id); if(!t)return;
   if(!(await uiConfirm({title:'ลบชุด "'+t.name+'"?',msg:'ลบแล้วกู้คืนไม่ได้',okText:'ลบชุด',danger:true})))return;
-  try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'deleteWageTemplate',userId:MY_UID,id})});const d=await r.json();
+  try{const d=await adminWrite({action:'deleteWageTemplate',userId:MY_UID,id});
     if(d&&d.ok){toast('ลบแล้ว');await loadTemplates();}else toast('❌ '+((d&&d.error)||''));
   }catch(e){toast('❌ '+e);}
 }

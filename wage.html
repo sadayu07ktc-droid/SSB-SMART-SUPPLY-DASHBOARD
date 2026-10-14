@@ -6,7 +6,7 @@
 <title>ค่าแรง/ต้นทุน คนขับ · SSB</title>
 <link rel="icon" type="image/svg+xml" href="favicon-wage.svg?v=1">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261007e"></script>
+<script src="ssb-read.js?v=20261014a"></script>
 <style>
   :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
   @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--danger:#e5645d}}
@@ -544,12 +544,16 @@ async function recomputeUnpaid(){
   uiAlert((badChunks.length?'⚠️ ':'✅ ')+'คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:'')
     +(badChunks.length?'\nหลังบ้านไม่ตอบ '+badChunks.length+' เที่ยว — กด 🔄 คำนวณใหม่ อีกครั้ง\n('+badChunks.slice(0,6).join(', ')+(badChunks.length>6?' …':'')+')':''));
 }
+// ✍️ ปุ่มบันทึก → Edge admin-writes ก่อน (เร็วกว่า) · Edge ล่ม/เกินเวลา → GAS เดิม (ssb-read.js ssbPost)
+function adminWrite(body){
+  return window.ssbPost ? ssbPost('admin-writes',GAS_URL,body,30000)
+    : fetch(GAS_URL,{method:'POST',body:JSON.stringify(body)}).then(r=>r.json());
+}
 // ติ๊ก "จ่ายแล้ว" = ล็อกค่าแรง (คำนวณใหม่จะไม่ทับ) · เอาติ๊กออก = ปลดล็อก
 async function togglePaid(orderId,checked,el){
   el.disabled=true;
   try{
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaid',userId:MY_UID,orderId,paid:checked})});
-    const d=await r.json();
+    const d=await adminWrite({action:'setWagePaid',userId:MY_UID,orderId,paid:checked});
     if(d.ok){const row=ROWS.find(x=>x.orderId===orderId);if(row)row.locked=checked;const sp=el.parentNode.querySelector('span');if(sp){sp.textContent=checked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย';sp.style.color=checked?'var(--primary)':'var(--txt2)';}updatePaidAllBtn();}
     else{el.checked=!checked;uiAlert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));}
   }catch(e){el.checked=!checked;uiAlert('❌ '+e);}
@@ -570,8 +574,7 @@ async function togglePaidAll(){
   if(!(await uiConfirm({title:(paid?'ทำเครื่องหมาย "จ่ายแล้ว" ':'ยกเลิก "จ่ายแล้ว" ')+ids.length+' เที่ยว?',msg:paid?'เที่ยวที่จ่ายแล้วจะถูกล็อก ไม่ถูกคิดใหม่':'เที่ยวจะกลับไปคิดใหม่ได้',okText:paid?'จ่ายแล้ว':'ยกเลิกจ่าย',icon:paid?'☑️':'↩️',danger:!paid})))return;
   const b=$('paidAll');b.textContent='กำลังบันทึก…';b.disabled=true;
   try{
-    const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'setWagePaidBulk',userId:MY_UID,orderIds:ids,paid})});
-    const d=await r.json();
+    const d=await adminWrite({action:'setWagePaidBulk',userId:MY_UID,orderIds:ids,paid});
     if(d.ok){ VIEW.forEach(r=>r.locked=paid); applyView(); }
     else uiAlert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
   }catch(e){uiAlert('❌ '+e);}

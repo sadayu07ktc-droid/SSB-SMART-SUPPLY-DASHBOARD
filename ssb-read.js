@@ -17,6 +17,8 @@
     getCentralDistances: 'ssb-admin', getDpWaitTimes: 'ssb-admin', getAdminList: 'ssb-admin', getGardenList: 'ssb-admin',
     // ลิ้นชักรายละเอียดสวน (garden.html) · ปุ่มบันทึกในหน้านั้นยิง garden-admin เอง
     getGardenDetail: 'garden-admin',
+    // ชุดคำนวณค่าแรง (wage-settings.html) · ปุ่มบันทึกหน้าตั้งค่าแอดมินยิง admin-writes ผ่าน ssbPost
+    getWageTemplates: 'admin-writes',
     // สวิตช์ตรวจสิทธิ์เข้าดูแดชบอร์ด (admins.html)
     getDashAuth: 'admin-perms', getPermInfo: 'admin-perms',
     // หน้าแจ้งเตือนแอดมิน (repo admin_notifications)
