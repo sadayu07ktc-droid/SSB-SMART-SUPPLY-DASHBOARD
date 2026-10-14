@@ -1,0 +1,272 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>แพลนส่งมอบ Bulk · SSB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261014b"></script>
+<script src="ssb-pin-gate.js?v=20261014b"></script>
+<style>
+/* แพลนส่งมอบ Bulk (FM-MK-04 จาก SAP B1) · 2026-10-14 · Edge bulk-plan
+   แถบหัว (วันที่ส่ง + ฉบับ) → KPI → ตารางแยกหัวจ่าย · อัปโหลด/แจกงาน = DEV / ADMIN_BULK / MANAGER · ACC/YARD ดูอย่างเดียว */
+:root{
+  --bg:#EEF2EF; --surface:#FFFFFF; --surface2:#F6F8F6; --ink:#14251C; --muted:#5E6F65; --line:#D8E1DA;
+  --brand:#1B4332; --brand2:#2D6A4F; --brandInk:#1B4332; --tint:rgba(45,106,79,.10); --gold:#C9A227; --goldInk:#8A6D12; --goldTint:#FBF3DA;
+  --ok:#157A40; --okTint:#DCF3E3; --warn:#A15C07; --warnTint:#FDF0D9; --info:#1D4ED8; --infoTint:#E2EBFD; --bad:#B42318; --badTint:#FDE7E5;
+  --f-ui:"IBM Plex Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif; --f-num:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1612; --surface:#15211A; --surface2:#1A2820; --ink:#E3ECE6; --muted:#93A69A; --line:#26362D;
+  --brand:#2D6A4F; --brand2:#3E8E68; --brandInk:#86D7AC; --tint:rgba(134,215,172,.12); --gold:#D9B54A; --goldInk:#E3C66A; --goldTint:#2B2610;
+  --ok:#6FD39A; --okTint:#173226; --warn:#F0B35A; --warnTint:#33260F; --info:#8DB0FF; --infoTint:#18233F; --bad:#F2877D; --badTint:#3A1916; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1612; --surface:#15211A; --surface2:#1A2820; --ink:#E3ECE6; --muted:#93A69A; --line:#26362D;
+  --brand:#2D6A4F; --brand2:#3E8E68; --brandInk:#86D7AC; --tint:rgba(134,215,172,.12); --gold:#D9B54A; --goldInk:#E3C66A; --goldTint:#2B2610;
+  --ok:#6FD39A; --okTint:#173226; --warn:#F0B35A; --warnTint:#33260F; --info:#8DB0FF; --infoTint:#18233F; --bad:#F2877D; --badTint:#3A1916; color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:14px;line-height:1.55}
+.wrap{max-width:1240px;margin:0 auto;padding-inline:16px;padding-block:16px 48px}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+h1{font-size:19px;margin:0;font-weight:700}
+h2{font-size:15px;margin:0;font-weight:700}
+.sub{color:var(--muted);font-size:13px}
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.back{width:38px;height:38px;border-radius:10px;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:18px;cursor:pointer;flex:none}
+.logo{width:38px;height:38px;border-radius:10px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none}
+.me{margin-left:auto;font-size:12px;color:var(--muted)}
+.btn{font:inherit;font-weight:600;font-size:13.5px;border-radius:10px;padding:8px 14px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#1b1400}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn:focus-visible,select:focus-visible,label.btn:focus-within{outline:2px solid var(--brand2);outline-offset:2px}
+select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px}
+.head{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;padding:14px 16px;border-bottom:1px solid var(--line)}
+.head .meta{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;margin-top:3px}
+.head .meta b{font-family:var(--f-num)}
+.head .acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.ver{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line);font-size:12.5px;align-items:center}
+.ver .v{border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted)}
+.ver .v.on{border-color:var(--brand2);color:var(--brandInk);font-weight:600}
+.ver .v.ok{border-color:var(--ok);color:var(--ok);font-weight:600}
+.kpis{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.kpi{background:var(--surface2);border-radius:10px;padding:6px 12px;min-width:104px}
+.kpi .k{font-size:11.5px;color:var(--muted)}.kpi .v{font-family:var(--f-num);font-size:17px;font-weight:600}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:1040px;font-size:13px}
+th{font-size:11.5px;font-weight:600;color:var(--muted);text-align:left;padding:8px;border-bottom:1px solid var(--line);background:var(--surface2);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.r,th.r{text-align:right}
+tr.grp td{background:var(--tint);font-weight:600;font-size:12.5px;color:var(--brandInk)}
+tr.cx td{color:var(--muted)}
+tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
+.cust{font-weight:600}.cust small,.prod small{display:block;font-weight:400;color:var(--muted);font-family:var(--f-num);font-size:11px}
+.co{font-weight:700}.co.y{color:var(--ok)}.co.n{color:var(--bad)}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.chip::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.s-new{color:var(--muted);background:var(--surface2)}.s-sent{color:var(--info);background:var(--infoTint)}.s-accepted{color:var(--warn);background:var(--warnTint)}
+.s-weighed{color:var(--goldInk);background:var(--goldTint)}.s-gate_out{color:var(--brandInk);background:var(--tint)}.s-delivered{color:var(--ok);background:var(--okTint)}.s-cx{color:var(--bad);background:var(--badTint)}
+.chg{display:block;font-size:11px;font-weight:600;color:var(--warn);margin-top:2px;text-decoration:none}
+.warnd{color:var(--warn);font-size:11px;font-weight:600}
+.panel{padding:12px 16px;background:var(--goldTint);border-top:1px solid var(--gold);display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}
+.panel.bad{background:var(--badTint);border-top-color:var(--bad)}
+.panel .txt{flex:1;min-width:260px;font-size:13.5px}
+.panel ul{margin:4px 0 6px;padding-left:18px;font-size:12.5px;max-height:240px;overflow:auto}
+.panel .acts{display:flex;gap:8px;align-self:flex-end}
+.note{font-size:12.5px;color:var(--muted);padding:10px 16px}
+.empty{padding:40px 16px;text-align:center;color:var(--muted)}
+.gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:50;padding:16px;text-align:center}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--brand);color:#fff;border-radius:12px;padding:10px 16px;font-size:13.5px;font-weight:600;opacity:0;transition:.25s;max-width:calc(100% - 32px);z-index:60}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.toast.err{background:var(--bad)}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="gate" id="gate"><div><div style="font-size:30px">🚛</div><h2 id="gateT">กำลังเข้าสู่ระบบ…</h2><div class="sub" id="gateS"></div></div></div>
+<div class="wrap" id="app" hidden>
+  <div class="top">
+    <button class="back" type="button" onclick="goBack()" aria-label="กลับ">←</button>
+    <div class="logo">Bulk</div>
+    <div><h1>แพลนส่งมอบ Bulk</h1><div class="sub">FM-MK-04 จาก SAP B1 · 1 แพลน = 1 วันที่ส่ง · อัปโหลดวันที่ส่งเดิมซ้ำ = Revised</div></div>
+    <span class="me" id="me"></span>
+  </div>
+  <div class="card">
+    <div class="head">
+      <div>
+        <label class="sub" for="planSel">วันที่ส่ง</label><br>
+        <select id="planSel"></select>
+        <div class="meta" id="meta"></div>
+      </div>
+      <div class="acts" id="acts"></div>
+    </div>
+    <div class="ver" id="ver"></div>
+    <div class="kpis" id="kpis"></div>
+    <div class="tbl"><table>
+      <thead><tr><th>#</th><th>ลูกค้า</th><th>สถานที่ส่ง</th><th>สินค้า</th><th class="r">จำนวน (กก.)</th><th>บิล</th><th>ใบขนย้าย</th><th>ทะเบียน · คนขับ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
+      <tbody id="rows"></tbody>
+    </table></div>
+    <div class="panel" id="panel" hidden></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ</div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+const LIFF_ID='2010274217-Ot7vGhri';
+const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/bulk-plan';
+const DASH='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';
+const GROUPS={'FG-OL':'น้ำมันปาล์มโอเลอีน','FG-PO':'น้ำมันปาล์มข้น','FG-POMIX':'น้ำมันปาล์ม RPO-RPS','FG-PS':'ไขมันปาล์ม'};
+const ST={new:'ยังไม่แจก',sent:'แจกแล้ว · รอคนขับรับ',accepted:'รับงานแล้ว',weighed:'ชั่งต้นทางแล้ว',gate_out:'โหลดเสร็จ · ออกจาก SSB',delivered:'ส่งแล้ว'};
+let MY_UID='', DATA=null, PENDING=null;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fmt=n=>Number(n||0).toLocaleString('en-US');
+const thDate=iso=>{ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(+m[3])+'/'+(+m[2])+'/'+(+m[1]+543):'—'; };
+const thTime=iso=>{ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
+const revName=n=>n?'Revised '+n:'ฉบับแรก';
+let _t; function toast(m,err){ const t=$('toast'); t.textContent=m; t.className='toast on'+(err?' err':''); clearTimeout(_t); _t=setTimeout(()=>t.className='toast',3200); }
+function goBack(){ if(history.length>1) history.back(); else location.href=DASH; }
+function gate(t,s){ $('gate').hidden=false; $('app').hidden=true; $('gateT').textContent=t; $('gateS').textContent=s||''; }
+
+async function post(body){ const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},body))}); return r.json(); }
+async function load(date){
+  const r=await fetch(EDGE+'?action=getPlan&userId='+encodeURIComponent(MY_UID)+(date?'&date='+encodeURIComponent(date):''));
+  const d=await r.json();
+  if(!d.ok){ gate(d.denied?'🔒 ไม่มีสิทธิ์ดูแพลน Bulk':'โหลดไม่สำเร็จ', d.error||''); return; }
+  DATA=d; $('gate').hidden=true; $('app').hidden=false; render();
+}
+
+function render(){
+  const d=DATA, p=d.plan, me=d.me;
+  $('me').textContent=(me.name||'')+(me.canEdit?'':' · ดูอย่างเดียว');
+  $('planSel').innerHTML=d.plans.length?d.plans.map(x=>`<option value="${x.send_date}"${p&&p.send_date===x.send_date?' selected':''}>ส่ง ${thDate(x.send_date)} · ${revName(x.rev)}${x.dispatched_at?' · แจกแล้ว':''}</option>`).join(''):'<option>ยังไม่มีแพลน</option>';
+  $('planSel').disabled=!d.plans.length;
+  $('acts').innerHTML=me.canEdit?`<label class="btn" for="fileIn">⬆️ อัปโหลดแพลน (Excel)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>
+    ${p&&!p.dispatched_at?`<button class="btn pri" type="button" id="dispBtn">📤 แจกงานทั้งแพลน</button>`:''}`:'';
+  if(me.canEdit) $('fileIn').addEventListener('change',onFile);
+  if($('dispBtn')) $('dispBtn').addEventListener('click',askDispatch);
+  if(!p){ $('meta').innerHTML=''; $('ver').innerHTML=''; $('kpis').innerHTML='';
+    $('rows').innerHTML=`<tr><td colspan="10" class="empty">ยังไม่มีแพลน Bulk${me.canEdit?' — กด "⬆️ อัปโหลดแพลน" แล้วเลือกไฟล์ FM-MK-04 จาก SAP B1':''}</td></tr>`; return; }
+  $('meta').innerHTML=`<span>โหลด <b>${thDate(p.load_date)}</b></span><span>ส่ง <b>${thDate(p.send_date)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`;
+  $('ver').innerHTML='<span class="sub">ฉบับ:</span>'+d.revs.map((v,i)=>{ const df=v.diff||{};
+    return `<span class="v${i===d.revs.length-1?' on':''}" title="${esc(v.file_name||'')}">${revName(v.rev)} · ${thTime(v.uploaded_at)} · ${esc(v.uploaded_by_name||'')}${v.rev?` · แก้ ${(df.chg||[]).length} เพิ่ม ${(df.add||[]).length} ตัด ${(df.del||[]).length}`:` · ${(df.add||[]).length} รายการ`}</span>`; }).join('')
+    +(p.dispatched_at?`<span class="v ok">แจกงานแล้ว ${thTime(p.dispatched_at)} · ฉบับต่อไปส่งใบงานให้คนขับอัตโนมัติ</span>`:'');
+  const live=d.jobs.filter(j=>!j.cancelled), cnt=f=>live.filter(f).length;
+  $('kpis').innerHTML=[['เที่ยว',live.length],['รวม (กก.)',fmt(live.reduce((s,j)=>s+Number(j.qty_kg||0),0))],['คนขับ',new Set(live.map(j=>j.driver_uid)).size],
+    ['รอคนขับรับ',cnt(j=>j.status==='sent')],['กำลังโหลด',cnt(j=>j.status==='accepted'||j.status==='weighed')],['ออกจาก SSB',cnt(j=>j.status==='gate_out')],['ส่งแล้ว',cnt(j=>j.status==='delivered')]]
+    .map(k=>`<div class="kpi"><div class="k">${k[0]}</div><div class="v">${k[1]}</div></div>`).join('');
+  let html='', last=null;
+  const order=d.jobs.slice().sort((a,b)=>(a.prod_group||'').localeCompare(b.prod_group||'')||a.line_no-b.line_no);
+  order.forEach(j=>{
+    if(j.prod_group!==last){ last=j.prod_group; const sum=live.filter(x=>x.prod_group===j.prod_group).reduce((s,x)=>s+Number(x.qty_kg||0),0);
+      html+=`<tr class="grp"><td colspan="10">หัวจ่าย ${esc(j.prod_group||'—')} · ${esc(GROUPS[j.prod_group]||'')} · รวม <span class="num">${fmt(sum)}</span> กก.</td></tr>`; }
+    const stc=j.cancelled?'<span class="chip s-cx">ตัดออก</span>':(j.needs_ack&&j.status==='sent'?'<span class="chip s-accepted">แก้ไข · รอคนขับรับใบงานใหม่</span>':`<span class="chip s-${j.status}">${ST[j.status]||j.status}</span>`);
+    html+=`<tr class="${j.cancelled?'cx':''}"><td class="num">${j.line_no}</td>
+      <td class="cust">${esc(j.cust_name)}<small>${esc(j.cust_code)}</small></td><td>${esc(j.dest)}</td>
+      <td class="prod">${esc(j.prod_name)}<small>${esc(j.prod_code)}</small></td><td class="r num">${fmt(j.qty_kg)}</td><td>${esc(j.bill)}</td>
+      <td>${j.co?'<span class="co y">✓ มี</span>':'<span class="co n">✗</span>'}</td>
+      <td><span class="num">${esc(j.plate||'—')}</span> · ${esc(j.driver_name||'—')}</td>
+      <td>${stc}${j.change_txt?`<span class="chg">${esc(j.change_txt)}</span>`:''}</td><td>${esc(j.note||'—')}</td></tr>`;
+  });
+  $('rows').innerHTML=html||'<tr><td colspan="10" class="empty">แพลนนี้ไม่มีรายการ</td></tr>';
+}
+$('planSel').addEventListener('change',e=>{ $('panel').hidden=true; load(e.target.value); });
+
+/* ── อัปโหลด: อ่านไฟล์ FM-MK-04 ในเบราว์เซอร์ → preview → ยืนยัน → commit ── */
+function loadXLSX(){ return window.XLSX?Promise.resolve(window.XLSX):new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('โหลดตัวอ่าน Excel ไม่ได้ — ลองใหม่อีกครั้ง')); document.head.appendChild(s); }); }
+const cell=v=>String(v==null?'':v).trim();
+function parseFM(aoa){
+  const out=[]; let pend=[], dl='', ds='';
+  aoa.forEach(row=>{
+    const a=cell(row[0]), f=cell(row[5]);
+    const m=a.match(/วันที่\s*([\d\/]+).*ส่งสินค้า\s*วันที่\s*([\d\/]+)/); if(m){ dl=m[1]; ds=m[2]; return; }
+    const g=f.match(/รวม\s*จำนวนที่ต้องส่ง\s*(FG-[A-Z]+)/); if(g){ pend.forEach(r=>r.g=g[1]); pend=[]; return; }
+    if(/^\d+$/.test(a) && cell(row[1])){
+      const co=cell(row[11]);
+      const r={no:+a, code:cell(row[1]), cust:cell(row[2]), dest:cell(row[3]), pcode:cell(row[4]), prod:cell(row[5]),
+        qty:cell(row[7]), bill:cell(row[9]), plate:cell(row[10]), co:co==='✓'||co==='/'||co.toUpperCase()==='P',
+        note:[cell(row[13]),cell(row[14])].filter(Boolean).join(' · '), g:''};
+      out.push(r); pend.push(r);
+    }
+  });
+  return {rows:out, dl, ds};
+}
+async function onFile(e){
+  const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+  toast('กำลังอ่านไฟล์ '+f.name+' …');
+  try{
+    const X=await loadXLSX(), wb=X.read(await f.arrayBuffer(),{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
+    const p=parseFM(X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
+    if(!p.rows.length){ toast('ไม่พบรายการในไฟล์ — ต้องเป็นรูปแบบ FM-MK-04 (แผนการส่งมอบ SSB)',true); return; }
+    PENDING={sendDate:p.ds, loadDate:p.dl, fileName:f.name, rows:p.rows};
+    const pv=await post(Object.assign({action:'preview'},PENDING));
+    showPreview(pv);
+  }catch(err){ toast(String(err.message||err),true); }
+}
+function showPreview(pv){
+  const P=$('panel'); P.hidden=false; P.className='panel';
+  if(!pv.ok){ P.className='panel bad'; P.innerHTML=`<div class="txt">⛔ ${esc(pv.error||'อ่านไฟล์ไม่สำเร็จ')}</div><div class="acts"><button class="btn" type="button" onclick="closePanel()">ปิด</button></div>`; return; }
+  const li=[].concat(
+    pv.chg.map(c=>`<li>แก้ #${c.no} ${esc(c.cust)} — ${esc(c.txt)}</li>`),
+    pv.add.map(a=>`<li>${pv.isNew?'':'เพิ่ม '}#${a.no} ${esc(a.cust)} · ${fmt(a.qty)} กก. · ${esc(a.driver||'ไม่พบคนขับ')}</li>`),
+    pv.del.map(x=>`<li>ตัดออก #${x.no} ${esc(x.cust)}</li>`)).join('');
+  const blocked=pv.missing.length>0||pv.loadedGone.length>0||pv.unchanged;
+  let warn='';
+  if(pv.missing.length) warn+=`<div style="color:var(--bad);font-weight:600;margin-top:6px">⛔ แพลนต้องมีคนขับครบก่อน — ทะเบียนไม่พบในตารางคนขับ:</div><ul>${pv.missing.map(m=>`<li>#${m.no} ${esc(m.cust)} · ทะเบียน "${esc(m.plate||'ว่าง')}"</li>`).join('')}</ul>แก้ใน SAP แล้วอัปโหลดใหม่`;
+  if(pv.loadedGone.length) warn+=`<div style="color:var(--bad);font-weight:600;margin-top:6px">⛔ ไฟล์ตัดรายการที่โหลดแล้วออก (#${pv.loadedGone.join(', #')}) — ตรวจไฟล์อีกครั้ง</div>`;
+  if(pv.unchanged) warn+=`<div style="font-weight:600;margin-top:6px">ไฟล์นี้เหมือนฉบับล่าสุด — ไม่มีอะไรเปลี่ยน</div>`;
+  if(pv.inactive.length) warn+=`<div class="warnd" style="margin-top:6px">⚠️ คนขับยังไม่ Active ใน LINE ${pv.inactive.length} คน (${esc([...new Set(pv.inactive.map(x=>x.name))].join(', '))}) — จะยังไม่ได้รับการ์ดจนกว่าจะเปิดใช้งาน</div>`;
+  const head=pv.isNew?`🗓️ <b>แพลนใหม่ · ส่ง ${thDate(pv.sendDate)}</b> (ฉบับแรก) — ${pv.total} เที่ยว`
+    :`<b>${esc(pv.revName)} · ส่ง ${thDate(pv.sendDate)}</b> — แก้ ${pv.chg.length} · เพิ่ม ${pv.add.length} · ตัดออก ${pv.del.length}`;
+  const after=pv.dispatched?' · แจกงานแล้ว → ส่ง<b>ใบงานใหม่/แก้ไข/ยกเลิก</b>ให้คนขับอัตโนมัติ':' · ยังไม่แจกงาน (กดแจกงานเมื่อพร้อม)';
+  P.className='panel'+(blocked?' bad':'');
+  P.innerHTML=`<div class="txt">${head}<ul>${li}</ul>${warn}${blocked?'':`<div style="margin-top:4px">กดยืนยัน → บันทึกเป็น <b>${esc(pv.revName)}</b>${after}</div>`}</div>
+    <div class="acts"><button class="btn" type="button" onclick="closePanel()">${blocked?'ปิด':'ยกเลิก'}</button>${blocked?'':'<button class="btn gold" type="button" id="cYes">ยืนยันใช้ไฟล์นี้</button>'}</div>`;
+  if(!blocked) $('cYes').onclick=doCommit;
+}
+function closePanel(){ $('panel').hidden=true; PENDING=null; }
+async function doCommit(){
+  if(!PENDING) return; const b=$('cYes'); b.disabled=true; b.textContent='กำลังบันทึก…';
+  try{
+    const d=await post(Object.assign({action:'commit'},PENDING));
+    if(!d.ok){ showPreview(Object.assign({},d,{ok:true})); toast(d.error||'บันทึกไม่สำเร็จ',true); return; }
+    closePanel(); toast('บันทึก '+d.revName+' แล้ว'+(d.dispatched?' · ส่งใบงานให้คนขับ '+(d.notify.newJobs.length+d.notify.changed.length+d.notify.cancelled.length)+' ใบ':''));
+    load(d.sendDate);
+  }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(); }
+}
+
+/* ── แจกงานทั้งแพลน ── */
+function askDispatch(){
+  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled);
+  const by={}; live.forEach(j=>{ by[j.driver_name]=(by[j.driver_name]||0)+1; });
+  const P=$('panel'); P.hidden=false; P.className='panel';
+  P.innerHTML=`<div class="txt">แจกงานทั้งแพลน · ส่ง ${thDate(p.send_date)} — <b>${live.length} เที่ยว</b> ให้คนขับ ${Object.keys(by).length} คน: ${esc(Object.keys(by).map(k=>k+' ('+by[k]+')').join(', '))}<br>คนขับได้การ์ด LINE ทันที · หลังจากนี้อัปโหลดฉบับใหม่ = ส่งใบงานให้อัตโนมัติ</div>
+    <div class="acts"><button class="btn" type="button" onclick="closePanel()">ยกเลิก</button><button class="btn gold" type="button" id="dYes">ยืนยันแจกงาน</button></div>`;
+  $('dYes').onclick=async()=>{ const b=$('dYes'); b.disabled=true; b.textContent='กำลังแจก…';
+    try{ const d=await post({action:'dispatch',planId:p.id});
+      if(d.ok){ closePanel(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · คนขับ '+d.drivers+' คน'); load(p.send_date); }
+      else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
+    }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
+}
+
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
+    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(!MY_UID){ gate('ไม่พบ LINE UID','เปิดผ่าน LINE อีกครั้ง'); return; }
+    gate('🔐 ใส่ PIN','');
+    if(!(await ssbAdminPin(MY_UID,{text:'แพลนส่งมอบ Bulk'}))){ gate('🔒 ต้องใส่ PIN ก่อนเข้า',''); return; }
+    gate('กำลังโหลดแพลน…','');
+    load(new URLSearchParams(location.search).get('date')||'');
+  }catch(e){ gate('เชื่อมต่อ LINE ไม่สำเร็จ', String(e)); }
+})();
+</script>
+</body>
+</html>
