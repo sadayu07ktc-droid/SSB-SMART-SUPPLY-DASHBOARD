@@ -4,6 +4,9 @@
  *   ตรวจ PIN จริงที่ Edge admin-perms (pinCheck · ผิด 5 ครั้ง = ล็อก 15 นาที) — หน้าเว็บไม่เก็บ PIN
  *   ผ่านแล้วจำในแท็บนี้ 15 นาที (sessionStorage · ใช้ต่อเนื่องจะต่อเวลาเอง) → สลับ 3 หน้านี้ไม่ต้องใส่ซ้ำ
  *   ⚠️ ล็อกระดับหน้าจอ: หน้าไม่โหลดข้อมูลจนกว่าจะผ่าน (API ข้อมูลยังเช็คแค่ว่าเป็นแอดมิน)
+ *   🆕 2026-10-14 ล็อกเฉพาะปุ่ม (ไม่ใช่ทั้งหน้า): ssbPinGate(uid, { action:true, text:'…' })
+ *        ปุ่ม "‹ กลับ" = ปิดกล่อง + คืน false (อยู่หน้าเดิม) · ใช้ที่หน้าผู้ใช้งาน (ดาวน์โหลด/นำเข้าไฟล์)
+ *   ssbPinInfo(uid) → { ok, canEdit, pinSet } ไว้ซ่อนปุ่มจากคนที่ไม่ใช่ DEV
  */
 (function () {
   var EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/admin-perms';
@@ -42,34 +45,41 @@
     return w;
   }
   function back() { if (history.length > 1) history.back(); else location.href = DASH; }
+  var onBack = back;   // โหมดล็อกเฉพาะปุ่ม → แทนด้วย "ปิดกล่อง"
   function msgBox(icon, title, text, extra) {
     var w = show('<div class="ic">' + icon + '</div><h2>' + title + '</h2><p>' + text + '</p>' + (extra || '') +
       '<button type="button" class="pg-btn pg-back" id="pg-back">‹ กลับ</button>');
-    w.querySelector('#pg-back').onclick = back;
+    w.querySelector('#pg-back').onclick = function () { onBack(); };
   }
+  window.ssbPinInfo = function (uid) {
+    return fetch(EDGE + '?action=getPermInfo&userId=' + encodeURIComponent(String(uid || '').trim())).then(function (r) { return r.json(); });
+  };
 
-  window.ssbPinGate = async function (uid) {
+  window.ssbPinGate = async function (uid, opts) {
+    opts = opts || {};
     uid = String(uid || '').trim();
+    var closeWrap = function () { var w = document.getElementById('pg-wrap'); if (w) w.remove(); };
+    onBack = opts.action ? closeWrap : back;
     if (!uid) { msgBox('🔒', 'เข้าไม่ได้', 'ไม่พบบัญชี LINE'); return false; }
     if (remembered(uid)) { remember(uid); return true; }
     show('<div class="ic">🔐</div><h2>กำลังตรวจสิทธิ์</h2><p>รอสักครู่…</p>');
     var info = null;
     try { info = await fetch(EDGE + '?action=getPermInfo&userId=' + encodeURIComponent(uid)).then(function (r) { return r.json(); }); } catch (e) {}
     if (!info || !info.ok) { msgBox('⚠️', 'ตรวจสิทธิ์ไม่สำเร็จ', 'เชื่อมต่อไม่ได้ ลองเปิดหน้านี้ใหม่อีกครั้ง'); return false; }
-    if (!info.canEdit) { msgBox('🔒', 'เฉพาะผู้ได้รับสิทธิ์', 'หน้านี้ดูได้เฉพาะ DEV ที่มี PIN<br>ถ้าต้องการข้อมูล กรุณาติดต่อผู้ดูแลระบบ'); return false; }
+    if (!info.canEdit) { msgBox('🔒', 'เฉพาะผู้ได้รับสิทธิ์', (opts.action ? 'ปุ่มนี้ใช้ได้เฉพาะ DEV ที่มี PIN' : 'หน้านี้ดูได้เฉพาะ DEV ที่มี PIN') + '<br>ถ้าต้องการข้อมูล กรุณาติดต่อผู้ดูแลระบบ'); return false; }
     if (!info.pinSet) {
       msgBox('🔐', 'ยังไม่ได้ตั้ง PIN', 'ตั้ง PIN 6 หลักที่หน้า "สิทธิ์แอดมิน" ก่อน แล้วกลับมาเปิดหน้านี้',
         '<a class="pg-btn pg-ok" href="' + DASH + 'admins.html">ไปตั้ง PIN</a>');
       return false;
     }
     return await new Promise(function (resolve) {
-      var w = show('<div class="ic">🔐</div><h2>ใส่ PIN 6 หลัก</h2><p>หน้านี้มีข้อมูลต้นทุน/ค่าแรง<br>ใส่ PIN ชุดเดียวกับหน้าสิทธิ์แอดมิน</p>' +
+      var w = show('<div class="ic">🔐</div><h2>ใส่ PIN 6 หลัก</h2><p>' + (opts.text || 'หน้านี้มีข้อมูลต้นทุน/ค่าแรง') + '<br>ใส่ PIN ชุดเดียวกับหน้าสิทธิ์แอดมิน</p>' +
         '<input id="pg-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="off" placeholder="••••••" aria-label="PIN 6 หลัก">' +
         '<div id="pg-err" role="alert">' + (info.lockMin ? 'ใส่ PIN ผิดหลายครั้ง — ล็อกอีก ' + info.lockMin + ' นาที' : '') + '</div>' +
         '<button type="button" class="pg-btn pg-ok" id="pg-ok">ปลดล็อก</button>' +
         '<button type="button" class="pg-btn pg-back" id="pg-back">‹ กลับ</button>');
       var inp = w.querySelector('#pg-pin'), ok = w.querySelector('#pg-ok'), err = w.querySelector('#pg-err');
-      w.querySelector('#pg-back').onclick = back;
+      w.querySelector('#pg-back').onclick = function () { if (opts.action) { closeWrap(); resolve(false); } else back(); };
       inp.addEventListener('input', function () { inp.value = inp.value.replace(/\D/g, '').slice(0, 6); if (inp.value.length === 6) submit(); });
       inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') submit(); });
       ok.onclick = submit;
