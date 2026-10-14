@@ -1,6 +1,8 @@
 <title>ออเดอร์ทั้งหมด · SSB</title>
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261008h"></script>
+<script src="ssb-read.js?v=20261014b"></script>
+<script src="ssb-pin-gate.js?v=20261014b"></script>
+<script src="ssb-group-gate.js?v=20261014a"></script>
 <script src="ssb-ui.js?v=20261008h"></script>
 <style>
   :root{
@@ -172,7 +174,7 @@
 <header><div class="bar">
   <button class="backbtn" onclick="goBack()">← กลับ</button>
   <div><div class="eyebrow">SSB Smart Supply · Orders</div><h1>ออเดอร์ทั้งหมด</h1></div>
-  <div class="spacer"></div><span class="count" id="cnt"></span>
+  <div class="spacer"></div><span id="grpChip"></span><span class="count" id="cnt"></span>
 </div></header>
 
 <main>
@@ -196,7 +198,7 @@
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
-let MY_UID='', ORDERS=[], COUNTS={}, FILTER='', SEL=new Set(), BUSY=false;
+let MY_UID='', ORDERS=[], COUNTS={}, FILTER='', SEL=new Set(), BUSY=false, GROUP='', PROFILE={};
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -236,7 +238,9 @@ async function load(){
   if(res.denied){ $('#gate').innerHTML='<div class="box"><div class="deny">🚫</div><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>หน้านี้สำหรับแอดมินเท่านั้น</p></div>'; return; }
   $('#gate').style.display='none';
   if(!res.ok){ $('#list').innerHTML=`<div class="empty">${esc(res.error||'โหลดข้อมูลไม่สำเร็จ')}</div>`; return; }
-  ORDERS=res.orders||[]; COUNTS=res.counts||{}; SEL.clear(); render();
+  // 🧭 เฉพาะกลุ่มที่เลือก (ปาล์ม=ไร่ · Packing · Bulk) — นับจำนวนต่อสถานะใหม่จากรายการที่เหลือ
+  ORDERS=(res.orders||[]).filter(o=>ssbOrderGroup(o.jobType)===GROUP);
+  COUNTS={}; ORDERS.forEach(o=>{COUNTS[o.status]=(COUNTS[o.status]||0)+1;}); SEL.clear(); render();
 }
 
 function visible(){
@@ -333,13 +337,23 @@ async function bulkDelete(){
   } else { toast('❌ '+(d.error||''),true); render(); }
 }
 
+/* 🧭 เลือกกลุ่ม (ไร่/Bulk/Packing) + PIN ส่วนตัวแอดมิน ก่อนเข้า · ssb-group-gate.js (2026-10-14) */
+async function chooseGroup(){
+  $('#gate').style.display='none';
+  const g=await ssbGroupGate(MY_UID,{title:'ออเดอร์ทั้งหมด',key:'orders',name:PROFILE.name,picture:PROFILE.picture});
+  if(!g) return;
+  const changed=g!==GROUP; GROUP=g; ssbGroupChip($('#grpChip'),g,chooseGroup);
+  if(changed||!ORDERS.length){ FILTER=''; $('#list').innerHTML='<div class="empty">กำลังโหลด…</div>'; load(); }
+}
+
 (async function(){
   try{
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
     const p=await liff.getProfile(); MY_UID=p.userId||'';
     if(!MY_UID){ $('#gate').innerHTML='<div class="box"><div class="deny">⚠️</div><h2>ไม่พบ LINE UID</h2><p>เปิดผ่านแอป LINE อีกครั้ง</p></div>'; return; }
-    load();
+    PROFILE={name:p.displayName,picture:p.pictureUrl};
+    chooseGroup();
   }catch(e){ $('#gate').innerHTML='<div class="box"><div class="deny">⚠️</div><h2>เชื่อมต่อ LINE ไม่สำเร็จ</h2><p>'+esc(e)+'</p></div>'; }
 })();
 </script>
