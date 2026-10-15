@@ -435,7 +435,7 @@ function draw(){
     <div class="sect"><h3>สิทธิ์</h3>
       <div class="sw"><div class="body"><div class="t">รับแจ้งเตือน</div>
         <div class="d">ได้รับ LINE เมื่อมีออเดอร์ใหม่ · ชั่งน้ำหนักเสร็จ · ขอลา · แจ้งซ่อม</div>
-        <div class="val">รับแจ้งเตือน = "${D.notify?'รับแจ้งเตือน':'(ว่าง)'}"</div></div>
+        <div class="val">รับแจ้งเตือน = "${D.notify?'รับแจ้งเตือน':'(ว่าง)'}"</div>
         ${bulkOnly?'<div class="val" style="color:#B45309">ประเภท '+D.type+' ปิดรับแจ้งเตือนงานไร่ให้อัตโนมัติ</div>':''}</div>
         <button class="toggle ${D.notify?'on':''}" onclick="tog('notify')" ${bulkOnly?'disabled style="opacity:.4;cursor:not-allowed"':''}><span class="knob"></span></button></div>
       ${D.type==='ACC_BULK'||D.email?`<div class="sw"><div class="body" style="flex:1"><div class="t">อีเมล ${D.type==='ACC_BULK'?'<span style="color:#B42318;font-size:11px">* จำเป็นสำหรับบัญชี</span>':''}</div>
