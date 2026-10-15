@@ -90,6 +90,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .pvwrap th{position:sticky;top:0;z-index:1}
 .pvwrap td{padding:7px 8px}
 .pvwrap tr.grp td{position:static}
+.pvwrap td.pl{white-space:nowrap}
 .pvwrap td.hl{background:var(--warnTint);font-weight:700}
 .pvwrap tr.bad td{background:var(--badTint)}
 .pvwrap tr.same td{color:var(--muted)}
@@ -283,7 +284,7 @@ function pvRows(pv,onlyChanged){
       <td class="cust${hl('cust')}">${esc(r.cust)}<small>${esc(r.cust_code)}</small></td><td class="${hl('dest')}">${esc(r.dest)}</td>
       <td class="prod${hl('prod')}">${esc(r.prod)}<small>${esc(r.prod_code)}</small></td><td class="r num${hl('qty')}">${fmt(r.qty)}</td>
       <td class="${hl('bill')}">${esc(r.bill)}</td><td class="${hl('co')}">${r.co?'<span class="co y">✓ มี</span>':'<span class="co n">✗</span>'}</td>
-      <td class="num${hl('plate')}">${esc(r.plate||'—')}</td><td class="${hl('plate')}">${drvCell}</td><td>${esc(r.note||'—')}</td></tr>`;
+      <td class="num pl${hl('plate')}">${esc(r.plate||'—').replace(/\s*,\s*/g,'<br>')}</td><td class="${hl('plate')}">${drvCell}</td><td>${esc(r.note||'—')}</td></tr>`;
   });
   return html;
 }
