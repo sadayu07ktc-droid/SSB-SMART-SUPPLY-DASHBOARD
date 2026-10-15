@@ -118,6 +118,29 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .note{font-size:12.5px;color:var(--muted);padding:10px 16px}
 .empty{padding:40px 16px;text-align:center;color:var(--muted)}
 .gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:50;padding:16px;text-align:center}
+/* แถบวิ่งสถานะเที่ยว (skill webapp-ticker · ผูกโทน SSB) · 2026-10-15 */
+.ticker{display:flex;align-items:stretch;margin:0 0 14px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(90deg,var(--surface2),var(--surface))}
+.tk-label{display:flex;align-items:center;gap:6px;padding:0 15px;border:0;font:700 12px/1 var(--f-ui);letter-spacing:.02em;color:#fff;
+  background:linear-gradient(135deg,var(--brand),var(--brand2));white-space:nowrap;flex-shrink:0;cursor:default}
+.tk-label:focus-visible{outline:2px solid #fff;outline-offset:-3px}
+.tk-date{font-weight:500;font-size:11px;opacity:.8;margin-left:2px}
+.tk-view{position:relative;overflow:hidden;flex:1;min-width:0}
+.tk-view::before,.tk-view::after{content:"";position:absolute;top:0;bottom:0;width:38px;z-index:2;pointer-events:none}
+.tk-view::before{left:0;background:linear-gradient(90deg,var(--surface2),transparent)}
+.tk-view::after{right:0;background:linear-gradient(270deg,var(--surface),transparent)}
+.tk-track{display:flex;align-items:center;width:max-content;animation:tkscroll linear infinite}
+.ticker:hover .tk-track,.ticker:focus-within .tk-track{animation-play-state:paused}
+@keyframes tkscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tk-item{display:inline-flex;align-items:center;gap:7px;padding:9px 17px;border-right:1px solid var(--line);white-space:nowrap;font-size:13px}
+.tk-code{font-family:var(--f-num);font-size:12px;color:var(--muted)}
+.tk-val{font-family:var(--f-num);font-weight:600;color:var(--ink)}
+.tk-u{font-size:11px;color:var(--muted);margin-left:-3px}
+.tk-st{font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px}
+.tk-item.tk-sum{background:linear-gradient(90deg,var(--goldTint),transparent)}
+.tk-sumlb{font-size:12px;font-weight:700;color:var(--goldInk)}
+.tk-sep{display:inline-flex;align-items:center;padding:0 16px;white-space:nowrap;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em}
+@media(prefers-reduced-motion:reduce){.tk-track{animation:none}.tk-view{overflow-x:auto}}
+@media(max-width:760px){.tk-label{padding:0 11px;font-size:11px;max-width:46%}.tk-date{display:none}.tk-item{padding:8px 13px;gap:6px}.tk-view::before,.tk-view::after{width:22px}}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--brand);color:#fff;border-radius:12px;padding:10px 16px;font-size:13.5px;font-weight:600;opacity:0;transition:.25s;max-width:calc(100% - 32px);z-index:60}
 .toast.on{opacity:1;transform:translateX(-50%)}
 .toast.err{background:var(--bad)}
@@ -132,6 +155,10 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
     <div class="logo">Bulk</div>
     <div><h1>แพลนส่งมอบ Bulk</h1><div class="sub">FM-MK-04 จาก SAP B1 · 1 แพลน = 1 วันที่ส่ง · อัปโหลดวันที่ส่งเดิมซ้ำ = Revised</div></div>
     <span class="me" id="me"></span>
+  </div>
+  <div class="ticker" id="ticker" hidden>
+    <button class="tk-label" id="tkLabel" type="button" title="สถานะเที่ยวล่าสุด"></button>
+    <div class="tk-view"><div class="tk-track" id="tkTrack"></div></div>
   </div>
   <div class="card">
     <div class="head">
@@ -150,7 +177,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15i</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15j</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -214,7 +241,7 @@ function render(){
   if($('repBtn')) $('repBtn').addEventListener('click',bulkReport);
   if(me.canEdit) $('fileIn').addEventListener('change',onFile);
   if($('dispBtn')) $('dispBtn').addEventListener('click',askDispatch);
-  if(!p){ $('vbar').hidden=true; $('meta').innerHTML=''; $('ver').innerHTML=''; $('kpis').innerHTML='';
+  if(!p){ buildTicker(null,[]); $('vbar').hidden=true; $('meta').innerHTML=''; $('ver').innerHTML=''; $('kpis').innerHTML='';
     $('rows').innerHTML=`<tr><td colspan="10" class="empty">ยังไม่มีแพลน Bulk${me.canEdit?' — กด "⬆️ อัปโหลดแพลน" แล้วเลือกไฟล์ FM-MK-04 จาก SAP B1':''}</td></tr>`; return; }
   $('meta').innerHTML=`<span>โหลด <b>${thDate(p.load_date)}</b></span><span>ส่ง <b>${thDate(p.send_date)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`;
   const lastRev=d.revs.length?d.revs[d.revs.length-1].rev:0;
@@ -266,6 +293,7 @@ function render(){
       <td>${stc}${j.change_txt?`<span class="chg">${esc(j.change_txt)}</span>`:''}</td><td>${esc(j.note||'—')}</td></tr>`;
   });
   $('rows').innerHTML=html||'<tr><td colspan="10" class="empty">แพลนนี้ไม่มีรายการ</td></tr>';
+  buildTicker(viewing?null:p, viewing?[]:live);
 }
 $('planSel').addEventListener('change',e=>{ $('panel').hidden=true; load(e.target.value); });
 
@@ -409,6 +437,32 @@ function askDispatch(){
       if(d.ok){ close(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)); load(p.send_date); }
       else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
     }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
+}
+
+/* ── 🚛 แถบวิ่งสถานะเที่ยว (skill webapp-ticker) · 2026-10-15
+   ยอดสรุปแต่ละสถานะ → เที่ยวที่ออกจาก SSB แล้ว (โหลดเสร็จ · ผ่านป้อมยาม) → ชั่งต้นทางแล้ว → ยังไม่โหลด · เฉพาะฉบับล่าสุด (ฉบับย้อนหลังไม่มีสถานะ) */
+const TK_ST={new:['ยังไม่แจก','var(--muted)','var(--surface2)'],sent:['รอคนขับรับ','var(--info)','var(--infoTint)'],accepted:['รับงานแล้ว','var(--warn)','var(--warnTint)'],
+  weighed:['ชั่งต้นทางแล้ว','var(--goldInk)','var(--goldTint)'],gate_out:['ออกจาก SSB','var(--brandInk)','var(--tint)'],delivered:['ส่งแล้ว','var(--ok)','var(--okTint)']};
+const tkSt=s=>{ const t=TK_ST[s]||[s,'var(--muted)','var(--surface2)']; return `<span class="tk-st" style="color:${t[1]};background:${t[2]}">${esc(t[0])}</span>`; };
+const tkSep=t=>`<span class="tk-sep">${esc(t)} ▸</span>`;
+function buildTicker(p,live){
+  const box=$('ticker'), track=$('tkTrack'), lab=$('tkLabel');
+  if(!p||!live.length){ box.hidden=true; track.innerHTML=''; return; }
+  const cnt=s=>live.filter(j=>j.status===s).length;
+  const sum=[['เที่ยวทั้งหมด',live.length]].concat(Object.keys(TK_ST).map(s=>[TK_ST[s][0],cnt(s)]).filter((x,i)=>i===0||x[1]))
+    .map((x,i)=>`<span class="tk-item tk-sum"><span class="tk-sumlb">${esc(x[0])}</span><span class="tk-val">${x[1]}</span>${i===0?'':'<span class="tk-u">เที่ยว</span>'}</span>`).join('');
+  const trip=j=>`<span class="tk-item"><span class="tk-code">#${j.line_no}</span><span>${esc(j.driver_name||'—')}</span><span class="tk-code">${esc(String(j.plate||'').split(/\s*[,/]\s*/)[0])}</span>
+    <span class="tk-val">${fmt(j.qty_kg)}</span><span class="tk-u">กก.</span>${tkSt(j.needs_ack&&j.status==='sent'?'sent':j.status)}${j.status==='gate_out'&&j.gate_out_at?`<span class="tk-code">${thTime(j.gate_out_at)}</span>`:''}</span>`;
+  const out=live.filter(j=>j.status==='gate_out'||j.status==='delivered'), wg=live.filter(j=>j.status==='weighed'), rest=live.filter(j=>['gate_out','delivered','weighed'].indexOf(j.status)<0);
+  let html=sum, n=sum.split('tk-item').length-1+live.length;
+  if(out.length) html+=tkSep('ออกจาก SSB แล้ว '+out.length+' เที่ยว')+out.map(trip).join('');
+  if(wg.length) html+=tkSep('ชั่งต้นทางแล้ว · รอออก '+wg.length+' เที่ยว')+wg.map(trip).join('');
+  if(rest.length) html+=tkSep('ยังไม่โหลด '+rest.length+' เที่ยว')+rest.map(trip).join('');
+  lab.innerHTML=`🚛 สถานะเที่ยว<span class="tk-date"> · ส่ง ${thDate(p.send_date)}</span>`;
+  track.innerHTML=html+html;   // 2 ชุด = วนไร้รอยต่อ (เลื่อน −50%)
+  track.style.animation='none'; void track.offsetWidth; track.style.animation='';
+  track.style.animationDuration=Math.max(30,n*3.2)+'s';
+  box.hidden=false;
 }
 
 /* ── 🖨️ รายงาน Excel / PDF / JPEG (skill webapp-report-export · docreport.js ปรับเป็นโทน SSB) · 2026-10-15
