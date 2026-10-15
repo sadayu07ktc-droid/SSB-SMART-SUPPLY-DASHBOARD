@@ -139,7 +139,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15g</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15h</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -417,8 +417,15 @@ function bulkReport(){
     cols:[{h:'#',w:28,a:'center',x:5},{h:'หัวจ่าย',w:64,x:10},{h:'ลูกค้า',w:0,x:38},{h:'ส่งที่',w:56,x:10},{h:'สินค้า',w:126,x:26},
       {h:'จำนวน (กก.)',w:72,a:'right',x:12},{h:'บิล',w:30,a:'center',x:6},{h:'ใบขนย้าย',w:54,a:'center',x:9},
       {h:'ทะเบียน',w:104,x:18},{h:'คนขับ',w:108,x:20},{h:'หมายเหตุ',w:80,x:18},{h:v.old?'เปลี่ยน':'สถานะ',w:92,a:'center',x:16}],
-    rows:rows.map(j=>[j.line_no,j.prod_group||'',j.cust_name||'',j.dest||'',j.prod_name||'',Number(j.qty_kg)||0,j.bill||'',j.co?'✓ มี':'✗',
-      String(j.plate||'').replace(/\s*[,/]\s*/g,' / '),j.driver_name||'',j.note||'',stTx(j)]),
+    // แถวรวมท้ายแต่ละหัวจ่าย (เหมือน "รวม จำนวนที่ต้องส่ง FG-…" ในไฟล์ SAP) · แถวพิเศษ = {sub:[…]}
+    rows:rows.reduce((out,j,i)=>{
+      out.push([j.line_no,j.prod_group||'',j.cust_name||'',j.dest||'',j.prod_name||'',Number(j.qty_kg)||0,j.bill||'',j.co?'✓ มี':'✗',
+        String(j.plate||'').replace(/\s*[,/]\s*/g,' / '),j.driver_name||'',j.note||'',stTx(j)]);
+      const nx=rows[i+1];
+      if(!nx||nx.prod_group!==j.prod_group){ const g=rows.filter(x=>x.prod_group===j.prod_group);
+        out.push({sub:['',j.prod_group||'—','รวมจำนวนที่ต้องส่ง '+(j.prod_group||'')+' · '+(GROUPS[j.prod_group]||''),'',g.length+' เที่ยว',
+          g.reduce((s,x)=>s+Number(x.qty_kg||0),0),'','','','','','']}); }
+      return out; },[]),
     status:{col:11,map:{'ยังไม่แจก':['#5f5e5a','#efefef'],'แจกแล้ว · รอคนขับรับ':['#185fa5','#e6f1fb'],'รับงานแล้ว':['#8a5a0b','#fef0d9'],
       'ชั่งต้นทางแล้ว':['#8a5a0b','#fef0d9'],'โหลดเสร็จ · ออกจาก SSB':['#185fa5','#e6f1fb'],'ส่งแล้ว':['#127a2e','#e7f5ee'],
       'แก้ไข · รอรับใหม่':['#a33b0b','#fde9d9'],'แก้ในฉบับนี้':['#a33b0b','#fde9d9'],'เพิ่มในฉบับนี้':['#185fa5','#e6f1fb']}},
@@ -472,7 +479,11 @@ async function docReportXlsx(spec){
   const aoa=[r0,r1,[]], merges=[{s:{r:0,c:0},e:{r:0,c:n-1}},{s:{r:1,c:0},e:{r:1,c:n-1}}];
   if(spec.kpis&&spec.kpis.length){ aoa.push(spec.kpis.map(k=>c(k[0],S.kl))); aoa.push(spec.kpis.map(k=>c(String(k[1]),S.kv))); aoa.push([]); }
   aoa.push(spec.cols.map(k=>c(k.h,S.th)));
-  spec.rows.forEach((r,i)=>{
+  let zi=0;
+  spec.rows.forEach(r=>{
+    if(r.sub){ aoa.push(r.sub.map((v,ci)=>c(v,{font:F({bold:true,sz:ci===5?12:10,color:{rgb:'1B4332'}}),fill:{fgColor:{rgb:'FBF0C9'}},border:bd,
+      alignment:{horizontal:spec.cols[ci].a==='right'?'right':'left',vertical:'center'}}))); merges.push({s:{r:aoa.length-1,c:2},e:{r:aoa.length-1,c:3}}); zi=0; return; }
+    const i=zi++;
     const base={font:F(),border:bd,alignment:{vertical:'top',wrapText:true}}; if(i%2) base.fill={fgColor:{rgb:'F7FAF8'}};
     aoa.push(r.map((v,ci)=>{
       let s=Object.assign({},base,{alignment:Object.assign({},base.alignment,{horizontal:spec.cols[ci].a==='right'?'right':(spec.cols[ci].a==='center'?'center':'left')})});
@@ -502,7 +513,9 @@ function docReportPages(spec){
       <div style="font-size:10.5px;color:#5E6F65">${e(k[0])}</div><div style="font-size:18px;font-weight:800;color:#14251C">${e(String(k[1]))}</div></div>`).join('')}</div>`:'';
   const colg='<colgroup>'+spec.cols.map(k=>'<col'+(k.w?(' style="width:'+k.w+'px"'):'')+'>').join('')+'</colgroup>';
   const thead='<tr>'+spec.cols.map((k,i)=>`<th style="${th};text-align:${k.a||'left'}${i===0?';border-radius:8px 0 0 0':''}${i===spec.cols.length-1?';border-radius:0 8px 0 0':''}">${e(k.h)}</th>`).join('')+'</tr>';
-  const tr=(r,i)=>'<tr style="background:'+(i%2?'#f7faf8':'#fff')+'">'+r.map((v,ci)=>{
+  const tr=(r,i)=>r.sub?'<tr style="background:#FBF0C9;font-weight:800;color:#1B4332">'+r.sub.map((v,ci)=>
+      `<td style="${cell};border-top:1.5px solid #C9A227;border-bottom:1.5px solid #C9A227;overflow:visible;text-align:${spec.cols[ci].a||'left'}${ci===5?';font-size:13px':''}">${e(typeof v==='number'?fmt(v):String(v==null?'':v))}</td>`).join('')+'</tr>'
+    :'<tr style="background:'+(i%2?'#f7faf8':'#fff')+'">'+r.map((v,ci)=>{
       let st=''; if(spec.status&&ci===spec.status.col&&spec.status.map[v]){ const cc=spec.status.map[v]; st=`<span style="display:inline-block;line-height:16px;vertical-align:middle;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;color:${cc[0]};background:${cc[1]}">${e(String(v))}</span>`; }
       if(!st&&spec.tint&&ci===spec.tint.col&&spec.tint.map[v]) st=`<b style="color:${spec.tint.map[v]}">${e(String(v))}</b>`;
       const val=st||e(typeof v==='number'?fmt(v):String(v==null?'':v));
