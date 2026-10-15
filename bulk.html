@@ -52,7 +52,10 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);
 .head .meta b{font-family:var(--f-num)}
 .head .acts{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 .ver{display:flex;gap:6px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line);font-size:12.5px;align-items:center}
-.ver .v{border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted)}
+.ver .v{border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted);background:var(--surface);font:inherit;font-size:12.5px}
+.ver button.v{cursor:pointer}.ver button.v:hover{border-color:var(--brand2);color:var(--brandInk)}
+.ver button.v:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+.vbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;padding:10px 16px;background:var(--infoTint);border-bottom:1px solid var(--line);font-size:13.5px}
 .ver .v.on{border-color:var(--brand2);color:var(--brandInk);font-weight:600}
 .ver .v.ok{border-color:var(--ok);color:var(--ok);font-weight:600}
 .kpis{display:flex;gap:8px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
@@ -126,13 +129,14 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <div class="acts" id="acts"></div>
     </div>
     <div class="ver" id="ver"></div>
+    <div class="vbar" id="vbar" hidden></div>
     <div class="kpis" id="kpis"></div>
     <div class="tbl"><table>
       <thead><tr><th>#</th><th>ลูกค้า</th><th>สถานที่ส่ง</th><th>สินค้า</th><th class="r">จำนวน (กก.)</th><th>บิล</th><th>ใบขนย้าย</th><th>ทะเบียน · คนขับ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15b</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15c</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -143,7 +147,17 @@ const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/bulk-plan';
 const DASH='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';
 const GROUPS={'FG-OL':'น้ำมันปาล์มโอเลอีน','FG-PO':'น้ำมันปาล์มข้น','FG-POMIX':'น้ำมันปาล์ม RPO-RPS','FG-PS':'ไขมันปาล์ม'};
 const ST={new:'ยังไม่แจก',sent:'แจกแล้ว · รอคนขับรับ',accepted:'รับงานแล้ว',weighed:'ชั่งต้นทางแล้ว',gate_out:'โหลดเสร็จ · ออกจาก SSB',delivered:'ส่งแล้ว'};
-let MY_UID='', DATA=null, PENDING=null;
+let MY_UID='', DATA=null, PENDING=null, VIEW=null;   // VIEW = {planId, rev:{rev,rows,diff,...}} ฉบับย้อนหลังที่กำลังดู
+async function openRev(planId,rev,lastRev){
+  if(rev===lastRev){ VIEW=null; render(); return; }
+  if(VIEW&&VIEW.planId===planId&&VIEW.rev.rev===rev) return;
+  toast('กำลังเปิด '+revName(rev)+' …');
+  try{
+    const r=await fetch(EDGE+'?action=getRev&userId='+encodeURIComponent(MY_UID)+'&planId='+planId+'&rev='+rev).then(x=>x.json());
+    if(!r.ok){ toast(r.error||'เปิดฉบับนี้ไม่สำเร็จ',true); return; }
+    VIEW={planId,rev:r.rev}; render(); $('vbar').scrollIntoView({block:'nearest'});
+  }catch(e){ toast('เปิดฉบับนี้ไม่สำเร็จ — ลองใหม่',true); }
+}
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=n=>Number(n||0).toLocaleString('en-US');
@@ -159,7 +173,7 @@ async function load(date){
   const r=await fetch(EDGE+'?action=getPlan&userId='+encodeURIComponent(MY_UID)+(date?'&date='+encodeURIComponent(date):''));
   const d=await r.json();
   if(!d.ok){ gate(d.denied?'🔒 ไม่มีสิทธิ์ดูแพลน Bulk':'โหลดไม่สำเร็จ', d.error||''); return; }
-  DATA=d; $('gate').hidden=true; $('app').hidden=false; render();
+  DATA=d; VIEW=null; $('gate').hidden=true; $('app').hidden=false; render();
 }
 
 function render(){
@@ -171,22 +185,39 @@ function render(){
     ${p&&!p.dispatched_at?`<button class="btn pri" type="button" id="dispBtn">📤 แจกงานทั้งแพลน</button>`:''}`:'';
   if(me.canEdit) $('fileIn').addEventListener('change',onFile);
   if($('dispBtn')) $('dispBtn').addEventListener('click',askDispatch);
-  if(!p){ $('meta').innerHTML=''; $('ver').innerHTML=''; $('kpis').innerHTML='';
+  if(!p){ $('vbar').hidden=true; $('meta').innerHTML=''; $('ver').innerHTML=''; $('kpis').innerHTML='';
     $('rows').innerHTML=`<tr><td colspan="10" class="empty">ยังไม่มีแพลน Bulk${me.canEdit?' — กด "⬆️ อัปโหลดแพลน" แล้วเลือกไฟล์ FM-MK-04 จาก SAP B1':''}</td></tr>`; return; }
   $('meta').innerHTML=`<span>โหลด <b>${thDate(p.load_date)}</b></span><span>ส่ง <b>${thDate(p.send_date)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`;
-  $('ver').innerHTML='<span class="sub">ฉบับ:</span>'+d.revs.map((v,i)=>{ const df=v.diff||{};
-    return `<span class="v${i===d.revs.length-1?' on':''}" title="${esc(v.file_name||'')}">${revName(v.rev)} · ${thTime(v.uploaded_at)} · ${esc(v.uploaded_by_name||'')}${v.rev?` · แก้ ${(df.chg||[]).length} เพิ่ม ${(df.add||[]).length} ตัด ${(df.del||[]).length}`:` · ${(df.add||[]).length} รายการ`}</span>`; }).join('')
+  const lastRev=d.revs.length?d.revs[d.revs.length-1].rev:0;
+  const viewing=VIEW&&VIEW.planId===p.id&&VIEW.rev.rev!==lastRev?VIEW.rev:null;   // ดูฉบับย้อนหลังอยู่
+  $('ver').innerHTML='<span class="sub">ฉบับ:</span>'+d.revs.map(v=>{ const df=v.diff||{}, on=viewing?v.rev===viewing.rev:v.rev===lastRev;
+    return `<button type="button" class="v${on?' on':''}" data-rev="${v.rev}" title="กดเพื่อดูฉบับนี้${v.file_name?' · ไฟล์ '+esc(v.file_name):''}">${revName(v.rev)} · ${thTime(v.uploaded_at)} · ${esc(v.uploaded_by_name||'')}${v.rev?` · แก้ ${(df.chg||[]).length} เพิ่ม ${(df.add||[]).length} ตัด ${(df.del||[]).length}`:` · ${(df.add||[]).length} รายการ`}${v.rev===lastRev?' (ล่าสุด)':''}</button>`; }).join('')
     +(p.dispatched_at?`<span class="v ok">แจกงานแล้ว ${thTime(p.dispatched_at)} · ฉบับต่อไปส่งใบงานให้คนขับอัตโนมัติ</span>`:'');
-  const live=d.jobs.filter(j=>!j.cancelled), cnt=f=>live.filter(f).length;
-  $('kpis').innerHTML=[['เที่ยว',live.length],['รวม (กก.)',fmt(live.reduce((s,j)=>s+Number(j.qty_kg||0),0))],['คนขับ',new Set(live.map(j=>j.driver_uid)).size],
-    ['รอคนขับรับ',cnt(j=>j.status==='sent')],['กำลังโหลด',cnt(j=>j.status==='accepted'||j.status==='weighed')],['ออกจาก SSB',cnt(j=>j.status==='gate_out')],['ส่งแล้ว',cnt(j=>j.status==='delivered')]]
+  $('ver').querySelectorAll('button[data-rev]').forEach(b=>b.onclick=()=>openRev(p.id,+b.dataset.rev,lastRev));
+  if($('dispBtn')&&viewing) $('dispBtn').hidden=true;
+  // ฉบับย้อนหลัง: ใช้แถวตอนอัปโหลด (ไม่มีสถานะเที่ยว) + ป้ายสิ่งที่เปลี่ยนในฉบับนั้น
+  let jobs=d.jobs, df=null;
+  if(viewing){ df=viewing.diff||{}; jobs=(viewing.rows||[]).map(r=>Object.assign({},r,{status:'_snap',cancelled:false})); }
+  $('vbar').hidden=!viewing;
+  if(viewing){ const dl=(df.del||[]);
+    $('vbar').innerHTML=`<div>👁️ กำลังดู <b>${revName(viewing.rev)}</b> (ย้อนหลัง) · อัปโหลด ${thTime(viewing.uploaded_at)} โดย ${esc(viewing.uploaded_by_name||'—')}${viewing.file_name?' · ไฟล์ '+esc(viewing.file_name):''}
+      <div class="sub">เป็นข้อมูลตามไฟล์ตอนอัปโหลดฉบับนั้น · สถานะเที่ยวดูได้ที่ฉบับล่าสุด${dl.length?` · ตัดออกในฉบับนี้: ${dl.map(x=>'#'+x.no+' '+esc(x.cust)).join(', ')}`:''}</div></div>
+      <button class="btn" type="button" id="vBack">กลับไปฉบับล่าสุด</button>`;
+    $('vBack').onclick=()=>{ VIEW=null; render(); };
+  }
+  const live=jobs.filter(j=>!j.cancelled), cnt=f=>live.filter(f).length;
+  $('kpis').innerHTML=[['เที่ยว',live.length],['รวม (กก.)',fmt(live.reduce((s,j)=>s+Number(j.qty_kg||0),0))],['คนขับ',new Set(live.map(j=>j.driver_uid)).size]]
+    .concat(viewing?[]:[['รอคนขับรับ',cnt(j=>j.status==='sent')],['กำลังโหลด',cnt(j=>j.status==='accepted'||j.status==='weighed')],['ออกจาก SSB',cnt(j=>j.status==='gate_out')],['ส่งแล้ว',cnt(j=>j.status==='delivered')]])
     .map(k=>`<div class="kpi"><div class="k">${k[0]}</div><div class="v">${k[1]}</div></div>`).join('');
+  const chgNo={}, addNo={}; if(df&&viewing.rev){ (df.chg||[]).forEach(c=>chgNo[c.no]=c.txt); (df.add||[]).forEach(a=>addNo[a.no]=1); }
   let html='', last=null;
-  const order=d.jobs.slice().sort((a,b)=>(a.prod_group||'').localeCompare(b.prod_group||'')||a.line_no-b.line_no);
+  const order=jobs.slice().sort((a,b)=>(a.prod_group||'').localeCompare(b.prod_group||'')||a.line_no-b.line_no);
   order.forEach(j=>{
     if(j.prod_group!==last){ last=j.prod_group; const sum=live.filter(x=>x.prod_group===j.prod_group).reduce((s,x)=>s+Number(x.qty_kg||0),0);
       html+=`<tr class="grp"><td colspan="10">หัวจ่าย ${esc(j.prod_group||'—')} · ${esc(GROUPS[j.prod_group]||'')} · รวม <span class="num">${fmt(sum)}</span> กก.</td></tr>`; }
-    const stc=j.cancelled?'<span class="chip s-cx">ตัดออก</span>':(j.needs_ack&&j.status==='sent'?'<span class="chip s-accepted">แก้ไข · รอคนขับรับใบงานใหม่</span>':`<span class="chip s-${j.status}">${ST[j.status]||j.status}</span>`);
+    const stc=j.status==='_snap'?(chgNo[j.line_no]!=null?`<span class="chip s-accepted">แก้ในฉบับนี้</span><span class="chg">${esc(chgNo[j.line_no])}</span>`:addNo[j.line_no]?'<span class="chip s-sent">เพิ่มในฉบับนี้</span>':'<span class="sub">—</span>')
+      :j.cancelled?'<span class="chip s-cx">ตัดออก</span>':(j.needs_ack&&j.status==='sent'?'<span class="chip s-accepted">แก้ไข · รอคนขับรับใบงานใหม่</span>':`<span class="chip s-${j.status}">${ST[j.status]||j.status}</span>`);
+    if(j.status==='_snap') j.change_txt='';
     html+=`<tr class="${j.cancelled?'cx':''}"><td class="num">${j.line_no}</td>
       <td class="cust">${esc(j.cust_name)}<small>${esc(j.cust_code)}</small></td><td>${esc(j.dest)}</td>
       <td class="prod">${esc(j.prod_name)}<small>${esc(j.prod_code)}</small></td><td class="r num">${fmt(j.qty_kg)}</td><td>${esc(j.bill)}</td>
