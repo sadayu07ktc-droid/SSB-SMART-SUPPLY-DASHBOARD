@@ -436,6 +436,13 @@
 
   // เปิดลิงก์แบบทน: ปกติเด้งทั้งหน้า (same-tab) · ถ้าอยู่ใน iframe/พรีวิวที่บล็อก → เปิดแท็บใหม่
   function openLink(url){
+    // สร้าง/มอบหมายงาน บนคอม: ผ่าน liff.line.me แล้วเบราว์เซอร์ใช้หน้าเก่าที่จำไว้ (แก้หน้าแล้วไม่เห็น) → เปิดหน้าตรง+ตัวกันแคช
+    //   ใช้บัตร SSO ของแดชบอร์ดอยู่แล้ว ไม่ต้องล็อกอิน LINE ซ้ำ · ในแอป LINE คงลิงก์ LIFF เดิม · 2026-10-15
+    try{
+      if(/^https:\/\/liff\.line\.me\/2010274217-BF41B8c2/.test(url) && window.ssbSession && ssbSession.get()
+         && !(window.liff && liff.isInClient && liff.isInClient()))
+        url = 'https://sadayu07ktc-droid.github.io/Order_form/?v=3&t=' + Date.now();
+    }catch(e){}
     try{
       if(window.top && window.top!==window.self){ window.top.location.href = url; return; }
     }catch(e){ window.open(url,'_blank'); return; }
