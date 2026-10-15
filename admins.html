@@ -254,7 +254,7 @@ let _t; function toast(m,err){ let e=$('#toast'); if(!e){e=document.createElemen
 const TYPES=[
   {v:'ADMIN',     t:'แอดมินไร่',        d:'แอดมินปฏิบัติการฝ่ายไร่ · ทำงานประจำวันเต็มรูปแบบ · ได้รับงาน Packing ให้อนุมัติเสมอ'},
   {v:'ADMIN_PK',  t:'แอดมิน Packing',   d:'เป็นฝ่ายส่งคำขอ Packing เอง — ระบบไม่ส่งงาน Packing กลับมาให้'},
-  {v:'ADMIN_BULK',t:'แอดมิน Bulk',      d:'ดูแลงาน Bulk — สร้างงานและมอบหมายคนขับกลุ่ม Bulk · ไม่ได้รับงาน Packing ให้อนุมัติ'},
+  {v:'ADMIN_BULK',t:'แอดมิน Bulk',      d:'ดูแลงาน Bulk — อัปโหลดแพลน/แจกงานคนขับกลุ่ม Bulk · รับสำเนาอีเมลแพลน (CC) · ไม่ได้รับงาน Packing ให้อนุมัติ'},
   {v:'MANAGER',   t:'ผู้จัดการ',        d:'คุมทั้ง 3 แผนก (ไร่ · Bulk · Packing) เห็นงานทุกงาน · ถ้าปิด “อนุมัติ/จัดการ” จะไม่ได้รับงาน Packing'},
   {v:'EXECUTIVE', t:'ผู้บริหาร',        d:'ดูภาพรวม · ไม่ได้รับงาน Packing ให้อนุมัติ'},
   {v:'ACC_BULK',  t:'บัญชี Bulk',       d:'รับแพลนส่งมอบ Bulk ทาง LINE + อีเมล ทุกครั้งที่อัปโหลด (รับรู้อย่างเดียว) · ไม่รับแจ้งเตือนงานไร่ · ต้องใส่อีเมล'},
@@ -438,8 +438,8 @@ function draw(){
         <div class="val">รับแจ้งเตือน = "${D.notify?'รับแจ้งเตือน':'(ว่าง)'}"</div>
         ${bulkOnly?'<div class="val" style="color:#B45309">ประเภท '+D.type+' ปิดรับแจ้งเตือนงานไร่ให้อัตโนมัติ</div>':''}</div>
         <button class="toggle ${D.notify?'on':''}" onclick="tog('notify')" ${bulkOnly?'disabled style="opacity:.4;cursor:not-allowed"':''}><span class="knob"></span></button></div>
-      ${D.type==='ACC_BULK'||D.email?`<div class="sw"><div class="body" style="flex:1"><div class="t">อีเมล ${D.type==='ACC_BULK'?'<span style="color:#B42318;font-size:11px">* จำเป็นสำหรับบัญชี</span>':''}</div>
-        <div class="d">ส่งแพลนส่งมอบ Bulk ไปที่อีเมลนี้ทุกครั้งที่อัปโหลด</div>
+      ${D.type==='ACC_BULK'||D.type==='ADMIN_BULK'||D.email?`<div class="sw"><div class="body" style="flex:1"><div class="t">อีเมล ${D.type==='ACC_BULK'?'<span style="color:#B42318;font-size:11px">* จำเป็นสำหรับบัญชี</span>':D.type==='ADMIN_BULK'?'<span style="color:#B45309;font-size:11px">* ควรใส่ — รับสำเนาเป็นหลักฐาน</span>':''}</div>
+        <div class="d">${D.type==='ADMIN_BULK'?'รับสำเนา (CC) อีเมลแพลนส่งมอบ Bulk ที่ส่งถึงบัญชี ทุกครั้งที่อัปโหลด':'ส่งแพลนส่งมอบ Bulk ไปที่อีเมลนี้ทุกครั้งที่อัปโหลด'}</div>
         <input id="dEmail" type="email" autocomplete="off" placeholder="name@company.com" value="${esc(D.email||'')}" ${PERM.canEdit?'':'disabled'}
           oninput="D.email=this.value.trim();syncDirty()" style="margin-top:6px;width:100%;font:inherit;font-size:14px;padding:9px 11px;border:1px solid var(--line-strong,#cfd8d2);border-radius:10px;background:var(--surface,#fff);color:inherit"></div></div>`:''}
 
