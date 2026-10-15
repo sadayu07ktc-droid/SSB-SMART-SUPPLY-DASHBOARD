@@ -55,6 +55,9 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);
 .ver .v{border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted);background:var(--surface);font:inherit;font-size:12.5px}
 .ver button.v{cursor:pointer}.ver button.v:hover{border-color:var(--brand2);color:var(--brandInk)}
 .ver button.v:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+.revinfo{flex-basis:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
+.btn.sm{font-size:12.5px;padding:4px 10px;border-radius:8px}
+.mfail{color:var(--bad);font-weight:600}
 .vbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;padding:10px 16px;background:var(--infoTint);border-bottom:1px solid var(--line);font-size:13.5px}
 .ver .v.on{border-color:var(--brand2);color:var(--brandInk);font-weight:600}
 .ver .v.ok{border-color:var(--ok);color:var(--ok);font-weight:600}
@@ -136,7 +139,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15d</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15e</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -147,7 +150,20 @@ const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/bulk-plan';
 const DASH='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';
 const GROUPS={'FG-OL':'น้ำมันปาล์มโอเลอีน','FG-PO':'น้ำมันปาล์มข้น','FG-POMIX':'น้ำมันปาล์ม RPO-RPS','FG-PS':'ไขมันปาล์ม'};
 const ST={new:'ยังไม่แจก',sent:'แจกแล้ว · รอคนขับรับ',accepted:'รับงานแล้ว',weighed:'ชั่งต้นทางแล้ว',gate_out:'โหลดเสร็จ · ออกจาก SSB',delivered:'ส่งแล้ว'};
-let MY_UID='', DATA=null, PENDING=null, VIEW=null;   // VIEW = {planId, rev:{rev,rows,diff,...}} ฉบับย้อนหลังที่กำลังดู
+let MY_UID='', DATA=null, PENDING=null, PFILE=null, VIEW=null;   // VIEW = {planId, rev:{rev,rows,diff,...}} ฉบับย้อนหลังที่กำลังดู
+async function downloadRev(planId,rev){
+  try{ const r=await fetch(EDGE+'?action=fileUrl&userId='+encodeURIComponent(MY_UID)+'&planId='+planId+'&rev='+rev).then(x=>x.json());
+    if(!r.ok){ toast(r.error||'ดาวน์โหลดไม่สำเร็จ',true); return; }
+    location.href=r.url;
+  }catch(e){ toast('ดาวน์โหลดไม่สำเร็จ — ลองใหม่',true); }
+}
+async function resendMail(planId,rev){
+  const b=$('reMail'); if(b){ b.disabled=true; b.textContent='กำลังส่ง…'; }
+  try{ const r=await post({action:'resendMail',planId,rev});
+    toast(r.ok?'ส่งอีเมลแล้ว · ถึง '+r.to+' คน'+(r.cc?' · CC '+r.cc:''):'ส่งอีเมลไม่สำเร็จ: '+(r.error||''),!r.ok);
+  }catch(e){ toast('ไม่แน่ใจว่าส่งสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); }
+  load(DATA&&DATA.plan?DATA.plan.send_date:'');
+}
 async function openRev(planId,rev,lastRev){
   if(rev===lastRev){ VIEW=null; render(); return; }
   if(VIEW&&VIEW.planId===planId&&VIEW.rev.rev===rev) return;
@@ -195,6 +211,16 @@ function render(){
     +(p.dispatched_at?`<span class="v ok">แจกงานแล้ว ${thTime(p.dispatched_at)} · ฉบับต่อไปส่งใบงานให้คนขับอัตโนมัติ</span>`:'');
   $('ver').querySelectorAll('button[data-rev]').forEach(b=>b.onclick=()=>openRev(p.id,+b.dataset.rev,lastRev));
   if($('dispBtn')&&viewing) $('dispBtn').hidden=true;
+  // ไฟล์ต้นฉบับ + สถานะอีเมลบัญชี ของฉบับที่กำลังดู
+  const cur=d.revs.find(v=>v.rev===(viewing?viewing.rev:lastRev));
+  if(cur){ const ms=String(cur.mail_status||''), m=ms.match(/^sent:(\d+)\+(\d+)/);
+    const mailTx=m?`✉️ อีเมลถึงบัญชีแล้ว ${m[1]} คน${+m[2]?' · CC '+m[2]:''} · ${thTime(cur.mail_at)}`
+      :ms==='pending'?'⏳ กำลังส่งอีเมลถึงบัญชี…':ms.indexOf('failed')===0?'⚠️ อีเมลส่งไม่สำเร็จ: '+esc(ms.slice(7)):'✉️ ฉบับนี้ยังไม่มีการส่งอีเมล (อัปโหลดก่อนเปิดระบบเมล)';
+    $('ver').insertAdjacentHTML('beforeend',`<div class="revinfo">${cur.file_path?`<button type="button" class="btn sm" id="dlBtn">📎 ไฟล์ต้นฉบับ ${revName(cur.rev)}</button>`:'<span class="sub">ไม่มีไฟล์ต้นฉบับเก็บไว้</span>'}
+      <span class="${ms.indexOf('failed')===0?'mfail':'sub'}">${mailTx}</span>${me.canEdit&&ms!=='pending'?`<button type="button" class="btn sm" id="reMail">${m?'ส่งอีเมลซ้ำ':'ส่งอีเมล'}</button>`:''}</div>`);
+    if($('dlBtn')) $('dlBtn').onclick=()=>downloadRev(p.id,cur.rev);
+    if($('reMail')) $('reMail').onclick=()=>resendMail(p.id,cur.rev);
+  }
   // ฉบับย้อนหลัง: ใช้แถวตอนอัปโหลด (ไม่มีสถานะเที่ยว) + ป้ายสิ่งที่เปลี่ยนในฉบับนั้น
   let jobs=d.jobs, df=null;
   if(viewing){ df=viewing.diff||{}; jobs=(viewing.rows||[]).map(r=>Object.assign({},r,{status:'_snap',cancelled:false})); }
@@ -252,10 +278,13 @@ async function onFile(e){
   const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
   toast('กำลังอ่านไฟล์ '+f.name+' …');
   try{
-    const X=await loadXLSX(), wb=X.read(await f.arrayBuffer(),{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
+    const buf=await f.arrayBuffer();
+    const X=await loadXLSX(), wb=X.read(buf,{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
     const p=parseFM(X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
     if(!p.rows.length){ toast('ไม่พบรายการในไฟล์ — ต้องเป็นรูปแบบ FM-MK-04 (แผนการส่งมอบ SSB)',true); return; }
     PENDING={sendDate:p.ds, loadDate:p.dl, fileName:f.name, rows:p.rows};
+    // ไฟล์ต้นฉบับ (ส่งตอนยืนยันเท่านั้น → เก็บไว้ + แนบเมลบัญชี) · เกิน 8MB = ไม่แนบ
+    PFILE=null; if(buf.byteLength<=8*1024*1024){ const u=new Uint8Array(buf); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); PFILE=btoa(s); }
     const pv=await post(Object.assign({action:'preview'},PENDING));
     showPreview(pv);
   }catch(err){ toast(String(err.message||err),true); }
@@ -333,9 +362,10 @@ function closePanel(){ $('panel').hidden=true; PENDING=null; }
 async function doCommit(){
   if(!PENDING) return; const b=$('cYes'); b.disabled=true; b.textContent='กำลังบันทึก…';
   try{
-    const d=await post(Object.assign({action:'commit'},PENDING));
+    const d=await post(Object.assign({action:'commit',fileB64:PFILE||''},PENDING));
     if(!d.ok){ showPreview(Object.assign({},d,{ok:true})); toast(d.error||'บันทึกไม่สำเร็จ',true); return; }
-    closePanel(); toast('บันทึก '+d.revName+' แล้ว · '+lineTxt(d.line,true));
+    closePanel(); toast('บันทึก '+d.revName+' แล้ว · '+lineTxt(d.line,true)+' · อีเมลบัญชีกำลังส่ง'+(d.file?' (แนบไฟล์ Excel)':''));
+    setTimeout(()=>{ if(DATA&&DATA.plan&&DATA.plan.send_date===d.sendDate&&!VIEW) load(d.sendDate); },25000);   // อัปเดตสถานะอีเมล
     load(d.sendDate);
   }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(); }
 }
