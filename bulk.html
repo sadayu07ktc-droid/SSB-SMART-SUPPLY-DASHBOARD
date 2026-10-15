@@ -158,6 +158,37 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .tk-sep{display:inline-flex;align-items:center;padding:0 16px;white-space:nowrap;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em}
 @media(prefers-reduced-motion:reduce){.tk-track{animation:none}.tk-view{overflow-x:auto}}
 @media(max-width:760px){.tk-label{padding:0 11px;font-size:11px;max-width:46%}.tk-date{display:none}.tk-item{padding:8px 13px;gap:6px}.tk-view::before,.tk-view::after{width:22px}}
+/* 📍 ลูกค้า Bulk (พิกัด/หมุด DTC/ตาชั่งปลายทาง/ใบชั่งตอนออก) · 2026-10-15 */
+.dlgbox.wide{max-width:980px}
+.cinfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
+.cinfo .btn{margin-left:auto}
+.ctbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+.ctbl table{min-width:860px}
+.ctbl td{vertical-align:top}
+.ctbl .pin{font-size:12.5px}.ctbl .pin small{display:block;color:var(--muted);font-size:11px}
+.ctbl a{color:var(--brandInk);font-family:var(--f-num);font-size:12px;text-decoration:none;border-bottom:1px dashed currentColor}
+.src{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:0 6px;margin-left:4px;background:var(--surface2);color:var(--muted)}
+.yn{font-weight:700;font-size:12.5px}.yn.y{color:var(--ok)}.yn.n{color:var(--muted);font-weight:400}
+.c-ok{color:var(--ok);background:var(--okTint)}.c-wait{color:var(--warn);background:var(--warnTint)}.c-bad{color:var(--bad);background:var(--badTint)}
+.cmiss{background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
+.cmiss>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.cf{display:grid;grid-template-columns:150px 1fr;gap:10px 14px;align-items:start;font-size:13.5px}
+.cf>label,.cf>.lb{color:var(--muted);font-size:12.5px;padding-top:7px}
+.cf input[type=text],.cf input[type=number],.cf textarea{font:inherit;font-size:13.5px;width:100%;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px}
+.cf input::placeholder,.cf textarea::placeholder{color:var(--muted);opacity:.6;font-size:12.5px}
+.cf input:focus-visible,.cf textarea:focus-visible{outline:2px solid var(--brand2);outline-offset:1px}
+.cf .hint{font-size:11.5px;color:var(--muted);margin-top:3px}
+.plist{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:6px}
+.plist button{display:flex;width:100%;gap:8px;align-items:baseline;text-align:left;font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:0;border-bottom:1px solid var(--line);padding:7px 10px;cursor:pointer}
+.plist button:hover,.plist button:focus-visible{background:var(--tint);outline:none}
+.plist button.on{background:var(--tint);font-weight:700}
+.plist small{color:var(--muted);font-size:11px;margin-left:auto;white-space:nowrap}
+.pchosen{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--tint);border-radius:10px;padding:7px 10px;font-size:13px}
+.ck{display:flex;gap:8px;align-items:flex-start;cursor:pointer;padding:6px 0}
+.ck input{width:17px;height:17px;margin-top:2px;accent-color:var(--brand2)}
+.ck small{display:block;color:var(--muted);font-size:11.5px}
+.btn.danger{color:var(--bad);border-color:var(--bad);background:transparent}
+@media(max-width:640px){.cf{grid-template-columns:1fr}.cf>label,.cf>.lb{padding-top:0}}
 .toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%) translateY(20px);background:var(--brand);color:#fff;border-radius:12px;padding:10px 16px;font-size:13.5px;font-weight:600;opacity:0;transition:.25s;max-width:calc(100% - 32px);z-index:60}
 .toast.on{opacity:1;transform:translateX(-50%)}
 .toast.err{background:var(--bad)}
@@ -202,7 +233,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15l</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15m</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -283,9 +314,11 @@ function render(){
   drawWho(me);
   $('planSel').innerHTML=d.plans.length?d.plans.map(x=>`<option value="${x.send_date}"${p&&p.send_date===x.send_date?' selected':''}>ส่ง ${thDate(x.send_date)} · ${revName(x.rev)}${x.dispatched_at?' · แจกแล้ว':''}</option>`).join(''):'<option>ยังไม่มีแพลน</option>';
   $('planSel').disabled=!d.plans.length;
-  $('acts').innerHTML=(p?`<button class="btn" type="button" id="repBtn">🖨️ รายงาน (Excel / PDF / JPEG)</button>`:'')
+  $('acts').innerHTML=`<button class="btn" type="button" id="custBtn">📍 ลูกค้า Bulk</button>`
+    +(p?`<button class="btn" type="button" id="repBtn">🖨️ รายงาน (Excel / PDF / JPEG)</button>`:'')
     +(me.canEdit?`<label class="btn" for="fileIn">⬆️ อัปโหลดแพลน (Excel)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>
     ${p&&!p.dispatched_at?`<button class="btn pri" type="button" id="dispBtn">📤 แจกงานทั้งแพลน</button>`:''}`:'');
+  $('custBtn').addEventListener('click',openCustomers);
   if($('repBtn')) $('repBtn').addEventListener('click',bulkReport);
   if(me.canEdit) $('fileIn').addEventListener('change',onFile);
   if($('dispBtn')) $('dispBtn').addEventListener('click',askDispatch);
@@ -487,6 +520,129 @@ function askDispatch(){
       if(d.ok){ close(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)); load(p.send_date); }
       else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
     }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
+}
+
+/* ── 📍 ลูกค้า Bulk · 2026-10-15 ──
+   พิกัดลูกค้า = ใช้เช็คอิน "ถึงลูกค้า" อัตโนมัติ (รัศมีเดียวกับรถไร่) · พิกัดกรอกเอง ชนะ หมุด DTC
+   ตาชั่งปลายทาง → คนขับมีขั้นชั่งปลายทาง · ใบชั่งตอนออก → ต้องถ่ายใบชั่งก่อนกดออกจากลูกค้า
+   แก้ได้: DEV / ADMIN_BULK / MANAGER (Edge ตรวจสิทธิ์ซ้ำ) · คนอื่นดูอย่างเดียว */
+let CUST=null;
+const mapUrl=ll=>'https://www.google.com/maps?q='+encodeURIComponent(ll);
+function custDlg(){ let m=$('dlgCust'); if(!m){ m=document.createElement('div'); m.id='dlgCust'; m.className='dlg'; document.body.appendChild(m);
+    m.onmousedown=e=>{ if(e.target===m) closeCust(); }; document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!m.hidden) closeCust(); }); }
+  return m; }
+function closeCust(){ const m=$('dlgCust'); if(m){ m.hidden=true; m.innerHTML=''; } }
+async function openCustomers(){
+  const m=custDlg(); m.hidden=false;
+  m.innerHTML=`<div class="dlgbox wide"><div class="dlghd"><h2 style="color:#fff">📍 ลูกค้า Bulk</h2></div><div class="dlgbd"><div class="sub">กำลังโหลด…</div></div></div>`;
+  try{ const d=await fetch(EDGE+'?action=getCustomers&userId='+encodeURIComponent(MY_UID)).then(x=>x.json());
+    if(!d.ok){ toast(d.error||'โหลดลูกค้าไม่สำเร็จ',true); closeCust(); return; }
+    CUST=d; drawCustList();
+  }catch(e){ toast('โหลดลูกค้าไม่สำเร็จ — ลองใหม่',true); closeCust(); }
+}
+function custState(c){
+  const ll=c.location||c.dtc_location;
+  if(!ll) return ['c-bad','ไม่มีพิกัด · คนขับกดเอง'];
+  if(/^auto/.test(c.match_note||'')) return ['c-wait','รอยืนยันหมุด'];
+  return ['c-ok','พร้อม'];
+}
+function drawCustList(){
+  const d=CUST, ed=d.me.canEdit, m=$('dlgCust');
+  const rows=d.customers.map(c=>{ const ll=c.location||c.dtc_location, st=custState(c);
+    return `<tr><td class="cust">${esc(c.cust_name||'—')}<small>${esc(c.cust_code)}</small></td>
+      <td class="pin">${c.dtc_poi_name?esc(c.dtc_poi_name)+`<small>${esc(c.dtc_poi_id)}</small>`:'<span class="sub">ไม่ผูกหมุด</span>'}</td>
+      <td>${ll?`<a href="${mapUrl(ll)}" target="_blank" rel="noopener" title="เปิดใน Google Maps">${esc(ll)}</a><span class="src">${c.location?'กรอกเอง':'DTC'}</span>`:'<span class="sub">—</span>'}
+        ${c.radius_m?`<div class="sub" style="font-size:11.5px">รัศมี ${c.radius_m} ม.</div>`:''}</td>
+      <td>${c.has_dest_scale?'<span class="yn y">✓ มี</span>':'<span class="yn n">ไม่มี</span>'}</td>
+      <td>${c.need_slip_out?'<span class="yn y">✓ ต้องมี</span>':'<span class="yn n">ไม่ต้อง</span>'}</td>
+      <td><span class="chip ${st[0]}">${st[1]}</span>${c.note?`<div class="sub" style="font-size:11.5px;margin-top:3px">${esc(c.note)}</div>`:''}</td>
+      ${ed?`<td style="white-space:nowrap">${st[1]==='รอยืนยันหมุด'?`<button class="btn sm pri" type="button" data-ok="${esc(c.cust_code)}">✓ ยืนยัน</button> `:''}<button class="btn sm" type="button" data-ed="${esc(c.cust_code)}">แก้ไข</button></td>`:''}</tr>`; }).join('');
+  const miss=d.missing.length?`<div class="cmiss"><b>ลูกค้าในแพลนที่ยังไม่ได้ตั้งค่า (${d.missing.length})</b><span class="sub" style="font-size:12px">ยังไม่ตั้งค่า = คนขับกด "ถึงลูกค้า" เอง · ไม่มีขั้นชั่งปลายทาง</span>
+    ${d.missing.map(x=>`<div><span>${esc(x.cust_name||'—')} <span class="sub num">${esc(x.cust_code)}</span></span>${ed?`<button class="btn sm" type="button" data-add="${esc(x.cust_code)}">+ ตั้งค่า</button>`:''}</div>`).join('')}</div>`:'';
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="cT">
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">พิกัดเช็คอิน · ตาชั่งปลายทาง · ใบชั่งตอนออก</div><h2 id="cT" style="color:#fff">📍 ลูกค้า Bulk · ${d.customers.length} ราย</h2></div>
+      <button type="button" class="dlgx" aria-label="ปิด" id="cX">✕</button></div>
+    <div class="dlgbd">
+      <div class="cinfo"><span>คนขับเข้าใกล้พิกัดลูกค้า = ระบบเช็คอิน "ถึงลูกค้า" ให้เอง (รัศมีเดียวกับรถไร่ · ตั้งรายลูกค้าได้) · พิกัดกรอกเอง ใช้ก่อนหมุด DTC
+        · หมุด DTC อัปเดต ${thTime(d.poiAt)||'—'} (${d.poi.length} หมุด)</span>
+        ${ed?`<button class="btn sm" type="button" id="cRef" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>`:''}</div>
+      <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
+        <tbody>${rows||`<tr><td colspan="7" class="empty">ยังไม่มีลูกค้า</td></tr>`}</tbody></table></div>
+      ${miss}
+      ${ed?'':'<div class="sub">ดูอย่างเดียว · แก้ได้เฉพาะ DEV / แอดมิน Bulk / ผู้จัดการ</div>'}
+    </div></div>`;
+  $('cX').onclick=closeCust;
+  m.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editCust(d.customers.find(c=>c.cust_code===b.dataset.ed)));
+  m.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{ const x=d.missing.find(c=>c.cust_code===b.dataset.add); editCust({cust_code:x.cust_code,cust_name:x.cust_name,_new:true}); });
+  m.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{ const c=d.customers.find(x=>x.cust_code===b.dataset.ok);
+    saveCust(b,{custCode:c.cust_code,custName:c.cust_name,poiId:c.dtc_poi_id||'',location:c.location||'',radiusM:c.radius_m||'',hasDestScale:!!c.has_dest_scale,needSlipOut:!!c.need_slip_out,note:c.note||''},'ยืนยันหมุดแล้ว'); });
+  if($('cRef')) $('cRef').onclick=async()=>{ const b=$('cRef'); b.disabled=true; b.textContent='กำลังดึง…';
+    try{ const r=await post({action:'refreshPoi'}); toast(r.ok?'ดึงหมุดแล้ว '+r.total+' หมุด'+(r.moved?' · พิกัดลูกค้าเปลี่ยน '+r.moved+' ราย':''):(r.error||'ดึงหมุดไม่สำเร็จ'),!r.ok); }
+    catch(e){ toast('ดึงหมุดไม่สำเร็จ — ลองใหม่',true); }
+    openCustomers(); };
+}
+async function saveCust(btn,body,okMsg){
+  const t=btn.textContent; btn.disabled=true; btn.textContent='กำลังบันทึก…';
+  try{ const r=await post(Object.assign({action:'saveCustomer'},body));
+    if(!r.ok){ toast(r.error||'บันทึกไม่สำเร็จ',true); btn.disabled=false; btn.textContent=t; return false; }
+    toast(okMsg||'บันทึกแล้ว'); openCustomers(); return true;
+  }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); openCustomers(); return false; }
+}
+function editCust(c){
+  const m=$('dlgCust'), poi=CUST.poi; let pick=c.dtc_poi_id||'';
+  const pName=id=>{ const p=poi.find(x=>x.id===id); return p?p:null; };
+  // คำค้นตั้งต้น = ชื่อลูกค้าตัดคำบริษัท/จำกัด (ช่วยหาหมุดที่ชื่อย่อ)
+  const guess=String(c.cust_name||'').replace(/บริษัท|จำกัด|\(.*?\)|มหาชน/g,'').trim().split(/\s+/)[0]||'';
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="eT">
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">${c._new?'ตั้งค่าลูกค้าใหม่':'แก้ไขลูกค้า'} · ${esc(c.cust_code)}</div><h2 id="eT" style="color:#fff">${esc(c.cust_name||c.cust_code)}</h2></div>
+      <button type="button" class="dlgx" aria-label="กลับ" id="eX">✕</button></div>
+    <div class="dlgbd"><div class="cf">
+      <div class="lb">หมุดใน DTC</div>
+      <div><div class="pchosen" id="ePin"></div>
+        <input type="text" id="eQ" placeholder="ค้นหมุด เช่น ฟูจิ, บีบีจีไอ" value="${esc(pick?'':guess)}" style="margin-top:6px" aria-label="ค้นหมุด DTC">
+        <div class="plist" id="eList" role="listbox"></div>
+        <div class="hint">หมุดประเภท "ลูกค้า BULK" ขึ้นก่อน · ไม่เจอ = ให้แอดมินปักหมุดในเว็บ DTC แล้วกด 🔄 ดึงหมุดใหม่ หรือกรอกพิกัดเองด้านล่าง</div></div>
+      <label for="eLoc">พิกัดกรอกเอง</label>
+      <div><input type="text" id="eLoc" value="${esc(c.location||'')}" placeholder="13.157902,101.333302 หรือลิงก์ Google Maps (ว่าง = ใช้หมุด DTC)">
+        <div class="hint">ใส่แล้วใช้พิกัดนี้แทนหมุด DTC · รูปแบบเดียวกับพิกัดสวน/จุดรับของรถไร่</div></div>
+      <label for="eRad">รัศมีเช็คอิน (ม.)</label>
+      <div><input type="number" id="eRad" min="50" max="5000" step="50" value="${esc(c.radius_m||'')}" placeholder="ว่าง = ค่ากลางเดียวกับรถไร่ (300 ม.)" style="max-width:280px">
+        <div class="hint">โรงงานใหญ่ / ประตูไกลจากหมุด → เพิ่มรัศมี</div></div>
+      <div class="lb">ขั้นตอนคนขับ</div>
+      <div><label class="ck"><input type="checkbox" id="eScale"${c.has_dest_scale?' checked':''}><span>ปลายทางมีตาชั่ง<small>คนขับมีขั้น "ชั่งปลายทาง" + ถ่ายใบชั่งของลูกค้า</small></span></label>
+        <label class="ck"><input type="checkbox" id="eSlip"${c.need_slip_out?' checked':''}><span>ออกจากลูกค้าต้องมีใบชั่ง<small>ต้องถ่ายรูปใบชั่งก่อนกด "ออกจากลูกค้า"</small></span></label></div>
+      <label for="eNote">หมายเหตุ</label>
+      <textarea id="eNote" rows="2" placeholder="เช่น เข้าประตู 3 · ต้องจองคิวก่อน">${esc(c.note||'')}</textarea>
+    </div></div>
+    <div class="dlgft">${c._new?'':`<button class="btn danger" type="button" id="eDel" style="margin-right:auto">ลบออกจากรายการ</button>`}
+      <button class="btn" type="button" id="eNo">กลับ</button><button class="btn gold" type="button" id="eYes">บันทึก</button></div></div>`;
+  const drawPin=()=>{ const p=pName(pick);
+    $('ePin').innerHTML=p?`📌 <b>${esc(p.n)}</b> <span class="sub">${esc(p.k||'')} · ${esc(p.id)}</span>${p.c?` · <a href="${mapUrl(p.c)}" target="_blank" rel="noopener">${esc(p.c)}</a>`:''}<button class="btn sm" type="button" id="eUn" style="margin-left:auto">ไม่ผูกหมุด</button>`
+      :'<span class="sub">ยังไม่ผูกหมุด — ค้นแล้วเลือกด้านล่าง</span>';
+    if($('eUn')) $('eUn').onclick=()=>{ pick=''; drawPin(); drawList(); }; };
+  const drawList=()=>{ const q=$('eQ').value.trim().toLowerCase().replace(/\s+/g,'');
+    const hit=poi.filter(p=>!q||String(p.n).toLowerCase().replace(/\s+/g,'').indexOf(q)>=0)
+      .sort((a,b)=>((b.k==='ลูกค้า BULK')-(a.k==='ลูกค้า BULK'))||String(a.n).localeCompare(String(b.n),'th')).slice(0,60);
+    $('eList').innerHTML=hit.length?hit.map(p=>`<button type="button" role="option" class="${p.id===pick?'on':''}" data-p="${esc(p.id)}">${esc(p.n)}<small>${esc(p.k||'')}</small></button>`).join('')
+      :'<div class="sub" style="padding:10px">ไม่พบหมุดชื่อนี้</div>';
+    $('eList').querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ pick=b.dataset.p; drawPin(); drawList(); }); };
+  drawPin(); drawList(); $('eQ').oninput=drawList;
+  const back=()=>drawCustList();
+  $('eX').onclick=back; $('eNo').onclick=back;
+  $('eYes').onclick=()=>{ const loc=$('eLoc').value.trim();
+    if(!pick&&!loc&&!confirmNoLoc()) return;
+    saveCust($('eYes'),{custCode:c.cust_code,custName:c.cust_name,poiId:pick,location:loc,radiusM:$('eRad').value,
+      hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,note:$('eNote').value.trim()},'บันทึก '+(c.cust_name||c.cust_code)+' แล้ว'); };
+  // ยังไม่มีพิกัด: เตือนครั้งแรก (ปุ่มเปลี่ยนเป็นยืนยัน) กดซ้ำ = บันทึกจริง
+  function confirmNoLoc(){ const b=$('eYes'); if(b.dataset.warned) return true;
+    b.dataset.warned='1'; b.textContent='บันทึกแบบไม่มีพิกัด'; toast('ยังไม่มีพิกัด — คนขับต้องกด "ถึงลูกค้า" เอง · กดบันทึกอีกครั้งเพื่อยืนยัน',true); return false; }
+  if($('eDel')) $('eDel').onclick=async()=>{ const b=$('eDel');
+    if(!b.dataset.sure){ b.dataset.sure='1'; b.textContent='ยืนยันลบ '+(c.cust_name||c.cust_code)+'?'; return; }
+    b.disabled=true; b.textContent='กำลังลบ…';
+    try{ const r=await post({action:'removeCustomer',custCode:c.cust_code}); toast(r.ok?'ลบออกจากรายการแล้ว':(r.error||'ลบไม่สำเร็จ'),!r.ok); }
+    catch(e){ toast('ไม่แน่ใจว่าลบสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); }
+    openCustomers(); };
+  $('eQ').focus();
 }
 
 /* ── 🚛 แถบวิ่งสถานะเที่ยว (skill webapp-ticker) · 2026-10-15
