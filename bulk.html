@@ -233,7 +233,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15m</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15n</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -307,6 +307,33 @@ async function load(date){
   const d=await r.json();
   if(!d.ok){ gate(d.denied?'🔒 ไม่มีสิทธิ์ดูแพลน Bulk':'โหลดไม่สำเร็จ', d.error||''); return; }
   DATA=d; VIEW=null; $('gate').hidden=true; $('app').hidden=false; render();
+  runGo();
+}
+/* ── ปุ่มริชเมนู Bulk (บัญชี/พันตัน) → ?go= เปิดตรงส่วนนั้น (ทำครั้งเดียวตอนเปิดหน้า) · 2026-10-15 ──
+   today = แพลนล่าสุด · status = สถานะเที่ยว · history = เลือกแพลนย้อนหลัง · report = รายงาน · customers = ลูกค้า Bulk */
+let GO=(new URLSearchParams(location.search).get('go')||'').toLowerCase();
+function runGo(){
+  const g=GO; GO=''; if(!g) return;
+  const p=DATA&&DATA.plan;
+  if(g==='customers') return openCustomers();
+  if(g==='history') return openHistory();
+  if(g==='report'){ if(p) bulkReport(); else toast('ยังไม่มีแพลนให้ออกรายงาน',true); return; }
+  if(g==='status'){ const t=$('ticker').hidden?$('kpis'):$('ticker'); setTimeout(()=>t.scrollIntoView({behavior:'smooth',block:'start'}),60); return; }
+}
+function openHistory(){
+  const d=DATA, cur=d.plan&&d.plan.send_date;
+  let m=$('dlgHist'); if(!m){ m=document.createElement('div'); m.id='dlgHist'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="hT">
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">แพลนส่งมอบ 30 วันล่าสุด</div><h2 id="hT" style="color:#fff">📅 แพลนย้อนหลัง</h2></div>
+      <button type="button" class="dlgx" aria-label="ปิด" id="hX">✕</button></div>
+    <div class="dlgbd"><div class="plist" style="max-height:60vh;margin:0">${d.plans.length?d.plans.map(x=>`<button type="button" class="${x.send_date===cur?'on':''}" data-d="${x.send_date}">
+      ส่ง ${thDate(x.send_date)} · ${revName(x.rev)}<small>${x.dispatched_at?'แจกแล้ว':'ยังไม่แจก'}${x.load_date?' · โหลด '+thDate(x.load_date):''}</small></button>`).join('')
+      :'<div class="sub" style="padding:12px">ยังไม่มีแพลน</div>'}</div></div></div>`;
+  m.hidden=false; $('hX').onclick=close;
+  m.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ close(); load(b.dataset.d); });
+  const on=m.querySelector('button.on')||m.querySelector('[data-d]'); if(on) on.focus();
 }
 
 function render(){
