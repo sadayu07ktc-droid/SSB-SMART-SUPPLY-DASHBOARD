@@ -136,6 +136,11 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .tk-val{font-family:var(--f-num);font-weight:600;color:var(--ink)}
 .tk-u{font-size:11px;color:var(--muted);margin-left:-3px}
 .tk-st{font-size:11.5px;font-weight:700;border-radius:999px;padding:1px 8px}
+.tk-trip{cursor:help}.tk-trip:hover,.tk-trip:focus-visible{background:var(--tint);outline:none}
+.tk-tip{position:fixed;z-index:80;max-width:340px;background:var(--surface);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--brand2);
+  border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;box-shadow:0 12px 30px -12px rgba(0,0,0,.35);pointer-events:none}
+.tk-tip>b{display:block;font-size:13px;margin-bottom:4px}
+.tk-tip div span{display:inline-block;min-width:62px;color:var(--muted)}
 .tk-item.tk-sum{background:linear-gradient(90deg,var(--goldTint),transparent)}
 .tk-sumlb{font-size:12px;font-weight:700;color:var(--goldInk)}
 .tk-sep{display:inline-flex;align-items:center;padding:0 16px;white-space:nowrap;font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.04em}
@@ -177,10 +182,11 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15j</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15k</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="tk-tip" id="tkTip" role="tooltip" hidden></div>
 
 <script>
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -451,7 +457,7 @@ function buildTicker(p,live){
   const cnt=s=>live.filter(j=>j.status===s).length;
   const sum=[['เที่ยวทั้งหมด',live.length]].concat(Object.keys(TK_ST).map(s=>[TK_ST[s][0],cnt(s)]).filter((x,i)=>i===0||x[1]))
     .map((x,i)=>`<span class="tk-item tk-sum"><span class="tk-sumlb">${esc(x[0])}</span><span class="tk-val">${x[1]}</span>${i===0?'':'<span class="tk-u">เที่ยว</span>'}</span>`).join('');
-  const trip=j=>`<span class="tk-item"><span class="tk-code">#${j.line_no}</span><span>${esc(j.driver_name||'—')}</span><span class="tk-code">${esc(String(j.plate||'').split(/\s*[,/]\s*/)[0])}</span>
+  const trip=j=>`<span class="tk-item tk-trip" data-id="${j.id}" tabindex="0"><span class="tk-code">#${j.line_no}</span><span>${esc(j.driver_name||'—')}</span><span class="tk-code">${esc(String(j.plate||'').split(/\s*[,/]\s*/)[0])}</span>
     <span class="tk-val">${fmt(j.qty_kg)}</span><span class="tk-u">กก.</span>${tkSt(j.needs_ack&&j.status==='sent'?'sent':j.status)}${j.status==='gate_out'&&j.gate_out_at?`<span class="tk-code">${thTime(j.gate_out_at)}</span>`:''}</span>`;
   const out=live.filter(j=>j.status==='gate_out'||j.status==='delivered'), wg=live.filter(j=>j.status==='weighed'), rest=live.filter(j=>['gate_out','delivered','weighed'].indexOf(j.status)<0);
   let html=sum, n=sum.split('tk-item').length-1+live.length;
@@ -463,7 +469,24 @@ function buildTicker(p,live){
   track.style.animation='none'; void track.offsetWidth; track.style.animation='';
   track.style.animationDuration=Math.max(30,n*3.2)+'s';
   box.hidden=false;
+  TK_JOBS={}; live.forEach(j=>{ TK_JOBS[j.id]=j; });
+  if(!box.__tip){ box.__tip=true;   // ชี้/โฟกัสเที่ยว → กล่องบอกส่งที่ไหน (ผูกครั้งเดียว)
+    const show=(el,x,y)=>{ const j=TK_JOBS[el.dataset.id]; if(!j) return; const t=$('tkTip');
+      t.innerHTML=`<b>#${j.line_no} · ${esc(j.cust_name||'—')}</b>
+        <div><span>ส่งที่</span>${esc(j.dest||'—')}</div><div><span>สินค้า</span>${esc(j.prod_name||'—')} · <b>${fmt(j.qty_kg)} กก.</b></div>
+        <div><span>คนขับ</span>${esc(j.driver_name||'—')} · ${esc(j.plate||'—')}</div>
+        <div><span>บิล</span>${esc(j.bill||'—')} · ใบขนย้าย ${j.co?'<b style="color:var(--ok)">✓ มี</b>':'<b style="color:var(--bad)">✗ ไม่มี</b>'}</div>
+        ${j.note?`<div><span>หมายเหตุ</span>${esc(j.note)}</div>`:''}`;
+      t.hidden=false; const w=t.offsetWidth, h=t.offsetHeight;
+      t.style.left=Math.max(8,Math.min(x-w/2,innerWidth-w-8))+'px'; t.style.top=(y+h+20>innerHeight?y-h-12:y+18)+'px'; };
+    const hide=()=>{ $('tkTip').hidden=true; };
+    box.addEventListener('mouseover',e=>{ const el=e.target.closest('.tk-trip'); if(el) show(el,e.clientX,el.getBoundingClientRect().bottom-10); else hide(); });
+    box.addEventListener('mouseleave',hide);
+    box.addEventListener('focusin',e=>{ const el=e.target.closest('.tk-trip'); if(el){ const r=el.getBoundingClientRect(); show(el,r.left+r.width/2,r.bottom-10); } });
+    box.addEventListener('focusout',hide);
+  }
 }
+let TK_JOBS={};
 
 /* ── 🖨️ รายงาน Excel / PDF / JPEG (skill webapp-report-export · docreport.js ปรับเป็นโทน SSB) · 2026-10-15
    ข้อมูล = ฉบับที่กำลังดูบนจอ (ล่าสุด หรือ ฉบับย้อนหลัง) ไม่รวมเที่ยวที่ตัดออก · PDF/JPEG = A4 แนวนอน แถวสูงคงที่ ข้อความยาวตัดด้วย … */
