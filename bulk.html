@@ -79,6 +79,24 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .panel .txt{flex:1;min-width:260px;font-size:13.5px}
 .panel ul{margin:4px 0 6px;padding-left:18px;font-size:12.5px;max-height:240px;overflow:auto}
 .panel .acts{display:flex;gap:8px;align-self:flex-end}
+/* ตารางพรีวิวก่อนยืนยันไฟล์ · 2026-10-15 */
+.pvsum{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0 2px}
+.pvsum .kpi{background:var(--surface);padding:5px 11px;min-width:0}
+.pvsum .kpi .v{font-size:15px}
+.pvtools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:12.5px}
+.pvtools label{display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+.pvwrap{overflow:auto;max-height:min(62vh,560px);border:1px solid var(--line);border-radius:10px;background:var(--surface);margin:8px 0 4px}
+.pvwrap table{min-width:1080px}
+.pvwrap th{position:sticky;top:0;z-index:1}
+.pvwrap td{padding:7px 8px}
+.pvwrap tr.grp td{position:static}
+.pvwrap td.hl{background:var(--warnTint);font-weight:700}
+.pvwrap tr.bad td{background:var(--badTint)}
+.pvwrap tr.same td{color:var(--muted)}
+.pvwrap .k{font-size:11.5px;font-weight:700;border-radius:999px;padding:2px 8px;white-space:nowrap;display:inline-block}
+.k-add{color:var(--info);background:var(--infoTint)}.k-chg{color:var(--warn);background:var(--warnTint)}.k-del{color:var(--bad);background:var(--badTint)}.k-same{color:var(--muted);background:var(--surface2)}
+.pvwrap .why{display:block;font-size:11px;color:var(--warn);margin-top:3px;max-width:260px;white-space:normal}
+.ina{display:inline-block;font-size:10.5px;font-weight:700;color:var(--warn);background:var(--warnTint);border-radius:6px;padding:0 6px;margin-left:4px;white-space:nowrap}
 .note{font-size:12.5px;color:var(--muted);padding:10px 16px}
 .empty{padding:40px 16px;text-align:center;color:var(--muted)}
 .gate{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg);z-index:50;padding:16px;text-align:center}
@@ -227,9 +245,47 @@ function showPreview(pv){
     :`<b>${esc(pv.revName)} · ส่ง ${thDate(pv.sendDate)}</b> — แก้ ${pv.chg.length} · เพิ่ม ${pv.add.length} · ตัดออก ${pv.del.length}`;
   const after=pv.dispatched?' · แจกงานแล้ว → ส่ง<b>ใบงานใหม่/แก้ไข/ยกเลิก</b>ให้คนขับอัตโนมัติ':' · ยังไม่แจกงาน (กดแจกงานเมื่อพร้อม)';
   P.className='panel'+(blocked?' bad':'');
-  P.innerHTML=`<div class="txt">${head}<ul>${li}</ul>${warn}${blocked?'':`<div style="margin-top:4px">กดยืนยัน → บันทึกเป็น <b>${esc(pv.revName)}</b>${after}</div>`}</div>
-    <div class="acts"><button class="btn" type="button" onclick="closePanel()">${blocked?'ปิด':'ยกเลิก'}</button>${blocked?'':'<button class="btn gold" type="button" id="cYes">ยืนยันใช้ไฟล์นี้</button>'}</div>`;
+  const tb=Array.isArray(pv.table)&&pv.table.length;
+  P.innerHTML=`<div class="txt"${tb?' style="flex-basis:100%"':''}>${head}${tb?pvTable(pv):`<ul>${li}</ul>`}${warn}${blocked?'':`<div style="margin-top:4px">กดยืนยัน → บันทึกเป็น <b>${esc(pv.revName)}</b>${after}</div>`}</div>
+    <div class="acts" style="margin-left:auto"><button class="btn" type="button" onclick="closePanel()">${blocked?'ปิด':'ยกเลิก'}</button>${blocked?'':'<button class="btn gold" type="button" id="cYes">ยืนยันใช้ไฟล์นี้</button>'}</div>`;
+  if(tb&&$('pvOnly')) $('pvOnly').onchange=e=>{ $('pvBody').innerHTML=pvRows(pv,e.target.checked); };
   if(!blocked) $('cYes').onclick=doCommit;
+}
+/* ตารางพรีวิว: แยกหัวจ่ายเหมือนตารางหลัก · ฉบับแก้ = ป้าย เพิ่ม/แก้/ตัดออก + ไฮไลต์ช่องที่เปลี่ยน */
+const PV_COLS={cust:['cust_name','cust_code'],dest:['dest'],prod:['prod_name','prod_code','prod_group'],qty:['qty_kg'],bill:['bill'],co:['co'],plate:['plate']};
+function pvTable(pv){
+  const t=pv.table, live=t.filter(r=>r.kind!=='del'), isRev=!pv.isNew;
+  const drv=new Set(live.filter(r=>r.driver).map(r=>r.driver)).size;
+  const kp=[['เที่ยว',live.length],['รวม (กก.)',fmt(live.reduce((s,r)=>s+Number(r.qty||0),0))],['คนขับ',drv+' คน']];
+  if(isRev) kp.push(['แก้',pv.chg.length],['เพิ่ม',pv.add.length],['ตัดออก',pv.del.length]);
+  if(pv.missing.length) kp.push(['ไม่พบทะเบียน',pv.missing.length]);
+  const changed=pv.chg.length+pv.add.length+pv.del.length;
+  const only=isRev&&changed>0;
+  return `<div class="pvsum">${kp.map(k=>`<div class="kpi"><div class="k">${k[0]}</div><div class="v">${k[1]}</div></div>`).join('')}</div>`
+    +(isRev?`<div class="pvtools"><label><input type="checkbox" id="pvOnly"${only?' checked':''}> แสดงเฉพาะรายการที่เปลี่ยน</label><span class="sub">ช่องสีส้ม = ค่าที่เปลี่ยนจากฉบับก่อน</span></div>`:'')
+    +`<div class="pvwrap"><table><thead><tr>${isRev?'<th>เปลี่ยน</th>':''}<th>#</th><th>ลูกค้า</th><th>สถานที่ส่ง</th><th>สินค้า</th><th class="r">จำนวน (กก.)</th><th>บิล</th><th>ใบขนย้าย</th><th>ทะเบียน</th><th>คนขับ</th><th>หมายเหตุ</th></tr></thead>
+      <tbody id="pvBody">${pvRows(pv,only)}</tbody></table></div>`;
+}
+function pvRows(pv,onlyChanged){
+  const isRev=!pv.isNew, ncol=isRev?11:10;
+  const rows=pv.table.filter(r=>!onlyChanged||r.kind!=='same').slice().sort((a,b)=>(a.g||'').localeCompare(b.g||'')||a.no-b.no);
+  if(!rows.length) return `<tr><td colspan="${ncol}" class="empty">ไม่มีรายการที่เปลี่ยน</td></tr>`;
+  const KN={add:'เพิ่ม',chg:'แก้',del:'ตัดออก',same:'เหมือนเดิม'};
+  let html='', last=null;
+  rows.forEach(r=>{
+    if(r.g!==last){ last=r.g; const sum=pv.table.filter(x=>x.g===r.g&&x.kind!=='del').reduce((s,x)=>s+Number(x.qty||0),0);
+      html+=`<tr class="grp"><td colspan="${ncol}">หัวจ่าย ${esc(r.g||'—')} · ${esc(GROUPS[r.g]||'')} · รวม <span class="num">${fmt(sum)}</span> กก.</td></tr>`; }
+    const hl=c=>r.kind==='chg'&&(PV_COLS[c]||[]).some(k=>r.cf.indexOf(k)>=0)?' hl':'';
+    const cls=[r.missing?'bad':'',r.kind==='del'?'cx':'',isRev&&r.kind==='same'?'same':''].filter(Boolean).join(' ');
+    const drvCell=r.missing?'<span style="color:var(--bad);font-weight:700">⛔ ไม่พบทะเบียนนี้</span>':esc(r.driver||'—')+(r.inactive?'<span class="ina">ยังไม่ Active</span>':'');
+    html+=`<tr class="${cls}">${isRev?`<td><span class="k k-${r.kind}">${KN[r.kind]}</span>${r.kind==='chg'&&r.txt?`<span class="why">${esc(r.txt)}</span>`:''}</td>`:''}
+      <td class="num">${r.no}</td>
+      <td class="cust${hl('cust')}">${esc(r.cust)}<small>${esc(r.cust_code)}</small></td><td class="${hl('dest')}">${esc(r.dest)}</td>
+      <td class="prod${hl('prod')}">${esc(r.prod)}<small>${esc(r.prod_code)}</small></td><td class="r num${hl('qty')}">${fmt(r.qty)}</td>
+      <td class="${hl('bill')}">${esc(r.bill)}</td><td class="${hl('co')}">${r.co?'<span class="co y">✓ มี</span>':'<span class="co n">✗</span>'}</td>
+      <td class="num${hl('plate')}">${esc(r.plate||'—')}</td><td class="${hl('plate')}">${drvCell}</td><td>${esc(r.note||'—')}</td></tr>`;
+  });
+  return html;
 }
 function closePanel(){ $('panel').hidden=true; PENDING=null; }
 async function doCommit(){
