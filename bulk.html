@@ -55,6 +55,17 @@ select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);
 .ver .v{border:1px solid var(--line);border-radius:999px;padding:2px 10px;color:var(--muted);background:var(--surface);font:inherit;font-size:12.5px}
 .ver button.v{cursor:pointer}.ver button.v:hover{border-color:var(--brand2);color:var(--brandInk)}
 .ver button.v:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+.dlg{position:fixed;inset:0;z-index:65;background:rgba(10,20,15,.45);display:flex;justify-content:center;align-items:flex-start;padding:max(16px,5vh) 16px 16px;overflow:auto}
+.dlgbox{background:var(--surface);color:var(--ink);width:100%;max-width:620px;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px -20px rgba(0,0,0,.5);animation:dlgIn .18s ease-out}
+@keyframes dlgIn{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion: reduce){.dlgbox{animation:none}}
+.dlghd{background:var(--brand);padding:14px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.dlgx{background:transparent;border:0;color:#fff;font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px}
+.dlgx:focus-visible{outline:2px solid #fff}
+.dlgbd{padding:14px 16px;display:flex;flex-direction:column;gap:12px}
+.dlglist{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:6px;max-height:40vh;overflow:auto}
+.dlglist div{background:var(--surface2);border-radius:8px;padding:6px 10px;font-size:13px;display:flex;flex-direction:column}
+.dlgft{display:flex;justify-content:flex-end;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
 .revinfo{flex-basis:100%;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:4px}
 .btn.sm{font-size:12.5px;padding:4px 10px;border-radius:8px}
 .mfail{color:var(--bad);font-weight:600}
@@ -139,7 +150,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15h</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15i</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -376,13 +387,26 @@ async function doCommit(){
 /* ── แจกงานทั้งแพลน ── */
 function askDispatch(){
   const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled);
-  const by={}; live.forEach(j=>{ by[j.driver_name]=(by[j.driver_name]||0)+1; });
-  const P=$('panel'); P.hidden=false; P.className='panel';
-  P.innerHTML=`<div class="txt">แจกงานทั้งแพลน · ส่ง ${thDate(p.send_date)} — <b>${live.length} เที่ยว</b> ให้คนขับ ${Object.keys(by).length} คน: ${esc(Object.keys(by).map(k=>k+' ('+by[k]+')').join(', '))}<br>คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที (กด "รับงาน" ในการ์ด) · หลังจากนี้อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้อัตโนมัติ</div>
-    <div class="acts"><button class="btn" type="button" onclick="closePanel()">ยกเลิก</button><button class="btn gold" type="button" id="dYes">ยืนยันแจกงาน</button></div>`;
+  const by={}; live.forEach(j=>{ (by[j.driver_name]=by[j.driver_name]||[]).push(j); });
+  const total=live.reduce((s,j)=>s+Number(j.qty_kg||0),0);
+  // หน้าต่างยืนยันเด้งด้านบนจอ (เดิมเป็นแถบใต้ตาราง ต้องเลื่อนลงไปหา) · 2026-10-15
+  let m=$('dlgDisp'); if(!m){ m=document.createElement('div'); m.id='dlgDisp'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="dlgT">
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">📤 แจกงานทั้งแพลน</div><h2 id="dlgT" style="color:#fff">ส่ง ${thDate(p.send_date)} · ${revName(p.rev||0)}</h2></div>
+      <button type="button" class="dlgx" aria-label="ปิด" id="dNo2">✕</button></div>
+    <div class="dlgbd">
+      <div class="kpis" style="padding:0;border:0"><div class="kpi"><div class="k">เที่ยว</div><div class="v">${live.length}</div></div>
+        <div class="kpi"><div class="k">รวม (กก.)</div><div class="v">${fmt(total)}</div></div><div class="kpi"><div class="k">คนขับ</div><div class="v">${Object.keys(by).length}</div></div></div>
+      <div class="dlglist">${Object.keys(by).map(k=>`<div><b>${esc(k||'—')}</b><span class="sub">${by[k].length} เที่ยว · #${by[k].map(j=>j.line_no).join(', #')}</span></div>`).join('')}</div>
+      <div class="sub">คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที (กด "รับงาน" ในการ์ด) · หลังจากนี้อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้อัตโนมัติ</div>
+    </div>
+    <div class="dlgft"><button class="btn" type="button" id="dNo">ยกเลิก</button><button class="btn gold" type="button" id="dYes">ยืนยันแจกงาน ${live.length} เที่ยว</button></div></div>`;
+  m.hidden=false; $('dNo').onclick=close; $('dNo2').onclick=close; $('dYes').focus();
   $('dYes').onclick=async()=>{ const b=$('dYes'); b.disabled=true; b.textContent='กำลังแจก…';
     try{ const d=await post({action:'dispatch',planId:p.id});
-      if(d.ok){ closePanel(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)); load(p.send_date); }
+      if(d.ok){ close(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)); load(p.send_date); }
       else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
     }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
 }
