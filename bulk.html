@@ -139,7 +139,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15f</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15g</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -422,6 +422,7 @@ function bulkReport(){
     status:{col:11,map:{'ยังไม่แจก':['#5f5e5a','#efefef'],'แจกแล้ว · รอคนขับรับ':['#185fa5','#e6f1fb'],'รับงานแล้ว':['#8a5a0b','#fef0d9'],
       'ชั่งต้นทางแล้ว':['#8a5a0b','#fef0d9'],'โหลดเสร็จ · ออกจาก SSB':['#185fa5','#e6f1fb'],'ส่งแล้ว':['#127a2e','#e7f5ee'],
       'แก้ไข · รอรับใหม่':['#a33b0b','#fde9d9'],'แก้ในฉบับนี้':['#a33b0b','#fde9d9'],'เพิ่มในฉบับนี้':['#185fa5','#e6f1fb']}},
+    tint:{col:7,map:{'✓ มี':'#157A40','✗':'#B42318'}},   // สีตัวอักษรช่องใบขนย้าย
     total:['','','รวม '+rows.length+' เที่ยว','','',total,'','','','','',''] });
 }
 function docReportPick(spec){
@@ -476,6 +477,7 @@ async function docReportXlsx(spec){
     aoa.push(r.map((v,ci)=>{
       let s=Object.assign({},base,{alignment:Object.assign({},base.alignment,{horizontal:spec.cols[ci].a==='right'?'right':(spec.cols[ci].a==='center'?'center':'left')})});
       if(spec.status&&ci===spec.status.col&&spec.status.map[v]){ const cc=spec.status.map[v]; s=Object.assign({},s,{font:F({bold:true,color:{rgb:hex(cc[0])}}),fill:{fgColor:{rgb:hex(cc[1])}}}); }
+      if(spec.tint&&ci===spec.tint.col&&spec.tint.map[v]) s=Object.assign({},s,{font:F({bold:true,color:{rgb:hex(spec.tint.map[v])}})});
       return c(v,s); }));
   });
   if(spec.total) aoa.push(spec.total.map(v=>c(v,S.tot)));
@@ -502,6 +504,7 @@ function docReportPages(spec){
   const thead='<tr>'+spec.cols.map((k,i)=>`<th style="${th};text-align:${k.a||'left'}${i===0?';border-radius:8px 0 0 0':''}${i===spec.cols.length-1?';border-radius:0 8px 0 0':''}">${e(k.h)}</th>`).join('')+'</tr>';
   const tr=(r,i)=>'<tr style="background:'+(i%2?'#f7faf8':'#fff')+'">'+r.map((v,ci)=>{
       let st=''; if(spec.status&&ci===spec.status.col&&spec.status.map[v]){ const cc=spec.status.map[v]; st=`<span style="display:inline-block;line-height:16px;vertical-align:middle;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;color:${cc[0]};background:${cc[1]}">${e(String(v))}</span>`; }
+      if(!st&&spec.tint&&ci===spec.tint.col&&spec.tint.map[v]) st=`<b style="color:${spec.tint.map[v]}">${e(String(v))}</b>`;
       const val=st||e(typeof v==='number'?fmt(v):String(v==null?'':v));
       return `<td style="${cell};text-align:${spec.cols[ci].a||'left'}">${val}</td>`; }).join('')+'</tr>';
   const tot=spec.total?'<tr style="background:#dce8e0;font-weight:800">'+spec.total.map((v,ci)=>`<td style="${cell};border:0;text-align:${spec.cols[ci].a||'left'}">${e(typeof v==='number'?fmt(v):String(v==null?'':v))}</td>`).join('')+'</tr>':'';
