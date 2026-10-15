@@ -136,7 +136,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15c</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-15d</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -164,7 +164,7 @@ const fmt=n=>Number(n||0).toLocaleString('en-US');
 const thDate=iso=>{ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?(+m[3])+'/'+(+m[2])+'/'+(+m[1]+543):'—'; };
 const thTime=iso=>{ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
 const revName=n=>n?'Revised '+n:'ฉบับแรก';
-let _t; function toast(m,err){ const t=$('toast'); t.textContent=m; t.className='toast on'+(err?' err':''); clearTimeout(_t); _t=setTimeout(()=>t.className='toast',3200); }
+let _t; function toast(m,err){ const t=$('toast'); t.textContent=m; t.className='toast on'+(err?' err':''); clearTimeout(_t); _t=setTimeout(()=>t.className='toast',Math.min(9000,Math.max(3200,String(m).length*70))); }
 function goBack(){ if(history.length>1) history.back(); else location.href=DASH; }
 function gate(t,s){ $('gate').hidden=false; $('app').hidden=true; $('gateT').textContent=t; $('gateS').textContent=s||''; }
 
@@ -319,13 +319,23 @@ function pvRows(pv,onlyChanged){
   });
   return html;
 }
+// ผลส่ง LINE จาก Edge (line = {admins, drivers, skipped, pushed, failed} / {error})
+function lineTxt(l,withAdmins){
+  if(!l) return 'LINE: ไม่มีข้อมูล';
+  if(l.error) return 'LINE ส่งไม่สำเร็จ';
+  const a=[]; if(withAdmins) a.push('แพลน → บัญชี/พันตัน '+(l.admins||0)+' คน');
+  a.push('ใบงาน → คนขับ '+(l.drivers||0)+' คน');
+  if(l.skipped) a.push(l.skipped+' เที่ยวไม่ได้ส่ง (คนขับยังไม่ Active)');
+  if(l.failed) a.push('ส่งพลาด '+l.failed);
+  return 'LINE: '+a.join(' · ');
+}
 function closePanel(){ $('panel').hidden=true; PENDING=null; }
 async function doCommit(){
   if(!PENDING) return; const b=$('cYes'); b.disabled=true; b.textContent='กำลังบันทึก…';
   try{
     const d=await post(Object.assign({action:'commit'},PENDING));
     if(!d.ok){ showPreview(Object.assign({},d,{ok:true})); toast(d.error||'บันทึกไม่สำเร็จ',true); return; }
-    closePanel(); toast('บันทึก '+d.revName+' แล้ว'+(d.dispatched?' · ส่งใบงานให้คนขับ '+(d.notify.newJobs.length+d.notify.changed.length+d.notify.cancelled.length)+' ใบ':''));
+    closePanel(); toast('บันทึก '+d.revName+' แล้ว · '+lineTxt(d.line,true));
     load(d.sendDate);
   }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(); }
 }
@@ -335,11 +345,11 @@ function askDispatch(){
   const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled);
   const by={}; live.forEach(j=>{ by[j.driver_name]=(by[j.driver_name]||0)+1; });
   const P=$('panel'); P.hidden=false; P.className='panel';
-  P.innerHTML=`<div class="txt">แจกงานทั้งแพลน · ส่ง ${thDate(p.send_date)} — <b>${live.length} เที่ยว</b> ให้คนขับ ${Object.keys(by).length} คน: ${esc(Object.keys(by).map(k=>k+' ('+by[k]+')').join(', '))}<br>คนขับได้การ์ด LINE ทันที · หลังจากนี้อัปโหลดฉบับใหม่ = ส่งใบงานให้อัตโนมัติ</div>
+  P.innerHTML=`<div class="txt">แจกงานทั้งแพลน · ส่ง ${thDate(p.send_date)} — <b>${live.length} เที่ยว</b> ให้คนขับ ${Object.keys(by).length} คน: ${esc(Object.keys(by).map(k=>k+' ('+by[k]+')').join(', '))}<br>คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที (กด "รับงาน" ในการ์ด) · หลังจากนี้อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้อัตโนมัติ</div>
     <div class="acts"><button class="btn" type="button" onclick="closePanel()">ยกเลิก</button><button class="btn gold" type="button" id="dYes">ยืนยันแจกงาน</button></div>`;
   $('dYes').onclick=async()=>{ const b=$('dYes'); b.disabled=true; b.textContent='กำลังแจก…';
     try{ const d=await post({action:'dispatch',planId:p.id});
-      if(d.ok){ closePanel(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · คนขับ '+d.drivers+' คน'); load(p.send_date); }
+      if(d.ok){ closePanel(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)); load(p.send_date); }
       else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
     }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
 }
