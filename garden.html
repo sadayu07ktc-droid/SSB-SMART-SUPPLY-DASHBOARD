@@ -784,8 +784,10 @@ function poiRow(it){
   const J=s=>esc(JSON.stringify(s));
   let acts='';
   if(s==='ok'){
-    acts=`<button class="poi-btn" onclick='poiOpenPick(${J(key)})'>เปลี่ยน</button>`+(it.locPrev?`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"undo")'>↩ พิกัดเดิม</button>`:'');
+    acts=`<button class="poi-btn" onclick='poiOpenPick(${J(key)})'>เปลี่ยน</button>`+(it.locPrev?`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"undo")'>↩ พิกัดเดิม</button>`:'')
+      +`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"unconfirm")' title="กลับเป็น ต้องตรวจ · พิกัดไม่เปลี่ยน">ยกเลิกการยืนยัน</button>`;
   } else {
+    if(it.locPrev) acts+=`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"undo")' title="คืนพิกัดก่อนเปลี่ยนเป็นหมุด DTC">↩ พิกัดเดิม</button>`;
     if(top) acts+=`<button class="poi-btn pri" onclick='poiAct(${J(it.kind)},${J(it.code)},"useDtc",${J(top.id)})'>ใช้หมุด DTC</button>`;
     if(it.latlng) acts+=`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"keep",${J(top&&top.d<=2000?top.id:'')})'>คงพิกัดเดิม</button>`;
     acts+=`<button class="poi-btn" onclick='poiOpenPick(${J(key)})'>เลือกหมุดอื่น</button>`;
@@ -824,11 +826,12 @@ async function poiAct(kind,code,mode,poiId){
     const ok=await confirmBox('ใช้พิกัดหมุด DTC',`${POI_KIND[kind]} "${it.name}" → หมุด "${pin?pin.n:poiId}"${d!=null?' (ห่างพิกัดเดิม '+mDist(d)+')':''} · พิกัดเช็คอินอัตโนมัติจะเปลี่ยนทันที (กด ↩ พิกัดเดิม ย้อนกลับได้)`,'ใช้หมุดนี้',false);
     if(!ok) return;
   }
+  if(mode==='unconfirm'){ const ok=await confirmBox('ยกเลิกการยืนยัน',`"${it.name}" จะกลับไปอยู่ในรายการ "ต้องตรวจ" · พิกัดเช็คอินไม่เปลี่ยน (ยังเป็น ${it.latlng||it.loc||'—'})`,'ยกเลิกการยืนยัน',true); if(!ok) return; }
   if(mode==='undo'){ const ok=await confirmBox('ย้อนกลับพิกัดเดิม',`คืนพิกัดของ "${it.name}" เป็น ${it.locPrev}`,'ย้อนกลับ',false); if(!ok) return; }
   try{
     const r=await poiPost({action:'setFarmPoi',kind,code,mode,poiId:poiId||''});
     if(!r.ok) throw new Error(r.error||'บันทึกไม่สำเร็จ');
-    toast(mode==='useDtc'?'✅ ใช้พิกัดหมุด DTC แล้ว':mode==='keep'?'✅ ยืนยันพิกัดเดิมแล้ว':'↩ คืนพิกัดเดิมแล้ว');
+    toast(mode==='useDtc'?'✅ ใช้พิกัดหมุด DTC แล้ว':mode==='keep'?'✅ ยืนยันพิกัดเดิมแล้ว':mode==='unconfirm'?'ยกเลิกการยืนยันแล้ว — กลับไปที่ "ต้องตรวจ"':'↩ คืนพิกัดเดิมแล้ว');
     POI_PICK=''; await poiLoad();
   }catch(e){ toast('บันทึกไม่สำเร็จ: '+(e.message||e),true); }
 }
