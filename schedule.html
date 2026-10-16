@@ -173,6 +173,10 @@ button.wagechip{cursor:pointer;border:0}
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
+// เปลี่ยนคนขับ → Edge order-actions (ตัวเดียวกับ Order_Status) · ?edgew=0 = ใช้ GAS (จำในเครื่อง ใช้คีย์เดียวกับ Order_Status) · ?edgew=1 = กลับ Edge
+const EDGE_WRITE_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/order-actions';
+(function(){ try{ const q=new URLSearchParams(location.search).get('edgew'); if(q==='0') localStorage.setItem('ssb_edge_writes','0'); if(q==='1') localStorage.removeItem('ssb_edge_writes'); }catch(e){} })();
+function useEdgeWrites(){ try{ return localStorage.getItem('ssb_edge_writes')!=='0'; }catch(e){ return true; } }
 const $=s=>document.querySelector(s);
 const fmt=(n,d=0)=>Number(n||0).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
 let MY_UID='', VIEW='week', ANCHOR=new Date(), DATA=null, LOADING=false, FILTER='all';
@@ -517,7 +521,7 @@ async function showAssign(orderId){
   const open=box.style.display!=='none'; if(open){ box.style.display='none'; return; }
   box.style.display='block'; box.innerHTML='<div style="padding:10px;color:var(--muted);font-size:12px">กำลังโหลดรายชื่อคนขับ...</div>';
   if(!DRIVERS_ROSTER){
-    try{ const r=await fetch(GAS_URL+'?action=getReassignDrivers&userId='+encodeURIComponent(MY_UID)+_CB); const d=await r.json();
+    try{ const r=await ssbFetch(GAS_URL+'?action=getReassignDrivers&userId='+encodeURIComponent(MY_UID)+_CB); const d=await r.json();
       DRIVERS_ROSTER = d.ok ? (d.drivers||d.list||[]) : []; }
     catch(e){ DRIVERS_ROSTER=[]; }
   }
@@ -530,7 +534,11 @@ async function showAssign(orderId){
 async function doAssign(orderId, driverUid){
   const box=document.getElementById('assignPick'); if(box)box.innerHTML='<div style="padding:10px;color:var(--muted);font-size:12.5px">กำลังมอบหมาย...</div>';
   try{
-    const r=await fetch(GAS_URL, {method:'POST', body:JSON.stringify({action:'reassignDriver', userId:MY_UID, orderId:orderId, driverUid:driverUid})});
+    // Edge order-actions (เหมือน Order_Status) · ฉุกเฉิน ?edgew=0 = กลับไป GAS · POST ห้ามยิงซ้ำอัตโนมัติ
+    const dr=(DRIVERS_ROSTER||[]).find(x=>x.uid===driverUid)||{};
+    const url=useEdgeWrites()?EDGE_WRITE_URL:GAS_URL;
+    const r=await fetch(url, {method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'reassignDriver', userId:MY_UID, orderId:orderId, driverUid:driverUid, driverName:dr.name||'', plate:dr.plate||''})});
     const d=await r.json();
     if(d.success){ closeDr(); DRIVERS_ROSTER=null; load(); }
     else{ if(box)box.innerHTML='<div style="padding:10px;color:var(--st-cancel);font-size:12.5px">❌ '+(d.error||'มอบหมายไม่สำเร็จ')+'</div>'; }

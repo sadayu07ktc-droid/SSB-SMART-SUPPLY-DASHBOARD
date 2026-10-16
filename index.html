@@ -781,7 +781,7 @@
         + '&userId=' + encodeURIComponent(MY_UID)
         + '&t=' + Date.now();
 
-      const r = await fetch(url);
+      const r = await ssbFetch(url);   // Edge admin-notify ก่อน (ตัวเดียวกับหน้าแจ้งเตือน) · พัง → GAS เดิม
       const j = await r.json();
       NOTIFY_CACHE = j;
 
