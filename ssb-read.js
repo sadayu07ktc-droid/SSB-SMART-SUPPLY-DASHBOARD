@@ -19,6 +19,8 @@
     getGardenDetail: 'garden-admin',
     // ชุดคำนวณค่าแรง (wage-settings.html) · ปุ่มบันทึกหน้าตั้งค่าแอดมินยิง admin-writes ผ่าน ssbPost
     getWageTemplates: 'admin-writes',
+    // ลิ้นชักค่าแรง "เทียบกับตั้งค่าปัจจุบัน" คิดสด (wage.html) → Edge wage-calc (พอร์ต computeTripWage · parity 107/107) · 2026-10-16
+    getWageMonitor: 'wage-calc',
     // สวิตช์ตรวจสิทธิ์เข้าดูแดชบอร์ด (admins.html)
     getDashAuth: 'admin-perms', getPermInfo: 'admin-perms',
     // หน้าแจ้งเตือนแอดมิน (repo admin_notifications)
@@ -36,7 +38,7 @@
   // getWageReport: แยกกลุ่ม ไร่/Bulk/Packing ตามสิทธิ์แอดมิน (2026-10-14) — GAS ไม่กรองกลุ่ม ห้ามถอยไป GAS
   var EDGE_ONLY = { getWageStored: 1, getPermInfo: 1, getWageReport: 1 };
   // action ที่ช้าเพราะรอระบบนอก (DTC ประวัติ/สรุป GPS 5–15 วิ) → รอ Edge นานกว่าค่าเริ่ม 10 วิ ก่อนถอยไป GAS
-  var TIMEOUT = { getDriverRounds: 30000, getSummary: 30000, getDtcTodayChart: 60000 };   // กราฟระยะวิ่งจริง: ประวัติ GPS ทุกคัน ~30 วิ (GAS ~180 วิ)
+  var TIMEOUT = { getWageMonitor: 30000, getDriverRounds: 30000, getSummary: 30000, getDtcTodayChart: 60000 };   // กราฟระยะวิ่งจริง: ประวัติ GPS ทุกคัน ~30 วิ (GAS ~180 วิ)
   window.ssbFetch = async function (url, init) {
     try {
       var method = String((init && init.method) || 'GET').toUpperCase();

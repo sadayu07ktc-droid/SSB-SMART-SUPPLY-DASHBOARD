@@ -6,7 +6,7 @@
 <title>ค่าแรง/ต้นทุน คนขับ · SSB</title>
 <link rel="icon" type="image/svg+xml" href="favicon-wage.svg?v=1">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261014b"></script>
+<script src="ssb-read.js?v=20261016w"></script>
 <script src="ssb-pin-gate.js?v=20261014b"></script>
 <style>
   :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--danger:#c8352f;--radius:8px}
@@ -395,7 +395,7 @@ async function recalcOne(orderId,btn){
   btn.disabled=true;btn.textContent='กำลังคิด…';
   let d=null;
   for(let tr=1;tr<=3&&!d;tr++){   // คิดซ้ำได้ปลอดภัย (ผลเดิม) → GAS ตอบ HTML = ลองใหม่
-    try{const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:[orderId]})});d=JSON.parse(await r.text());}catch(_){d=null;await new Promise(z=>setTimeout(z,1500*tr));}
+    try{d=await recomputeApi([orderId]);}catch(_){d=null;await new Promise(z=>setTimeout(z,1500*tr));}
   }
   if(!d||!d.ok||!d.done){btn.disabled=false;btn.textContent='🔄 คิดใหม่เที่ยวนี้';uiAlert('❌ คิดใหม่ไม่สำเร็จ'+(d&&d.results&&d.results[0]&&d.results[0].error?': '+d.results[0].error:''));return;}
   await loadReport(); openDetail(orderId);
@@ -566,8 +566,7 @@ async function recomputeUnpaid(){
       // คิดใหม่ซ้ำได้ปลอดภัย (ผลเดิม · ที่จ่ายแล้วข้าม) → Google ตอบหน้า HTML/หลุด = ลองก้อนเดิมใหม่ 3 รอบ แล้วไปก้อนถัดไป (เดิมหยุดทั้งหมด เที่ยวที่เหลือไม่ถูกคิด)
       let d=null;
       for(let tr=1;tr<=3&&!d;tr++){
-        try{ const r=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'recomputeWages',userId:MY_UID,orderIds:part})});
-          d=JSON.parse(await r.text()); }catch(_){ d=null; }
+        try{ d=await recomputeApi(part); }catch(_){ d=null; }
         if(!d&&tr<3){ b.textContent=`ลองใหม่… ${Math.min(i+CHUNK,ids.length)}/${ids.length}`; await new Promise(z=>setTimeout(z,2000*tr)); }
       }
       if(!d){ badChunks.push(...part); continue; }
@@ -580,6 +579,13 @@ async function recomputeUnpaid(){
   await loadReport();
   uiAlert((badChunks.length?'⚠️ ':'✅ ')+'คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:'')
     +(badChunks.length?'\nหลังบ้านไม่ตอบ '+badChunks.length+' เที่ยว — กด 🔄 คำนวณใหม่ อีกครั้ง\n('+badChunks.slice(0,6).join(', ')+(badChunks.length>6?' …':'')+')':''));
+}
+// 🔄 คิดค่าแรงใหม่ → Edge wage-calc ก่อน (พอร์ต computeTripWage · ผลตรง GAS 107/107 ใบ · เร็วกว่ามาก) · Edge ล่ม/เกินเวลา → GAS เดิม
+//    คิดซ้ำปลอดภัย (ผลเดิม · ที่จ่ายแล้วข้าม) จึงถอยไป GAS ได้ · 2026-10-16
+function recomputeApi(orderIds){
+  const body={action:'recomputeWages',userId:MY_UID,orderIds};
+  return window.ssbPost ? ssbPost('wage-calc',GAS_URL,body,120000)
+    : fetch(GAS_URL,{method:'POST',body:JSON.stringify(body)}).then(r=>r.text()).then(t=>JSON.parse(t));
 }
 // ✍️ ปุ่มบันทึก → Edge admin-writes ก่อน (เร็วกว่า) · Edge ล่ม/เกินเวลา → GAS เดิม (ssb-read.js ssbPost)
 function adminWrite(body){
