@@ -212,6 +212,7 @@
       <h1>เจ้าของสวน</h1>
     </div>
     <div class="spacer"></div>
+    <button class="backbtn" onclick="openPoi()" title="เทียบพิกัดเช็คอินอัตโนมัติกับหมุดในเว็บ DTC">📍 หมุด DTC</button>
     <span class="count" id="cnt"></span>
   </div>
 </header>
@@ -642,6 +643,201 @@ function toggleHist(){
 function closeDr(){ $('#dw').classList.remove('on'); $('#scrim').classList.remove('on'); document.body.style.overflow=''; CUR=null; }
 $('#scrim').addEventListener('click', closeDr);
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDr(); });
+
+
+/* ══════════ 📍 หมุด DTC รถไร่ (2026-10-16) — เทียบพิกัดเช็คอินอัตโนมัติของ สวน/จุดรับ/ลาน กับหมุดในเว็บ DTC ══════════
+ * Edge farm-poi: getFarmPoi / setFarmPoi(useDtc|keep|undo) / refreshPoi · ไม่ส่ง LINE
+ * useDtc = เปลี่ยนพิกัดเช็คอินเป็นพิกัดหมุด (เก็บพิกัดเดิมไว้ ย้อนกลับได้) · keep = คงพิกัดเดิม (ผูกหมุดไว้อ้างอิง) */
+const FARM_POI_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/farm-poi';
+const POI_KIND={garden:'สวน',pickup:'จุดรับ',ramp:'ลาน'};
+let POI=null, POI_TAB='pickup', POI_F='todo', POI_PICK='';
+async function poiGet(){ const r=await fetch(FARM_POI_URL+'?action=getFarmPoi&userId='+encodeURIComponent(MY_UID)); return r.json(); }
+async function poiPost(body){ const r=await fetch(FARM_POI_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},body))}); return r.json(); }
+const mDist=d=>d==null?'—':d<1000?nf(d)+' ม.':(d/1000).toFixed(d<10000?1:0)+' กม.';
+function poiLL(s){ const m=String(s||'').match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/); return m?[+m[1],+m[2]]:null; }
+function poiDist(a,b){ if(!a||!b) return null; const R=6371000,r=Math.PI/180,x=Math.sin((b[0]-a[0])*r/2)**2+Math.cos(a[0]*r)*Math.cos(b[0]*r)*Math.sin((b[1]-a[1])*r/2)**2; return Math.round(2*R*Math.asin(Math.sqrt(x))); }
+/* สถานะ: ok=ยืนยันแล้ว · match=ห่าง≤300ม. (รอยืนยัน) · off=300ม.–2กม. · far=ไม่มีหมุดใกล้ · none=ไม่มีพิกัด */
+function poiState(it){
+  if(it.checkedAt) return 'ok';
+  if(!it.latlng) return 'none';
+  const d=it.near[0]?it.near[0].d:null;
+  return d==null||d>2000?'far':d<=300?'match':'off';
+}
+const POI_ST={ok:['ยืนยันแล้ว','ok'],match:['ตรงหมุด · รอยืนยัน','match'],off:['ห่างหมุด DTC','off'],far:['ไม่พบหมุดใกล้','far'],none:['ไม่มีพิกัด','none']};
+
+function poiCss(){
+  if(document.getElementById('poiCss')) return;
+  const st=document.createElement('style'); st.id='poiCss'; st.textContent=`
+#poiDlg{position:fixed;inset:0;z-index:70;background:rgba(9,22,17,.55);display:none;align-items:flex-start;justify-content:center;padding:24px 16px;overflow-y:auto}
+#poiDlg.on{display:flex}
+.poi-card{width:1120px;max-width:100%;background:var(--bg);border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden}
+.poi-head{background:var(--pine-deep);color:#EAF3EF;padding:16px 20px;border-bottom:3px solid var(--gold);display:flex;gap:12px;align-items:flex-start}
+.poi-head h2{font-size:18px;font-weight:700;flex:1;line-height:1.35}
+.poi-head .eyebrow{display:block;margin-bottom:2px}
+.poi-body{padding:16px 20px 22px}
+.poi-note{font-size:12.5px;color:var(--ink-soft);margin-bottom:12px;line-height:1.55}
+.poi-note b{color:var(--ink)}
+.poi-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.poi-tabs{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:11px;padding:3px;gap:3px}
+.poi-tabs button,.poi-fl button{font-family:inherit;font-size:13px;font-weight:600;border:0;background:none;color:var(--ink-soft);padding:7px 13px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.poi-tabs button.on{background:var(--pine);color:#fff}
+.poi-fl{display:flex;gap:6px;flex-wrap:wrap}
+.poi-fl button{border:1px solid var(--line);background:var(--surface);padding:6px 11px;border-radius:999px;font-size:12px}
+.poi-fl button.on{border-color:var(--pine);color:var(--pine);background:var(--surface-3)}
+.poi-fl .n{font-family:var(--mono);margin-left:4px;opacity:.8}
+.poi-q{flex:1;min-width:160px;font-family:inherit;font-size:13.5px;border:1px solid var(--line-strong);background:var(--surface);border-radius:10px;padding:8px 12px;color:var(--ink)}
+.poi-q:focus{outline:none;border-color:var(--pine)}
+.poi-btn{font-family:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);padding:7px 12px;border-radius:9px;cursor:pointer;white-space:nowrap}
+.poi-btn:hover:not(:disabled){border-color:var(--pine);color:var(--pine)}
+.poi-btn.pri{background:var(--pine);border-color:var(--pine);color:#fff}
+.poi-btn.pri:hover:not(:disabled){background:var(--pine-deep);color:#fff}
+.poi-btn:disabled{opacity:.5;cursor:wait}
+.poi-tw{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface)}
+.poi-tw table td{white-space:normal;vertical-align:top}
+.poi-nm{font-weight:600;font-size:13.5px;color:var(--ink)}
+.poi-sub{font-size:11.5px;color:var(--ink-faint);margin-top:2px}
+.poi-ll{font-family:var(--mono);font-size:12px;color:var(--pine);text-decoration:none;border-bottom:1px dashed var(--line-strong)}
+.poi-pin{display:flex;flex-direction:column;gap:2px}
+.poi-pin .pn{font-size:13px;font-weight:600;color:var(--ink)}
+.poi-pin .pk{font-size:11px;color:var(--ink-faint)}
+.poi-alt{font-size:11.5px;color:var(--ink-soft);margin-top:5px}
+.poi-alt span{white-space:nowrap}
+.dpill{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-left:4px;vertical-align:1px}
+.dpill.g{background:var(--green-bg);color:var(--green)} .dpill.o{background:var(--gold-bg);color:var(--gold)} .dpill.r{background:#FBE3DF;color:#A91F12}
+.pst{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:600;padding:3px 10px;border-radius:999px;white-space:nowrap}
+.pst::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pst.ok{background:var(--green-bg);color:var(--green)} .pst.match{background:#E3F0FB;color:#185FA5}
+.pst.off{background:var(--gold-bg);color:var(--gold)} .pst.far,.pst.none{background:var(--slate-bg);color:var(--slate)} .pst.none{color:#A91F12}
+.poi-by{font-size:11px;color:var(--ink-faint);margin-top:4px}
+.poi-acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.poi-pick td{background:var(--surface-2)}
+.poi-plist{max-height:240px;overflow-y:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface);margin-top:8px}
+.poi-plist div{display:flex;align-items:center;gap:10px;padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px}
+.poi-plist div:last-child{border-bottom:0}
+.poi-plist .nm{flex:1;min-width:0}
+.poi-plist .k{font-size:11px;color:var(--ink-faint)}
+@media(max-width:760px){.poi-body{padding:14px}.poi-head{padding:14px}.poi-acts{justify-content:flex-start}}
+`; document.head.appendChild(st);
+}
+function poiEl(){
+  let d=document.getElementById('poiDlg'); if(d) return d;
+  poiCss();
+  d=document.createElement('div'); d.id='poiDlg'; d.setAttribute('role','dialog'); d.setAttribute('aria-modal','true');
+  d.innerHTML=`<div class="poi-card"><div class="poi-head"><div style="flex:1"><span class="eyebrow">พิกัดเช็คอินอัตโนมัติ · รถไร่</span><h2>📍 หมุด DTC · สวน / จุดรับ / ลาน</h2></div>
+    <button class="xbtn" aria-label="ปิด" onclick="closePoi()">✕</button></div><div class="poi-body" id="poiBody"></div></div>`;
+  d.addEventListener('click',e=>{ if(e.target===d) closePoi(); });
+  document.body.appendChild(d); return d;
+}
+async function openPoi(){
+  const d=poiEl(); d.classList.add('on'); document.body.style.overflow='hidden';
+  $('#poiBody').innerHTML='<div class="empty" style="padding:50px 10px">กำลังเทียบพิกัดกับหมุด DTC…</div>';
+  await poiLoad();
+}
+function closePoi(){ const d=document.getElementById('poiDlg'); if(d) d.classList.remove('on'); document.body.style.overflow=''; POI_PICK=''; }
+async function poiLoad(){
+  try{ const r=await poiGet();
+    if(r.denied){ $('#poiBody').innerHTML='<div class="empty">หน้านี้สำหรับแอดมินเท่านั้น</div>'; return; }
+    if(!r.ok) throw new Error(r.error||'โหลดไม่สำเร็จ');
+    POI=r; poiRender();
+  }catch(e){ $('#poiBody').innerHTML=`<div class="empty">โหลดไม่สำเร็จ — ${esc(e.message||e)} <button class="poi-btn" onclick="poiLoad()">↻ ลองใหม่</button></div>`; }
+}
+function poiRender(){
+  if(!POI) return;
+  const kw=(document.getElementById('poiQ')||{}).value||'';
+  const all=POI.items.filter(i=>i.kind===POI_TAB);
+  const cnt={todo:0,ok:0,all:all.length}; all.forEach(i=>{ if(poiState(i)==='ok') cnt.ok++; else cnt.todo++; });
+  let rows=all.filter(i=>POI_F==='all'||(POI_F==='ok')===(poiState(i)==='ok'));
+  if(kw.trim()){ const k=kw.trim().toLowerCase(); rows=rows.filter(i=>(i.name+' '+i.code+' '+i.parent).toLowerCase().includes(k)); }
+  const ord={off:0,match:1,none:2,far:3,ok:4};
+  rows.sort((a,b)=>ord[poiState(a)]-ord[poiState(b)]||(a.near[0]?a.near[0].d:1e9)-(b.near[0]?b.near[0].d:1e9));
+  const tabN=k=>POI.items.filter(i=>i.kind===k).length;
+  const at=POI.poiAt?new Date(POI.poiAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'—';
+  const keepQ=document.activeElement&&document.activeElement.id==='poiQ';
+  $('#poiBody').innerHTML=`
+    <p class="poi-note">รถเข้าใกล้ <b>พิกัดที่ใช้</b> ไม่เกิน 300 ม. = ระบบเช็คอิน "ถึงสวน/จุดรับ/ลาน" ให้เอง · ถ้าพิกัดเดิม (เจ้าของสวนปักตอนสมัคร) ห่างหมุดใน DTC มาก รถถึงจริงแต่ระบบไม่เช็คอิน ·
+      <b>ใช้หมุด DTC</b> = เปลี่ยนพิกัดเป็นของหมุด (ย้อนกลับได้) · <b>คงพิกัดเดิม</b> = พิกัดเดิมถูกแล้ว · หมุด DTC อัปเดต ${esc(at)} (${nf(POI.poiTotal)} หมุด)</p>
+    <div class="poi-tools">
+      <div class="poi-tabs">${['pickup','garden','ramp'].map(k=>`<button class="${POI_TAB===k?'on':''}" onclick="POI_TAB='${k}';POI_PICK='';poiRender()">${POI_KIND[k]} <span class="mono">${tabN(k)}</span></button>`).join('')}</div>
+      <div class="poi-fl">${[['todo','ต้องตรวจ'],['ok','ยืนยันแล้ว'],['all','ทั้งหมด']].map(([k,l])=>`<button class="${POI_F===k?'on':''}" onclick="POI_F='${k}';poiRender()">${l}<span class="n">${cnt[k]}</span></button>`).join('')}</div>
+      <input class="poi-q" id="poiQ" placeholder="ค้นหาชื่อ / รหัส" value="${esc(kw)}" oninput="poiRender()">
+      <button class="poi-btn" id="poiRef" onclick="poiRefresh()" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>
+    </div>
+    <div class="poi-tw tscroll"><table><thead><tr><th>${POI_KIND[POI_TAB]}</th><th>พิกัดที่ใช้ตอนนี้</th><th>หมุด DTC ใกล้สุด</th><th>สถานะ</th><th></th></tr></thead>
+    <tbody>${rows.length?rows.map(poiRow).join(''):`<tr><td colspan="5" class="empty">${POI_F==='todo'?'ตรวจครบแล้ว 🎉':'ไม่มีรายการ'}</td></tr>`}</tbody></table></div>`;
+  if(keepQ){ const q=$('#poiQ'); q.focus(); q.setSelectionRange(q.value.length,q.value.length); }
+}
+function dPill(d){ return d==null?'':`<span class="dpill ${d<=300?'g':d<=2000?'o':'r'}">${mDist(d)}</span>`; }
+function poiRow(it){
+  const s=poiState(it), key=it.kind+'|'+it.code, top=it.near[0];
+  const llCell=it.latlng?`<a class="poi-ll" href="https://maps.google.com/?q=${encodeURIComponent(it.latlng)}" target="_blank" rel="noopener">${esc(it.latlng)}</a>${it.isLink?'<div class="poi-sub">🔗 จากลิงก์ Google Maps</div>':''}`
+    :(it.loc?`<span class="poi-sub">${it.isLink?'🔗 ลิงก์อ่านพิกัดไม่ได้':esc(it.loc)}</span>`:'<span class="poi-sub">— ไม่มีพิกัด —</span>');
+  const pinOf=p=>p?`<div class="poi-pin"><span class="pn">${esc(p.n)}${dPill(p.d)}</span><span class="pk">${esc(p.k)} · ${esc(p.id)} · <a class="poi-ll" href="https://maps.google.com/?q=${encodeURIComponent(p.c)}" target="_blank" rel="noopener">${esc(p.c)}</a></span></div>`:'';
+  let pinCell;
+  if(s==='ok') pinCell=it.linked?pinOf(it.linked):`<span class="poi-sub">ไม่ได้ผูกหมุด${it.linkedName?' ('+esc(it.linkedName)+')':''}</span>`;
+  else {
+    pinCell=top?pinOf(top):'<span class="poi-sub">ไม่มีหมุดในรัศมี 5 กม.</span>';
+    const alts=[...it.near.slice(1),...it.named];
+    if(alts.length) pinCell+=`<div class="poi-alt">อื่นๆ: ${alts.map(a=>`<span>${esc(a.n)} ${a.d!=null?'('+mDist(a.d)+')':''}</span>`).join(' · ')}</div>`;
+  }
+  const st=POI_ST[s]; let stCell=`<span class="pst ${st[1]}">${st[0]}${s==='off'?' '+mDist(top.d):''}</span>`;
+  if(s==='ok') stCell+=`<div class="poi-by">${esc(it.checkedBy||'')} · ${new Date(it.checkedAt).toLocaleDateString('th-TH',{day:'numeric',month:'short'})}${it.locPrev?' · เปลี่ยนจากพิกัดเดิม':''}</div>`;
+  const J=s=>esc(JSON.stringify(s));
+  let acts='';
+  if(s==='ok'){
+    acts=`<button class="poi-btn" onclick='poiOpenPick(${J(key)})'>เปลี่ยน</button>`+(it.locPrev?`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"undo")'>↩ พิกัดเดิม</button>`:'');
+  } else {
+    if(top) acts+=`<button class="poi-btn pri" onclick='poiAct(${J(it.kind)},${J(it.code)},"useDtc",${J(top.id)})'>ใช้หมุด DTC</button>`;
+    if(it.latlng) acts+=`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"keep",${J(top&&top.d<=2000?top.id:'')})'>คงพิกัดเดิม</button>`;
+    acts+=`<button class="poi-btn" onclick='poiOpenPick(${J(key)})'>เลือกหมุดอื่น</button>`;
+  }
+  let html=`<tr><td><div class="poi-nm">${esc(it.name||'—')}</div><div class="poi-sub mono">${esc(it.code)}${it.parent?' · '+esc(it.parent):''}</div></td>
+    <td>${llCell}</td><td>${pinCell}</td><td>${stCell}</td><td><div class="poi-acts">${acts}</div></td></tr>`;
+  if(POI_PICK===key) html+=`<tr class="poi-pick"><td colspan="5">${poiPicker(it)}</td></tr>`;
+  return html;
+}
+function poiOpenPick(key){ POI_PICK=POI_PICK===key?'':key; poiRender(); setTimeout(()=>{ const i=document.getElementById('poiPQ'); if(i) i.focus(); },30); }
+function poiPicker(it){
+  const me=poiLL(it.latlng), J=s=>esc(JSON.stringify(s));
+  return `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b style="font-size:13px">เลือกหมุดสำหรับ ${esc(it.name)}</b>
+      <input class="poi-q" id="poiPQ" placeholder="ค้นหาหมุด เช่น ปอ175, ลานคลองพลู" oninput="poiPickList(${J(it.kind+'|'+it.code)})">
+      <button class="poi-btn" onclick="POI_PICK='';poiRender()">ปิด</button></div>
+    <div class="poi-plist" id="poiPL">${poiPickRows(it,'')}</div>
+    <div class="poi-sub" style="margin-top:6px">${me?'เรียงจากใกล้พิกัดเดิมที่สุด · ':''}ไม่เจอ = ปักหมุดในเว็บ DTC แล้วกด 🔄 ดึงหมุดใหม่ · หรือแก้พิกัดเองในหน้ารายละเอียดสวน</div>`;
+}
+function poiPickRows(it,q){
+  const me=poiLL(it.latlng), k=q.trim().toLowerCase(), J=s=>esc(JSON.stringify(s));
+  let list=POI.poi.map(p=>({...p,d:poiDist(me,poiLL(p.c))}));
+  if(k) list=list.filter(p=>(p.n+' '+p.k+' '+p.id).toLowerCase().includes(k));
+  list.sort((a,b)=>(a.d==null?1e12:a.d)-(b.d==null?1e12:b.d)||a.n.localeCompare(b.n,'th'));
+  list=list.slice(0,60);
+  return list.length?list.map(p=>`<div><span class="nm"><b>${esc(p.n)}</b>${dPill(p.d)}<br><span class="k">${esc(p.k)} · ${esc(p.id)} · ${esc(p.c)}</span></span>
+      <button class="poi-btn pri" onclick='poiAct(${J(it.kind)},${J(it.code)},"useDtc",${J(p.id)})'>ใช้พิกัดหมุดนี้</button>
+      ${it.latlng?`<button class="poi-btn" onclick='poiAct(${J(it.kind)},${J(it.code)},"keep",${J(p.id)})' title="ผูกหมุดไว้อ้างอิง แต่พิกัดเช็คอินยังเป็นพิกัดเดิม">ผูกไว้ · คงพิกัดเดิม</button>`:''}</div>`).join('')
+    :'<div class="poi-sub">ไม่พบหมุด</div>';
+}
+function poiPickList(key){ const it=POI.items.find(i=>i.kind+'|'+i.code===key); if(it) $('#poiPL').innerHTML=poiPickRows(it,$('#poiPQ').value||''); }
+async function poiAct(kind,code,mode,poiId){
+  const it=POI.items.find(i=>i.kind===kind&&i.code===code); if(!it) return;
+  const pin=poiId?POI.poi.find(p=>p.id===poiId):null;
+  if(mode==='useDtc'){
+    const d=poiDist(poiLL(it.latlng),poiLL(pin&&pin.c));
+    const ok=await confirmBox('ใช้พิกัดหมุด DTC',`${POI_KIND[kind]} "${it.name}" → หมุด "${pin?pin.n:poiId}"${d!=null?' (ห่างพิกัดเดิม '+mDist(d)+')':''} · พิกัดเช็คอินอัตโนมัติจะเปลี่ยนทันที (กด ↩ พิกัดเดิม ย้อนกลับได้)`,'ใช้หมุดนี้',false);
+    if(!ok) return;
+  }
+  if(mode==='undo'){ const ok=await confirmBox('ย้อนกลับพิกัดเดิม',`คืนพิกัดของ "${it.name}" เป็น ${it.locPrev}`,'ย้อนกลับ',false); if(!ok) return; }
+  try{
+    const r=await poiPost({action:'setFarmPoi',kind,code,mode,poiId:poiId||''});
+    if(!r.ok) throw new Error(r.error||'บันทึกไม่สำเร็จ');
+    toast(mode==='useDtc'?'✅ ใช้พิกัดหมุด DTC แล้ว':mode==='keep'?'✅ ยืนยันพิกัดเดิมแล้ว':'↩ คืนพิกัดเดิมแล้ว');
+    POI_PICK=''; await poiLoad();
+  }catch(e){ toast('บันทึกไม่สำเร็จ: '+(e.message||e),true); }
+}
+async function poiRefresh(){
+  const b=$('#poiRef'); b.disabled=true; b.textContent='กำลังดึงหมุด…';
+  try{ const r=await poiPost({action:'refreshPoi'}); if(!r.ok) throw new Error(r.error||'ดึงไม่สำเร็จ'); toast('🔄 ได้หมุด '+nf(r.total)+' จุด'); await poiLoad(); }
+  catch(e){ toast(e.message||String(e),true); b.disabled=false; b.textContent='🔄 ดึงหมุดใหม่จาก DTC'; }
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&document.getElementById('poiDlg')&&document.getElementById('poiDlg').classList.contains('on')&&!(document.getElementById('pickModal')||{classList:{contains:()=>false}}).classList.contains('on')) closePoi(); });
 
 (async function(){
   try{
