@@ -241,7 +241,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-16a</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-16b</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -591,7 +591,7 @@ function drawCustList(){
       <td>${c.has_dest_scale?'<span class="yn y">✓ มี</span>':'<span class="yn n">ไม่มี</span>'}</td>
       <td>${c.need_slip_out?'<span class="yn y">✓ ต้องมี</span>':'<span class="yn n">ไม่ต้อง</span>'}</td>
       <td><span class="chip ${st[0]}">${st[1]}</span>${c.note?`<div class="sub" style="font-size:11.5px;margin-top:3px">${esc(c.note)}</div>`:''}</td>
-      ${ed?`<td style="white-space:nowrap">${st[1]==='รอยืนยันหมุด'?`<button class="btn sm pri" type="button" data-ok="${esc(c.cust_code)}">✓ ยืนยัน</button> `:''}<button class="btn sm" type="button" data-ed="${esc(c.cust_code)}">แก้ไข</button></td>`:''}</tr>`; }).join('');
+      ${ed?`<td style="white-space:nowrap">${st[1]==='รอยืนยันหมุด'?`<button class="btn sm pri" type="button" data-ok="${esc(c.cust_code)}">✓ ยืนยัน</button> `:''}${st[1]==='พร้อม'?`<button class="btn sm" type="button" data-un="${esc(c.cust_code)}" title="กลับเป็น รอยืนยันหมุด · พิกัดไม่เปลี่ยน">ยกเลิกการยืนยัน</button> `:''}<button class="btn sm" type="button" data-ed="${esc(c.cust_code)}">แก้ไข</button></td>`:''}</tr>`; }).join('');
   const miss=d.missing.length?`<div class="cmiss"><b>ลูกค้าในแพลนที่ยังไม่ได้ตั้งค่า (${d.missing.length})</b><span class="sub" style="font-size:12px">ยังไม่ตั้งค่า = คนขับกด "ถึงลูกค้า" เอง · ไม่มีขั้นชั่งปลายทาง</span>
     ${d.missing.map(x=>`<div><span>${esc(x.cust_name||'—')} <span class="sub num">${esc(x.cust_code)}</span></span>${ed?`<button class="btn sm" type="button" data-add="${esc(x.cust_code)}">+ ตั้งค่า</button>`:''}</div>`).join('')}</div>`:'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="cT">
@@ -611,6 +611,15 @@ function drawCustList(){
   m.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{ const x=d.missing.find(c=>c.cust_code===b.dataset.add); editCust({cust_code:x.cust_code,cust_name:x.cust_name,_new:true}); });
   m.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{ const c=d.customers.find(x=>x.cust_code===b.dataset.ok);
     saveCust(b,{custCode:c.cust_code,custName:c.cust_name,poiId:c.dtc_poi_id||'',location:c.location||'',radiusM:c.radius_m||'',hasDestScale:!!c.has_dest_scale,needSlipOut:!!c.need_slip_out,note:c.note||''},'ยืนยันหมุดแล้ว'); });
+  // ยกเลิกการยืนยันหมุด (2026-10-16) — กด 2 ครั้ง (ครั้งแรกถาม) · พิกัด/ตั้งค่าอื่นไม่เปลี่ยน
+  m.querySelectorAll('[data-un]').forEach(b=>b.onclick=async()=>{
+    if(!b.dataset.sure){ b.dataset.sure='1'; b.textContent='กดอีกครั้งเพื่อยืนยัน'; b.classList.add('danger'); setTimeout(()=>{ if(b.isConnected&&b.dataset.sure){ delete b.dataset.sure; b.textContent='ยกเลิกการยืนยัน'; b.classList.remove('danger'); } },4000); return; }
+    b.disabled=true; b.textContent='กำลังบันทึก…';
+    try{ const r=await post({action:'unconfirmCustomer',custCode:b.dataset.un});
+      if(!r.ok){ toast(r.error||'บันทึกไม่สำเร็จ',true); b.disabled=false; delete b.dataset.sure; b.textContent='ยกเลิกการยืนยัน'; b.classList.remove('danger'); return; }
+      toast('ยกเลิกการยืนยันแล้ว — กลับเป็น "รอยืนยันหมุด"'); openCustomers();
+    }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); openCustomers(); }
+  });
   if($('cRef')) $('cRef').onclick=async()=>{ const b=$('cRef'); b.disabled=true; b.textContent='กำลังดึง…';
     try{ const r=await post({action:'refreshPoi'}); toast(r.ok?'ดึงหมุดแล้ว '+r.total+' หมุด'+(r.moved?' · พิกัดลูกค้าเปลี่ยน '+r.moved+' ราย':''):(r.error||'ดึงหมุดไม่สำเร็จ'),!r.ok); }
     catch(e){ toast('ดึงหมุดไม่สำเร็จ — ลองใหม่',true); }
