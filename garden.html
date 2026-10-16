@@ -699,7 +699,7 @@ function poiCss(){
 .poi-ll{font-family:var(--mono);font-size:12px;color:var(--pine);text-decoration:none;border-bottom:1px dashed var(--line-strong)}
 .poi-pin{display:flex;flex-direction:column;gap:2px}
 .poi-pin .pn{font-size:13px;font-weight:600;color:var(--ink)}
-.poi-pin .pk{font-size:11px;color:var(--ink-faint)}
+.poi-pin .ppk{font-size:11px;color:var(--ink-faint)}
 .poi-alt{font-size:11.5px;color:var(--ink-soft);margin-top:5px}
 .poi-alt span{white-space:nowrap}
 .dpill{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;margin-left:4px;vertical-align:1px}
@@ -771,7 +771,7 @@ function poiRow(it){
   const s=poiState(it), key=it.kind+'|'+it.code, top=it.near[0];
   const llCell=it.latlng?`<a class="poi-ll" href="https://maps.google.com/?q=${encodeURIComponent(it.latlng)}" target="_blank" rel="noopener">${esc(it.latlng)}</a>${it.isLink?'<div class="poi-sub">🔗 จากลิงก์ Google Maps</div>':''}`
     :(it.loc?`<span class="poi-sub">${it.isLink?'🔗 ลิงก์อ่านพิกัดไม่ได้':esc(it.loc)}</span>`:'<span class="poi-sub">— ไม่มีพิกัด —</span>');
-  const pinOf=p=>p?`<div class="poi-pin"><span class="pn">${esc(p.n)}${dPill(p.d)}</span><span class="pk">${esc(p.k)} · ${esc(p.id)} · <a class="poi-ll" href="https://maps.google.com/?q=${encodeURIComponent(p.c)}" target="_blank" rel="noopener">${esc(p.c)}</a></span></div>`:'';
+  const pinOf=p=>p?`<div class="poi-pin"><span class="pn">${esc(p.n)}${dPill(p.d)}</span><span class="ppk">${esc(p.k)} · ${esc(p.id)} · <a class="poi-ll" href="https://maps.google.com/?q=${encodeURIComponent(p.c)}" target="_blank" rel="noopener">${esc(p.c)}</a></span></div>`:'';
   let pinCell;
   if(s==='ok') pinCell=it.linked?pinOf(it.linked):`<span class="poi-sub">ไม่ได้ผูกหมุด${it.linkedName?' ('+esc(it.linkedName)+')':''}</span>`;
   else {
