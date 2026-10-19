@@ -32,6 +32,9 @@ html,body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 var(--s
 .side{display:flex;flex-direction:column;gap:10px;min-height:0}
 .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 1px 2px rgba(21,32,25,.05)}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=search]{font:inherit;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+input[type=search]::placeholder{color:var(--faint);font-size:13.5px}
+mark{background:#FDE68A;color:inherit;border-radius:3px;padding:0 1px}
 input[type=date],select{font:inherit;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
 .btn{border:0;border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--green);color:#fff}
 .btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
@@ -84,7 +87,12 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid 
 <div class="top"><a href="./">‹ แดชบอร์ด</a><div><h1>ย้อนเส้นทาง GPS</h1><div class="sub">เล่นย้อนเที่ยววิ่งจาก GPS · จุดจอด · เทียบเวลาที่คนขับกดในฟอร์ม</div></div></div>
 <div class="wrap">
   <div class="side">
-    <div class="card"><div class="row"><label for="dt" class="sub" style="color:var(--muted)">วันที่เริ่มงาน</label><input type="date" id="dt"><button class="btn sec" id="today">วันนี้</button></div></div>
+    <div class="card" style="display:flex;flex-direction:column;gap:8px">
+      <input type="search" id="q" placeholder="🔍 ค้นหาทะเบียน หรือชื่อคนขับ (เช่น 87-1972, จุมพล)" aria-label="ค้นหาทะเบียน หรือชื่อคนขับ" style="width:100%">
+      <div class="row"><label for="dt" class="sub" style="color:var(--muted)">ถึงวันที่</label><input type="date" id="dt">
+        <select id="days" aria-label="ช่วงย้อนหลัง"><option value="1">วันนี้วันเดียว</option><option value="7">ย้อนหลัง 7 วัน</option><option value="30">ย้อนหลัง 30 วัน</option></select>
+        <button class="btn sec" id="today">วันนี้</button></div>
+    </div>
     <div class="card" style="padding:8px"><div class="trips" id="trips"><div class="msg">กำลังโหลด…</div></div></div>
     <div class="card" id="infoCard" hidden>
       <div id="info"></div>
@@ -124,19 +132,37 @@ async function api(params) {
   return r.json();
 }
 
-// ── รายการเที่ยว ──
+// ── รายการเที่ยว ── โหลดตามช่วงวัน แล้วกรองด้วยช่องค้นหา (ทะเบียน / ชื่อคนขับ / เลขออเดอร์) ในเครื่อง
+let TRIPS = [], TDAYS = 1;
+const norm = (s) => String(s || '').toLowerCase().replace(/[\s\-.,/]/g, '');   // 87-1972 = 871972 = 87 1972
 async function loadTrips() {
-  const date = $('dt').value; $('trips').innerHTML = loader('กำลังโหลดเที่ยว');
+  const date = $('dt').value; TDAYS = +$('days').value; $('trips').innerHTML = loader('กำลังโหลดเที่ยว');
   try {
-    const d = await api({ action: 'listTrips', date });
+    const d = await api({ action: 'listTrips', date, days: TDAYS });
     if (d.denied) { $('trips').innerHTML = '<div class="msg">หน้านี้สำหรับแอดมินเท่านั้น</div>'; return; }
     if (!d.ok) throw new Error(d.error || 'โหลดไม่ได้');
-    $('trips').innerHTML = d.trips.length ? d.trips.map((t) => `<button class="trip" data-id="${esc(t.orderId)}" aria-pressed="${t.orderId === curTrip}">
-      <div class="row" style="justify-content:space-between"><b>${esc(t.driver || '—')}</b><span class="chip ${t.done ? 'done' : 'run'}">${esc(t.status)}</span></div>
-      <small>${esc(t.plate.split(',')[0])} · ${esc(t.garden || t.pickup)} · ${esc(t.jobType)}</small>
-      <small class="num">${esc(t.orderId)} · เริ่ม ${esc(t.started.slice(-8, -3))}${t.done ? ' · เสร็จ ' + esc(t.done.slice(-8, -3)) : ''}</small></button>`).join('')
-      : '<div class="msg">วันนี้ไม่มีเที่ยวที่เริ่มงาน</div>';
+    TRIPS = d.trips; renderTrips();
   } catch (e) { $('trips').innerHTML = `<div class="msg">โหลดไม่ได้ · <button class="btn sec" onclick="loadTrips()">ลองใหม่</button></div>`; }
+}
+function hl(text, q) {   // ไฮไลต์คำที่ค้นในข้อความ (เทียบแบบไม่สนขีด/ช่องว่าง)
+  const s = String(text || ''); if (!q) return esc(s);
+  const map = []; let flat = '';
+  for (let i = 0; i < s.length; i++) { const c = s[i].toLowerCase(); if (/[\s\-.,/]/.test(c)) continue; map.push(i); flat += c; }
+  const k = flat.indexOf(q); if (k < 0) return esc(s);
+  const a = map[k], b = map[k + q.length - 1] + 1;
+  return esc(s.slice(0, a)) + '<mark>' + esc(s.slice(a, b)) + '</mark>' + esc(s.slice(b));
+}
+function renderTrips() {
+  const q = norm($('q').value);
+  const list = q ? TRIPS.filter((t) => norm(t.plate).includes(q) || norm(t.driver).includes(q) || norm(t.orderId).includes(q)) : TRIPS;
+  const multi = TDAYS > 1;
+  const range = TDAYS === 1 ? 'วันที่เลือก' : 'ช่วง ' + TDAYS + ' วัน';
+  $('trips').innerHTML = (q ? `<div class="sub" style="color:var(--muted);font-size:12.5px;padding:2px 4px">พบ ${list.length} จาก ${TRIPS.length} เที่ยว</div>` : '') +
+    (list.length ? list.map((t) => `<button class="trip" data-id="${esc(t.orderId)}" aria-pressed="${t.orderId === curTrip}">
+      <div class="row" style="justify-content:space-between"><b>${hl(t.driver || '—', q)}</b><span class="chip ${t.done ? 'done' : 'run'}">${esc(t.status)}</span></div>
+      <small>${hl(t.plate, q)} · ${esc(t.garden || t.pickup)} · ${esc(t.jobType)}</small>
+      <small class="num">${hl(t.orderId, q)} · เริ่ม ${multi ? esc(t.started.split(' ')[0]) + ' ' : ''}${esc(t.started.slice(-8, -3))}${t.done ? ' · เสร็จ ' + esc(t.done.slice(-8, -3)) : ''}</small></button>`).join('')
+    : `<div class="msg">${q ? 'ไม่พบ "' + esc($('q').value) + '" ใน' + range : 'ไม่มีเที่ยวที่เริ่มงาน' + range}${q && TDAYS < 30 ? `<div style="margin-top:8px"><button class="btn sec" id="wider">ค้นย้อนหลัง 30 วัน</button></div>` : ''}</div>`);
 }
 
 // ── เปิดเที่ยว ──
@@ -242,12 +268,17 @@ function renderTicks() {
 
 // ── เหตุการณ์ ──
 document.addEventListener('click', (e) => {
+  if (e.target.id === 'wider') { $('days').value = '30'; loadTrips(); return; }
   const t = e.target.closest('.trip'); if (t) { openTrip(t.dataset.id); return; }
   const li = e.target.closest('#tl li[data-t]'); if (li) { pause(); seek(+li.dataset.t); if (mk) map.panTo(mk.getLatLng()); return; }
 });
 $('playBtn').addEventListener('click', () => (playing ? pause() : play()));
 $('seek').addEventListener('input', (e) => { pause(); seek(+e.target.value); });
 $('dt').addEventListener('change', loadTrips);
+$('days').addEventListener('change', loadTrips);
+$('q').addEventListener('input', renderTrips);
+// พิมพ์ค้นทะเบียน/ชื่อตอนดูวันเดียว → ขยายเป็น 7 วันให้เองครั้งแรก (คนมักค้นย้อนหลัง)
+$('q').addEventListener('change', () => { if ($('q').value.trim() && TDAYS === 1) { $('days').value = '7'; loadTrips(); } });
 $('today').addEventListener('click', () => { $('dt').value = bkkISO(Date.now()); loadTrips(); });
 
 (async function init() {
@@ -259,6 +290,8 @@ $('today').addEventListener('click', () => { $('dt').value = bkkISO(Date.now());
   }
   initMap();
   $('dt').value = q.get('date') || bkkISO(Date.now());
+  if (q.get('q')) { $('q').value = q.get('q'); $('days').value = '7'; }   // ลิงก์ ?q=ทะเบียน/ชื่อ
+  if (q.get('days')) $('days').value = q.get('days');
   await loadTrips();
   if (q.get('order')) openTrip(q.get('order'));
 })();
