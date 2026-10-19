@@ -241,7 +241,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
       <tbody id="rows"></tbody>
     </table></div>
     <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-16b</span></div>
+    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-10-19a</span></div>
   </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -522,7 +522,10 @@ async function doCommit(){
   try{
     const d=await post(Object.assign({action:'commit',fileB64:PFILE||''},PENDING));
     if(!d.ok){ showPreview(Object.assign({},d,{ok:true})); toast(d.error||'บันทึกไม่สำเร็จ',true); return; }
-    closePanel(); toast('บันทึก '+d.revName+' แล้ว · '+lineTxt(d.line,true)+' · อีเมลบัญชีกำลังส่ง'+(d.file?' (แนบไฟล์ Excel)':''));
+    // ลูกค้าใหม่ในแพลน → ระบบเพิ่มเข้า "📍 ลูกค้า Bulk" ให้เอง (2026-10-19) · ผูกหมุดได้ = รอยืนยันหมุด · ไม่ได้ = ต้องกดแก้ไข
+    const nc=d.newCustomers||[], ncNo=nc.filter(x=>!x.pin).length;
+    const ncTxt=nc.length?' · ลูกค้าใหม่ '+nc.length+' ราย เพิ่มในหน้าลูกค้า Bulk แล้ว'+(ncNo?' ('+ncNo+' รายหาหมุด DTC ไม่เจอ ต้องกดแก้ไข)':' — รอยืนยันหมุด'):'';
+    closePanel(); toast('บันทึก '+d.revName+' แล้ว · '+lineTxt(d.line,true)+' · อีเมลบัญชีกำลังส่ง'+(d.file?' (แนบไฟล์ Excel)':'')+ncTxt);
     setTimeout(()=>{ if(DATA&&DATA.plan&&DATA.plan.send_date===d.sendDate&&!VIEW) load(d.sendDate); },25000);   // อัปเดตสถานะอีเมล
     load(d.sendDate);
   }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(); }
