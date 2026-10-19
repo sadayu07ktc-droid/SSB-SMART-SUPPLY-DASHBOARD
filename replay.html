@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ย้อนเส้นทาง GPS — SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261007e"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* ย้อนเส้นทาง GPS · 2026-10-19 · ซ้าย = เลือกวัน/เที่ยว + ไทม์ไลน์ · ขวา = แผนที่ + ตัวเล่น · โทนสว่าง (เขียว SSB) */
+:root{
+  --bg:#EDF1EE; --card:#FFFFFF; --sunken:#F3F6F3; --ink:#152019; --muted:#5D6B62; --faint:#8A968D;
+  --line:#DCE4DE; --green:#1B4332; --green2:#2D6A4F; --gold:#B7892A; --goldtint:#FBF1DC;
+  --run:#0D9488; --park:#E08A1E; --idle:#D9412B; --step:#2F6FD6; --done:#16A34A;
+  --sans:"Noto Sans Thai","Sarabun","Segoe UI",sans-serif; --num:"Space Grotesk",ui-monospace,monospace;
+  color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14.5px/1.5 var(--sans)}
+.num{font-family:var(--num);font-variant-numeric:tabular-nums}
+.top{background:var(--green);color:#fff;padding:12px max(16px,env(safe-area-inset-left,0px));display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top a{color:#fff;text-decoration:none;opacity:.85;font-size:13px}
+.top h1{font-size:18px;margin:0}
+.top .sub{font-size:12.5px;opacity:.8}
+.wrap{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:12px;padding:12px max(12px,env(safe-area-inset-right,0px)) 24px max(12px,env(safe-area-inset-left,0px));height:calc(100vh - 58px)}
+@media (max-width:900px){.wrap{grid-template-columns:1fr;height:auto}}
+.side{display:flex;flex-direction:column;gap:10px;min-height:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:0 1px 2px rgba(21,32,25,.05)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+input[type=date],select{font:inherit;padding:7px 10px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+.btn{border:0;border-radius:10px;padding:8px 14px;font:inherit;font-weight:600;cursor:pointer;background:var(--green);color:#fff}
+.btn.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.trips{display:flex;flex-direction:column;gap:6px;overflow:auto;max-height:42vh}
+@media (max-width:900px){.trips{max-height:none}}
+.trip{border:1px solid var(--line);border-radius:12px;padding:8px 10px;background:#fff;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.trip[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 3px var(--goldtint)}
+.trip b{font-size:14px} .trip small{display:block;color:var(--muted);font-size:12.5px}
+.chip{display:inline-block;border-radius:999px;padding:1px 8px;font-size:11.5px;font-weight:600;background:var(--sunken);color:var(--muted)}
+.chip.done{background:#D7F3DF;color:#127a2e} .chip.run{background:#D5F0EC;color:#0b6f66}
+.tl{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px;overflow:auto;min-height:0;flex:1}
+.tl li{display:grid;grid-template-columns:52px 14px 1fr;gap:8px;align-items:start;padding:6px 6px;border-radius:8px;cursor:pointer;font-size:13.5px}
+.tl li:hover{background:var(--sunken)}
+.tl li.past{color:var(--faint)}
+.tl li.now{background:var(--goldtint)}
+.tl .dot{width:12px;height:12px;border-radius:50%;margin-top:5px}
+.tl small{display:block;color:var(--muted);font-size:12px}
+#infoCard{display:flex;flex-direction:column;gap:8px;min-height:0;flex:1}
+[hidden]{display:none!important}
+.main{display:flex;flex-direction:column;gap:10px;min-height:0}
+#map{flex:1;min-height:420px;border-radius:14px;border:1px solid var(--line);background:#dfe8e2}
+.player{display:flex;flex-direction:column;gap:6px}
+.pr{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.play{width:42px;height:42px;border-radius:50%;border:0;background:var(--green);color:#fff;font-size:18px;cursor:pointer}
+.read{display:flex;gap:16px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.read b{color:var(--ink);font-size:16px}
+.slider{position:relative;padding-top:12px}
+.slider input{width:100%;accent-color:var(--green)}
+.ticks{position:absolute;left:0;right:0;top:0;height:12px;pointer-events:none}
+.ticks i{position:absolute;top:0;width:2px;height:10px;background:var(--step);border-radius:1px}
+.ticks i.s{background:var(--park)}
+.sum{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.sum div{background:var(--sunken);border-radius:10px;padding:6px 8px;font-size:12px;color:var(--muted)}
+.sum b{display:block;font-size:16px;color:var(--ink)}
+.warn{border-left:4px solid var(--park);background:#FDF0D8;color:#7a4a05;border-radius:8px;padding:8px 10px;font-size:13px}
+.warn.b{border-left-color:var(--idle);background:#FBE9E9;color:#8a1f1f}
+.msg{padding:18px;text-align:center;color:var(--muted)}
+.ldr{display:flex;flex-direction:column;align-items:center;gap:10px;padding:30px}
+.ldr i{width:44px;height:44px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--green);animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.truck{font-size:26px;line-height:1;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+.pin{background:var(--green);color:#fff;font-weight:700;font-size:12px;border-radius:8px;padding:2px 7px;white-space:nowrap;box-shadow:0 2px 6px rgba(0,0,0,.25);border:2px solid #fff}
+.pin.dest{background:var(--gold)} .pin.ramp{background:#7C3AED}
+.flag{background:var(--step);color:#fff;font-size:11px;border-radius:6px;padding:1px 6px;white-space:nowrap;border:1.5px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3)}
+@media (prefers-reduced-motion:reduce){.ldr i{animation:none}}
+</style>
+</head>
+<body>
+<div class="top"><a href="./">‹ แดชบอร์ด</a><div><h1>ย้อนเส้นทาง GPS</h1><div class="sub">เล่นย้อนเที่ยววิ่งจาก GPS · จุดจอด · เทียบเวลาที่คนขับกดในฟอร์ม</div></div></div>
+<div class="wrap">
+  <div class="side">
+    <div class="card"><div class="row"><label for="dt" class="sub" style="color:var(--muted)">วันที่เริ่มงาน</label><input type="date" id="dt"><button class="btn sec" id="today">วันนี้</button></div></div>
+    <div class="card" style="padding:8px"><div class="trips" id="trips"><div class="msg">กำลังโหลด…</div></div></div>
+    <div class="card" id="infoCard" hidden>
+      <div id="info"></div>
+      <ul class="tl" id="tl"></ul>
+    </div>
+  </div>
+  <div class="main">
+    <div id="map"></div>
+    <div class="card player" id="player" hidden>
+      <div class="pr">
+        <button class="play" id="playBtn" aria-label="เล่น">▶</button>
+        <label class="sub" for="spd" style="color:var(--muted)">ความเร็วเล่น</label>
+        <select id="spd"><option value="30">×30</option><option value="60" selected>×60 (1 นาที/วิ)</option><option value="180">×180</option><option value="600">×600</option></select>
+        <div class="read"><span>เวลา <b class="num" id="rT">—</b></span><span>ความเร็ว <b class="num" id="rS">—</b> กม./ชม.</span><span>วิ่งไป <b class="num" id="rD">—</b> กม.</span><span id="rState"></span></div>
+      </div>
+      <div class="slider"><div class="ticks" id="ticks"></div><input type="range" id="seek" min="0" max="1000" value="0" step="1" aria-label="เลื่อนเวลา"></div>
+    </div>
+  </div>
+</div>
+<script>
+const EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/gps-replay';
+const LIFF_ID = '2010274217-Ot7vGhri';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const nf = (n, d) => Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const hm = (ms) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Bangkok' });
+const hms = (ms) => new Date(ms).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit', timeZone: 'Asia/Bangkok' });
+const bkkISO = (ms) => new Date(ms + 7 * 3600000).toISOString().slice(0, 10);
+function km(a1, o1, a2, o2) { const R = 6371, r = (x) => x * Math.PI / 180, dA = r(a2 - a1), dO = r(o2 - o1); const a = Math.sin(dA / 2) ** 2 + Math.cos(r(a1)) * Math.cos(r(a2)) * Math.sin(dO / 2) ** 2; return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)); }
+const loader = (t) => `<div class="ldr"><i></i><span class="sub" style="color:var(--muted)">${esc(t)}</span></div>`;
+
+let UID = '', D = null, P = [], CUM = [], T = 0, playing = false, lastTs = 0, curTrip = '';
+let map, L_full, L_done, mk, layerG;
+
+async function api(params) {
+  const r = await fetch(EDGE + '?' + new URLSearchParams({ ...params, userId: UID }), { cache: 'no-store' });
+  return r.json();
+}
+
+// ── รายการเที่ยว ──
+async function loadTrips() {
+  const date = $('dt').value; $('trips').innerHTML = loader('กำลังโหลดเที่ยว');
+  try {
+    const d = await api({ action: 'listTrips', date });
+    if (d.denied) { $('trips').innerHTML = '<div class="msg">หน้านี้สำหรับแอดมินเท่านั้น</div>'; return; }
+    if (!d.ok) throw new Error(d.error || 'โหลดไม่ได้');
+    $('trips').innerHTML = d.trips.length ? d.trips.map((t) => `<button class="trip" data-id="${esc(t.orderId)}" aria-pressed="${t.orderId === curTrip}">
+      <div class="row" style="justify-content:space-between"><b>${esc(t.driver || '—')}</b><span class="chip ${t.done ? 'done' : 'run'}">${esc(t.status)}</span></div>
+      <small>${esc(t.plate.split(',')[0])} · ${esc(t.garden || t.pickup)} · ${esc(t.jobType)}</small>
+      <small class="num">${esc(t.orderId)} · เริ่ม ${esc(t.started.slice(-8, -3))}${t.done ? ' · เสร็จ ' + esc(t.done.slice(-8, -3)) : ''}</small></button>`).join('')
+      : '<div class="msg">วันนี้ไม่มีเที่ยวที่เริ่มงาน</div>';
+  } catch (e) { $('trips').innerHTML = `<div class="msg">โหลดไม่ได้ · <button class="btn sec" onclick="loadTrips()">ลองใหม่</button></div>`; }
+}
+
+// ── เปิดเที่ยว ──
+async function openTrip(id) {
+  curTrip = id; pause();
+  document.querySelectorAll('.trip').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+  $('infoCard').hidden = false; $('info').innerHTML = loader('กำลังดึงเส้นทางจาก GPS (5–20 วิ)'); $('tl').innerHTML = ''; $('player').hidden = true;
+  try { const u = new URL(location.href); u.searchParams.set('order', id); history.replaceState(null, '', u); } catch (e) {}
+  let d;
+  try { d = await api({ action: 'getReplay', orderId: id }); } catch (e) { d = { ok: false, error: 'เชื่อมต่อไม่ได้' }; }
+  if (curTrip !== id) return;
+  if (!d.ok) { $('info').innerHTML = `<div class="warn b">${esc(d.error || (d.denied ? 'ไม่มีสิทธิ์' : 'ดึงเส้นทางไม่ได้'))}</div>`; return; }
+  D = d; P = d.points || [];
+  CUM = [0]; for (let i = 1; i < P.length; i++) CUM[i] = CUM[i - 1] + km(P[i - 1][1], P[i - 1][2], P[i][1], P[i][2]);
+  drawMap(); renderInfo(); renderTimeline();
+  if (P.length) { $('player').hidden = false; $('seek').min = P[0][0]; $('seek').max = P[P.length - 1][0]; seek(P[0][0]); renderTicks(); }
+}
+
+// ── แผนที่ ──
+function initMap() {
+  map = L.map('map', { zoomControl: true }).setView([13.16, 101.33], 10);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap' }).addTo(map);
+  layerG = L.layerGroup().addTo(map);
+}
+const pinIcon = (cls, txt) => L.divIcon({ className: '', html: `<div class="pin ${cls}">${esc(txt)}</div>`, iconSize: null, iconAnchor: [20, 12] });
+function drawMap() {
+  layerG.clearLayers();
+  const ll = P.map((p) => [p[1], p[2]]);
+  if (D.factory) L.marker([D.factory.lat, D.factory.lon], { icon: pinIcon('', '🏭 SSB') }).addTo(layerG);
+  if (D.dest) L.marker([D.dest.lat, D.dest.lon], { icon: pinIcon('dest', '📍 ' + (D.dest.name || 'ปลายทาง').slice(0, 26)) }).addTo(layerG).bindTooltip('หมุดปลายทางในระบบ');
+  if (D.ramp) L.marker([D.ramp.lat, D.ramp.lon], { icon: pinIcon('ramp', '🏗️ ' + D.ramp.name) }).addTo(layerG);
+  if (!ll.length) { if (D.dest) map.setView([D.dest.lat, D.dest.lon], 11); return; }
+  L_full = L.polyline(ll, { color: '#8A968D', weight: 4, opacity: .45, dashArray: '6 6' }).addTo(layerG);
+  L_done = L.polyline([], { color: '#1B4332', weight: 5, opacity: .9 }).addTo(layerG);
+  (D.stops || []).forEach((s) => L.circleMarker([s.lat, s.lon], { radius: Math.min(16, 6 + s.min / 10), color: '#fff', weight: 2, fillColor: s.idle ? '#D9412B' : '#E08A1E', fillOpacity: .9 })
+    .addTo(layerG).bindTooltip(`${s.idle ? 'จอดไม่ดับเครื่อง' : 'จอด'} ${s.min} นาที<br>${hm(s.from)}–${hm(s.to)}${s.name ? '<br>' + esc(s.name) : ''}`));
+  (D.steps || []).forEach((st) => { const p = posAt(st.ms); if (p) L.marker([p[0], p[1]], { icon: L.divIcon({ className: '', html: `<div class="flag">${esc(st.label.split(' /')[0])} ${hm(st.ms)}</div>`, iconSize: null, iconAnchor: [0, 22] }) }).addTo(layerG); });
+  mk = L.marker(ll[0], { icon: L.divIcon({ className: '', html: '<div class="truck">🚚</div>', iconSize: [30, 30], iconAnchor: [15, 15] }), zIndexOffset: 1000 }).addTo(layerG);
+  const b = L.latLngBounds(ll); if (D.factory) b.extend([D.factory.lat, D.factory.lon]);
+  map.fitBounds(b.pad(0.12));
+}
+// ตำแหน่ง ณ เวลา ms (เส้นตรงระหว่าง 2 จุด GPS) → [lat, lon, speed, index, km]
+function posAt(ms) {
+  if (!P.length) return null;
+  if (ms <= P[0][0]) return [P[0][1], P[0][2], P[0][3], 0, 0];
+  const n = P.length - 1; if (ms >= P[n][0]) return [P[n][1], P[n][2], P[n][3], n, CUM[n]];
+  let lo = 0, hi = n; while (hi - lo > 1) { const m = (lo + hi) >> 1; if (P[m][0] <= ms) lo = m; else hi = m; }
+  const a = P[lo], b = P[hi], f = (ms - a[0]) / ((b[0] - a[0]) || 1);
+  return [a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f, a[3] + (b[3] - a[3]) * f, lo, CUM[lo] + (CUM[hi] - CUM[lo]) * f];
+}
+function seek(ms) {
+  T = Math.max(+$('seek').min, Math.min(+$('seek').max, ms));
+  const p = posAt(T); if (!p) return;
+  if (mk) mk.setLatLng([p[0], p[1]]);
+  if (L_done) L_done.setLatLngs(P.slice(0, p[3] + 1).map((x) => [x[1], x[2]]).concat([[p[0], p[1]]]));
+  $('seek').value = T; $('rT').textContent = hms(T); $('rS').textContent = nf(p[2]); $('rD').textContent = nf(p[4], 1);
+  const stop = (D.stops || []).find((s) => T >= s.from && T <= s.to);
+  $('rState').innerHTML = stop ? `<span class="chip" style="background:${stop.idle ? '#FBE9E9' : '#FDF0D8'};color:${stop.idle ? '#8a1f1f' : '#7a4a05'}">${stop.idle ? 'จอดไม่ดับเครื่อง' : 'จอด'} ${stop.min} นาที</span>` : (p[2] > 3 ? '<span class="chip run">กำลังวิ่ง</span>' : '');
+  document.querySelectorAll('#tl li').forEach((li) => { const t = +li.dataset.t; li.classList.toggle('past', t < T - 60000); });
+  const nowLi = [...document.querySelectorAll('#tl li')].filter((li) => +li.dataset.t <= T).pop();
+  document.querySelectorAll('#tl li.now').forEach((li) => li.classList.remove('now')); if (nowLi) nowLi.classList.add('now');
+}
+function frame(ts) {
+  if (!playing) return;
+  const dt = lastTs ? ts - lastTs : 0; lastTs = ts;
+  const next = T + dt * +$('spd').value;
+  seek(next); if (mk && document.visibilityState === 'visible') map.panInside(mk.getLatLng(), { padding: [60, 60], animate: false });
+  if (next >= +$('seek').max) { pause(); return; }
+  requestAnimationFrame(frame);
+}
+function play() { if (!P.length) return; if (T >= +$('seek').max) seek(+$('seek').min); playing = true; lastTs = 0; $('playBtn').textContent = '❚❚'; $('playBtn').setAttribute('aria-label', 'หยุด'); requestAnimationFrame(frame); }
+function pause() { playing = false; $('playBtn').textContent = '▶'; $('playBtn').setAttribute('aria-label', 'เล่น'); }
+
+// ── ข้อมูลเที่ยว + ไทม์ไลน์ ──
+function renderInfo() {
+  const runMin = P.reduce((a, p, i) => (i && P[i - 1][3] > 3 ? a + (p[0] - P[i - 1][0]) / 60000 : a), 0);
+  const durMin = P.length ? (P[P.length - 1][0] - P[0][0]) / 60000 : 0;
+  const w = [];
+  if (D.warn) w.push(`<div class="warn b">${esc(D.warn)}</div>`);
+  if (!P.length && !D.warn) w.push('<div class="warn b">ไม่มีจุด GPS ช่วงเวลานี้ (GPS ออฟไลน์ หรือ DTC ไม่ตอบ)</div>');
+  if (D.dest && P.length) {   // หมุดปลายทางตรงกับที่รถไปจริงไหม
+    let best = Infinity; P.forEach((p) => { best = Math.min(best, km(p[1], p[2], D.dest.lat, D.dest.lon)); });
+    if (best > 1) w.push(`<div class="warn">รถไม่เคยเข้าใกล้หมุดปลายทางเกิน <b>${nf(best, 1)} กม.</b> · หมุดสวน/จุดรับในระบบอาจผิด (แก้ได้ที่หน้าสวน)</div>`);
+  }
+  if (!D.dest) w.push('<div class="warn">ปลายทางยังไม่มีพิกัดในระบบ</div>');
+  $('info').innerHTML = `<div class="row" style="justify-content:space-between"><b>${esc(D.driver)} · ${esc(D.plate.split(',')[0])}</b><span class="chip ${D.status === 'เสร็จงาน' ? 'done' : 'run'}">${esc(D.status)}</span></div>
+    <div class="sub" style="color:var(--muted);font-size:12.5px">${esc(D.orderId)} · ${esc(D.garden)}${D.pickup && D.pickup !== D.garden ? ' · ' + esc(D.pickup) : ''}</div>
+    <div class="sum" style="margin-top:8px"><div><b class="num">${D.km != null ? nf(D.km, 1) : nf(CUM[CUM.length - 1] || 0, 1)}</b>กม.${D.km != null ? ' (เลขไมล์)' : ''}</div><div><b class="num">${Math.floor(durMin / 60)}:${String(Math.round(durMin % 60)).padStart(2, '0')}</b>ชม. ทั้งเที่ยว</div><div><b class="num">${Math.floor(runMin / 60)}:${String(Math.round(runMin % 60)).padStart(2, '0')}</b>ชม. วิ่ง</div><div><b class="num">${(D.stops || []).length}</b>จุดจอด ≥5 น.</div></div>
+    ${w.join('')}`;
+}
+function renderTimeline() {
+  const items = (D.steps || []).map((s) => ({ t: s.ms, c: 'var(--step)', h: s.label, sub: 'เวลาที่คนขับกดในฟอร์ม' }))
+    .concat((D.stops || []).map((s) => ({ t: s.from, c: s.idle ? 'var(--idle)' : 'var(--park)', h: `${s.idle ? 'จอดไม่ดับเครื่อง' : 'จอด'} ${s.min} นาที`, sub: `ถึง ${hm(s.to)}${s.name ? ' · ' + s.name : ''}` })))
+    .sort((a, b) => a.t - b.t);
+  $('tl').innerHTML = items.map((it) => `<li data-t="${it.t}"><span class="num">${hm(it.t)}</span><span class="dot" style="background:${it.c}"></span><span><b>${esc(it.h)}</b><small>${esc(it.sub)}</small></span></li>`).join('')
+    || '<li><span></span><span></span><span class="sub">ไม่มีเหตุการณ์</span></li>';
+}
+function renderTicks() {
+  const a = +$('seek').min, b = +$('seek').max, w = (t) => ((t - a) / ((b - a) || 1) * 100).toFixed(2) + '%';
+  $('ticks').innerHTML = (D.steps || []).filter((s) => s.ms >= a && s.ms <= b).map((s) => `<i style="left:${w(s.ms)}" title="${esc(s.label)}"></i>`).join('')
+    + (D.stops || []).map((s) => `<i class="s" style="left:${w(s.from)}" title="จอด ${s.min} นาที"></i>`).join('');
+}
+
+// ── เหตุการณ์ ──
+document.addEventListener('click', (e) => {
+  const t = e.target.closest('.trip'); if (t) { openTrip(t.dataset.id); return; }
+  const li = e.target.closest('#tl li[data-t]'); if (li) { pause(); seek(+li.dataset.t); if (mk) map.panTo(mk.getLatLng()); return; }
+});
+$('playBtn').addEventListener('click', () => (playing ? pause() : play()));
+$('seek').addEventListener('input', (e) => { pause(); seek(+e.target.value); });
+$('dt').addEventListener('change', loadTrips);
+$('today').addEventListener('click', () => { $('dt').value = bkkISO(Date.now()); loadTrips(); });
+
+(async function init() {
+  const q = new URLSearchParams(location.search);
+  if (q.get('uid')) UID = q.get('uid');
+  else {
+    try { await liff.init({ liffId: LIFF_ID }); if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; } const p = await liff.getProfile(); UID = p.userId || ''; }
+    catch (e) { $('trips').innerHTML = '<div class="msg">เข้าระบบ LINE ไม่สำเร็จ</div>'; return; }
+  }
+  initMap();
+  $('dt').value = q.get('date') || bkkISO(Date.now());
+  await loadTrips();
+  if (q.get('order')) openTrip(q.get('order'));
+})();
+</script>
+</body>
+</html>
