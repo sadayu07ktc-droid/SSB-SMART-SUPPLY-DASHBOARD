@@ -50,6 +50,33 @@
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:50;opacity:0;transition:.3s;pointer-events:none}
   .toast.on{opacity:1}
   .toast.err{background:var(--danger)}
+  /* 🚚 กลุ่มรถ + เพิ่ม/แก้รถ (2026-10-19) */
+  .gchips{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 12px;align-items:center}
+  .gchip{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:999px;border:1px solid var(--line2);background:var(--card);color:var(--txt);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}
+  .gchip .n{font-size:11.5px;font-weight:700;background:var(--card2);border-radius:999px;padding:0 7px;color:var(--txt2)}
+  .gchip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .gchip.on .n{background:rgba(255,255,255,.25);color:#fff}
+  .gchip:disabled{opacity:.45;cursor:not-allowed}
+  .gchip:focus-visible,.btn:focus-visible,.vbtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .gchips .grow{flex:1}
+  .btn.sm{padding:8px 14px;font-size:13px}
+  .vbtn{border:1px solid var(--line2);background:var(--card);color:var(--accent);border-radius:8px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+  .gtag{font-size:10px;padding:2px 8px;border-radius:999px;font-weight:700}
+  .g-ไร่{background:rgba(46,165,103,.15);color:var(--primary)} .g-Bulk{background:rgba(13,110,253,.14);color:var(--accent)} .g-Packing{background:rgba(184,134,11,.16);color:var(--warn)}
+  .tag.bad{color:var(--danger);border-color:var(--danger)}
+  .veh.off{opacity:.55}
+  .warnbox{border:1px solid var(--warn);background:rgba(184,134,11,.08);border-radius:12px;padding:10px 13px;margin-bottom:12px;font-size:12.5px;line-height:1.7}
+  .dlg{position:fixed;inset:0;background:rgba(10,20,30,.45);display:none;align-items:flex-start;justify-content:center;padding:40px 12px;z-index:40;overflow:auto}
+  .dlg.on{display:flex}
+  .dbox{width:100%;max-width:440px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px 18px;box-shadow:0 18px 40px -20px rgba(0,0,0,.5)}
+  .dbox h2{font-size:16px;margin:0 0 12px}
+  .dbox .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .dbox label{margin-top:10px}
+  .dbox select{width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--card2);color:var(--txt);font:inherit;font-size:14px}
+  .dbox .dact{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+  .dbox .hint{font-size:11.5px;color:var(--txt2);margin-top:6px;line-height:1.6}
+  .dbox .hint.w{color:var(--warn)}
+  .dbox .gchips{margin:4px 0 0}
 </style>
 </head>
 <body>
@@ -57,7 +84,7 @@
   <div class="bar">
     <button onclick="goBack()" style="border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">←</button>
     <div class="logo">🏭</div>
-    <div><h1>ฐานต้นทุนรถ</h1><div class="sub">ต้นทุนต่อคัน (คงที่ · ผันแปร · ดำเนินงาน · ค่าเสื่อม) — อ้างอิงจาก DATA_Vehicle</div></div>
+    <div><h1>ฐานต้นทุนรถ</h1><div class="sub">ทะเบียนรถ (รายการให้คนขับเลือก) + ต้นทุนต่อคัน (คงที่ · ผันแปร · ดำเนินงาน · ค่าเสื่อม) <span style="opacity:.6">· build 2026-10-19a</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -68,6 +95,7 @@
   <button class="btn" id="saveBtn">💾 บันทึกเข้าฐาน</button>
 </div>
 <div class="toast" id="toast"></div>
+<div class="dlg" id="dlgVeh"><div class="dbox" role="dialog" aria-modal="true" aria-labelledby="vT" id="vBox"></div></div>
 
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
@@ -112,17 +140,31 @@ function vehAge(sd){
 }
 const fmtAge=y=>{const yy=Math.floor(y);const mm=Math.round((y-yy)*12);return yy+' ปี'+(mm?' '+mm+' ด.':'');};
 
+// 🚚 กลุ่มรถ (2026-10-19 คุณน้อง): DEV + PIN = ทุกกลุ่ม · แอดมิน + PIN ส่วนตัว = เฉพาะกลุ่มตัวเอง (หลังบ้านกรอง/ตรวจซ้ำ)
+const GROUPS=['ไร่','Bulk','Packing'], GICON={'ไร่':'🌴','Bulk':'🛢️','Packing':'📦'};
+const VTYPES=['พ่วง(Trailer) 360','พ่วง(Trailer) 240','เดี่ยว','10 ล้อ','6 ล้อ','4 ล้อ','รถ CPO'];
+const EDGE_AW='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/admin-writes';
+let G='', PIN_INFO=null, DIRTY=false;
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const vg=v=>v.job_group||'ไร่';
 async function load(){
   const r=await (window.ssbFetch||fetch)(GAS_URL+'?action=getCostBase&userId='+encodeURIComponent(MY_UID));
   const d=await r.json();
   if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
-  if(!d.ok){$('body').innerHTML='<div class="msg">'+(d.error||'ผิดพลาด')+'</div>';return;}
-  DATA=d; render(); $('saveBar').style.display='flex'; $('cnt').textContent='🚚 '+d.count+' คัน';
+  if(!d.ok){$('body').innerHTML='<div class="msg">'+esc(d.error||'ผิดพลาด')+'</div>';return;}
+  if(!d.me){   // ตอบจาก GAS ทางสำรอง (ไม่กรองกลุ่ม) → ให้เฉพาะ DEV
+    if(!(PIN_INFO&&PIN_INFO.isDev)){$('body').innerHTML='<div class="msg">ระบบหลักไม่ตอบ — ลองโหลดหน้าใหม่อีกครั้ง</div>';return;}
+    d.me={isDev:true,groups:GROUPS.slice(),canEdit:true}; d.dupParts=[];
+  }
+  DATA=d; DIRTY=false;
+  if(!G||d.me.groups.indexOf(G)<0) G=d.me.groups[0]||'ไร่';
+  render(); $('saveBar').style.display=d.me.canEdit?'flex':'none';
 }
 
 const r4=v=>{const n=parseFloat(v);return isNaN(n)?(v==null?'':v):Math.round(n*10000)/10000;};
 function inp(cols,v,cls){
-  return cols.map(c=>`<label class="${cls||''}">${c[1]} ${c[2]?'('+c[2]+')':''}<input type="number" step="any" data-plate="${v.plate}" data-col="${c[0]}" value="${r4(v[c[0]])}"></label>`).join('');
+  const ro=DATA&&DATA.me&&!DATA.me.canEdit?' disabled':'';
+  return cols.map(c=>`<label class="${cls||''}">${c[1]} ${c[2]?'('+c[2]+')':''}<input type="number" step="any" data-plate="${esc(v.plate)}" data-col="${c[0]}" value="${r4(v[c[0]])}"${ro}></label>`).join('');
 }
 
 function render(){
@@ -144,11 +186,20 @@ function render(){
     +(d.fuelToday?' · ⛽ ราคาน้ำมันกลางล่าสุด '+nf(d.fuelToday.price)+' บ./ล. ('+d.fuelToday.date+')':'')+'</div>'
     +'</div>';
 
+  // ชิปกลุ่มรถ 3 กลุ่ม · กลุ่มที่ไม่มีสิทธิ์ = กดไม่ได้
+  const me=d.me;
+  h+='<div class="gchips" role="tablist" aria-label="กลุ่มรถ">'+GROUPS.map(g=>{
+    const n=d.vehicles.filter(v=>vg(v)===g).length, can=me.groups.indexOf(g)>=0;
+    return `<button type="button" class="gchip${g===G?' on':''}" role="tab" aria-selected="${g===G}" data-g="${g}"${can?'':' disabled title="เฉพาะแอดมินกลุ่ม '+g+'"'}>${GICON[g]} ${g}${can?` <span class="n">${n}</span>`:' 🔒'}</button>`;
+  }).join('')+'<span class="grow"></span>'
+    +(me.canEdit?'<button type="button" class="btn sm" onclick="editVeh()">+ เพิ่มรถ</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
+  h+='<div id="warn"></div>';
   h+='<input class="search" id="q" placeholder="🔎 ค้นทะเบียน / รุ่น…" oninput="filt()">';
 
-  // การ์ดต่อคัน
+  // การ์ดต่อคัน (ใช้งานก่อน · เลิกใช้ไว้ท้าย) · ทุกกลุ่มอยู่ใน DOM ซ่อนด้วยชิป (แก้ตัวเลขค้างไว้แล้วสลับกลุ่มไม่หาย)
+  const typeOf=v=>v.vehicle_type||'';
   h+='<div id="list">';
-  d.vehicles.forEach((v,i)=>{
+  d.vehicles.slice().sort((a,b)=>((a.status==='เลิกใช้')-(b.status==='เลิกใช้'))||String(a.plate).localeCompare(String(b.plate))).forEach((v,i)=>{
     const mdl=[v.brand,v.model].filter(Boolean).join(' ')||v.vehicle_type||'';
     const age=vehAge(v.start_date), uy=parseFloat(v.usage_years)||0;
     let ageChip='', depNote='';
@@ -160,9 +211,13 @@ function render(){
           : `<span class="tag" style="color:var(--primary)">✓ ตัดค่าเสื่อมครบแล้ว</span>`;
       }
     }
-    h+=`<div class="veh" data-key="${(v.plate+' '+mdl).toLowerCase()}">`
-      +`<div class="vhead"><div><div class="plate">🚚 ${v.plate||'-'}</div><div class="vmodel">${mdl}</div></div>`
-      +`<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end">${ageChip}${depNote}<span class="tag">${v.status||'ใช้งาน'}</span></div></div>`
+    const off=v.status==='เลิกใช้';
+    h+=`<div class="veh${off?' off':''}" data-g="${esc(vg(v))}" data-key="${esc((v.plate+' '+mdl+' '+typeOf(v)).toLowerCase())}">`
+      +`<div class="vhead"><div><div class="plate">🚚 ${esc(v.plate||'-')}</div><div class="vmodel">${esc(mdl)}</div></div>`
+      +`<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;align-items:center">${ageChip}${depNote}`
+      +(typeOf(v)?`<span class="tag">${esc(typeOf(v))}</span>`:'<span class="tag bad" title="ไม่ระบุประเภท = ค่าแรงต้องเดาประเภทจากทะเบียน">⚠️ ไม่ระบุประเภท</span>')
+      +`<span class="tag${off?' bad':''}">${esc(v.status||'ใช้งาน')}</span>`
+      +(me.canEdit&&v.id?`<button type="button" class="vbtn" onclick="editVeh('${v.id}')">✏️ แก้ทะเบียน/ประเภท</button>`:'')+`</div></div>`
       +`<div class="g3 key">${inp(KEY,v,'')}</div>`
       +`<div class="g3" style="margin-top:9px">${inp(CTX,v)}</div>`
       +`<span class="more" onclick="this.nextElementSibling.classList.toggle('on');this.textContent=this.nextElementSibling.classList.contains('on')?'▲ ซ่อนรายละเอียด':'▾ รายละเอียดต้นทุน'">▾ รายละเอียดต้นทุน</span>`
@@ -173,17 +228,72 @@ function render(){
       +`<span>กำไร <b>${nf(v.profit_percent)}%</b></span></div>`
       +`</div>`;
   });
-  h+='</div>';
+  h+='</div><div class="msg" id="empty" style="display:none"></div>';
 
   $('body').innerHTML=h;
+  document.querySelectorAll('.gchips .gchip[data-g]').forEach(b=>b.onclick=()=>{ G=b.dataset.g;
+    document.querySelectorAll('.gchips .gchip[data-g]').forEach(x=>{x.classList.toggle('on',x===b);x.setAttribute('aria-selected',x===b);}); filt(); });
+  $('list').addEventListener('input',()=>{DIRTY=true;});
+  filt();
 }
 
 function filt(){
-  const q=$('q').value.trim().toLowerCase();
+  const q=($('q')&&$('q').value||'').trim().toLowerCase();
+  let n=0, live=0;
   document.querySelectorAll('#list .veh').forEach(el=>{
-    el.style.display = (!q || el.dataset.key.indexOf(q)>=0) ? '' : 'none';
+    const show=el.dataset.g===G && (!q || el.dataset.key.indexOf(q)>=0);
+    el.style.display = show ? '' : 'none';
+    if(el.dataset.g===G){ n++; if(!el.classList.contains('off')) live++; }
   });
+  $('cnt').textContent=GICON[G]+' '+G+' · ใช้งาน '+live+' คัน'+(n>live?' · เลิกใช้ '+(n-live):'');
+  const e=$('empty'); e.style.display=n?'none':''; e.textContent=n?'':'ยังไม่มีรถกลุ่ม '+G+(DATA.me.canEdit?' — กด "+ เพิ่มรถ"':'');
+  // คำเตือนของกลุ่มนี้: ป้ายซ้ำ / ไม่ระบุประเภท
+  const inG=DATA.vehicles.filter(v=>vg(v)===G&&v.status!=='เลิกใช้'), pl={}; inG.forEach(v=>pl[v.plate]=1);
+  const dup=(DATA.dupParts||[]).filter(x=>x.plates.some(p=>pl[p]));
+  const noType=inG.filter(v=>!v.vehicle_type).length;
+  let w='';
+  if(dup.length) w+='⚠️ <b>ป้ายซ้ำ</b> — '+dup.map(x=>'<b>'+esc(x.part)+'</b> อยู่ใน '+x.plates.map(esc).join(' และ ')).join(' · ')+' · น่าจะพิมพ์ผิดคันใดคันหนึ่ง<br>';
+  if(noType) w+='⚠️ <b>ไม่ระบุประเภทรถ '+noType+' คัน</b> — ค่าแรงต้องเดาประเภทจากทะเบียน (2 ป้าย = พ่วง) กด ✏️ เพื่อเลือกประเภท';
+  $('warn').innerHTML=w?'<div class="warnbox">'+w+'</div>':'';
 }
+
+/* ── เพิ่ม/แก้รถ ── */
+function closeVeh(){ $('dlgVeh').classList.remove('on'); }
+function editVeh(id){
+  const me=DATA.me, v=id?DATA.vehicles.find(x=>String(x.id)===String(id)):null;
+  const P=v?String(v.plate||'').split(',').map(s=>s.trim()):[];
+  let g=v?vg(v):G, st=v&&v.status==='เลิกใช้'?'เลิกใช้':'ใช้งาน';
+  const cur=v&&v.vehicle_type||'', opts=VTYPES.indexOf(cur)<0&&cur?[cur].concat(VTYPES):VTYPES;
+  $('vBox').innerHTML=`<h2 id="vT">${v?'✏️ แก้รถ '+esc(v.plate):'+ เพิ่มรถ'}</h2>
+    <div class="row2"><label>ทะเบียนหัว *<input id="vHd" value="${esc(P[0]||'')}" placeholder="เช่น 87-4649" autocomplete="off"></label>
+      <label>ทะเบียนหาง (ถ้ามี)<input id="vTl" value="${esc(P[1]||'')}" placeholder="รถเดี่ยว = เว้นว่าง" autocomplete="off"></label></div>
+    <label>กลุ่มรถ</label><div class="gchips" id="vG">${GROUPS.map(x=>`<button type="button" class="gchip${x===g?' on':''}" data-v="${x}"${me.groups.indexOf(x)<0?' disabled':''}>${GICON[x]} ${x}</button>`).join('')}</div>
+    <label>ประเภทรถ<select id="vTy"><option value="">— เลือกประเภท —</option>${opts.map(o=>`<option${o===cur?' selected':''}>${esc(o)}</option>`).join('')}</select></label>
+    <div class="row2"><label>ยี่ห้อ<input id="vBr" value="${esc(v&&v.brand||'')}"></label><label>รุ่น<input id="vMd" value="${esc(v&&v.model||'')}"></label></div>
+    <label>สถานะ</label><div class="gchips" id="vS">${['ใช้งาน','เลิกใช้'].map(x=>`<button type="button" class="gchip${x===st?' on':''}" data-v="${x}">${x==='ใช้งาน'?'✅ ใช้งาน':'⛔ เลิกใช้'}</button>`).join('')}</div>
+    <div class="hint">เลิกใช้ = ไม่ขึ้นในรายการให้คนขับเลือก · ข้อมูลและค่าแรงเที่ยวเก่ายังอยู่ครบ (ไม่มีปุ่มลบ)</div>
+    ${v?'<div class="hint w">⚠️ เปลี่ยนทะเบียนคันเดิม = เที่ยวเก่าที่บันทึกทะเบียนเดิมจะหาประเภท/ต้นทุนรถไม่เจอ · ถ้าเป็นรถคันใหม่ ให้กด "+ เพิ่มรถ" แทน · แก้พิมพ์ผิดได้ตามปกติ</div>':''}
+    <div class="dact"><button type="button" class="btn ghost" id="vX">ยกเลิก</button><button type="button" class="btn" id="vOk">บันทึก</button></div>`;
+  const pick=(box,set)=>$(box).querySelectorAll('.gchip').forEach(b=>b.onclick=()=>{ if(b.disabled)return; $(box).querySelectorAll('.gchip').forEach(x=>x.classList.toggle('on',x===b)); set(b.dataset.v); });
+  pick('vG',x=>g=x); pick('vS',x=>st=x);
+  $('vX').onclick=closeVeh;
+  $('vOk').onclick=async()=>{
+    const hd=$('vHd').value.trim(), tl=$('vTl').value.trim();
+    if(!hd){ toast('กรอกทะเบียนหัว',true); $('vHd').focus(); return; }
+    if(DIRTY){ toast('มีตัวเลขต้นทุนที่แก้ค้างไว้ — กด 💾 บันทึกเข้าฐานก่อน',true); return; }
+    const b=$('vOk'); b.disabled=true; b.textContent='กำลังบันทึก…';
+    try{
+      const r=await fetch(EDGE_AW,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'saveVehicle',userId:MY_UID,
+        id:v?v.id:'',plate:[hd,tl].filter(Boolean).join(','),group:g,vehicleType:$('vTy').value,brand:$('vBr').value.trim(),model:$('vMd').value.trim(),status:st})});
+      const d=await r.json();
+      if(!d.ok){ toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); b.disabled=false; b.textContent='บันทึก'; return; }
+      toast('✅ '+(v?'แก้':'เพิ่ม')+' '+d.vehicle.plate+' แล้ว'); G=g; closeVeh(); load();
+    }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); closeVeh(); load(); }
+  };
+  $('dlgVeh').classList.add('on'); setTimeout(()=>{try{$('vHd').focus();}catch(e){}},50);
+}
+$('dlgVeh').addEventListener('click',e=>{ if(e.target.id==='dlgVeh') closeVeh(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeVeh(); });
 
 async function save(){
   // รวมค่าต่อ plate จากทุก input ที่ถูกแก้ (ส่งเฉพาะ plate ที่มี input)
@@ -199,7 +309,7 @@ async function save(){
     // ✍️ Edge admin-writes ก่อน · Edge ล่ม/เกินเวลา → GAS เดิม (ssb-read.js ssbPost)
     const d=window.ssbPost ? await ssbPost('admin-writes',GAS_URL,payload,30000)
       : await (await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload)})).json();
-    if(d.ok) toast('✅ บันทึก '+d.saved+' คันเข้าฐานแล้ว');
+    if(d.ok){ toast('✅ บันทึก '+d.saved+' คันเข้าฐานแล้ว'); DIRTY=false; }
     else toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'ผิดพลาด')),true);
   }catch(e){toast('❌ '+e,true);}
   b.textContent='💾 บันทึกเข้าฐาน'; b.disabled=false;
@@ -212,7 +322,11 @@ async function save(){
     const p=await liff.getProfile(); MY_UID=p.userId||'';
     if(!MY_UID){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่พบ LINE UID</div>';return;}
     $('saveBtn').onclick=save;
-    if(await ssbPinGate(MY_UID)) load();   // 🔐 PIN ก่อนเข้าดู (เฉพาะ DEV) · ssb-pin-gate.js
+    // 🔐 2026-10-19: DEV = PIN DEV (ปลดหน้า DEV อื่นด้วย) · แอดมิน = PIN ส่วนตัว (ตั้งเองครั้งแรก) → เห็นเฉพาะกลุ่มตัวเอง
+    try{ PIN_INFO=await ssbAdminPinInfo(MY_UID); }catch(e){ PIN_INFO=null; }
+    const ok = PIN_INFO&&PIN_INFO.isDev ? await ssbPinGate(MY_UID) : await ssbAdminPin(MY_UID,{info:PIN_INFO,text:'เข้าหน้าฐานต้นทุนรถ'});
+    if(ok) load();
+    else $('body').innerHTML='<div class="msg">🔐 ต้องใส่ PIN ก่อนเข้าหน้านี้<br><button class="btn" style="margin-top:12px" onclick="location.reload()">ใส่ PIN อีกครั้ง</button></div>';
   }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+e+'</div>';}
 })();
 </script>
