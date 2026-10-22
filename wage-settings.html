@@ -102,7 +102,7 @@ const LIFF_ID='2010274217-Ot7vGhri';
 let MY_UID='', DATA=null;
 const $=id=>document.getElementById(id);
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('on');setTimeout(()=>e.classList.remove('on'),2200);}
-function goBack(){ if(history.length>1){history.back();} else {location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';} }
+function goBack(){ if(history.length>1){history.back();} else {location.href='/SSB-SMART-SUPPLY-DASHBOARD/';} }
 
 // ป้ายชื่อ param กลาง
 const PLBL={run_rate_per_hr:'เลทค่าวิ่ง (บ./ชม.)',load_rate_per_hr:'ค่าขึ้น-ลง (บ./ชม.)',fuel_rate_wage:'เลทน้ำมันคิดค่าแรง (บ./ล.)',heavy_pct:'ถ่วงหนัก (%)',light_pct:'ถ่วงเบา (%)',bonus_pct:'โบนัส % ค่าเที่ยว',tarp_fee:'ค่าคลุมผ้าใบ (บ.)',hooklift_fee:'ค่ายกกระบะ ฮุคลิฟท์ (บ./ครั้ง)',hooklift_liters:'ฮุคลิฟท์ +น้ำมัน (ลิตร/ครั้ง · เทปาล์ม)',give_per_hr:'ให้เพิ่มตามเวลาวิ่ง (บ./ชม.ไป-กลับ)',wait_rate_per_hr:'ค่ารอลงของ (บ./ชม. · × ชม.รอต่อปลายทาง)',overnight_fee:'ค่ารอขึ้นของข้ามคืน (บ./คืน · เลิกใช้)'};

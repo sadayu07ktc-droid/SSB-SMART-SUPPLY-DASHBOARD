@@ -181,7 +181,7 @@ const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;'
 const nf=(n,d)=>{const x=parseFloat(n);return isNaN(x)?'–':x.toLocaleString('th-TH',{minimumFractionDigits:d||0,maximumFractionDigits:d==null?2:d});};
 const norm=s=>String(s||'').replace(/\s+/g,'').toLowerCase();
 function toast(t,err){const e=$('toast');e.textContent=t;e.className='toast on'+(err?' err':'');setTimeout(()=>e.className='toast',2600);}
-function goBack(){ if(history.length>1)history.back(); else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
+function goBack(){ if(history.length>1)history.back(); else location.href='/SSB-SMART-SUPPLY-DASHBOARD/'; }
 function openOv(id){$(id).classList.add('on');}
 function closeOv(id){$(id).classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape')['ovAsk','ovImp','ovPick','ovEdit'].forEach(id=>{if($(id).classList.contains('on')){closeOv(id);}});});

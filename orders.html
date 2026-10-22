@@ -202,7 +202,7 @@ let MY_UID='', ORDERS=[], COUNTS={}, FILTER='', SEL=new Set(), BUSY=false, GROUP
 
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-function goBack(){ if(history.length>1) history.back(); else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
+function goBack(){ if(history.length>1) history.back(); else location.href='/SSB-SMART-SUPPLY-DASHBOARD/'; }
 let _t; function toast(m,err){ let e=$('#toast'); if(!e){e=document.createElement('div');e.id='toast';document.body.appendChild(e);}
   e.textContent=m; e.className='show'+(err?' err':''); clearTimeout(_t); _t=setTimeout(()=>e.className='',2800); }
 

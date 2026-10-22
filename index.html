@@ -284,7 +284,7 @@
           <b>รายการแจ้งเตือน</b>
           <span id="notifyPopSub">กำลังโหลด...</span>
         </div>
-        <button onclick="openLink('https://sadayu07ktc-droid.github.io/admin_notifications/')">ดูทั้งหมด</button>
+        <button onclick="openLink('/admin_notifications/')">ดูทั้งหมด</button>
       </div>
       <div class="np-list" id="notifyPopList"></div>
     </div>
@@ -336,29 +336,29 @@
 
   const MENU = [
     {group:'ภาพรวม', items:[
-      {icon:'dash', label:'Command Center', sub:'สรุปงานขนส่งและสถานะรถแบบเรียลไทม์', url:'https://sadayu07ktc-droid.github.io/ManageDrivers/'},
+      {icon:'dash', label:'Command Center', sub:'สรุปงานขนส่งและสถานะรถแบบเรียลไทม์', url:'/ManageDrivers/'},
       {icon:'pin', label:'ติดตามรถ', tag:'สด', sub:'ตำแหน่งและสถานะรถทุกคันบนแผนที่', children:[
         ['แผนที่รวมทุกคัน','ดูทั้งฟลีตพร้อมกัน'],['ติดตามรายคัน','เลือกคันเจาะลึก'],['รถใกล้โรงงาน','เข้า/ออกรัศมีโรงงาน']
       ]},
-      {icon:'ramp', label:'รับเข้าผลปาล์ม', tag:'ใหม่', sub:'ผลปาล์มรายวัน เข้า–ออก–ส่งโรงงาน · ลาน + สวน · KPI + กราฟ', url:'https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/ramp-dashboard.html'}
+      {icon:'ramp', label:'รับเข้าผลปาล์ม', tag:'ใหม่', sub:'ผลปาล์มรายวัน เข้า–ออก–ส่งโรงงาน · ลาน + สวน · KPI + กราฟ', url:'/SSB-SMART-SUPPLY-DASHBOARD/ramp-dashboard.html'}
     ]},
     {group:'งานขนส่ง', items:[
       {icon:'order', label:'ออเดอร์', sub:'งานรับ-ส่งปาล์มทั้งหมด', children:[
-        ['ออเดอร์ทั้งหมด','ทุกสถานะ · ยกเลิก/ลบขยะ','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/orders.html'],
-        ['ติดตามสถานะ','ไทม์ไลน์รายออเดอร์','https://sadayu07ktc-droid.github.io/Order_Status/'],
+        ['ออเดอร์ทั้งหมด','ทุกสถานะ · ยกเลิก/ลบขยะ','/SSB-SMART-SUPPLY-DASHBOARD/orders.html'],
+        ['ติดตามสถานะ','ไทม์ไลน์รายออเดอร์','/Order_Status/'],
         ['สร้าง/มอบหมายงาน','assign คนขับ','https://liff.line.me/2010274217-BF41B8c2'],
         ['รอลานเทยืนยัน','คิวค้างยืนยัน'],['ประวัติงาน','งานที่จบแล้ว']
       ]},
       {icon:'users', label:'จัดการคนขับ', sub:'ตารางงาน สถานะ เครื่องเดินเบา สรุปพฤติกรรม', children:[
-        ['ตารางงานคนขับ','ใครว่าง/มีงาน · เวลานัด + ระยะทาง','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/schedule.html'],
-        ['ย้อนเส้นทาง GPS','เล่นย้อนเที่ยววิ่ง · จุดจอด · เทียบเวลาที่คนขับกด','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/replay.html'],
+        ['ตารางงานคนขับ','ใครว่าง/มีงาน · เวลานัด + ระยะทาง','/SSB-SMART-SUPPLY-DASHBOARD/schedule.html'],
+        ['ย้อนเส้นทาง GPS','เล่นย้อนเที่ยววิ่ง · จุดจอด · เทียบเวลาที่คนขับกด','/SSB-SMART-SUPPLY-DASHBOARD/replay.html'],
         ['รายชื่อคนขับ','การ์ดสถานะรายคน'],['เครื่องเดินเบา','ติดเครื่องค้าง/เกินเกณฑ์'],['สรุปต่อเที่ยว','กม./ลิตร · %วิ่งหนัก'],['สรุปรายวัน/สัปดาห์','เดินเบา/วิ่ง/ขับเกิน']
       ]},
       {icon:'truck', label:'ยานพาหนะ', sub:'ทะเบียนรถ ประเภท และการจับคู่ GPS', children:[
         ['รถทั้งหมด','ทะเบียน/ประเภท'],['จับคู่ GPS','ทะเบียน ↔ DTC'],['รถยืม/เช่า','หัว-ลูกที่ยืม']
       ]},
       {icon:'ramp', label:'ข้อมูล', sub:'ข้อมูลหลัก — เจ้าของสวน · ทีมตัด · ลานเท · จุดรับ', children:[
-        ['เจ้าของสวน','GARDEN · จุดรับ · ชื่อในบิล','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/garden.html'],
+        ['เจ้าของสวน','GARDEN · จุดรับ · ชื่อในบิล','/SSB-SMART-SUPPLY-DASHBOARD/garden.html'],
         ['ทีมตัด','TEAM'],['ลานเท','RAMP'],['จุดรับ','PICKUP']
       ]}
     ]},
@@ -372,16 +372,16 @@
     ]},
     {group:'ค่าแรง / ต้นทุน', items:[
       {icon:'wage', label:'ค่าแรง / ต้นทุน', sub:'สรุปค่าแรงคนขับ + ต้นทุนต่อเที่ยว', children:[
-        ['รายงานค่าแรง','รายเที่ยว · export Excel','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage.html'],
-        ['🧮 เครื่องคิดค่าแรง','ลองคิด/อธิบายคนขับ','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage-calc.html'],
-        ['⚙️ ตั้งค่าต้นทุน/ค่าแรง','แก้ param → บันทึกเข้าฐาน','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/wage-settings.html'],
-        ['🏭 ฐานต้นทุนรถ','ต้นทุนต่อคัน (คงที่/ผันแปร/ดำเนินงาน)','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/cost-base.html'],
-        ['📍 ค่ากลาง','ระยะ SSB → สวน/ลาน · ผูกรหัสสวน','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/central-distance.html']
+        ['รายงานค่าแรง','รายเที่ยว · export Excel','/SSB-SMART-SUPPLY-DASHBOARD/wage.html'],
+        ['🧮 เครื่องคิดค่าแรง','ลองคิด/อธิบายคนขับ','/SSB-SMART-SUPPLY-DASHBOARD/wage-calc.html'],
+        ['⚙️ ตั้งค่าต้นทุน/ค่าแรง','แก้ param → บันทึกเข้าฐาน','/SSB-SMART-SUPPLY-DASHBOARD/wage-settings.html'],
+        ['🏭 ฐานต้นทุนรถ','ต้นทุนต่อคัน (คงที่/ผันแปร/ดำเนินงาน)','/SSB-SMART-SUPPLY-DASHBOARD/cost-base.html'],
+        ['📍 ค่ากลาง','ระยะ SSB → สวน/ลาน · ผูกรหัสสวน','/SSB-SMART-SUPPLY-DASHBOARD/central-distance.html']
       ]}
     ]},
     {group:'วิเคราะห์', items:[
       {icon:'chart', label:'รายงาน', sub:'ระยะทาง น้ำมัน พฤติกรรมขับ และต้นทุน', children:[
-        ['กราฟการวิ่ง/วัน รายคัน','ระยะทางต่อวันแต่ละคัน','https://sadayu07ktc-droid.github.io/pages_chart_daily/'],
+        ['กราฟการวิ่ง/วัน รายคัน','ระยะทางต่อวันแต่ละคัน','/pages_chart_daily/'],
         ['Ranking — Rate น้ำมัน','จัดอันดับ กม./ลิตร'],
         ['Ranking — %วิ่งหนัก/ระยะ','คนขับที่วิ่งคุ้มสุด'],
         ['สรุปน้ำมัน','กม./ลิตร รายคัน/เดือน'],
@@ -390,8 +390,8 @@
       ]},
       {icon:'gear', label:'ตั้งค่า', sub:'เกณฑ์เดินเบา การแจ้งเตือน และผู้ใช้งาน', children:[
         ['เกณฑ์เดินเบา','IDLE_LIMIT_MIN'],['การแจ้งเตือน','ใครได้รับ alert'],
-        ['ผู้ใช้งาน/สิทธิ์','แอดมิน/ผู้บริหาร','https://sadayu07ktc-droid.github.io/User_Management/'],
-        ['🔑 ตั้งค่าสิทธิ์แอดมิน','ประเภท · แจ้งเตือน · อนุมัติ','https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/admins.html']
+        ['ผู้ใช้งาน/สิทธิ์','แอดมิน/ผู้บริหาร','/User_Management/'],
+        ['🔑 ตั้งค่าสิทธิ์แอดมิน','ประเภท · แจ้งเตือน · อนุมัติ','/SSB-SMART-SUPPLY-DASHBOARD/admins.html']
       ]}
     ]}
   ];
@@ -442,7 +442,7 @@
     try{
       if(/^https:\/\/liff\.line\.me\/2010274217-BF41B8c2/.test(url) && window.ssbSession && ssbSession.get()
          && !(window.liff && liff.isInClient && liff.isInClient()))
-        url = 'https://sadayu07ktc-droid.github.io/Order_form/?v=3&t=' + Date.now();
+        url = '/Order_form/?v=3&t=' + Date.now();
     }catch(e){}
     try{
       if(window.top && window.top!==window.self){ window.top.location.href = url; return; }
@@ -456,7 +456,7 @@
     if(sub){
       if(sub.dataset.url){          // เมนูย่อยที่ลิงก์ไป LIFF (เช่น ออเดอร์ทั้งหมด)
         var _u=sub.dataset.url;
-        if(MY_UID && /github\.io/.test(_u)) _u += (_u.indexOf('?')<0?'?':'&')+'uid='+encodeURIComponent(MY_UID);   // ส่ง uid ให้หน้าเราเอง (เช่น ตารางงาน)
+        if(MY_UID && /^\/(?!\/)/.test(_u)) _u += (_u.indexOf('?')<0?'?':'&')+'uid='+encodeURIComponent(MY_UID);   // ส่ง uid ให้หน้าเราเอง (เช่น ตารางงาน)
         openLink(_u);
         return;
       }
@@ -737,7 +737,7 @@
     }
 
     list.innerHTML = items.slice(0, 6).map(x => `
-      <div class="np-item" onclick="openLink('https://sadayu07ktc-droid.github.io/admin_notifications/')">
+      <div class="np-item" onclick="openLink('/admin_notifications/')">
         <div class="np-ic">${x.icon}</div>
         <div>
           <div class="np-t">${escapeNotifyHtml(x.title)}</div>
@@ -748,7 +748,7 @@
 
     if(items.length > 6){
       list.innerHTML += `
-        <div class="np-item" onclick="openLink('https://sadayu07ktc-droid.github.io/admin_notifications/')">
+        <div class="np-item" onclick="openLink('/admin_notifications/')">
           <div class="np-ic">⋯</div>
           <div>
             <div class="np-t">ดูรายการทั้งหมด</div>

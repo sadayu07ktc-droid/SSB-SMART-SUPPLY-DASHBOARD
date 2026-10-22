@@ -104,7 +104,7 @@ let MY_UID='', DATA=null;
 const $=id=>document.getElementById(id);
 const nf=n=>{const x=parseFloat(n);return isNaN(x)?'–':x.toLocaleString('th-TH',{maximumFractionDigits:2});};
 function toast(t,err){const e=$('toast');e.textContent=t;e.className='toast on'+(err?' err':'');setTimeout(()=>e.className='toast',2400);}
-function goBack(){ if(history.length>1){history.back();} else {location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';} }
+function goBack(){ if(history.length>1){history.back();} else {location.href='/SSB-SMART-SUPPLY-DASHBOARD/';} }
 
 // ช่องที่แก้ได้ (data column ↔ ป้าย ↔ หน่วย)  — 3 ตัวแรก = ตัวที่ใช้คิดต้นทุนเที่ยวตรงๆ
 const KEY=[

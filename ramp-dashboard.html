@@ -150,7 +150,7 @@ const LIFF_ID='2010274217-Ot7vGhri';
 let MY_UID='';
 const $=s=>document.querySelector(s);
 const fmt=(n,d=0)=>Number(n||0).toLocaleString('th-TH',{minimumFractionDigits:d,maximumFractionDigits:d});
-function goBack(){if(history.length>1)history.back();else location.href='https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';}
+function goBack(){if(history.length>1)history.back();else location.href='/SSB-SMART-SUPPLY-DASHBOARD/';}
 
 // ── ธีม (จำค่าใน localStorage) ──
 function effTheme(){const a=document.documentElement.getAttribute('data-theme');if(a)return a;return matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}

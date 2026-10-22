@@ -52,7 +52,7 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function lastOf(key) { try { return localStorage.getItem('ssb_grp_' + key) || ''; } catch (e) { return ''; } }
   function setLast(key, g) { try { localStorage.setItem('ssb_grp_' + key, g); } catch (e) {} }
-  function back() { if (history.length > 1) history.back(); else location.href = 'https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/'; }
+  function back() { if (history.length > 1) history.back(); else location.href = '/SSB-SMART-SUPPLY-DASHBOARD/'; }
 
   window.ssbGroupInfo = async function (uid) {
     uid = String(uid || '').trim();

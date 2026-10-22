@@ -5,7 +5,7 @@
  *   const why = await ssbPrompt({ title:'ยกเลิกออเดอร์', msg:'ระบุเหตุผล', placeholder:'ไม่ใส่ก็ได้' });   // null = กดยกเลิก
  *   const pin = await ssbPrompt({ title:'ใส่ PIN', type:'password', numeric:true, maxLength:6 });   // ช่องรหัส (ซ่อนตัวเลข · แป้นตัวเลข)
  *   await ssbAlert({ title:'ไม่มีข้อมูล', msg:'...' });   หรือ ssbAlert('❌ บันทึกไม่สำเร็จ\nรายละเอียด')
- *   repo อื่นโหลดข้ามได้ (โดเมนเดียวกัน): <script src="https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/ssb-ui.js?v=…"></script>
+ *   repo อื่นโหลดข้ามได้ (โดเมนเดียวกัน): <script src="/SSB-SMART-SUPPLY-DASHBOARD/ssb-ui.js?v=…"></script>
  *   msg ขึ้นบรรทัดใหม่ด้วย \n ได้ · Esc / แตะพื้นหลัง = ยกเลิก · Enter ในช่องพิมพ์ = ตกลง */
 (function () {
   var css = '' +

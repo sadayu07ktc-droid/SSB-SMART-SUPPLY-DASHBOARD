@@ -14,7 +14,7 @@
 (function () {
   var EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/admin-perms';
   var KEY = 'ssb_pin_gate_v1', TTL = 15 * 60 * 1000;
-  var DASH = 'https://sadayu07ktc-droid.github.io/SSB-SMART-SUPPLY-DASHBOARD/';
+  var DASH = '/SSB-SMART-SUPPLY-DASHBOARD/';
 
   var KEY_ADM = 'ssb_admin_pin_v1';
   function remembered(uid, key) {
