@@ -611,9 +611,9 @@ async function doImport(){
 const DTC_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dtc-central';
 let DTC=null, DTC_F='all', DTC_DAYS=90, DTC_Y=0;
 async function dtcGet(qs){
-  const c=new AbortController(), t=setTimeout(()=>c.abort(),60000);
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),90000);
   try{const r=await fetch(DTC_EDGE+'?userId='+encodeURIComponent(MY_UID)+'&days='+DTC_DAYS+'&'+qs,{signal:c.signal});const d=await r.json();if(!d.success)throw new Error(d.error||'โหลดไม่ได้');return d;}
-  catch(e){throw (e&&e.name==='AbortError')?new Error('หลังบ้านไม่ตอบภายใน 60 วินาที'):e;}
+  catch(e){throw (e&&e.name==='AbortError')?new Error('หลังบ้านไม่ตอบภายใน 90 วินาที'):e;}
   finally{clearTimeout(t);}
 }
 function openDtc(){
@@ -635,12 +635,12 @@ function dtcLvl(r){   // เทียบกับค่าในตาราง:
 }
 function dtcList(){
   $('dtcBack').style.display='none';$('dtcT').textContent='📡 ค่ากลางจาก DTC';
-  $('dtcSub').textContent='เที่ยวจริงจาก GPS '+DTC.days+' วันล่าสุด · ข้อมูล '+dtcTh(DTC.from)+' – '+dtcTh(DTC.to);
+  $('dtcSub').textContent='เที่ยวจริงจาก GPS '+(DTC.days>=800?'ทั้งหมด':DTC.days>=365?'1 ปีล่าสุด':DTC.days+' วันล่าสุด')+' · มีข้อมูล '+dtcTh(DTC.from)+' – '+dtcTh(DTC.to);
   const R=DTC.routes||[], cnt={all:R.length,has:0,none:0,bad:0};
   R.forEach(r=>{const l=dtcLvl(r);if(l==='none')cnt.none++;else{cnt.has++;if(l==='bad')cnt.bad++;}});
   let h='<div class="note" style="margin-bottom:10px">ค่ากลาง = เฉลี่ยของ <b>มัธยฐานขาไป</b> (ออก SSB → สถานี) กับ <b>มัธยฐานขากลับ</b> (สถานี → เข้า SSB) · นับจาก<b>ป้อมยาม SSB</b> ถ้ารถไม่ผ่านป้อมยามใช้จุดอื่นในโรงงาน (ลานจอด/ห้องชั่ง/จุดโหลด) · ใช้<b>เที่ยววิ่งตรง</b> (ไม่จอดที่อื่นเกิน 15 นาทีระหว่างทาง) · ตัดค่าผิดปกติออกก่อน · แตะสถานีเพื่อดูเที่ยวที่เอามาคิด</div>'
     +'<div class="dr-tools"><input class="search" id="dtcQ" placeholder="🔎 ค้นสถานี…" oninput="dtcRows()" aria-label="ค้นสถานี">'
-    +'<div class="seg" role="group" aria-label="ช่วงเวลา">'+[30,90,180].map(d=>'<button type="button" class="'+(DTC_DAYS===d?'on':'')+'" onclick="DTC_DAYS='+d+';dtcLoad()">'+d+' วัน</button>').join('')+'</div></div>'
+    +'<div class="seg" role="group" aria-label="ช่วงเวลา">'+[[90,'90 วัน'],[180,'180 วัน'],[365,'1 ปี'],[800,'ทั้งหมด']].map(d=>'<button type="button" class="'+(DTC_DAYS===d[0]?'on':'')+'" onclick="DTC_DAYS='+d[0]+';dtcLoad()">'+d[1]+'</button>').join('')+'</div></div>'
     +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
     +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
     +'<div id="dtcRows"></div>';
