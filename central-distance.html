@@ -104,6 +104,47 @@
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:60;opacity:0;transition:.3s;pointer-events:none;max-width:92vw}
   .toast.on{opacity:1}
   .toast.err{background:var(--danger)}
+  /* 📡 ค่ากลางจาก DTC — ลิ้นชักขวา */
+  .dtcbtn{margin-left:auto;flex:none;display:flex;align-items:center;gap:6px;padding:8px 13px;border:1px solid var(--line2);border-radius:10px;background:var(--card);color:var(--txt);font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .dtcbtn:hover{border-color:var(--primary);color:var(--primary)}
+  .dtcbtn:focus-visible,.dr-row:focus-visible,.dr-x:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .drov{position:fixed;inset:0;background:rgba(10,20,30,.4);opacity:0;pointer-events:none;transition:opacity .2s;z-index:45}
+  .drov.on{opacity:1;pointer-events:auto}
+  .drw{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--bg);box-shadow:-8px 0 30px rgba(0,0,0,.18);transform:translateX(100%);transition:transform .25s ease;z-index:46;display:flex;flex-direction:column}
+  .drw.on{transform:none}
+  @media(prefers-reduced-motion:reduce){.drw,.drov{transition:none}}
+  .dr-h{display:flex;align-items:flex-start;gap:10px;padding:14px 16px 12px;background:var(--card);border-bottom:1px solid var(--line)}
+  .dr-h h2{font-size:15.5px;margin:0;line-height:1.35}
+  .dr-h .sub{margin-top:2px}
+  .dr-x{border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:9px;width:34px;height:34px;font-size:16px;cursor:pointer;flex:none}
+  .dr-b{flex:1;overflow:auto;padding:12px 14px 30px}
+  .dr-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+  .dr-tools .search{flex:1 1 180px}
+  .dr-row{display:grid;grid-template-columns:minmax(0,1fr) 78px 86px;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px;cursor:pointer}
+  .dr-row:hover{border-color:var(--line2)}
+  .dr-row .st{font-size:13.5px}
+  .dr-row .n{font-size:11.5px;color:var(--txt2)}
+  .dr-row .v{text-align:right;font-variant-numeric:tabular-nums}
+  .dr-row .v b{font-size:15px}
+  .dr-row .v span{display:block;font-size:10.5px;color:var(--txt2)}
+  .dpill{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;font-variant-numeric:tabular-nums}
+  .dpill.ok{background:rgba(46,165,103,.14);color:var(--primary)}
+  .dpill.warn{background:rgba(184,134,11,.15);color:var(--warn)}
+  .dpill.bad{background:rgba(200,53,47,.12);color:var(--danger)}
+  .dpill.none{background:var(--card2);color:var(--txt2);border:1px solid var(--line);font-weight:500}
+  .legs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+  .leg{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .leg .k{font-size:11px;color:var(--txt2)}
+  .leg .v{font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+  .leg .s{font-size:11px;color:var(--txt2)}
+  .tr{display:grid;grid-template-columns:62px minmax(0,1fr) 70px;gap:8px;align-items:center;padding:7px 2px;border-top:1px solid var(--line);font-size:12.5px}
+  .tr .km{font-weight:700}
+  .tr.cut{opacity:.55}
+  .tr.cut .km{text-decoration:line-through}
+  .tr small{color:var(--txt2)}
+  .tsec{font-size:12.5px;font-weight:700;margin:14px 2px 4px;display:flex;justify-content:space-between;gap:8px}
+  .tsec span{font-weight:500;color:var(--txt2)}
+  @media(max-width:620px){.dtcbtn .lb{display:none}.dr-row{grid-template-columns:minmax(0,1fr) 70px 76px}}
 </style>
 </head>
 <body>
@@ -112,6 +153,7 @@
     <button class="back" onclick="goBack()" aria-label="ย้อนกลับ">←</button>
     <div class="logo">📍</div>
     <div><h1>ค่ากลาง (ระยะกลาง)</h1><div class="sub">ระยะเที่ยวเดียว SSB → สถานี · ใช้คิดค่าแรงแทนระยะจริง</div></div>
+    <button class="dtcbtn" type="button" onclick="openDtc()" aria-label="ดูค่ากลางจาก GPS DTC">📡 <span class="lb">ค่ากลางจาก DTC</span></button>
   </div>
   <div id="body"><div class="ldr"><div class="ring"></div>กำลังโหลดค่ากลาง</div></div>
 </div>
@@ -170,6 +212,16 @@
     <div class="dact"><button class="btn ghost" onclick="closeOv('ovImp')">ยกเลิก</button><button class="btn" id="impOk" onclick="doImport()">นำเข้า</button></div>
   </div>
 </div>
+<!-- 📡 ค่ากลางจาก DTC -->
+<div class="drov" id="dtcOv" onclick="closeDtc()"></div>
+<aside class="drw" id="dtcDrw" role="dialog" aria-modal="true" aria-labelledby="dtcT" aria-hidden="true">
+  <div class="dr-h">
+    <button class="dr-x" id="dtcBack" type="button" onclick="dtcList()" aria-label="กลับไปรายการ" style="display:none">‹</button>
+    <div style="flex:1;min-width:0"><h2 id="dtcT">📡 ค่ากลางจาก DTC</h2><div class="sub" id="dtcSub"></div></div>
+    <button class="dr-x" type="button" onclick="closeDtc()" aria-label="ปิด">✕</button>
+  </div>
+  <div class="dr-b" id="dtcBody"></div>
+</aside>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -184,7 +236,9 @@ function toast(t,err){const e=$('toast');e.textContent=t;e.className='toast on'+
 function goBack(){ if(history.length>1)history.back(); else location.href='/SSB-SMART-SUPPLY-DASHBOARD/'; }
 function openOv(id){$(id).classList.add('on');}
 function closeOv(id){$(id).classList.remove('on');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape')['ovAsk','ovImp','ovPick','ovEdit'].forEach(id=>{if($(id).classList.contains('on')){closeOv(id);}});});
+document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  const open=['ovAsk','ovImp','ovPick','ovEdit'].filter(id=>$(id).classList.contains('on'));
+  if(open.length)open.forEach(closeOv); else if($('dtcDrw').classList.contains('on'))closeDtc();});
 function codeName(c){const x=(DATA.codes||[]).find(k=>k.code===c);return x?x.name:'';}
 
 /* เรียก GAS แบบทนทาน — GAS บางครั้งสะดุดแล้วส่งหน้า error เป็น HTML แทน JSON
@@ -550,6 +604,95 @@ async function doImport(){
     if(d.errors)$('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+d.errors.map(esc).join('<br>')+'</div>');
   }catch(e){toast('❌ '+(e.message||e)+' — ลองนำเข้าไฟล์เดิมซ้ำได้ ไม่เกิดแถวซ้ำ',true);}
   b.disabled=false; b.textContent='นำเข้า '+rows.length+' แถว';
+}
+
+/* ── 📡 ค่ากลางจาก DTC (Edge dtc-central) ──
+ * เที่ยวจริงจาก GPS: ออกเขต SSB (ป้อมยามเป็นหลัก) → สถานี → กลับเขต SSB · ตัดค่าผิดปกติ (IQR) → มัธยฐานขาไป + ขากลับ → เฉลี่ยเป็นค่าเดียว */
+const DTC_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dtc-central';
+let DTC=null, DTC_F='all', DTC_DAYS=90, DTC_Y=0;
+async function dtcGet(qs){
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),60000);
+  try{const r=await fetch(DTC_EDGE+'?userId='+encodeURIComponent(MY_UID)+'&days='+DTC_DAYS+'&'+qs,{signal:c.signal});const d=await r.json();if(!d.success)throw new Error(d.error||'โหลดไม่ได้');return d;}
+  catch(e){throw (e&&e.name==='AbortError')?new Error('หลังบ้านไม่ตอบภายใน 60 วินาที'):e;}
+  finally{clearTimeout(t);}
+}
+function openDtc(){
+  $('dtcOv').classList.add('on');$('dtcDrw').classList.add('on');$('dtcDrw').setAttribute('aria-hidden','false');
+  if(DTC)dtcList(); else dtcLoad();
+}
+function closeDtc(){$('dtcOv').classList.remove('on');$('dtcDrw').classList.remove('on');$('dtcDrw').setAttribute('aria-hidden','true');}
+async function dtcLoad(){
+  $('dtcBack').style.display='none';$('dtcT').textContent='📡 ค่ากลางจาก DTC';$('dtcSub').textContent='';
+  $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังรวมเที่ยวจาก GPS ทุกคัน</div>';
+  try{DTC=await dtcGet('action=routes');dtcList();}
+  catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcLoad()">↻ ลองใหม่</button></div>';}
+}
+const dtcTh=d=>d?new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'–';
+function dtcLvl(r){   // เทียบกับค่าในตาราง: ต่าง ≤ 5% (หรือ ≤ 1 กม.) = ตรง · ≤ 15% = ต่างนิดหน่อย · เกินนั้น = ต่างมาก
+  if(!r.current||r.current.km==null)return 'none';
+  const a=Math.abs(r.diff), p=r.current.km>0?a/r.current.km:1;
+  return (a<=1||p<=.05)?'ok':p<=.15?'warn':'bad';
+}
+function dtcList(){
+  $('dtcBack').style.display='none';$('dtcT').textContent='📡 ค่ากลางจาก DTC';
+  $('dtcSub').textContent='เที่ยวจริงจาก GPS '+DTC.days+' วันล่าสุด · ข้อมูล '+dtcTh(DTC.from)+' – '+dtcTh(DTC.to);
+  const R=DTC.routes||[], cnt={all:R.length,has:0,none:0,bad:0};
+  R.forEach(r=>{const l=dtcLvl(r);if(l==='none')cnt.none++;else{cnt.has++;if(l==='bad')cnt.bad++;}});
+  let h='<div class="note" style="margin-bottom:10px">ค่ากลาง = เฉลี่ยของ <b>มัธยฐานขาไป</b> (ออก SSB → สถานี) กับ <b>มัธยฐานขากลับ</b> (สถานี → เข้า SSB) · นับจาก<b>ป้อมยาม SSB</b> ถ้ารถไม่ผ่านป้อมยามใช้จุดอื่นในโรงงาน (ลานจอด/ห้องชั่ง/จุดโหลด) · ใช้<b>เที่ยววิ่งตรง</b> (ไม่จอดที่อื่นเกิน 15 นาทีระหว่างทาง) · ตัดค่าผิดปกติออกก่อน · แตะสถานีเพื่อดูเที่ยวที่เอามาคิด</div>'
+    +'<div class="dr-tools"><input class="search" id="dtcQ" placeholder="🔎 ค้นสถานี…" oninput="dtcRows()" aria-label="ค้นสถานี">'
+    +'<div class="seg" role="group" aria-label="ช่วงเวลา">'+[30,90,180].map(d=>'<button type="button" class="'+(DTC_DAYS===d?'on':'')+'" onclick="DTC_DAYS='+d+';dtcLoad()">'+d+' วัน</button>').join('')+'</div></div>'
+    +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
+    +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
+    +'<div id="dtcRows"></div>';
+  $('dtcBody').innerHTML=h; dtcRows();
+  $('dtcBody').scrollTop=DTC_Y;
+}
+function dtcRows(){
+  const q=norm(($('dtcQ')||{}).value);
+  let R=(DTC.routes||[]).map((r,i)=>Object.assign({_i:i},r));
+  if(DTC_F==='has')R=R.filter(r=>dtcLvl(r)!=='none');
+  if(DTC_F==='none')R=R.filter(r=>dtcLvl(r)==='none');
+  if(DTC_F==='bad')R=R.filter(r=>dtcLvl(r)==='bad');
+  if(q)R=R.filter(r=>norm(r.station+' '+(r.current?r.current.station+' '+r.current.by:'')).indexOf(q)>=0);
+  if(!R.length){$('dtcRows').innerHTML='<div class="empty">'+(DTC.routes&&DTC.routes.length?'ไม่พบสถานีที่ตรงเงื่อนไข':'ยังไม่มีเที่ยวจาก DTC — ระบบกำลังดึงประวัติย้อนหลัง ลองใหม่ภายหลัง')+'</div>';return;}
+  $('dtcRows').innerHTML=R.map(r=>{
+    const l=dtcLvl(r), one=r.out.median==null||r.back.median==null;
+    const cur=l==='none'?'<span class="dpill none">ไม่มีในตาราง</span>'
+      :'<span class="dpill '+l+'">'+(r.diff>0?'+':'')+nf(r.diff,1)+'</span><span>ตาราง '+nf(r.current.km,2)+'</span>';
+    return '<div class="dr-row" tabindex="0" role="button" onclick="dtcOpen('+r._i+')" onkeydown="if(event.key===\'Enter\')dtcOpen('+r._i+')">'
+      +'<div style="min-width:0"><div class="st">'+esc(r.station)+'</div><div class="n">'+r.trips+' เที่ยว · ไป '+(r.out.median==null?'–':nf(r.out.median,1))+' / กลับ '+(r.back.median==null?'–':nf(r.back.median,1))
+        +(one?' · <span style="color:var(--warn)">มีขาเดียว</span>':'')+((r.out.median!=null&&!r.out.direct)||(r.back.median!=null&&!r.back.direct)?' · <span style="color:var(--warn)">มีแต่เที่ยวแวะ</span>':'')+'</div></div>'
+      +'<div class="v"><b>'+nf(r.central,2)+'</b><span>กม.</span></div>'
+      +'<div class="v">'+cur+'</div></div>';
+  }).join('');
+}
+async function dtcOpen(i){
+  const r=DTC.routes[i]; if(!r)return;
+  DTC_Y=$('dtcBody').scrollTop;
+  $('dtcBack').style.display='';$('dtcT').textContent=r.station;
+  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,2)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,2)+' กม.':'');
+  $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดเที่ยว</div>';$('dtcBody').scrollTop=0;
+  let d; try{d=await dtcGet('action=trips&station='+encodeURIComponent(r.station));}
+  catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcOpen('+i+')">↻ ลองใหม่</button></div>';return;}
+  const legBox=(k,x)=>{const used=(x.list||[]).filter(t=>t.used).length;
+    return '<div class="leg"><div class="k">'+k+'</div><div class="v">'+(x.median==null?'–':nf(x.median,2))+'</div><div class="s">มัธยฐาน '+used+' จาก '+(x.list||[]).length+' เที่ยว'+(x.basis?' · '+esc(x.basis):'')+'</div></div>';};
+  const tl=(x,ttl)=>{const L=x.list||[]; if(!L.length)return '';
+    return '<div class="tsec">'+ttl+'<span>'+L.filter(t=>t.used).length+' ใช้ · '+L.filter(t=>!t.used).length+' ตัดทิ้ง'+(x.lo!=null?' · ช่วงปกติ '+nf(Math.max(0,x.lo),1)+'–'+nf(x.hi,1):'')+'</span></div>'
+      +L.map(t=>'<div class="tr'+(t.used?'':' cut')+'"><div class="km">'+nf(t.km,2)+'</div>'
+        +'<div style="min-width:0"><div>'+esc(t.plate)+' <small>· '+(t.gate?'ป้อมยาม':esc(t.ssb))+'</small></div><small>'+new Date(t.at).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(t.via?' · แวะ '+esc(t.via):'')+'</small></div>'
+        +'<div style="text-align:right">'+(t.used?'<span class="dpill ok">ใช้</span>':'<span class="dpill bad">'+esc(t.why)+'</span>')+'</div></div>').join('');};
+  let h='<div class="legs">'+legBox('ขาไป SSB → สถานี (กม.)',d.out)+legBox('ขากลับ สถานี → SSB (กม.)',d.back)+'</div>'
+    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีขาเดียว ใช้ขานั้น = ')+'<b style="font-size:15px">'+nf(d.central,2)+' กม.</b>'
+    +(r.current&&r.current.km!=null?'<br>ในตาราง: <b>'+esc(r.current.station)+'</b> '+nf(r.current.km,2)+' กม. ('+esc(r.current.by)+') · ต่าง '+(r.diff>0?'+':'')+nf(r.diff,2)+' กม.':(r.current?'<br>ผูก '+esc(r.current.by)+' แต่ยังไม่มีแถวในตาราง':'<br>ยังไม่มีสถานีนี้ในตาราง'))+'</div>'
+    +'<div class="dact" style="margin-top:10px">'+(r.current&&r.current.id?'<button class="btn sm" onclick="dtcUse('+i+')">ใช้ค่านี้แก้ในตาราง</button>':'<button class="btn sm" onclick="dtcUse('+i+')">+ เพิ่มเป็นสถานีใหม่</button>')+'</div></div>'
+    +tl(d.out,'ขาไป')+tl(d.back,'ขากลับ');
+  $('dtcBody').innerHTML=h;
+}
+function dtcUse(i){   // เปิดฟอร์มแก้ (บันทึกตามสิทธิ์เดิมของหน้า) · ยังไม่บันทึกจนกว่าจะกดบันทึก
+  const r=DTC.routes[i]; closeDtc();
+  if(r.current&&r.current.id)openEdit(r.current.id); else openEdit(null,{station:r.station});
+  $('edKm').value=r.central; kmHint();
+  toast('ใส่ระยะ '+nf(r.central,2)+' กม. จาก DTC แล้ว — ตรวจแล้วกดบันทึก');
 }
 
 (async function(){
