@@ -237,7 +237,7 @@ function goBack(){ if(history.length>1)history.back(); else location.href='/SSB-
 function openOv(id){$(id).classList.add('on');}
 function closeOv(id){$(id).classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
-  const open=['ovAsk','ovImp','ovPick','ovEdit'].filter(id=>$(id).classList.contains('on'));
+  const open=['xrtPv','ovAsk','ovImp','ovPick','ovEdit'].filter(id=>$(id)&&$(id).classList.contains('on'));
   if(open.length)open.forEach(closeOv); else if($('dtcDrw').classList.contains('on'))closeDtc();});
 function codeName(c){const x=(DATA.codes||[]).find(k=>k.code===c);return x?x.name:'';}
 
@@ -646,6 +646,10 @@ function dtcList(){
     +'<div class="seg" role="group" aria-label="ช่วงเวลา">'+[[90,'90 วัน'],[180,'180 วัน'],[365,'1 ปี'],[800,'ทั้งหมด']].map(d=>'<button type="button" class="'+(DTC_DAYS===d[0]?'on':'')+'" onclick="DTC_DAYS='+d[0]+';dtcLoad()">'+d[1]+'</button>').join('')+'</div></div>'
     +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
     +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
+    +'<div class="dr-tools"><button type="button" class="btn sm" style="background:#1d6f42" onclick="dtcXDown(this)">⬇️ ดาวน์โหลด Excel</button>'
+    +'<label class="btn sm ghost" for="dtcFile" style="display:inline-block">⬆️ อัปโหลดที่แก้แล้ว</label>'
+    +'<input type="file" id="dtcFile" accept=".xlsx,.xls,.csv" hidden onchange="dtcXUp(this)">'
+    +'<span class="note">ใส่ "ระยะที่จะใช้" ในไฟล์ (ตัวเลข หรือพิมพ์ DTC) → อัปโหลด → ตรวจสรุปก่อนบันทึก</span></div>'
     +'<div id="dtcRows"></div>';
   $('dtcBody').innerHTML=h; dtcRows();
   $('dtcBody').scrollTop=DTC_Y;
@@ -696,6 +700,149 @@ function dtcUse(i){   // เปิดฟอร์มแก้ (บันทึ�
   if(r.current&&r.current.id)openEdit(r.current.id); else openEdit(null,{station:r.station});
   $('edKm').value=r.central; kmHint();
   toast('ใส่ระยะ '+nf(r.central,0)+' กม. จาก DTC แล้ว — ตรวจแล้วกดบันทึก');
+}
+
+/* ── Excel round-trip ของลิ้นชัก 📡 (แบบเดียวกับทะเบียนพนักงาน MySSB · skill webapp-excel-roundtrip) ──
+ * ดาวน์โหลด: ทุกสถานีในช่วงที่เลือก (ไม่ใช่เฉพาะที่กรองบนจอ) · แถว 1 หัวไทย · แถว 2 คีย์อังกฤษ (ห้ามแก้) · id = แถวในตารางค่ากลาง
+ * อัปโหลด: Edge dtc-central xrt_preview ตรวจ → popup สรุป → xrt_apply ตรวจซ้ำทั้งไฟล์แล้วบันทึกเฉพาะแถวที่ผ่าน (เฉพาะ DEV) */
+function btnBusy(el,label){if(!el||!el.tagName)return function(){};const h=el.innerHTML,d=el.disabled;el.disabled=true;el.innerHTML=label||'…';return function(){el.innerHTML=h;el.disabled=d;};}
+function cdRow(id){return (DATA&&DATA.rows||[]).find(x=>x.id===id)||{};}
+const DTC_X={
+  title:'ค่ากลางจาก DTC', sheet:'ค่ากลาง DTC', file:'ค่ากลาง_DTC', unit:'สถานี', key:'id',
+  offHint:'ปิดใช้สถานีให้ทำที่ฟอร์มแก้ในหน้าค่ากลาง', rows:[],
+  cols:[
+    {k:'dtc',h:'สถานี DTC',w:34,ro:1,get:r=>r.station},
+    {k:'dtc_km',h:'ค่ากลาง DTC (กม.)',w:12,ro:1,get:r=>r.central},
+    {k:'trips',h:'จำนวนเที่ยว',w:9,ro:1,get:r=>r.trips},
+    {k:'out_med',h:'ขาไป มัธยฐาน',w:11,ro:1,get:r=>r.out.median==null?'':r.out.median},
+    {k:'back_med',h:'ขากลับ มัธยฐาน',w:11,ro:1,get:r=>r.back.median==null?'':r.back.median},
+    {k:'cur_km',h:'ค่าในตาราง (กม.)',w:12,ro:1,get:r=>r.current&&r.current.km!=null?r.current.km:''},
+    {k:'diff',h:'ต่าง (กม.)',w:9,ro:1,get:r=>r.diff==null?'':r.diff},
+    {k:'station',h:'ชื่อสถานีในตาราง',w:34,req:1,get:r=>r.current&&r.current.id?r.current.station:r.station,
+      help:'แถวที่มีในตารางแล้ว = ชื่อเดิม (แก้ชื่อได้) · แถวที่ยังไม่มี = ชื่อจาก DTC (แก้ก่อนเพิ่มได้)'},
+    {k:'km',h:'ระยะที่จะใช้ (กม.)',w:14,get:()=>'',
+      help:'เว้นว่าง = ไม่เปลี่ยน / ไม่เพิ่ม · ใส่ตัวเลข เช่น 35 หรือ 35.5 · พิมพ์ DTC = ใช้ค่ากลาง DTC ของแถวนั้น (ปัดกม.เต็มแล้ว)'},
+    {k:'job_type',h:'ประเภทงาน',w:11,get:r=>r.current&&r.current.id?(cdRow(r.current.id).job_type||''):'',help:'สวน / ลาน / Packing / Bulk / ส่งน้ำ / อื่นๆ'},
+    {k:'garden_code',h:'รหัสสวน/ลาน',w:12,get:r=>r.current&&r.current.id?(cdRow(r.current.id).garden_code||''):'',help:'เช่น GD-0016 / LT-004 · ว่าง = ไม่ผูก (แถวเดิมคงค่าเดิม)'},
+    {k:'pickup_point',h:'จุดรับ',w:14,get:r=>r.current&&r.current.id?(cdRow(r.current.id).pickup_point||''):'',help:'ใส่เฉพาะสวนที่มีหลายจุดรับ ระยะต่างกัน'}
+  ],
+  preview:rows=>dtcXPost('xrt_preview',rows),
+  apply:rows=>dtcXPost('xrt_apply',rows),
+  onDone:()=>{load();dtcLoad();}
+};
+async function dtcXPost(action,rows){
+  const r=await fetch(DTC_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,userId:MY_UID,days:DTC_DAYS,rows})});
+  let d; try{d=await r.json();}catch(e){throw new Error('หลังบ้านตอบผิดรูปแบบ');}
+  if(!d.success)throw new Error(d.error||'ทำรายการไม่สำเร็จ');
+  return d;
+}
+function dtcXDown(b){
+  if(!DTC||!(DTC.routes||[]).length){toast('ยังไม่มีข้อมูล DTC',true);return;}
+  DTC_X.rows=DTC.routes.map(r=>Object.assign({id:r.current&&r.current.id||''},r));
+  DTC_X.file='ค่ากลาง_DTC_'+(DTC.days>=800?'ทั้งหมด':DTC.days>=365?'1ปี':DTC.days+'วัน');
+  xrtDownload(DTC_X,b);
+}
+function dtcXUp(inp){xrtUpload(DTC_X,inp);}
+function xrtLib(){
+  if(window.XLSX&&window.XLSX.utils&&window.XLSX.write)return Promise.resolve(window.XLSX);
+  return new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+    s.onload=()=>ok(window.XLSX);s.onerror=()=>no(new Error('โหลดตัวสร้าง Excel ไม่ได้'));document.head.appendChild(s);});
+}
+function xrtSave(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(u);a.remove();},1500);}
+function xrtYmd(d){const p=n=>('0'+n).slice(-2);return d.getFullYear()+p(d.getMonth()+1)+p(d.getDate());}
+async function xrtDownload(S,b){
+  const done=btnBusy(b,'กำลังสร้าง…');
+  try{
+    const X=await xrtLib(),NAVY='1E293B',LN='CBD5E1';
+    const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
+    const F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'1E293B'}},o||{});
+    const sh={font:F({bold:true,color:{rgb:'FFFFFF'}}),fill:{fgColor:{rgb:NAVY}},border:bd,alignment:{horizontal:'center',vertical:'center',wrapText:true}};
+    const sk={font:F({sz:8,italic:true,color:{rgb:'94A3B8'}}),fill:{fgColor:{rgb:'F1F5F9'}},border:bd,alignment:{horizontal:'center'}};
+    const sro={font:F({sz:9,color:{rgb:'64748B'}}),fill:{fgColor:{rgb:'F1F5F9'}},border:bd};
+    const sd={font:F(),border:bd},sz={font:F(),border:bd,fill:{fgColor:{rgb:'F8FAFC'}}};
+    const cols=[{k:S.key,h:S.key+' (ห้ามแก้)',ro:true,w:10}].concat(S.cols);
+    const c=(v,s)=>({v:v==null?'':String(v),t:'s',s});   // ทุกช่องเป็นข้อความ → เลข 0 นำหน้า/วันที่ไม่เพี้ยน
+    const aoa=[cols.map(x=>c(x.h+(x.ro&&x.k!==S.key?' (อ่านอย่างเดียว)':''),sh)),cols.map(x=>c(x.ro&&x.k!==S.key?'_'+x.k:x.k,sk))];
+    S.rows.forEach((r,i)=>{const st=i%2?sz:sd;aoa.push(cols.map(x=>c(x.get?x.get(r):r[x.k],x.ro?sro:st)));});
+    const ws=X.utils.aoa_to_sheet([[]]);
+    aoa.forEach((row,ri)=>row.forEach((cell,ci)=>{ws[X.utils.encode_cell({r:ri,c:ci})]=cell;}));
+    ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:cols.length-1}});
+    ws['!cols']=cols.map(x=>({wch:x.w||14}));ws['!rows']=[{hpt:30},{hpt:14}];ws['!freeze']={xSplit:0,ySplit:2};
+    const help=[['วิธีใช้ไฟล์ '+S.title],[''],
+      ['1. ใส่ "ระยะที่จะใช้ (กม.)" เฉพาะแถวที่อยากแก้/เพิ่ม แล้วอัปโหลดกลับที่ปุ่ม อัปโหลดที่แก้แล้ว ในลิ้นชัก 📡'],
+      ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์ภาษาอังกฤษ) และคอลัมน์ '+S.key+' — ระบบใช้จับคู่แถวในตารางค่ากลาง'],
+      ['3. แถวที่ id ว่าง = ยังไม่มีในตาราง · ใส่ระยะแล้วจะถูกเพิ่มเป็นสถานีใหม่ (ชื่อตามคอลัมน์ ชื่อสถานีในตาราง)'],
+      ['4. ช่องที่เว้นว่าง = คงค่าเดิม · ลบแถวทิ้ง = ไม่ลบออกจากระบบ ('+S.offHint+')'],
+      ['5. ก่อนบันทึกจริง ระบบจะแสดงสรุป เพิ่มใหม่ / แก้ไข (เก่า → ใหม่) / ผิดพลาด ให้ตรวจแล้วค่อยกดยืนยัน · แก้ได้เฉพาะ DEV'],
+      [''],['ค่าที่ใช้ได้']].concat(S.cols.filter(x=>x.help).map(x=>[x.h,x.help]));
+    const wh=X.utils.aoa_to_sheet(help);wh['!cols']=[{wch:24},{wch:96}];
+    const wb=X.utils.book_new();X.utils.book_append_sheet(wb,ws,S.sheet);X.utils.book_append_sheet(wb,wh,'วิธีใช้');
+    xrtSave(new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),(S.file||S.sheet)+'_'+xrtYmd(new Date())+'.xlsx');
+    toast('⬇️ ดาวน์โหลดแล้ว '+S.rows.length+' '+S.unit);
+  }catch(e){toast('❌ สร้างไฟล์ไม่สำเร็จ: '+(e.message||e),true);}
+  finally{done();}
+}
+let XRT_UP=null, XRT_BUSY=false;
+async function xrtUpload(S,input){
+  const f=input.files&&input.files[0];input.value='';if(!f)return;
+  toast('กำลังอ่านไฟล์…');
+  try{
+    const X=await xrtLib();
+    const wb=X.read(await f.arrayBuffer(),{type:'array',cellDates:true});
+    const ws=wb.Sheets[S.sheet]||wb.Sheets[wb.SheetNames[0]];
+    const aoa=X.utils.sheet_to_json(ws,{header:1,raw:true,defval:''});
+    const edit=S.cols.filter(x=>!x.ro),known=[S.key].concat(edit.map(x=>x.k));
+    const th={};edit.forEach(x=>{th[x.h]=x.k;});th[S.key+' (ห้ามแก้)']=S.key;th[S.key]=S.key;
+    // แถวหัว = มีคอลัมน์บังคับครบ และตรงกับคอลัมน์ที่แก้ได้อย่างน้อยครึ่งหนึ่ง
+    const need=S.cols.filter(x=>x.req),half=Math.max(1,Math.ceil(edit.length/2));let hi=-1,map=null;
+    const isEn=row=>need.every(x=>row.indexOf(x.k)>=0)&&edit.filter(x=>row.indexOf(x.k)>=0).length>=half;
+    const isTh=row=>need.every(x=>row.indexOf(x.h)>=0)&&edit.filter(x=>row.indexOf(x.h)>=0).length>=half;
+    const trim=r=>(r||[]).map(v=>String(v).trim());
+    for(let i=0;i<Math.min(aoa.length,10)&&hi<0;i++){const row=trim(aoa[i]);
+      if(isEn(row)){hi=i;map=row.map(v=>known.indexOf(v)>=0?v:'');}
+      else if(isTh(row)&&!isEn(trim(aoa[i+1]))){hi=i;map=row.map(v=>th[v]||'');}}
+    if(hi<0){toast('❌ ไม่พบหัวตาราง — ใช้ไฟล์ที่ดาวน์โหลดจากลิ้นชักนี้เป็นแม่แบบ',true);return;}
+    const rows=[];
+    for(let r=hi+1;r<aoa.length;r++){const o={_line:r+1};let any=false;
+      map.forEach((k,ci)=>{if(!k)return;let v=aoa[r][ci];v=(v==null?'':String(v)).trim().replace(/^'/,'');o[k]=v;if(v)any=true;});
+      if(any)rows.push(o);}
+    if(!rows.length){toast('❌ ไฟล์ไม่มีข้อมูล',true);return;}
+    if(rows.length>3000){toast('❌ ไฟล์ใหญ่เกิน 3,000 แถว',true);return;}
+    const pv=await S.preview(rows);   // เซิร์ฟเวอร์ตรวจ
+    XRT_UP={S,rows,name:f.name}; xrtPreview(pv);
+  }catch(e){toast('❌ อ่านไฟล์ไม่สำเร็จ: '+(e.message||e),true);}
+}
+function xrtPreview(pv){
+  const S=XRT_UP.S,u=S.unit||'รายการ';let m=$('xrtPv');
+  if(!m){m=document.createElement('div');m.id='xrtPv';m.className='ov';m.style.zIndex='55';m.onclick=e=>{if(e.target===m)m.classList.remove('on');};document.body.appendChild(m);}
+  const n=pv.add.length+pv.change.length;
+  const sec=(title,color,count,body)=>'<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px;color:'+color+'">'+title+'</b>'
+    +'<span style="font-size:12px;font-weight:700;color:'+color+'">'+count+'</span></div>'+(body?'<div style="margin-top:4px">'+body+'</div>':'')+'</div>';
+  const li=(i,main,sub)=>'<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="flex:none;width:22px;color:var(--txt2);text-align:right">'+i+'.</span><div style="min-width:0;flex:1">'+main+(sub?'<div style="font-size:12px;color:var(--txt2)">'+sub+'</div>':'')+'</div></div>';
+  m.innerHTML='<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="xrtT" style="display:flex;flex-direction:column;padding:0">'
+    +'<div style="padding:16px 16px 4px"><h2 id="xrtT" style="margin:0">ตรวจไฟล์ก่อนบันทึก</h2><div class="sub">'+esc(XRT_UP.name)+' · '+XRT_UP.rows.length+' แถว</div></div>'
+    +'<div style="overflow:auto;padding:0 16px 8px;flex:1">'
+    +sec('เพิ่มใหม่','var(--primary)',pv.add.length+' '+u,pv.add.map((a,i)=>li(i+1,'<b>'+esc(a.name)+'</b>',esc(a.sub||'')+' · แถว '+a.line)).join(''))
+    +sec('แก้ไข','var(--accent)',pv.change.length+' '+u,pv.change.map((c,i)=>li(i+1,'<b>'+esc(c.name)+'</b> <span style="font-size:12px;color:var(--txt2)">· แถว '+c.line+'</span>',
+        c.fields.map(x=>esc(x.label)+': <s>'+esc(x.old||'(ว่าง)')+'</s> → <b style="color:var(--txt)">'+esc(x['new'])+'</b>').join('<br>'))).join(''))
+    +sec('ผิดพลาด (จะข้าม ไม่บันทึก)','var(--danger)',pv.errors.length+' แถว',pv.errors.map((e,i)=>li(i+1,'แถว '+e.line+(e.name?' · '+esc(e.name):''),'<span style="color:var(--danger)">'+esc(e.msg)+'</span>')).join(''))
+    +sec('ไม่เปลี่ยนแปลง / ไม่ได้ใส่ระยะ','var(--txt2)',pv.same+' '+u,'')
+    +(pv.missing&&pv.missing.length?sec('สถานีในตารางที่ไม่อยู่ในไฟล์ (คงอยู่ ไม่ถูกลบ)','var(--txt2)',pv.missing.length+' '+u,'<div style="font-size:12px;color:var(--txt2)">'+pv.missing.slice(0,15).map(esc).join(', ')+(pv.missing.length>15?' และอีก '+(pv.missing.length-15):'')+'</div>'):'')
+    +'</div><div class="dact" style="padding:12px 16px 16px;border-top:1px solid var(--line);margin:0">'
+    +'<button class="btn ghost" onclick="$(\'xrtPv\').classList.remove(\'on\')">ยกเลิก</button>'
+    +'<button class="btn" '+(n?'':'disabled ')+'onclick="xrtApply(this)">'+(n?'ยืนยันบันทึก '+n+' '+u:'ไม่มีอะไรต้องบันทึก')+'</button></div></div>';
+  m.classList.add('on');
+}
+async function xrtApply(b){
+  if(XRT_BUSY||!XRT_UP)return;XRT_BUSY=true;const done=btnBusy(b,'กำลังบันทึก…');
+  try{
+    const r=await XRT_UP.S.apply(XRT_UP.rows);   // เซิร์ฟเวอร์ตรวจซ้ำทั้งไฟล์ แล้วบันทึกเฉพาะแถวที่ผ่าน
+    $('xrtPv').classList.remove('on');
+    toast('✅ บันทึกแล้ว: เพิ่ม '+r.added+' · แก้ '+r.changed+(r.skipped?' · ข้าม '+r.skipped+' แถว':''));
+    const S=XRT_UP.S;XRT_UP=null;
+    try{if(S.onDone)S.onDone(r);}catch(_){}   // บันทึกสำเร็จแล้ว — โหลดใหม่พลาดไม่นับเป็นบันทึกไม่สำเร็จ
+  }catch(e){toast('❌ บันทึกไม่สำเร็จ: '+(e.message||e),true);}
+  finally{XRT_BUSY=false;done();}
 }
 
 (async function(){
