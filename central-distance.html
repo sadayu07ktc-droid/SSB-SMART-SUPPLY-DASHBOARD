@@ -165,7 +165,7 @@
     <div class="warnbox" id="edWarn"></div>
     <div class="f"><label for="edStation">ชื่อสถานี</label><input id="edStation" placeholder="เช่น ลาน คลองพลู"></div>
     <div class="f2">
-      <div class="f"><label for="edKm">ระยะเที่ยวเดียว (กม.)</label><input id="edKm" type="number" step="0.01" min="0" inputmode="decimal" oninput="kmHint()"><div class="hint" id="edKmHint"></div></div>
+      <div class="f"><label for="edKm">ระยะเที่ยวเดียว (กม.)</label><input id="edKm" type="number" step="1" min="1" inputmode="numeric" oninput="kmHint()"><div class="hint" id="edKmHint"></div></div>
       <div class="f"><label for="edType">ประเภทงาน</label>
         <select id="edType"><option value="">— ไม่ระบุ —</option><option>สวน</option><option>ลาน</option><option>Packing</option><option>Bulk</option><option>ส่งน้ำ</option><option>อื่นๆ</option></select></div>
     </div>
@@ -332,7 +332,7 @@ function renderList(){
         +(r.pickup_point?'<span class="pill warn">จุดรับ: '+esc(r.pickup_point)+'</span>':'')
         +(r.dp_type?'<span class="pill">⏱️ '+esc(r.dp_type)+(dpHours(r.dp_type)!=null?' · รอ '+nf(dpHours(r.dp_type))+' ชม.':' · ไม่มีในตาราง')+'</span>':'')
         +(r.active===false?'<span class="pill bad">ปิดใช้</span>':'')+'</div></div>'
-      +'<div class="km kA"><b>'+nf(r.km,2)+'</b> กม.<span>ไป-กลับ '+nf(r.km*2,1)+'</span></div>'
+      +'<div class="km kA"><b>'+nf(r.km,0)+'</b> กม.<span>ไป-กลับ '+nf(r.km*2,0)+'</span></div>'
       +'<div class="code">'+(r.garden_code?'<span class="pill ok">ผูกแล้ว</span> <b>'+esc(r.garden_code)+'</b><span class="nm">'+esc(nm)+'</span>':'<span class="pill">ยังไม่ผูกรหัส</span>')+'</div>'
       +'<div class="chev">›</div></div>';
   }).join('');
@@ -357,7 +357,9 @@ function fillPickups(){
   const c=(DATA.codes||[]).find(k=>k.code===$('edCode').value);
   $('pkList').innerHTML=(c?c.pickups:[]).map(p=>'<option value="'+esc(p)+'">').join('');
 }
-function kmHint(){const k=parseFloat($('edKm').value);$('edKmHint').textContent=k>0?'คิดค่าแรงไป-กลับ '+nf(k*2,1)+' กม.':'';}
+/* ระยะค่ากลาง = กม.เต็ม (.5 ขึ้นไปปัดขึ้น ต่ำกว่าปัดลง · คุณน้อง 26 ต.ค.) · หลังบ้านปัดซ้ำตอนบันทึกเสมอ */
+const kmRound=v=>Math.round(Math.round(parseFloat(v)*100)/100);
+function kmHint(){const k=parseFloat($('edKm').value),r=kmRound(k);$('edKmHint').textContent=k>0?(r!==k?'บันทึกเป็น '+r+' กม. · ':'')+'คิดค่าแรงไป-กลับ '+nf(r*2,0)+' กม.':'';}
 function dupCheck(){
   const code=$('edCode').value, pk=norm($('edPickup').value), id=ED&&ED.id;
   const dup=code?(DATA.rows||[]).find(r=>r.id!==id&&r.active!==false&&r.garden_code===code&&norm(r.pickup_point)===pk):null;
@@ -391,7 +393,8 @@ async function saveEdit(){
   const row={id:ED&&ED.id||undefined,station:$('edStation').value.trim(),km:$('edKm').value,job_type:$('edType').value,
     garden_code:$('edCode').value,pickup_point:$('edPickup').value.trim(),note:$('edNote').value.trim(),dp_type:$('edDp').value,active:$('edActive').checked};
   if(!row.station){toast('กรอกชื่อสถานี',true);$('edStation').focus();return;}
-  if(!(parseFloat(row.km)>0)){toast('กรอกระยะเที่ยวเดียว (มากกว่า 0)',true);$('edKm').focus();return;}
+  if(!(kmRound(row.km)>=1)){toast('กรอกระยะเที่ยวเดียว (อย่างน้อย 1 กม.)',true);$('edKm').focus();return;}
+  row.km=kmRound(row.km);
   const b=$('edSave');b.disabled=true;b.textContent='กำลังบันทึก…';
   try{
     const d=await api({action:'saveCentralDistance',row});
@@ -427,7 +430,7 @@ function renderPick(){
   const q=norm($('pkQ').value);
   const rows=(DATA.rows||[]).filter(r=>!q||norm(r.station).indexOf(q)>=0)
     .sort((a,b)=>(a.garden_code?1:0)-(b.garden_code?1:0)||a.km-b.km);
-  $('pkBox').innerHTML=rows.map(r=>'<div onclick="pickRow('+r.id+')"><span>'+esc(r.station)+(r.garden_code?' <span class="pill">'+esc(r.garden_code)+'</span>':'')+'</span><small>'+nf(r.km,2)+' กม.</small></div>').join('')||'<div class="empty">ไม่พบ</div>';
+  $('pkBox').innerHTML=rows.map(r=>'<div onclick="pickRow('+r.id+')"><span>'+esc(r.station)+(r.garden_code?' <span class="pill">'+esc(r.garden_code)+'</span>':'')+'</span><small>'+nf(r.km,0)+' กม.</small></div>').join('')||'<div class="empty">ไม่พบ</div>';
 }
 function pickRow(id){
   const r=(DATA.rows||[]).find(x=>x.id===id); if(!r)return;
@@ -555,11 +558,11 @@ function buildPlan(tbl){
     if(!kmS){P.skip++;continue;}                   // ยังไม่กรอกระยะ
     const km=parseFloat(kmS);
     if(!station){P.err.push('แถว '+line+': ไม่มีชื่อสถานี');continue;}
-    if(!(km>0)||km>3000){P.err.push('แถว '+line+' ('+station+'): ระยะ "'+g('km')+'" ไม่ถูกต้อง');continue;}
+    if(!(km>=0.5)||km>3000){P.err.push('แถว '+line+' ('+station+'): ระยะ "'+g('km')+'" ไม่ถูกต้อง');continue;}
     const nk=norm(station);
     if(seen[nk]){P.err.push('แถว '+line+': ชื่อ "'+station+'" ซ้ำกับแถว '+seen[nk]+' ในไฟล์');continue;}
     seen[nk]=line;
-    const row={_line:line,station,km:Math.round(km*100)/100,job_type:g('job_type'),garden_code:g('garden_code'),pickup_point:g('pickup_point'),note:g('note'),dp_type:g('dp_type'),active:!/^(ไม่|no|false|0|ปิด)/i.test(g('active'))};
+    const row={_line:line,station,km:kmRound(km),job_type:g('job_type'),garden_code:g('garden_code'),pickup_point:g('pickup_point'),note:g('note'),dp_type:g('dp_type'),active:!/^(ไม่|no|false|0|ปิด)/i.test(g('active'))};
     const id=parseInt(g('id'),10); let base=null;
     if(id>0){base=cur[id];if(!base){P.err.push('แถว '+line+': ไม่พบ id '+id+' ในระบบ (แถวใหม่ให้ลบเลข id ออก)');continue;}}
     else if(curName[nk])base=curName[nk];
@@ -585,7 +588,7 @@ function showPlan(P){
   if(P.err.length)h+='<div class="errbox"><b>ต้องแก้ไฟล์ก่อนนำเข้า ('+P.err.length+' แถว)</b><br>'+P.err.slice(0,30).map(esc).join('<br>')+'</div>';
   if(P.warn.length)h+='<div class="warnbox" style="display:block;margin-top:10px">'+P.warn.slice(0,20).map(esc).join('<br>')+'</div>';
   const list=P.upd.map(u=>'<div><b>'+esc(u.row.station)+'</b><br><small>'+u.diff.map(esc).join(' · ')+'</small></div>')
-    .concat(P.ins.map(x=>'<div><b>+ เพิ่ม '+esc(x.row.station)+'</b><br><small>'+nf(x.row.km,2)+' กม.'+(x.row.garden_code?' · '+esc(x.row.garden_code):' · ยังไม่ผูกรหัส')+(x.row.pickup_point?' · จุดรับ '+esc(x.row.pickup_point):'')+'</small></div>'));
+    .concat(P.ins.map(x=>'<div><b>+ เพิ่ม '+esc(x.row.station)+'</b><br><small>'+nf(x.row.km,0)+' กม.'+(x.row.garden_code?' · '+esc(x.row.garden_code):' · ยังไม่ผูกรหัส')+(x.row.pickup_point?' · จุดรับ '+esc(x.row.pickup_point):'')+'</small></div>'));
   if(list.length)h+='<div class="plist">'+list.join('')+'</div>';
   if(P.skip)h+='<div class="note" style="margin-top:8px">ข้าม '+P.skip+' แถวที่ยังไม่กรอกระยะ · แถวที่ไม่อยู่ในไฟล์ไม่ถูกลบ</div>';
   $('impBody').innerHTML=h;
@@ -665,7 +668,7 @@ function dtcRows(){
   $('dtcRows').innerHTML=R.map(r=>{
     const l=dtcLvl(r), one=r.out.median==null||r.back.median==null;
     const cur=l==='none'?'<span class="dpill none">ไม่มีในตาราง</span>'
-      :'<span class="dpill '+l+'">'+(r.diff>0?'+':'')+nf(r.diff,1)+'</span><span>ตาราง '+nf(r.current.km,2)+'</span>';
+      :'<span class="dpill '+l+'">'+(r.diff>0?'+':'')+nf(r.diff,0)+'</span><span>ตาราง '+nf(r.current.km,0)+'</span>';
     return '<div class="dr-row" tabindex="0" role="button" onclick="dtcOpen('+r._i+')" onkeydown="if(event.key===\'Enter\')dtcOpen('+r._i+')">'
       +'<div style="min-width:0"><div class="st">'+esc(r.station)+'</div><div class="n">'+r.trips+' เที่ยว · ไป '+(r.out.median==null?'–':nf(r.out.median,1))+' / กลับ '+(r.back.median==null?'–':nf(r.back.median,1))
         +(one?' · <span style="color:var(--warn)">มีขาเดียว</span>':'')+((r.out.median!=null&&!r.out.direct)||(r.back.median!=null&&!r.back.direct)?' · <span style="color:var(--warn)">มีแต่เที่ยวแวะ</span>':'')+'</div></div>'
@@ -677,7 +680,7 @@ async function dtcOpen(i){
   const r=DTC.routes[i]; if(!r)return;
   DTC_Y=$('dtcBody').scrollTop;
   $('dtcBack').style.display='';$('dtcT').textContent=r.station;
-  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,0)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,2)+' กม.':'');
+  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,0)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,0)+' กม.':'');
   $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดเที่ยว</div>';$('dtcBody').scrollTop=0;
   let d; try{d=await dtcGet('action=trips&station='+encodeURIComponent(r.station));}
   catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcOpen('+i+')">↻ ลองใหม่</button></div>';return;}
@@ -690,7 +693,7 @@ async function dtcOpen(i){
         +'<div style="text-align:right">'+(t.used?'<span class="dpill ok">ใช้</span>':'<span class="dpill bad">'+esc(t.why)+'</span>')+'</div></div>').join('');};
   let h='<div class="legs">'+legBox('ขาไป SSB → สถานี (กม.)',d.out)+legBox('ขากลับ สถานี → SSB (กม.)',d.back)+'</div>'
     +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีขาเดียว ใช้ขานั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b>'
-    +(r.current&&r.current.km!=null?'<br>ในตาราง: <b>'+esc(r.current.station)+'</b> '+nf(r.current.km,2)+' กม. ('+esc(r.current.by)+') · ต่าง '+(r.diff>0?'+':'')+nf(r.diff,2)+' กม.':(r.current?'<br>ผูก '+esc(r.current.by)+' แต่ยังไม่มีแถวในตาราง':'<br>ยังไม่มีสถานีนี้ในตาราง'))+'</div>'
+    +(r.current&&r.current.km!=null?'<br>ในตาราง: <b>'+esc(r.current.station)+'</b> '+nf(r.current.km,0)+' กม. ('+esc(r.current.by)+') · ต่าง '+(r.diff>0?'+':'')+nf(r.diff,0)+' กม.':(r.current?'<br>ผูก '+esc(r.current.by)+' แต่ยังไม่มีแถวในตาราง':'<br>ยังไม่มีสถานีนี้ในตาราง'))+'</div>'
     +'<div class="dact" style="margin-top:10px">'+(r.current&&r.current.id?'<button class="btn sm" onclick="dtcUse('+i+')">ใช้ค่านี้แก้ในตาราง</button>':'<button class="btn sm" onclick="dtcUse('+i+')">+ เพิ่มเป็นสถานีใหม่</button>')+'</div></div>'
     +tl(d.out,'ขาไป')+tl(d.back,'ขากลับ');
   $('dtcBody').innerHTML=h;
