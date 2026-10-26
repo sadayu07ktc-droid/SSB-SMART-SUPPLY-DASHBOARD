@@ -110,6 +110,21 @@
   .grpchip{border:1px solid var(--primary);background:var(--card);color:var(--primary);border-radius:999px;padding:6px 13px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;margin-left:auto}
   .grpchip span{font-weight:400;color:var(--txt2)}
   .grpchip:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  /* 🔄 ป๊อปอัปความคืบหน้า "คำนวณใหม่" — กลางจอ บังหน้าไว้จนเสร็จ (คุณน้อง 26 ต.ค.) */
+  .rcp-ov{position:fixed;inset:0;z-index:190;background:rgba(10,20,15,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+  .rcp{width:100%;max-width:420px;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.3);padding:22px 22px 18px}
+  .rcp h3{margin:0 0 4px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:10px}
+  .rcp .num{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;margin:14px 0 2px}
+  .rcp .num small{font-size:14px;font-weight:600;color:var(--txt2)}
+  .rcp-bar{height:10px;border-radius:999px;background:var(--line);overflow:hidden;margin:8px 0 6px}   /* ไม่ใช้ .bar — ชนกับแถบหัวหน้า */
+  .rcp-bar i{display:block;height:100%;width:0;background:var(--primary);border-radius:999px;transition:width .3s}
+  .rcp .st{font-size:12.5px;color:var(--txt2);min-height:18px}
+  .rcp .warn{margin-top:14px;padding:10px 12px;border-radius:10px;background:rgba(184,134,11,.12);color:var(--txt);font-size:12.5px;line-height:1.6}
+  .rcp .f{display:flex;justify-content:flex-end;margin-top:16px}
+  .rcp .f button{border:1px solid var(--line2);background:transparent;color:var(--txt2);border-radius:10px;padding:8px 16px;font:inherit;font-size:13px;font-weight:600;cursor:pointer}
+  .rcp .f button:disabled{opacity:.5;cursor:default}
+  .rcp .f button:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  @media(prefers-reduced-motion:reduce){.rcp-bar i{transition:none}}
 </style>
 </head>
 <body>
@@ -558,27 +573,55 @@ async function recomputeUnpaid(){
   if(!(await uiConfirm({title:'คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว?',msg:'เฉพาะที่ยังไม่จ่าย · คิดตามตั้งค่าปัจจุบัน\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน',okText:'คำนวณใหม่',icon:'🔄'})))return;
   const b=$('recalc');b.disabled=true;
   const CHUNK=8;
-  let done=0,skipped=0,failed=0,ok=true,err='';const badChunks=[];
+  let done=0,skipped=0,failed=0,ok=true,err='',stopped=false,sent=0;const badChunks=[];
+  // ป๊อปอัปกลางจอ + เตือนก่อนปิดหน้า — คิดทีละก้อนจากเบราว์เซอร์ ปิดหน้า = ก้อนที่เหลือไม่ถูกคิด (ที่คิดแล้วเก็บไว้ · กดใหม่ต่อได้)
+  const P=rcpOpen(ids.length,()=>{stopped=true;});
+  const leave=e=>{e.preventDefault();e.returnValue='';return '';};
+  window.addEventListener('beforeunload',leave);
   try{
     for(let i=0;i<ids.length;i+=CHUNK){
+      if(stopped)break;
       const part=ids.slice(i,i+CHUNK);
       b.textContent=`กำลังคิด… ${Math.min(i+CHUNK,ids.length)}/${ids.length}`;
+      P.step(i,'กำลังคิด '+(i+1)+'–'+Math.min(i+CHUNK,ids.length));
       // คิดใหม่ซ้ำได้ปลอดภัย (ผลเดิม · ที่จ่ายแล้วข้าม) → Google ตอบหน้า HTML/หลุด = ลองก้อนเดิมใหม่ 3 รอบ แล้วไปก้อนถัดไป (เดิมหยุดทั้งหมด เที่ยวที่เหลือไม่ถูกคิด)
       let d=null;
       for(let tr=1;tr<=3&&!d;tr++){
         try{ d=await recomputeApi(part); }catch(_){ d=null; }
-        if(!d&&tr<3){ b.textContent=`ลองใหม่… ${Math.min(i+CHUNK,ids.length)}/${ids.length}`; await new Promise(z=>setTimeout(z,2000*tr)); }
+        if(!d&&tr<3){ b.textContent=`ลองใหม่… ${Math.min(i+CHUNK,ids.length)}/${ids.length}`; P.step(i,'หลังบ้านตอบช้า กำลังลองใหม่ (ครั้งที่ '+(tr+1)+'/3)'); await new Promise(z=>setTimeout(z,2000*tr)); }
       }
-      if(!d){ badChunks.push(...part); continue; }
+      sent=i+part.length;
+      if(!d){ badChunks.push(...part); P.step(sent,''); continue; }
       if(!d.ok){ ok=false; err=d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด'); break; }
       done+=d.done||0; skipped+=d.skipped||0; failed+=d.failed||0;
+      P.step(sent,'');
     }
   }catch(e){ ok=false; err=String(e); }
+  window.removeEventListener('beforeunload',leave);
+  P.close();
   b.textContent='🔄 คำนวณใหม่';b.disabled=false;
   if(!ok){ uiAlert('❌ '+err+(done?'\n(คิดสำเร็จไปแล้ว '+done+' เที่ยวก่อนหยุด)':'')); if(done)await loadReport(); return; }
   await loadReport();
-  uiAlert((badChunks.length?'⚠️ ':'✅ ')+'คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:'')
+  const left=ids.length-sent;   // หยุดกลางทาง = ก้อนที่ยังไม่ได้ส่ง
+  uiAlert((badChunks.length||stopped?'⚠️ ':'✅ ')+(stopped?'หยุดกลางทาง · ':'')+'คิดใหม่ '+done+' เที่ยว'+(skipped?' · ข้าม(จ่ายแล้ว) '+skipped:'')+(failed?' · ล้มเหลว '+failed:'')
+    +(stopped&&left>0?'\nยังไม่ได้คิด '+left+' เที่ยว (ใช้ค่าเดิม) — กด 🔄 คำนวณใหม่ เพื่อคิดต่อ':'')
     +(badChunks.length?'\nหลังบ้านไม่ตอบ '+badChunks.length+' เที่ยว — กด 🔄 คำนวณใหม่ อีกครั้ง\n('+badChunks.slice(0,6).join(', ')+(badChunks.length>6?' …':'')+')':''));
+}
+function rcpOpen(total,onStop){
+  const ov=document.createElement('div');ov.className='rcp-ov';
+  ov.innerHTML='<div class="rcp" role="alertdialog" aria-modal="true" aria-labelledby="rcpT" aria-describedby="rcpW">'
+    +'<h3 id="rcpT"><span class="dring" style="width:22px;height:22px;border-width:3px;flex:none" aria-hidden="true"></span>กำลังคิดค่าแรงใหม่</h3>'
+    +'<div class="num" aria-live="polite"><span id="rcpN">0</span> <small>/ '+total+' เที่ยว</small></div>'
+    +'<div class="rcp-bar"><i id="rcpB"></i></div><div class="st" id="rcpS"></div>'
+    +'<div class="warn" id="rcpW">⚠️ <b>อย่าเพิ่งปิดหน้านี้</b> — ถ้าปิดจะหยุดกลางทาง<br>เที่ยวที่คิดเสร็จแล้วเก็บไว้ · ที่เหลือใช้ค่าเดิม กด 🔄 คำนวณใหม่ อีกครั้งเพื่อคิดต่อได้ (คิดซ้ำไม่เสียหาย)</div>'
+    +'<div class="f"><button type="button" id="rcpX">หยุด</button></div></div>';
+  document.body.appendChild(ov);
+  const x=ov.querySelector('#rcpX');x.focus();
+  x.onclick=()=>{x.disabled=true;x.textContent='กำลังหยุดหลังก้อนนี้…';onStop();};
+  return {
+    step(n,msg){const v=Math.min(n,total);ov.querySelector('#rcpN').textContent=v;ov.querySelector('#rcpB').style.width=(total?v/total*100:0)+'%';ov.querySelector('#rcpS').textContent=msg||'';},
+    close(){ov.remove();}
+  };
 }
 // 🔄 คิดค่าแรงใหม่ → Edge wage-calc ก่อน (พอร์ต computeTripWage · ผลตรง GAS 107/107 ใบ · เร็วกว่ามาก) · Edge ล่ม/เกินเวลา → GAS เดิม
 //    คิดซ้ำปลอดภัย (ผลเดิม · ที่จ่ายแล้วข้าม) จึงถอยไป GAS ได้ · 2026-10-16
