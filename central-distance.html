@@ -649,7 +649,8 @@ function dtcList(){
     +'<div class="seg" role="group" aria-label="ช่วงเวลา">'+[[90,'90 วัน'],[180,'180 วัน'],[365,'1 ปี'],[800,'ทั้งหมด']].map(d=>'<button type="button" class="'+(DTC_DAYS===d[0]?'on':'')+'" onclick="DTC_DAYS='+d[0]+';dtcLoad()">'+d[1]+'</button>').join('')+'</div></div>'
     +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
     +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
-    +'<div class="dr-tools"><button type="button" class="btn sm" style="background:#1d6f42" onclick="dtcXDown(this)">⬇️ ดาวน์โหลด Excel</button>'
+    +'<div class="dr-tools"><button type="button" class="btn sm ghost" onclick="dtcMonthly()">📅 รายงานรายเดือน</button>'
+    +'<button type="button" class="btn sm" style="background:#1d6f42" onclick="dtcXDown(this)">⬇️ ดาวน์โหลด Excel</button>'
     +'<label class="btn sm ghost" for="dtcFile" style="display:inline-block">⬆️ อัปโหลดที่แก้แล้ว</label>'
     +'<input type="file" id="dtcFile" accept=".xlsx,.xls,.csv" hidden onchange="dtcXUp(this)">'
     +'<span class="note">ใส่ "ระยะที่จะใช้" ในไฟล์ (ตัวเลข หรือพิมพ์ DTC) → อัปโหลด → ตรวจสรุปก่อนบันทึก</span></div>'
@@ -679,7 +680,7 @@ function dtcRows(){
 async function dtcOpen(i){
   const r=DTC.routes[i]; if(!r)return;
   DTC_Y=$('dtcBody').scrollTop;
-  $('dtcBack').style.display='';$('dtcT').textContent=r.station;
+  $('dtcBack').style.display='';$('dtcBack').onclick=dtcList;$('dtcT').textContent=r.station;
   $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,0)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,0)+' กม.':'');
   $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดเที่ยว</div>';$('dtcBody').scrollTop=0;
   let d; try{d=await dtcGet('action=trips&station='+encodeURIComponent(r.station));}
@@ -697,6 +698,37 @@ async function dtcOpen(i){
     +'<div class="dact" style="margin-top:10px">'+(r.current&&r.current.id?'<button class="btn sm" onclick="dtcUse('+i+')">ใช้ค่านี้แก้ในตาราง</button>':'<button class="btn sm" onclick="dtcUse('+i+')">+ เพิ่มเป็นสถานีใหม่</button>')+'</div></div>'
     +tl(d.out,'ขาไป')+tl(d.back,'ขากลับ');
   $('dtcBody').innerHTML=h;
+}
+/* 📅 รายงานเทียบรายเดือน (cron วันที่ 1 · ต่างเกิน 5% และ ≥ 5 เที่ยว · แจ้ง LINE DEV) */
+const MTH=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const monthTh=m=>{const p=String(m).split('-');return MTH[+p[1]]+' '+String(+p[0]+543).slice(2);};
+let DTC_M=null;
+async function dtcMonthly(){
+  DTC_Y=$('dtcBody').scrollTop;
+  $('dtcBack').style.display='';$('dtcBack').onclick=dtcList;$('dtcT').textContent='📅 รายงานรายเดือน';
+  $('dtcSub').textContent='ค่ากลาง DTC ของเดือนนั้น เทียบค่าในตาราง · ต่างเกิน 5% (≥ 5 เที่ยว) · ส่ง LINE ถึง DEV ทุกวันที่ 1';
+  $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดรายงาน</div>';$('dtcBody').scrollTop=0;
+  try{DTC_M=(await dtcGet('action=monthlyList')).reports||[];}
+  catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcMonthly()">↻ ลองใหม่</button></div>';return;}
+  if(!DTC_M.length){$('dtcBody').innerHTML='<div class="empty">ยังไม่มีรายงาน — รายงานแรกออกวันที่ 1 ของเดือนถัดไป</div>';return;}
+  $('dtcBody').innerHTML=DTC_M.map((r,i)=>{const s=r.summary||{};
+    return '<div class="dr-row" tabindex="0" role="button" onclick="dtcMonth('+i+')" onkeydown="if(event.key===\'Enter\')dtcMonth('+i+')" style="grid-template-columns:minmax(0,1fr) auto">'
+      +'<div style="min-width:0"><div class="st">'+esc(monthTh(r.month))+'</div><div class="n">ตรวจ '+(s.checked||0)+' สถานี · ยังไม่มีในตาราง '+(s.notInTable||0)
+      +' · '+(r.notified_at?'ส่ง LINE แล้ว '+new Date(r.notified_at).toLocaleDateString('th-TH',{day:'numeric',month:'short'}):'ยังไม่ส่ง LINE')+'</div></div>'
+      +'<div class="v"><span class="dpill '+((s.flagged||0)?'bad':'ok')+'">'+((s.flagged||0)?'ต่างเกิน '+s.flagged:'ตรงทั้งหมด')+'</span></div></div>';}).join('');
+}
+function dtcMonth(i){
+  const r=DTC_M[i]; if(!r)return; const s=r.summary||{}, F=r.flagged||[];
+  $('dtcBack').onclick=dtcMonthly;   // ‹ กลับ = รายการเดือน (dtcMonthly/dtcOpen ตั้งกลับเป็น dtcList เอง)
+  $('dtcT').textContent='📅 '+monthTh(r.month);
+  $('dtcSub').textContent='ตรวจ '+(s.checked||0)+' สถานี (≥ '+(s.minTrips||5)+' เที่ยว) · ต่างเกิน '+(s.pct||5)+'% = '+F.length+' สถานี';
+  $('dtcBody').innerHTML=(F.length?F.map(f=>'<div class="dr-row" style="cursor:default">'
+      +'<div style="min-width:0"><div class="st">'+esc(f.tableStation||f.station)+'</div><div class="n">'+f.used+' เที่ยว · หมุด DTC: '+esc(f.station)+'</div></div>'
+      +'<div class="v"><b>'+nf(f.dtc,0)+'</b><span>DTC กม.</span></div>'
+      +'<div class="v"><span class="dpill '+(Math.abs(f.pct)>15?'bad':'warn')+'">'+(f.pct>0?'+':'')+nf(f.pct,1)+'%</span><span>ตาราง '+nf(f.km,0)+'</span></div></div>').join('')
+    :'<div class="empty">✅ ไม่มีสถานีที่ต่างเกินเกณฑ์</div>')
+    +'<div class="note" style="margin-top:10px">ค่า DTC = เที่ยวจริงเฉพาะเดือนนี้ · ถ้าจะใช้ค่าใหม่ ให้ปรับในตารางหรือดาวน์โหลด Excel แล้วพิมพ์ DTC</div>';
+  $('dtcBody').scrollTop=0;
 }
 function dtcUse(i){   // เปิดฟอร์มแก้ (บันทึกตามสิทธิ์เดิมของหน้า) · ยังไม่บันทึกจนกว่าจะกดบันทึก
   const r=DTC.routes[i]; closeDtc();
