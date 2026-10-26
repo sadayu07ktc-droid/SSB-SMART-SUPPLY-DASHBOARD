@@ -624,9 +624,12 @@ function closeDtc(){$('dtcOv').classList.remove('on');$('dtcDrw').classList.remo
 async function dtcLoad(){
   $('dtcBack').style.display='none';$('dtcT').textContent='📡 ค่ากลางจาก DTC';$('dtcSub').textContent='';
   $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังรวมเที่ยวจาก GPS ทุกคัน</div>';
-  try{DTC=await dtcGet('action=routes');dtcList();}
+  try{DTC=await dtcGet('action=routes');(DTC.routes||[]).forEach(dtcRound);dtcList();}
   catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcLoad()">↻ ลองใหม่</button></div>';}
 }
+/* ค่ากลางที่โชว์/ใช้ = ปัดเป็นกม.เต็ม (.5 ขึ้นไปปัดขึ้น ต่ำกว่าปัดลง · คุณน้อง 26 ต.ค.) · ส่วนต่างเทียบตารางคิดจากค่าที่ปัดแล้ว */
+const dtcR=v=>v==null?null:Math.round(Math.round(v*100)/100);
+function dtcRound(r){r.raw=r.central;r.central=dtcR(r.central);r.diff=r.current&&r.current.km!=null?Math.round((r.central-r.current.km)*100)/100:null;}
 const dtcTh=d=>d?new Date(d+'T00:00:00').toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'}):'–';
 function dtcLvl(r){   // เทียบกับค่าในตาราง: ต่าง ≤ 5% (หรือ ≤ 1 กม.) = ตรง · ≤ 15% = ต่างนิดหน่อย · เกินนั้น = ต่างมาก
   if(!r.current||r.current.km==null)return 'none';
@@ -662,7 +665,7 @@ function dtcRows(){
     return '<div class="dr-row" tabindex="0" role="button" onclick="dtcOpen('+r._i+')" onkeydown="if(event.key===\'Enter\')dtcOpen('+r._i+')">'
       +'<div style="min-width:0"><div class="st">'+esc(r.station)+'</div><div class="n">'+r.trips+' เที่ยว · ไป '+(r.out.median==null?'–':nf(r.out.median,1))+' / กลับ '+(r.back.median==null?'–':nf(r.back.median,1))
         +(one?' · <span style="color:var(--warn)">มีขาเดียว</span>':'')+((r.out.median!=null&&!r.out.direct)||(r.back.median!=null&&!r.back.direct)?' · <span style="color:var(--warn)">มีแต่เที่ยวแวะ</span>':'')+'</div></div>'
-      +'<div class="v"><b>'+nf(r.central,2)+'</b><span>กม.</span></div>'
+      +'<div class="v"><b>'+nf(r.central,0)+'</b><span>กม.</span></div>'
       +'<div class="v">'+cur+'</div></div>';
   }).join('');
 }
@@ -670,7 +673,7 @@ async function dtcOpen(i){
   const r=DTC.routes[i]; if(!r)return;
   DTC_Y=$('dtcBody').scrollTop;
   $('dtcBack').style.display='';$('dtcT').textContent=r.station;
-  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,2)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,2)+' กม.':'');
+  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,0)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,2)+' กม.':'');
   $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดเที่ยว</div>';$('dtcBody').scrollTop=0;
   let d; try{d=await dtcGet('action=trips&station='+encodeURIComponent(r.station));}
   catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcOpen('+i+')">↻ ลองใหม่</button></div>';return;}
@@ -682,7 +685,7 @@ async function dtcOpen(i){
         +'<div style="min-width:0"><div>'+esc(t.plate)+' <small>· '+(t.gate?'ป้อมยาม':esc(t.ssb))+'</small></div><small>'+new Date(t.at).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(t.via?' · แวะ '+esc(t.via):'')+'</small></div>'
         +'<div style="text-align:right">'+(t.used?'<span class="dpill ok">ใช้</span>':'<span class="dpill bad">'+esc(t.why)+'</span>')+'</div></div>').join('');};
   let h='<div class="legs">'+legBox('ขาไป SSB → สถานี (กม.)',d.out)+legBox('ขากลับ สถานี → SSB (กม.)',d.back)+'</div>'
-    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีขาเดียว ใช้ขานั้น = ')+'<b style="font-size:15px">'+nf(d.central,2)+' กม.</b>'
+    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีขาเดียว ใช้ขานั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b>'
     +(r.current&&r.current.km!=null?'<br>ในตาราง: <b>'+esc(r.current.station)+'</b> '+nf(r.current.km,2)+' กม. ('+esc(r.current.by)+') · ต่าง '+(r.diff>0?'+':'')+nf(r.diff,2)+' กม.':(r.current?'<br>ผูก '+esc(r.current.by)+' แต่ยังไม่มีแถวในตาราง':'<br>ยังไม่มีสถานีนี้ในตาราง'))+'</div>'
     +'<div class="dact" style="margin-top:10px">'+(r.current&&r.current.id?'<button class="btn sm" onclick="dtcUse('+i+')">ใช้ค่านี้แก้ในตาราง</button>':'<button class="btn sm" onclick="dtcUse('+i+')">+ เพิ่มเป็นสถานีใหม่</button>')+'</div></div>'
     +tl(d.out,'ขาไป')+tl(d.back,'ขากลับ');
@@ -692,7 +695,7 @@ function dtcUse(i){   // เปิดฟอร์มแก้ (บันทึ�
   const r=DTC.routes[i]; closeDtc();
   if(r.current&&r.current.id)openEdit(r.current.id); else openEdit(null,{station:r.station});
   $('edKm').value=r.central; kmHint();
-  toast('ใส่ระยะ '+nf(r.central,2)+' กม. จาก DTC แล้ว — ตรวจแล้วกดบันทึก');
+  toast('ใส่ระยะ '+nf(r.central,0)+' กม. จาก DTC แล้ว — ตรวจแล้วกดบันทึก');
 }
 
 (async function(){
