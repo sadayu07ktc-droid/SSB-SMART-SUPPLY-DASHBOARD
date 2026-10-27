@@ -99,7 +99,7 @@
   <div class="bar">
     <button onclick="goBack()" style="border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">←</button>
     <div class="logo">🏭</div>
-    <div><h1>ฐานต้นทุนรถ</h1><div class="sub">ทะเบียนรถ (รายการให้คนขับเลือก) + ต้นทุนต่อคัน (คงที่ · ผันแปร · ดำเนินงาน · ค่าเสื่อม) <span style="opacity:.6">· build 2026-10-27a</span></div></div>
+    <div><h1>ฐานต้นทุนรถ</h1><div class="sub">ทะเบียนรถ (รายการให้คนขับเลือก) + ต้นทุนต่อคัน (คงที่ · ผันแปร · ดำเนินงาน · ค่าเสื่อม) <span style="opacity:.6">· build 2026-10-27b</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -161,7 +161,9 @@ const fmtAge=y=>{const yy=Math.floor(y);const mm=Math.round((y-yy)*12);return yy
 
 // 🚚 กลุ่มรถ (2026-10-19 คุณน้อง): DEV + PIN = ทุกกลุ่ม · แอดมิน + PIN ส่วนตัว = เฉพาะกลุ่มตัวเอง (หลังบ้านกรอง/ตรวจซ้ำ)
 const GROUPS=['ไร่','Bulk','Packing'], GICON={'ไร่':'🌴','Bulk':'🛢️','Packing':'📦'};
-const VTYPES=['พ่วง(Trailer) 360','พ่วง(Trailer) 240','เดี่ยว','10 ล้อ','6 ล้อ','4 ล้อ','รถ CPO'];
+// 2026-10-27 คุณน้อง: "เดี่ยว ก็คือ 10 ล้อ" → เลิกใช้คำว่าเดี่ยว · 10 ล้อมีหลายชนิด
+//   ⚠️ ค่าแรง (wage-calc vehicleType): คำว่า พ่วง/4 ล้อ/6 ล้อ จับตรง · "10 ล้อ …" ป้ายเดียว = เกณฑ์น้ำมันเดี่ยว · 2 ป้าย = พ่วง
+const VTYPES=['พ่วง(Trailer) 360','พ่วง(Trailer) 240','10 ล้อ Bulk','10 ล้อ พื้นเรียบ','10 ล้อ คอกดั้ม','10 ล้อ คอก','10 ล้อ ฮุคลิฟ','6 ล้อ','4 ล้อ','รถ CPO'];
 const EDGE_AW='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/admin-writes';
 let G='', PIN_INFO=null, DIRTY=false;
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -211,7 +213,9 @@ function render(){
     const n=d.vehicles.filter(v=>vg(v)===g).length, can=me.groups.indexOf(g)>=0;
     return `<button type="button" class="gchip${g===G?' on':''}" role="tab" aria-selected="${g===G}" data-g="${g}"${can?'':' disabled title="เฉพาะแอดมินกลุ่ม '+g+'"'}>${GICON[g]} ${g}${can?` <span class="n">${n}</span>`:' 🔒'}</button>`;
   }).join('')+'<span class="grow"></span>'
-    +(me.canEdit?'<button type="button" class="btn sm" onclick="editVeh()">+ เพิ่มรถ</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
+    +'<button type="button" class="btn sm" style="background:#1d6f42" onclick="xrtDownload(vehX(),this)" title="ดาวน์โหลดทะเบียนรถกลุ่มนี้เป็น Excel">⬇ ดาวน์โหลด</button>'
+    +(me.canEdit?'<button type="button" class="btn sm ghost" style="color:var(--accent);border-color:var(--accent);font-weight:700" onclick="vehUp()" title="อัปโหลดไฟล์ที่แก้แล้ว — ดูสรุปก่อนบันทึก">⬆ อัปโหลด</button><input type="file" id="vehFile" accept=".xlsx,.xls,.csv" hidden onchange="xrtUpload(vehX(),this)">'
+      +'<button type="button" class="btn sm" onclick="editVeh()">+ เพิ่มรถ</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
   h+='<div id="warn"></div>';
   h+='<input class="search" id="q" placeholder="🔎 ค้นทะเบียน / รุ่น / คนขับ…" oninput="filt()">';
 
@@ -344,7 +348,9 @@ function whoLine(v){
 /* ── 📐 ขนาดกระบะ / น้ำหนัก ทุกกลุ่ม (2026-10-27 คุณน้อง) ──
    หัวลาก = หัวไม่มีกระบะ ต่อหางเทรลเลอร์ · 10 ล้อ (แม่-ลูก) = หัวมีกระบะ ต่อหางลูก · พื้นเรียบ = สูงว่าง ใช้ 4 ม. − ความสูงพื้นกระบะ */
 const HEAD_KINDS=['หัวลาก','10 ล้อ','6 ล้อ','4 ล้อ'];
-const BODY_LIST=['4 ล้อ ตู้ทึบ','6 ล้อ ตู้ทึบ','10 ล้อ ตู้ทึบ','แม่-ลูก กระบะ','แม่-ลูก พื้นเรียบ','แม่-ลูก คอก','เทรลเลอร์ ผ้าใบ','เทรลเลอร์ ตู้ทึบ','เทรลเลอร์ พื้นเรียบ','หาง พื้นเรียบ','หางเทรลเลอร์ ตู้ผ้าใบสไลด์','กระบะดั้มพ์','รถ CPO'];
+const BODY_LIST=['4 ล้อ ตู้ทึบ','4 ล้อ ผ้าใบในตัว','4 ล้อ ผ้าใบสไลด์','6 ล้อ ตู้ทึบ','6 ล้อ ผ้าใบในตัว','6 ล้อ ผ้าใบสไลด์',
+  '10 ล้อ Bulk','10 ล้อ พื้นเรียบ','10 ล้อ คอกดั้ม','10 ล้อ คอก','10 ล้อ ฮุคลิฟ',
+  'แม่-ลูก กระบะ','แม่-ลูก พื้นเรียบ','แม่-ลูก คอก','เทรลเลอร์ ผ้าใบ','เทรลเลอร์ ตู้ทึบ','เทรลเลอร์ พื้นเรียบ','หาง พื้นเรียบ','หางเทรลเลอร์ ตู้ผ้าใบสไลด์','รถ CPO'];
 const LEGAL_H=400;
 const n0=x=>{const n=parseFloat(x);return isNaN(n)?null:n;};
 function bedTxt(w,l,h,deck){
@@ -421,6 +427,159 @@ function editSpec(id){
     }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); closeVeh(); load(); }
   };
   $('dlgVeh').classList.add('on');
+}
+
+/* ── 📥 Excel round-trip ทะเบียนรถ (2026-10-27 · skill webapp-excel-roundtrip · แบบทะเบียนพนักงาน MySSB) ──
+   ดาวน์โหลด = รถกลุ่มที่เลือกอยู่ (ชิป) · แก้ได้ทุกช่องยกเว้นสีเทา · อัปโหลด → admin-writes vehicleImport ตรวจ → สรุปก่อนยืนยัน
+   ไม่เพิ่ม/ไม่ลบรถผ่านไฟล์ (เพิ่ม = ปุ่ม + เพิ่มรถ · เลิกใช้ = คอลัมน์สถานะ) */
+function vehUp(){ if(DIRTY){ toast('มีตัวเลขต้นทุนที่แก้ค้างไว้ — กด 💾 บันทึกเข้าฐานก่อน',true); return; } $('vehFile').click(); }
+async function vehPost(rows,apply){
+  const r=await fetch(EDGE_AW,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'vehicleImport',userId:MY_UID,rows,apply:!!apply})});
+  const d=await r.json(); if(!d.ok) throw new Error(d.denied&&!d.error?'ไม่มีสิทธิ์':(d.error||'ตรวจไฟล์ไม่สำเร็จ')); return d;
+}
+function vehX(){
+  const kindTx=v=>v.unit_kind==='หาง'?'หางสำรอง':(v.head_kind||'');
+  const num=(k,h,help)=>({k,h,w:11,help:help||'ตัวเลข (ซม.)'});
+  return { title:'ทะเบียนรถ '+G, sheet:'ทะเบียนรถ', file:'ทะเบียนรถ_'+G, unit:'คัน', key:'id', maxRows:1000,
+    offHint:'เลิกใช้ = แก้คอลัมน์ สถานะ เป็น เลิกใช้ · เพิ่มรถใหม่ใช้ปุ่ม + เพิ่มรถ ในหน้าเว็บ',
+    rows:DATA.vehicles.filter(v=>vg(v)===G),
+    sort:(a,b)=>((a.status==='เลิกใช้')-(b.status==='เลิกใช้'))||String(a.plate).localeCompare(String(b.plate)),
+    cols:[
+      {k:'plate',h:'ทะเบียน (หัว,หาง)',w:18,ro:1},
+      {k:'job_group',h:'กลุ่ม',w:8,ro:1,get:v=>vg(v)},
+      {k:'_drv',h:'คนขับประจำ',w:20,ro:1,get:v=>(v.drivers||[]).filter(d=>headOf(d.plate)===headOf(v.plate)).map(d=>d.name+' ('+(d.status||'-')+')').join(', ')||(v.unit_kind==='หาง'?'หางสำรอง':'รถสแปร์')},
+      {k:'vehicle_type',h:'ประเภทรถ (ค่าแรง)',w:16,help:VTYPES.join(' / ')+' — คำว่า พ่วง / 4 ล้อ / 6 ล้อ ใช้คิดเกณฑ์น้ำมันค่าแรง'},
+      {k:'brand',h:'ยี่ห้อ',w:10},{k:'model',h:'รุ่น',w:12},
+      {k:'status',h:'สถานะ',w:9,get:v=>v.status||'ใช้งาน',help:'ใช้งาน / เลิกใช้'},
+      {k:'start_date',h:'วันจดทะเบียน',w:12,get:v=>dmyToIso(v.start_date),help:'ปปปป-ดด-วว เช่น 2024-02-08 หรือ 8/2/2567'},
+      {k:'tax_expiry_date',h:'วันหมดอายุภาษี',w:12,get:v=>dmyToIso(v.tax_expiry_date),help:'ปปปป-ดด-วว หรือ ว/ด/ปปปป (พ.ศ. ได้)'},
+      {k:'kind',h:'ชนิดหัว',w:10,get:kindTx,help:'หัวลาก (ต่อหางเทรลเลอร์ · หัวไม่มีกระบะ) / 10 ล้อ (มีกระบะ · ต่อหางลูกได้) / 6 ล้อ / 4 ล้อ / หางสำรอง (ไม่มีหัว)'},
+      {k:'body_type',h:'รูปทรงกระบะ',w:16,help:'เช่น '+BODY_LIST.slice(0,8).join(' / ')},
+      num('head_w_cm','หัว กว้าง (ซม.)'),num('head_l_cm','หัว ยาว (ซม.)'),num('head_h_cm','หัว สูง (ซม.)','ซม. · พื้นเรียบ = เว้นว่าง'),
+      num('tail_w_cm','หาง กว้าง (ซม.)'),num('tail_l_cm','หาง ยาว (ซม.)'),num('tail_h_cm','หาง สูง (ซม.)','ซม. · พื้นเรียบ = เว้นว่าง'),
+      num('deck_h_cm','พื้นกระบะสูงจากถนน (ซม.)','ซม. · พื้นเรียบ: วางของสูงได้ = 400 − ค่านี้'),
+      num('tare_kg','น้ำหนักรถเปล่า (กก.)','กก. หัว+หาง'),num('gvw_kg','น้ำหนักรวมตามกฎหมาย (กก.)','กก. ต้องมากกว่าน้ำหนักรถเปล่า'),
+      {k:'_pay',h:'บรรทุกได้ (กก.)',w:11,ro:1,get:v=>{const t=n0(v.tare_kg),g=n0(v.gvw_kg);return t!=null&&g!=null?g-t:'';}},
+      {k:'needs_tarp',h:'ค่าคลุมผ้าใบ',w:10,get:v=>v.needs_tarp===true?'ได้':v.needs_tarp===false?'ไม่ได้':'',help:'ได้ (กระบะเปิด/พื้นเรียบ/คอก) / ไม่ได้ (ตู้ทึบ/ผ้าใบในตัว) · ว่าง = ตามประเภทงาน'},
+      {k:'spec_note',h:'หมายเหตุรถ',w:24}
+    ].concat(KEY.concat(CTX,DET).map(c=>({k:c[0],h:c[1]+(c[2]?' ('+c[2]+')':''),w:12,help:'ตัวเลข'+(c[2]?' '+c[2]:'')}))),
+    preview:rows=>vehPost(rows,false), apply:rows=>vehPost(rows,true), onDone:()=>load() };
+}
+/* xrt.js (skill webapp-excel-roundtrip assets) — esc/toast ใช้ของหน้านี้ */
+var btnBusy = window.btnBusy || function(el, label){ if (!el || !el.tagName) return function(){}; var h = el.innerHTML, d = el.disabled; el.disabled = true; el.innerHTML = label || '…'; return function(){ el.innerHTML = h; el.disabled = d; }; };
+function xrtLib(){
+  if (window.XLSX && window.XLSX.utils && window.XLSX.write) return Promise.resolve(window.XLSX);
+  return new Promise(function(ok, no){ var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+    s.onload = function(){ ok(window.XLSX); }; s.onerror = function(){ no(new Error('โหลดตัวสร้าง Excel ไม่ได้')); }; document.head.appendChild(s); });
+}
+function xrtSave(blob, name){
+  var u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); }, 1500);
+}
+function xrtYmd(d){ var p = function(n){ return ('0' + n).slice(-2); }; return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()); }
+async function xrtDownload(S, b){
+  var done = btnBusy(b, 'กำลังสร้าง…');
+  try {
+    var X = await xrtLib(), NAVY = '1E293B', LN = 'CBD5E1';
+    var bd = { top: { style: 'thin', color: { rgb: LN } }, bottom: { style: 'thin', color: { rgb: LN } }, left: { style: 'thin', color: { rgb: LN } }, right: { style: 'thin', color: { rgb: LN } } };
+    var F = function(o){ return Object.assign({ name: 'Tahoma', sz: 10, color: { rgb: '1E293B' } }, o || {}); };
+    var sh = { font: F({ bold: true, color: { rgb: 'FFFFFF' } }), fill: { fgColor: { rgb: NAVY } }, border: bd, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
+    var sk = { font: F({ sz: 8, italic: true, color: { rgb: '94A3B8' } }), fill: { fgColor: { rgb: 'F1F5F9' } }, border: bd, alignment: { horizontal: 'center' } };
+    var sro = { font: F({ sz: 8, color: { rgb: '94A3B8' } }), fill: { fgColor: { rgb: 'F1F5F9' } }, border: bd };
+    var sd = { font: F(), border: bd }, sz = { font: F(), border: bd, fill: { fgColor: { rgb: 'F8FAFC' } } };
+    var cols = [{ k: S.key, h: S.key + ' (ห้ามแก้)', ro: true, w: 7 }].concat(S.cols);
+    var c = function(v, s){ return { v: v == null ? '' : String(v), t: 's', s: s }; };
+    var aoa = [cols.map(function(x){ return c(x.h + (x.ro && x.k !== S.key ? ' (อ่านอย่างเดียว)' : ''), sh); }), cols.map(function(x){ return c(x.ro && x.k !== S.key ? '_' + x.k.replace(/^_/, '') : x.k, sk); })];
+    var rows = S.rows.slice(); if (S.sort) rows.sort(S.sort);
+    rows.forEach(function(r, i){ var st = i % 2 ? sz : sd;
+      aoa.push(cols.map(function(x){ var v = x.get ? x.get(r) : r[x.k]; return c(v, x.ro ? sro : st); })); });
+    var ws = X.utils.aoa_to_sheet([[]]);
+    aoa.forEach(function(row, ri){ row.forEach(function(cell, ci){ ws[X.utils.encode_cell({ r: ri, c: ci })] = cell; }); });
+    ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: cols.length - 1 } });
+    ws['!cols'] = cols.map(function(x){ return { wch: x.w || 14 }; });
+    ws['!rows'] = [{ hpt: 32 }, { hpt: 14 }];
+    ws['!freeze'] = { xSplit: 0, ySplit: 2 };
+    var help = [['วิธีใช้ไฟล์ ' + S.title], [''],
+      ['1. แก้ข้อมูลในแผ่น "' + S.sheet + '" แล้วอัปโหลดกลับที่ปุ่ม ⬆ อัปโหลด ในหน้าฐานต้นทุนรถ'],
+      ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์ภาษาอังกฤษ) และคอลัมน์ ' + S.key + ' — ระบบใช้จับคู่รถคันเดิม · ช่องสีเทา = อ่านอย่างเดียว แก้ไปก็ไม่มีผล'],
+      ['3. เพิ่มรถใหม่ทำในไฟล์ไม่ได้ — ใช้ปุ่ม + เพิ่มรถ ในหน้าเว็บ (ระบบตรวจทะเบียนซ้ำให้)'],
+      ['4. ช่องที่เว้นว่าง = คงค่าเดิม · ลบแถวทิ้ง = ไม่ลบออกจากระบบ' + (S.offHint ? ' (' + S.offHint + ')' : '')],
+      ['5. ก่อนบันทึกจริง ระบบจะแสดงสรุป แก้ไข (ค่าเก่า → ใหม่) / ผิดพลาด ให้ตรวจแล้วค่อยกดยืนยัน'], [''], ['ค่าที่ใช้ได้']]
+      .concat(S.cols.filter(function(x){ return x.help; }).map(function(x){ return [x.h, x.help]; }));
+    var wh = X.utils.aoa_to_sheet(help); wh['!cols'] = [{ wch: 26 }, { wch: 100 }];
+    var wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, S.sheet); X.utils.book_append_sheet(wb, wh, 'วิธีใช้');
+    xrtSave(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/octet-stream' }), (S.file || S.sheet) + '_' + xrtYmd(new Date()) + '.xlsx');
+  } catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: ' + (e.message || e), true); }
+  finally { done(); }
+}
+var XRT_UP = null;
+async function xrtUpload(S, input){
+  var f = input.files && input.files[0]; input.value = ''; if (!f) return;
+  toast('กำลังอ่านไฟล์…');
+  try {
+    var X = await xrtLib();
+    var wb = X.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
+    var ws = wb.Sheets[S.sheet] || wb.Sheets[wb.SheetNames[0]];
+    var aoa = X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    var edit = S.cols.filter(function(x){ return !x.ro; }), known = [S.key].concat(edit.map(function(x){ return x.k; }));
+    var th = {}; edit.forEach(function(x){ th[x.h] = x.k; (x.alias || []).forEach(function(a){ th[a] = x.k; }); }); th[S.key + ' (ห้ามแก้)'] = S.key; th[S.key] = S.key;
+    var need = S.cols.filter(function(x){ return x.req; }), half = Math.max(1, Math.ceil(edit.length / 2)), hi = -1, map = null;
+    var isEn = function(row){ return need.every(function(x){ return row.indexOf(x.k) >= 0; }) && edit.filter(function(x){ return row.indexOf(x.k) >= 0; }).length >= half; };
+    var isTh = function(row){ return need.every(function(x){ return row.indexOf(x.h) >= 0; }) && edit.filter(function(x){ return row.indexOf(x.h) >= 0 || (x.alias || []).some(function(a){ return row.indexOf(a) >= 0; }); }).length >= half; };
+    var trim = function(r){ return (r || []).map(function(v){ return String(v).trim(); }); };
+    for (var i = 0; i < Math.min(aoa.length, 10) && hi < 0; i++){
+      var row = trim(aoa[i]);
+      if (isEn(row)){ hi = i; map = row.map(function(v){ return known.indexOf(v) >= 0 ? v : ''; }); }
+      else if (isTh(row) && !isEn(trim(aoa[i + 1]))){ hi = i; map = row.map(function(v){ return th[v] || ''; }); }
+    }
+    if (hi < 0) return toast('ไม่พบหัวตาราง — ใช้ไฟล์ที่ดาวน์โหลดจากระบบเป็นแม่แบบ', true);
+    var p2 = function(n){ return ('0' + n).slice(-2); }, rows = [];
+    for (var r = hi + 1; r < aoa.length; r++){
+      var o = { _line: r + 1 }, any = false;
+      map.forEach(function(k, ci){ if (!k) return; var v = aoa[r][ci];
+        if (v instanceof Date) v = v.getFullYear() + '-' + p2(v.getMonth() + 1) + '-' + p2(v.getDate());
+        v = (v == null ? '' : String(v)).trim(); o[k] = v; if (v) any = true; });
+      if (any) rows.push(o);
+    }
+    if (!rows.length) return toast('ไฟล์ไม่มีข้อมูล', true);
+    if (rows.length > (S.maxRows || 3000)) return toast('ไฟล์ใหญ่เกิน ' + (S.maxRows || 3000) + ' แถว', true);
+    var pv = await S.preview(rows);
+    XRT_UP = { S: S, rows: rows, name: f.name };
+    xrtPreview(pv);
+  } catch(e){ toast('อ่านไฟล์ไม่สำเร็จ: ' + (e.message || e), true); }
+}
+function xrtPreview(pv){
+  var S = XRT_UP.S, u = S.unit || 'รายการ', m = document.getElementById('xrtPv');
+  if (!m){ m = document.createElement('div'); m.id = 'xrtPv';
+    m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(m); }
+  var n = pv.add.length + pv.change.length;
+  var sec = function(title, color, count, body){ return '<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px;color:' + color + '">' + title + '</b>' +
+    '<span style="font-size:12px;font-weight:700;color:' + color + '">' + count + '</span></div>' + (body ? '<div style="margin-top:4px">' + body + '</div>' : '') + '</div>'; };
+  var li = function(i, main, sub){ return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:13px"><span style="flex:none;width:22px;color:var(--txt2);text-align:right">' + i + '.</span><div style="min-width:0;flex:1">' + main + (sub ? '<div style="font-size:12px;color:var(--txt2)">' + sub + '</div>' : '') + '</div></div>'; };
+  m.innerHTML = '<div style="background:var(--card);color:var(--txt);width:100%;max-width:480px;max-height:86vh;display:flex;flex-direction:column;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35)">' +
+    '<div style="padding:16px 16px 4px"><b style="font-size:16px">ตรวจไฟล์ก่อนนำเข้า</b><div style="font-size:12px;color:var(--txt2)">' + esc(XRT_UP.name) + ' · ' + XRT_UP.rows.length + ' แถว</div></div>' +
+    '<div style="overflow:auto;padding:0 16px 8px;flex:1">' +
+    sec('แก้ไข', '#185fa5', pv.change.length + ' ' + u, pv.change.map(function(c, i){
+      return li(i + 1, '<b>' + esc(c.name) + '</b> <span style="font-size:12px;color:var(--txt2)">· แถว ' + c.line + '</span>', c.fields.map(function(x){ return esc(x.label) + ': <s>' + esc(x.old || '(ว่าง)') + '</s> → <b style="color:var(--txt)">' + esc(x['new']) + '</b>'; }).join('<br>')); }).join('')) +
+    sec('ผิดพลาด (จะข้าม ไม่บันทึก)', '#a32d2d', pv.errors.length + ' แถว', pv.errors.map(function(e, i){ return li(i + 1, 'แถว ' + e.line + (e.name ? ' · ' + esc(e.name) : ''), '<span style="color:#a32d2d">' + esc(e.msg) + '</span>'); }).join('')) +
+    sec('ไม่เปลี่ยนแปลง', 'var(--txt2)', pv.same + ' ' + u, '') +
+    (pv.missing && pv.missing.length ? sec('ไม่อยู่ในไฟล์ (ข้อมูลเดิมคงอยู่ ไม่ถูกลบ)', 'var(--txt2)', pv.missing.length + ' ' + u, '<div style="font-size:12px;color:var(--txt2)">' + pv.missing.slice(0, 15).map(esc).join(', ') + (pv.missing.length > 15 ? ' และอีก ' + (pv.missing.length - 15) : '') + '</div>') : '') +
+    '</div><div style="display:flex;gap:9px;padding:12px 16px 16px;border-top:1px solid var(--line)">' +
+    '<button class="btn ghost" style="margin:0;flex:1" onclick="document.getElementById(\'xrtPv\').style.display=\'none\'">ยกเลิก</button>' +
+    '<button class="btn" style="margin:0;flex:1' + (n ? '' : ';opacity:.5') + '" ' + (n ? '' : 'disabled ') + 'onclick="xrtApply(this)">' + (n ? 'ยืนยันนำเข้า ' + n + ' ' + u : 'ไม่มีอะไรต้องบันทึก') + '</button></div></div>';
+  m.style.display = 'flex';
+}
+var XRT_BUSY = false;
+async function xrtApply(b){
+  if (XRT_BUSY || !XRT_UP) return; XRT_BUSY = true; var done = btnBusy(b, 'กำลังบันทึก…');
+  try {
+    var r = await XRT_UP.S.apply(XRT_UP.rows);
+    document.getElementById('xrtPv').style.display = 'none';
+    toast('✅ นำเข้าแล้ว แก้ไข ' + r.changed + ' คัน' + (r.skipped ? ' · ข้าม ' + r.skipped + ' แถว' : ''));
+    var S = XRT_UP.S; XRT_UP = null; if (S.onDone) S.onDone(r);
+  } catch(e){ toast('นำเข้าไม่สำเร็จ: ' + (e.message || e), true); }
+  finally { XRT_BUSY = false; done(); }
 }
 
 async function save(){
