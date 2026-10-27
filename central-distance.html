@@ -492,19 +492,22 @@ function applyPreset(p){fillCodes(p.garden_code);fillPickups();$('edPickup').val
 /* ── ดาวน์โหลด → แก้ใน Excel → นำเข้ากลับ ──
  * ไฟล์มีคอลัมน์ id ประจำแถว → นำเข้าแล้วอัปเดตแถวเดิม (ไม่มี id แต่ชื่อตรง ก็อัปเดตแถวเดิม) · ชื่อใหม่ = เพิ่ม
  * ไม่ลบแถวที่หายจากไฟล์ · แถวไม่กรอกระยะ = ข้าม · นำเข้าซ้ำไฟล์เดิมได้ ไม่เกิดแถวซ้ำ */
-const COLS=['id (ห้ามแก้)','สถานี','ระยะเที่ยวเดียว(กม.)','ประเภทงาน','รหัสสวน/ลาน','จุดรับ','หมายเหตุ','ใช้งาน(ใช่/ไม่)','DP Type (เวลารอ)','ชื่อสวน/ลาน (อ้างอิง ไม่ต้องแก้)'];
+/* 📦 ค่าใช้จ่ายร้าน Packing ในไฟล์ (27 ต.ค. · ให้แอดมิน Packing กรอกประเภทงาน+ค่าร้าน) · หัวคอลัมน์ต้องตรงตัว (ไม่มีคอลัมน์ = ไม่แตะค่าเดิม) */
+const PK_COLS=[['pk_unload_4w','ค่าลงของ 4 ล้อ (จ่ายร้าน)'],['pk_unload_6w','ค่าลงของ 6 ล้อ (จ่ายร้าน)'],['pk_unload_10w','ค่าลงของ 10 ล้อ (จ่ายร้าน)'],['pk_unload_trailer','ค่าลงของ พ่วง (จ่ายร้าน)'],['pk_pallet_fee','ค่าตักพาเลท (บาท/พาเลท)']];
+const JOB_TYPES=['สวน','ลาน','Packing','Bulk','ส่งน้ำ','อื่นๆ'];
+const COLS=['id (ห้ามแก้)','สถานี','ระยะเที่ยวเดียว(กม.)','ประเภทงาน (สวน/ลาน/Packing/Bulk/ส่งน้ำ/อื่นๆ)','รหัสสวน/ลาน','จุดรับ','หมายเหตุ','ใช้งาน(ใช่/ไม่)','DP Type (เวลารอ)'].concat(PK_COLS.map(c=>c[1]),['ชื่อสวน/ลาน (อ้างอิง ไม่ต้องแก้)']);
 function csvCell(v){v=v==null?'':String(v);return /[",\r\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v;}
 function exportCsv(){
   const lines=[COLS.map(csvCell).join(',')], used={};
   (DATA.rows||[]).forEach(r=>{used[norm(r.station)]=1;
-    lines.push([r.id,r.station,r.km,r.job_type,r.garden_code,r.pickup_point,r.note,r.active===false?'ไม่':'ใช่',r.dp_type,codeName(r.garden_code)].map(csvCell).join(','));});
+    lines.push([r.id,r.station,r.km,r.job_type,r.garden_code,r.pickup_point,r.note,r.active===false?'ไม่':'ใช่',r.dp_type].concat(PK_COLS.map(c=>r[c[0]]),[codeName(r.garden_code)]).map(csvCell).join(','));});
   // ต่อท้าย: สวน/ลานที่ยังไม่มีค่ากลาง — กรอกระยะแล้วนำเข้าได้เลย (เว้นว่าง = ข้าม)
   let nMiss=0;
   (DATA.missing||[]).forEach(m=>{
     const k=(DATA.codes||[]).find(x=>x.code===m.code), multi=k&&k.pickups.length>1;
     let st=(m.name||m.code)+(multi&&m.pickup?' ('+m.pickup+')':'');
     if(used[norm(st)])return; used[norm(st)]=1; nMiss++;
-    lines.push(['',st,'',/^LT-/i.test(m.code)?'ลาน':'สวน',m.code,multi?(m.pickup||''):'','','ใช่','',(m.name||'')+' · ยังไม่มีค่ากลาง '+m.orders+' ออเดอร์ — กรอกระยะ'].map(csvCell).join(','));
+    lines.push(['',st,'',/^LT-/i.test(m.code)?'ลาน':'สวน',m.code,multi?(m.pickup||''):'','','ใช่',''].concat(PK_COLS.map(()=>''),[(m.name||'')+' · ยังไม่มีค่ากลาง '+m.orders+' ออเดอร์ — กรอกระยะ']).map(csvCell).join(','));
   });
   const b=new Blob(['﻿'+lines.join('\r\n')],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ค่ากลาง-'+new Date().toISOString().slice(0,10)+'.csv';a.click();
@@ -577,6 +580,9 @@ function diffRow(o,n){
     if(a!==b)d.push(l+': '+(a===''?'—':a)+' → '+(b===''?'—':b));
   });
   if((o.active!==false)!==n.active)d.push('ใช้งาน: '+(o.active!==false?'ใช่':'ไม่')+' → '+(n.active?'ใช่':'ไม่'));
+  PK_COLS.forEach(([k,l])=>{if(!(k in n))return;   // ไฟล์ไม่มีคอลัมน์นี้ = ไม่แตะ
+    const a=o[k]==null||o[k]===''?null:+o[k], b=n[k];
+    if(a!==b)d.push(l.replace(/ \(.*\)$/,'')+': '+(a==null?'—':a)+' → '+(b==null?'—':b));});
   return d;
 }
 function buildPlan(tbl){
@@ -586,6 +592,8 @@ function buildPlan(tbl){
   // ชื่อสถานี: "สถานี" ตรงตัว > "สถานีที่2" (ไฟล์ DATABASE.xlsx ต้นฉบับ — สถานีที่1 คือจุดออก SSB) > มีคำว่าสถานี
   let stI=H.findIndex(x=>x==='สถานี'); if(stI<0)stI=find(/สถานีที่\s*2/); if(stI<0)stI=find(/สถานี/);
   const ix={id:find(/^id\b/i),station:stI,km:find(/ระยะ/),job_type:find(/ประเภท/),garden_code:find(/รหัส/),pickup_point:find(/จุดรับ/),note:find(/หมายเหตุ/),active:find(/ใช้งาน/),dp_type:find(/DP\s*Type/i)};
+  PK_COLS.forEach(([k,l])=>{ix[k]=H.indexOf(l);});
+  const hasPk=PK_COLS.some(([k])=>ix[k]>=0);
   if(ix.km<0){toast('❌ ไม่เจอคอลัมน์ "ระยะ"',true);return;}
   const cur={},curName={},known={};
   (DATA.rows||[]).forEach(r=>{cur[r.id]=r;curName[norm(r.station)]=r;});
@@ -609,7 +617,17 @@ function buildPlan(tbl){
     // คอลัมน์ที่ไม่มีในไฟล์ = ไม่แตะค่าเดิม (กันไฟล์ต้นฉบับที่ไม่มีคอลัมน์รหัสสวน ลบรหัสที่ผูกไว้ทิ้ง)
     ['job_type','garden_code','pickup_point','note','dp_type'].forEach(k=>{if(ix[k]<0)row[k]=base?String(base[k]||''):'';});
     if(row.dp_type){const hit=(DATA.dpTypes||[]).find(d=>norm(d.dp_type)===norm(row.dp_type));if(hit)row.dp_type=hit.dp_type;}   // สะกดเว้นวรรคต่าง → ใช้ชื่อในตาราง
+    if(row.job_type){const jt=JOB_TYPES.find(x=>norm(x)===norm(row.job_type));   // packing / PACKING → Packing
+      if(jt)row.job_type=jt; else P.warn.push('แถว '+line+': ประเภทงาน "'+row.job_type+'" ไม่อยู่ในรายการ ('+JOB_TYPES.join(' / ')+')');}
     if(ix.active<0)row.active=base?base.active!==false:true;
+    // 📦 ค่าใช้จ่ายร้าน: มีคอลัมน์ในไฟล์ = ส่งทุกแถว (ว่าง = ไม่มี/ยังไม่รู้) · บันทึกเฉพาะ Packing
+    if(hasPk){let bad='',lost=false;
+      PK_COLS.forEach(([k,l])=>{const s=ix[k]<0?(base&&base[k]!=null?String(base[k]):''):g(k).replace(/,/g,''), v=s===''?null:Number(s);
+        if(v!=null&&!(v>=0&&v<=100000))bad=l;
+        if(row.job_type!=='Packing'&&v!=null)lost=true;
+        row[k]=row.job_type==='Packing'?v:null;});
+      if(bad){P.err.push('แถว '+line+' ('+station+'): '+bad+' ต้องเป็นตัวเลข 0 ขึ้นไป');continue;}
+      if(lost)P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — ค่าใช้จ่ายร้านจะไม่ถูกบันทึก');}
     if(base){
       const other=curName[nk];
       if(other&&other.id!==base.id){P.err.push('แถว '+line+': เปลี่ยนชื่อเป็น "'+station+'" ไม่ได้ ชื่อนี้มีอยู่แล้ว (id '+other.id+')');continue;}
