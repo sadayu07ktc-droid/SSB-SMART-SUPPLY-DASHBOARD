@@ -817,6 +817,7 @@ function dtcPairList(){
     +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
     +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง']].map(f=>'<button type="button" class="'+(DTC_PF===f[0]?'on':'')+'" onclick="DTC_PF=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
     +'<div class="dr-tools"><button type="button" class="btn sm ghost" onclick="dtcMonthly()">📅 รายงานรายเดือน</button>'
+    +(cnt.none?'<button type="button" class="btn sm" onclick="dtcAddMissing()">➕ เพิ่มที่ยังไม่มีในตาราง ('+cnt.none+')</button>':'')
     +'<button type="button" class="btn sm" style="background:#1d6f42" onclick="dtcXDown(this)">⬇️ ดาวน์โหลด Excel</button>'
     +'<label class="btn sm ghost" for="dtcFile" style="display:inline-block">⬆️ อัปโหลดที่แก้แล้ว</label>'
     +'<input type="file" id="dtcFile" accept=".xlsx,.xls,.csv" hidden onchange="dtcXUp(this)">'
@@ -933,19 +934,23 @@ const DTC_X={
 /* ➕ เพิ่มสถานี DTC ที่ยังไม่มีในตาราง (คุณน้อง 27 ต.ค.) · ระยะ = ค่ากลาง DTC · ประเภทงาน/ค่าร้าน ให้แอดมินกรอกผ่านไฟล์ภายหลัง
  * ใช้ Edge xrt_preview/xrt_apply ชุดเดียวกับ Excel (km:'DTC' · เฉพาะ DEV) · หมุดที่ผูกรหัสสวน/ลานไว้แล้ว ใส่รหัส+จุดรับให้ด้วย */
 const dtcCode=r=>{const x=/^รหัส (\S+)(?: · (.+))?$/.exec(r.current&&r.current.by||'');return x?{c:x[1],p:x[2]||''}:null;};
+let DTC_ADD_PAIR=false;   // ป๊อปอัปเพิ่มเข้าตาราง: false = โรงงาน ↔ ปลายทาง (central_distances) · true = ปลายทาง ↔ ปลายทาง (central_pairs)
 function dtcAddMissing(){
-  const L=(DTC.routes||[]).map((r,i)=>({r,i})).filter(x=>dtcLvl(x.r)==='none').sort((a,b)=>b.r.trips-a.r.trips);
-  if(!L.length){toast('ไม่มีสถานีที่ต้องเพิ่ม');return;}
+  const pair=DTC_ADD_PAIR=DTC_KIND==='pair', D=pair?DTC_P:DTC, unit=pair?'คู่':'สถานี';
+  const L=(D.routes||[]).map((r,i)=>({r,i})).filter(x=>dtcLvl(x.r)==='none'&&(!pair||dtcPairShown(x.r))).sort((a,b)=>b.r.trips-a.r.trips);
+  if(!L.length){toast('ไม่มี'+unit+'ที่ต้องเพิ่ม');return;}
   let m=$('dtcAddOv');
   if(!m){m=document.createElement('div');m.id='dtcAddOv';m.className='ov';m.style.zIndex='55';m.onclick=e=>{if(e.target===m)m.classList.remove('on');};document.body.appendChild(m);}
   m.innerHTML='<div class="dlg" role="dialog" aria-modal="true" aria-labelledby="dtcAddT" style="display:flex;flex-direction:column;padding:0">'
-    +'<div style="padding:16px 16px 6px"><h2 id="dtcAddT" style="margin:0">เพิ่มสถานีเข้าตารางค่ากลาง</h2>'
-    +'<div class="sub">ระยะ = ค่ากลาง DTC (ปัดกม.เต็ม) · ประเภทงานและค่าใช้จ่ายร้านให้แอดมินกรอกผ่านไฟล์ภายหลัง · เลือกเฉพาะสถานที่ส่งของจริง (ปั๊ม/อู่/ทางผ่าน ไม่ต้องเลือก)</div>'
+    +'<div style="padding:16px 16px 6px"><h2 id="dtcAddT" style="margin:0">'+(pair?'เพิ่มคู่ปลายทาง ↔ ปลายทาง เข้าตาราง':'เพิ่มสถานีเข้าตารางค่ากลาง')+'</h2>'
+    +'<div class="sub">'+(pair?'ระยะ = ค่ากลาง DTC ของคู่นั้น (ปัดกม.เต็ม · ใช้ทั้งสองทิศ) · เลือกเฉพาะคู่ที่เป็นงานหลายจุดจริง (หมุดอู่/ปั๊ม/ทางผ่าน ไม่ต้องเลือก)'
+      :'ระยะ = ค่ากลาง DTC (ปัดกม.เต็ม) · ประเภทงานและค่าใช้จ่ายร้านให้แอดมินกรอกผ่านไฟล์ภายหลัง · เลือกเฉพาะสถานที่ส่งของจริง (ปั๊ม/อู่/ทางผ่าน ไม่ต้องเลือก)')+'</div>'
     +'<div class="dr-tools" style="margin:8px 0 0"><button type="button" class="btn sm ghost" onclick="dtcAddSel(3)">เลือกที่ ≥ 3 เที่ยว</button><button type="button" class="btn sm ghost" onclick="dtcAddSel(1)">เลือกทั้งหมด</button><button type="button" class="btn sm ghost" onclick="dtcAddSel(0)">ล้าง</button></div></div>'
     +'<div style="overflow:auto;padding:0 16px 8px;flex:1">'
-    +L.map(x=>{const r=x.r,cd=dtcCode(r);
+    +L.map(x=>{const r=x.r,cd=pair?null:dtcCode(r);
       return '<label class="addrow"><input type="checkbox" data-i="'+x.i+'" data-t="'+r.trips+'"'+(r.trips>=3?' checked':'')+' onchange="dtcAddCnt()">'
-        +'<span style="min-width:0;flex:1"><b>'+esc(r.station)+'</b><small>'+r.trips+' เที่ยว'+(cd?' · ผูก '+esc(cd.c)+(cd.p?' · '+esc(cd.p):''):'')+'</small></span>'
+        +'<span style="min-width:0;flex:1"><b>'+(pair?esc(r.a)+' ↔ '+esc(r.b):esc(r.station))+'</b><small>'+r.trips+' เที่ยว'+(cd?' · ผูก '+esc(cd.c)+(cd.p?' · '+esc(cd.p):''):'')
+        +(pair&&(r.out.median==null||r.back.median==null)?' · มีทิศเดียว':'')+'</small></span>'
         +'<span class="km">'+nf(r.central,0)+' กม.</span></label>';}).join('')
     +'</div><div class="dact" style="padding:12px 16px 16px;border-top:1px solid var(--line);margin:0">'
     +'<button type="button" class="btn ghost" onclick="$(\'dtcAddOv\').classList.remove(\'on\')">ยกเลิก</button>'
@@ -954,16 +959,19 @@ function dtcAddMissing(){
 }
 const dtcAddBoxes=()=>[...document.querySelectorAll('#dtcAddOv input[data-i]')];
 function dtcAddSel(min){dtcAddBoxes().forEach(c=>{c.checked=min>0&&+c.dataset.t>=min;});dtcAddCnt();}
-function dtcAddCnt(){const n=dtcAddBoxes().filter(c=>c.checked).length,b=$('dtcAddGo');if(b){b.disabled=!n;b.textContent=n?'ตรวจก่อนเพิ่ม '+n+' สถานี':'เลือกอย่างน้อย 1 สถานี';}}
+function dtcAddCnt(){const n=dtcAddBoxes().filter(c=>c.checked).length,u=DTC_ADD_PAIR?'คู่':'สถานี',b=$('dtcAddGo');if(b){b.disabled=!n;b.textContent=n?'ตรวจก่อนเพิ่ม '+n+' '+u:'เลือกอย่างน้อย 1 '+u;}}
 async function dtcAddGo(b){
-  const rows=dtcAddBoxes().filter(c=>c.checked).map((c,k)=>{const r=DTC.routes[+c.dataset.i],cd=dtcCode(r);
+  const pair=DTC_ADD_PAIR, S=pair?DTC_XP:DTC_X, D=pair?DTC_P:DTC;
+  const rows=dtcAddBoxes().filter(c=>c.checked).map((c,k)=>{const r=D.routes[+c.dataset.i];
+    if(pair)return {_line:k+1,id:'',station_a:r.a,station_b:r.b,km:'DTC'};
+    const cd=dtcCode(r);
     return {_line:k+1,id:'',station:r.station,km:'DTC',job_type:'',garden_code:cd?cd.c:'',pickup_point:cd?cd.p:''};});
   if(!rows.length)return;
   const done=btnBusy(b,'กำลังตรวจ…');
   try{
-    const pv=await DTC_X.preview(rows); pv.missing=[];   // ไม่ใช่ไฟล์ทั้งตาราง — ไม่ต้องโชว์ "สถานีที่ไม่อยู่ในไฟล์"
+    const pv=await S.preview(rows); pv.missing=[];   // ไม่ใช่ไฟล์ทั้งตาราง — ไม่ต้องโชว์ "ที่ไม่อยู่ในไฟล์"
     $('dtcAddOv').classList.remove('on');
-    XRT_UP={S:DTC_X,rows,name:'เลือกจากลิ้นชัก DTC'}; xrtPreview(pv);
+    XRT_UP={S,rows,name:'เลือกจากลิ้นชัก DTC'}; xrtPreview(pv);
   }catch(e){toast('❌ '+(e.message||e),true);}
   finally{done();}
 }
