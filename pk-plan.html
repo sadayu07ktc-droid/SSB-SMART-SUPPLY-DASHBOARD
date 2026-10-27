@@ -39,8 +39,9 @@
   tr.add td:first-child{box-shadow:inset 3px 0 var(--primary)} tr.chg td:first-child{box-shadow:inset 3px 0 var(--warn)}
   td.cf{background:rgba(184,134,11,.13)}
   .how{font-size:10.5px;color:var(--txt2);display:block}
+  .stop+.stop{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
   .miss{color:var(--danger);font-weight:600}
-  .tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--txt2);margin:1px 2px 0 0}
+  .tag{display:inline-block;white-space:nowrap;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--txt2);margin:1px 2px 0 0}
   .tag.out{color:var(--warn);border-color:var(--warn)} .tag.bad{color:var(--danger);border-color:var(--danger)} .tag.ok{color:var(--primary);border-color:var(--primary)}
   select,input[list]{font:inherit;font-size:12.5px;padding:4px 6px;border:1px solid var(--line2);border-radius:7px;background:var(--card2);color:var(--txt);max-width:230px}
   .note{font-size:12px;color:var(--txt2);line-height:1.7}
@@ -55,7 +56,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-27a</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-27b</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -136,18 +137,30 @@ function drvCell(r,i,edit){
   let h=nm+'<span class="how">ในไฟล์: '+esc(r.driver_raw||'—')+(r.driver_how?' · '+esc(r.driver_how):'')+'</span>';
   if(edit&&LK){ const cur=UP.rows[i].driverCode||'';
     h+='<select aria-label="เลือกคนขับ" onchange="setRow('+i+',\'driverCode\',this.value)"><option value="">'+(r.driver_code?'— เปลี่ยนคนขับ —':'— เลือกคนขับ —')+'</option>'
-      +LK.drivers.map(d=>'<option value="'+esc(d.code)+'"'+(d.code===cur?' selected':'')+'>'+esc(d.name)+' · '+esc(d.group)+(d.active?'':' (LINE ยังไม่เปิด)')+'</option>').join('')+'</select>'; }
+      +LK.drivers.filter(d=>d.group==='Packing'||d.code===cur||d.code===r.driver_code).map(d=>'<option value="'+esc(d.code)+'"'+(d.code===cur?' selected':'')+'>'+esc(d.name)+' · '+esc(d.group)+(d.active?'':' (LINE ยังไม่เปิด)')+'</option>').join('')+'</select>'; }
   return h;
 }
+// หลายจุดส่ง ("A + B + C") = 1 บรรทัดต่อจุด เลือกสถานีได้ทีละจุด · แถวเก่าไม่มี stops = จุดเดียว
+const stopsOf=r=>Array.isArray(r.stops)?r.stops:(r.station_id||r.dest_text?[{name:r.dest_text,station_id:r.station_id,station_name:r.station_name,km:r.station_km,how:r.station_how}]:[]);
 function stCell(r,i,edit){
   if(r.pay_mode==='day') return '<span class="tag out">ค่าแรงรายวัน</span><span class="how">ไม่มีปลายทาง · ไม่ต้องผูกค่ากลาง</span>';
-  let h=r.station_name?esc(r.station_name)+(r.station_km?' <span class="tag">'+esc(r.station_km)+' กม.</span>':''):'<span class="miss">ยังไม่ผูกค่ากลาง</span>';
-  h+=howTag(r.station_how);
-  if(edit&&LK){ const cur=UP.rows[i].stationId||'';
-    h+='<input list="stList" placeholder="พิมพ์ค้นสถานี…" aria-label="เลือกสถานีค่ากลาง" value="'+esc(cur?((LK.stations.find(s=>String(s.id)===String(cur))||{}).name||''):'')+'" onchange="pickSt('+i+',this.value)">'; }
-  return h;
+  const ss=stopsOf(r), multi=ss.length>1;
+  if(!ss.length) return '<span class="miss">ยังไม่ผูกค่ากลาง</span>';
+  return (multi?'<span class="tag ok">ส่ง '+ss.length+' จุด</span>':'')+ss.map((s,k)=>{
+    let h='<div class="stop">'+(multi?'<b>'+(k+1)+'.</b> ':'')+(s.station_name?esc(s.station_name)+(s.km?' <span class="tag">'+esc(s.km)+' กม.</span>':''):'<span class="miss">'+(multi?esc(s.name)+' — ':'')+'ยังไม่ผูกค่ากลาง</span>')+howTag(s.how);
+    if(edit&&LK){ const cur=((UP.rows[i].stationIds||[])[k])||'';
+      h+='<input list="stList" placeholder="พิมพ์ค้นสถานี…" aria-label="เลือกสถานีค่ากลาง จุดที่ '+(k+1)+'" value="'+esc(cur?((LK.stations.find(x=>String(x.id)===String(cur))||{}).name||''):'')+'" onchange="pickSt('+i+','+k+',this.value)">'; }
+    return h+'</div>';
+  }).join('');
 }
-function pickSt(i,name){ const s=LK.stations.find(x=>x.name===name); setRow(i,'stationId',s?s.id:''); if(name&&!s) toast('ไม่พบสถานีชื่อนี้ — เลือกจากรายการ',true); }
+function pickSt(i,k,name){ const s=LK.stations.find(x=>x.name===name), r=UP.rows[i]; if(!r) return;
+  const ids=(r.stationIds||[]).slice(); ids[k]=s?s.id:''; setRow(i,'stationIds',ids);
+  if(name&&!s) toast('ไม่พบสถานีชื่อนี้ — เลือกจากรายการ',true); }
+function qtyCell(r){
+  const ss=stopsOf(r), unit=(v,u)=>esc(v)+(/^\d+$/.test(v)?' '+u:'');
+  if(ss.length>1&&ss.some(s=>s.pallets||s.cases)) return ss.map((s,k)=>'<div class="stop"><b>'+(k+1)+'.</b> '+(s.pallets?unit(s.pallets,'เลท')+' ':'')+(s.cases?unit(s.cases,'ลัง'):'')+'</div>').join('');
+  return (r.pallets?unit(r.pallets,'เลท'):'')+(r.cases?'<span class="how">'+unit(r.cases,'ลัง')+'</span>':'');
+}
 function helperCell(hs,time){
   if(!hs||!hs.length) return '<span class="how">ไม่มี</span>';
   return hs.map(h=>'<span class="tag'+(h.outside?' out':'')+'">'+esc(h.name)+(h.outside?' · นอก':'')+'</span>').join('')+(time?'<span class="how">นัด '+esc(time)+'</span>':'');
@@ -162,9 +175,9 @@ function jobRows(list,edit){
       +'<td>'+esc(r.truck_group||'')+'<span class="how">'+esc(r.plate||r.plate_raw)+'</span></td>'
       +'<td'+c('driver_code')+'>'+drvCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
       +'<td'+c('job_text')+'>'+esc(r.job_text)+(r.extras?'<span class="how">+ '+esc(r.extras)+'</span>':'')+'</td>'
-      +'<td'+c('station_id')+'>'+stCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
+      +'<td'+c('stops')+'>'+stCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
       +'<td'+c('unload_time')+'>'+esc(r.unload_time||'—')+'</td>'
-      +'<td'+c('pallets')+'>'+(r.pallets?esc(r.pallets)+(/^\d+$/.test(r.pallets)?' เลท':''):'')+(r.cases?'<span class="how">'+esc(r.cases)+(/^\d+$/.test(r.cases)?' ลัง':'')+'</span>':'')+'</td>'
+      +'<td'+(cf.indexOf('pallets')>=0||cf.indexOf('cases')>=0?' class="cf"':'')+'>'+qtyCell(r)+'</td>'
       +'<td'+c('unload_fee_text')+'>'+esc(r.unload_fee_text||'')+'</td>'
       +'<td'+c('helper_txt')+'>'+helperCell(r.helpers,r.helper_time)+'</td>'
       +'<td>'+(edit?'<span class="tag'+(r.kind==='add'?' ok':r.kind==='del'?' bad':'')+'">'+KIND[r.kind]+'</span>'+(r.txt?'<span class="how">'+esc(r.txt)+'</span>':''):'<span class="tag">'+esc(STAT[r.status]||r.status)+'</span>'+(r.cancelled?'<span class="tag bad">ยกเลิก</span>':''))+'</td>'
@@ -180,7 +193,7 @@ function render(){
     h+='<div class="card"><div class="row"><b style="font-size:15px">ตรวจไฟล์ '+esc(UP.fileName)+'</b><span class="tag">วันที่ '+thDate(d.date)+'</span><span class="tag">'+esc(d.revName)+'</span>'+(d.dispatched?'<span class="tag out">แจกงานแล้ว — บันทึกฉบับนี้ระบบจะส่งการ์ดเฉพาะงานที่เปลี่ยน (ขั้นถัดไป)</span>':'')+'</div>'
       +'<div class="kpis"><div class="kpi"><b>'+c.picked+'</b><span>งานที่จะสร้าง (จาก '+c.rows+' แถวรถ PK)</span></div>'
       +'<div class="kpi'+(c.noDriver?' bad':'')+'"><b>'+c.noDriver+'</b><span>หาคนขับไม่เจอ (ต้องแก้)</span></div>'
-      +'<div class="kpi'+(c.noStation?' warn':'')+'"><b>'+c.noStation+'</b><span>ยังไม่ผูกค่ากลาง'+(c.day?' (+ รายวัน '+c.day+')':'')+'</span></div>'
+      +'<div class="kpi'+(c.noStation?' warn':'')+'"><b>'+c.noStation+'</b><span>ยังไม่ผูกค่ากลาง (ครบทุกจุด)'+(c.multi?' · หลายจุด '+c.multi+' งาน':'')+(c.day?' · รายวัน '+c.day:'')+'</span></div>'
       +'<div class="kpi'+(c.noLine?' warn':'')+'"><b>'+c.noLine+'</b><span>คนขับยังไม่เปิด LINE</span></div>'
       +(d.isNew?'':'<div class="kpi"><b>+'+c.add+' / ~'+c.chg+' / −'+c.del+'</b><span>ใหม่ / แก้ / ตัดออก</span></div>')+'</div>'
       +'<div class="note">ติ๊ก "สร้าง" = ให้ระบบสร้างงานให้คนขับ (ระบบติ๊กให้ตามกติกา: รอมีงาน/ซ่อม/ลา/ออกเวร/รถสแปร์/เป็นเด็กรถ/ลงปูน/ซื้อของ = ไม่ติ๊ก · แสปร์ดับเพลิง = ติ๊ก ค่าแรงรายวัน) · เลือกคนขับ/สถานีเองครั้งเดียว ระบบจำไว้ใช้ครั้งหน้า · ปลายทางที่ยังไม่ผูก ค่าแรงจะคิดจากระยะจริง</div>'
@@ -194,9 +207,10 @@ function render(){
   if(plans.length) h+='<div class="row" style="margin-top:10px">'+plans.map(p=>'<button class="chip'+(PLAN.plan&&PLAN.plan.id===p.id?' on':'')+'" onclick="load(\''+p.work_date+'\')">'+thDate(p.work_date)+(p.rev?' · R'+p.rev:'')+(p.dispatched_at?' ✓':'')+'</button>').join('')+'</div>';
   if(PLAN&&PLAN.plan){
     const pl=PLAN.plan, js=PLAN.jobs||[], live=js.filter(j=>!j.cancelled);
+    const miss=live.filter(j=>j.pay_mode!=='day'&&(!stopsOf(j).length||stopsOf(j).some(s=>!s.station_id))).length;
     h+='<div class="kpis"><div class="kpi"><b>'+live.length+'</b><span>งาน · '+thDate(pl.work_date)+'</span></div>'
       +'<div class="kpi"><b>'+live.filter(j=>j.status==='accepted').length+'</b><span>คนขับรับงานแล้ว</span></div>'
-      +'<div class="kpi'+(live.filter(j=>!j.station_id).length?' warn':'')+'"><b>'+live.filter(j=>!j.station_id).length+'</b><span>ยังไม่ผูกค่ากลาง</span></div>'
+      +'<div class="kpi'+(miss?' warn':'')+'"><b>'+miss+'</b><span>ยังไม่ผูกค่ากลาง</span></div>'
       +'<div class="kpi"><b>'+(pl.rev?'Revised '+pl.rev:'ฉบับแรก')+'</b><span>'+((PLAN.revs||[]).slice(-1)[0]?esc(PLAN.revs.slice(-1)[0].uploaded_by_name||''):'')+'</span></div></div>'
       +'<div class="tw" style="margin-top:8px"><table>'+HEAD(false)+jobRows(js,false)+'</table></div>'
       +'<div class="sticky"><span class="note">ขั้นถัดไป: ปุ่ม "แจกงาน" ส่งการ์ดให้คนขับใน LINE → คนขับกดรับ → ระบบสร้างออเดอร์ (กำลังทำ)</span><span class="grow"></span><button class="btn" disabled title="กำลังทำ">📲 แจกงานทั้งวัน</button></div>';
