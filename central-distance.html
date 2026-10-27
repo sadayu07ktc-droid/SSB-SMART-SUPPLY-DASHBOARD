@@ -619,6 +619,16 @@ async function doImport(){
 const DTC_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dtc-central';
 let DTC=null, DTC_F='all', DTC_DAYS=90, DTC_Y=0;
 let DTC_KIND='st', DTC_P=null, DTC_PF='all', DTC_CHG_ALL=0;   // st = โรงงาน ↔ ปลายทาง · pair = ปลายทาง ↔ ปลายทาง (งานหลายจุด · คุณน้อง 27 ต.ค.)
+/* ค้างคืนก่อนกลับโรงงาน (Edge nights: วันที่กลับ − วันที่ออก เวลาไทย · คุณน้อง 27 ต.ค.) */
+const dtcNightTx=x=>!x?'':x.mode>0?'🌙 ส่วนใหญ่ค้าง '+x.mode+' คืน':(x.max>0?'🌙 บางเที่ยวค้างคืน':'');
+function dtcNightBox(x){
+  if(!x)return '';
+  const D=x.dist||{}, ks=Object.keys(D).map(Number).sort((a,b)=>a-b);
+  return '<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">🌙 <b>ค้างคืนก่อนกลับโรงงาน</b> · '
+    +(x.mode>0?'ส่วนใหญ่ <b style="font-size:15px;color:var(--txt)">'+x.mode+' คืน</b>':'ส่วนใหญ่ <b style="color:var(--txt)">ไป-กลับวันเดียว</b>')+(x.max>x.mode?' · นานสุด '+x.max+' คืน':'')+'<br>'
+    +ks.map(k=>(k?k+' คืน':'วันเดียว')+' '+D[k]+' เที่ยว').join(' · ')
+    +'<br><span style="font-size:11px">นับจากวันที่ออกโรงงาน ถึงวันที่กลับเข้าโรงงาน (เวลาไทย) · '+(x.direct?'ใช้เที่ยวที่ไปจุดนี้จุดเดียว':'มีแต่เที่ยวแวะหลายจุด')+' · '+x.n+' เที่ยว</span></div></div>';
+}
 /* เวลาดึงข้อมูลล่าสุด (cron 02:30 ดึงของเมื่อวาน) */
 const dtcUpd=d=>d&&d.updatedAt?' · อัปเดต '+new Date(d.updatedAt).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'})+' น.':'';
 /* รูทที่เปลี่ยนเยอะ = ค่ากลาง 30 วันล่าสุด ต่างจากช่วงที่เลือกเกิน 5% (Edge recent) · ขึ้นแถวบนสุด (คุณน้อง 27 ต.ค.) */
@@ -674,11 +684,12 @@ function dtcList(){
   $('dtcSub').textContent='เที่ยวจริงจาก GPS '+(DTC.days>=800?'ทั้งหมด':DTC.days>=365?'1 ปีล่าสุด':DTC.days+' วันล่าสุด')+' · มีข้อมูล '+dtcTh(DTC.from)+' – '+dtcTh(DTC.to)+dtcUpd(DTC);
   const R=DTC.routes||[], cnt={all:R.length,has:0,none:0,bad:0};
   R.forEach(r=>{const l=dtcLvl(r);if(l==='none')cnt.none++;else{cnt.has++;if(l==='bad')cnt.bad++;}});
+  cnt.night=R.filter(r=>r.nights&&r.nights.mode>0).length;
   let h=dtcChgBox(DTC,r=>r.station,'dtcOpen')+dtcKindSeg()+'<div class="note" style="margin-bottom:10px">ค่ากลาง = เฉลี่ยของ <b>มัธยฐานขาไป</b> (ออก SSB → สถานี) กับ <b>มัธยฐานขากลับ</b> (สถานี → เข้า SSB) · นับจาก<b>ป้อมยาม SSB</b> ถ้ารถไม่ผ่านป้อมยามใช้จุดอื่นในโรงงาน (ลานจอด/ห้องชั่ง/จุดโหลด) · ใช้<b>เที่ยววิ่งตรง</b> (ไม่จอดที่อื่นเกิน 15 นาทีระหว่างทาง) · ตัดค่าผิดปกติออกก่อน · แตะสถานีเพื่อดูเที่ยวที่เอามาคิด</div>'
     +'<div class="dr-tools"><input class="search" id="dtcQ" placeholder="🔎 ค้นสถานี…" oninput="dtcRows()" aria-label="ค้นสถานี">'
     +dtcDaySeg()+'</div>'
     +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
-    +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
+    +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง'],['night','🌙 ค้างคืน']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
     +'<div class="dr-tools"><button type="button" class="btn sm ghost" onclick="dtcMonthly()">📅 รายงานรายเดือน</button>'
     +'<button type="button" class="btn sm" style="background:#1d6f42" onclick="dtcXDown(this)">⬇️ ดาวน์โหลด Excel</button>'
     +'<label class="btn sm ghost" for="dtcFile" style="display:inline-block">⬆️ อัปโหลดที่แก้แล้ว</label>'
@@ -694,6 +705,7 @@ function dtcRows(){
   if(DTC_F==='has')R=R.filter(r=>dtcLvl(r)!=='none');
   if(DTC_F==='none')R=R.filter(r=>dtcLvl(r)==='none');
   if(DTC_F==='bad')R=R.filter(r=>dtcLvl(r)==='bad');
+  if(DTC_F==='night')R=R.filter(r=>r.nights&&r.nights.mode>0).sort((a,b)=>b.nights.mode-a.nights.mode||b.trips-a.trips);
   if(q)R=R.filter(r=>norm(r.station+' '+(r.current?r.current.station+' '+r.current.by:'')).indexOf(q)>=0);
   if(!R.length){$('dtcRows').innerHTML='<div class="empty">'+(DTC.routes&&DTC.routes.length?'ไม่พบสถานีที่ตรงเงื่อนไข':'ยังไม่มีเที่ยวจาก DTC — ระบบกำลังดึงประวัติย้อนหลัง ลองใหม่ภายหลัง')+'</div>';return;}
   $('dtcRows').innerHTML=R.map(r=>{
@@ -702,7 +714,8 @@ function dtcRows(){
       :'<span class="dpill '+l+'">'+(r.diff>0?'+':'')+nf(r.diff,0)+'</span><span>ตาราง '+nf(r.current.km,0)+'</span>';
     return '<div class="dr-row" tabindex="0" role="button" onclick="dtcOpen('+r._i+')" onkeydown="if(event.key===\'Enter\')dtcOpen('+r._i+')">'
       +'<div style="min-width:0"><div class="st">'+esc(r.station)+'</div><div class="n">'+r.trips+' เที่ยว · ไป '+(r.out.median==null?'–':nf(r.out.median,1))+' / กลับ '+(r.back.median==null?'–':nf(r.back.median,1))
-        +(one?' · <span style="color:var(--warn)">มีขาเดียว</span>':'')+((r.out.median!=null&&!r.out.direct)||(r.back.median!=null&&!r.back.direct)?' · <span style="color:var(--warn)">มีแต่เที่ยวแวะ</span>':'')+'</div></div>'
+        +(one?' · <span style="color:var(--warn)">มีขาเดียว</span>':'')+((r.out.median!=null&&!r.out.direct)||(r.back.median!=null&&!r.back.direct)?' · <span style="color:var(--warn)">มีแต่เที่ยวแวะ</span>':'')
+        +(r.nights&&r.nights.max>0?' · <span style="color:var(--accent)">'+dtcNightTx(r.nights)+'</span>':'')+'</div></div>'
       +'<div class="v"><b>'+nf(r.central,0)+'</b><span>กม.</span></div>'
       +'<div class="v">'+cur+'</div></div>';
   }).join('');
@@ -726,6 +739,7 @@ async function dtcOpen(i){
     +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีขาเดียว ใช้ขานั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b>'
     +(r.current&&r.current.km!=null?'<br>ในตาราง: <b>'+esc(r.current.station)+'</b> '+nf(r.current.km,0)+' กม. ('+esc(r.current.by)+') · ต่าง '+(r.diff>0?'+':'')+nf(r.diff,0)+' กม.':(r.current?'<br>ผูก '+esc(r.current.by)+' แต่ยังไม่มีแถวในตาราง':'<br>ยังไม่มีสถานีนี้ในตาราง'))+'</div>'
     +'<div class="dact" style="margin-top:10px">'+(r.current&&r.current.id?'<button class="btn sm" onclick="dtcUse('+i+')">ใช้ค่านี้แก้ในตาราง</button>':'<button class="btn sm" onclick="dtcUse('+i+')">+ เพิ่มเป็นสถานีใหม่</button>')+'</div></div>'
+    +dtcNightBox(r.nights)
     +tl(d.out,'ขาไป')+tl(d.back,'ขากลับ');
   $('dtcBody').innerHTML=h;
 }
@@ -841,6 +855,8 @@ const DTC_X={
     {k:'trips',h:'จำนวนเที่ยว',w:9,ro:1,get:r=>r.trips},
     {k:'out_med',h:'ขาไป มัธยฐาน',w:11,ro:1,get:r=>r.out.median==null?'':r.out.median},
     {k:'back_med',h:'ขากลับ มัธยฐาน',w:11,ro:1,get:r=>r.back.median==null?'':r.back.median},
+    {k:'nights',h:'ค้างคืน ส่วนใหญ่ (คืน)',w:11,ro:1,get:r=>r.nights?r.nights.mode:''},
+    {k:'nights_max',h:'ค้างคืน นานสุด (คืน)',w:11,ro:1,get:r=>r.nights?r.nights.max:''},
     {k:'cur_km',h:'ค่าในตาราง (กม.)',w:12,ro:1,get:r=>r.current&&r.current.km!=null?r.current.km:''},
     {k:'diff',h:'ต่าง (กม.)',w:9,ro:1,get:r=>r.diff==null?'':r.diff},
     {k:'station',h:'ชื่อสถานีในตาราง',w:34,req:1,get:r=>r.current&&r.current.id?r.current.station:r.station,
