@@ -613,6 +613,7 @@ async function doImport(){
  * เที่ยวจริงจาก GPS: ออกเขต SSB (ป้อมยามเป็นหลัก) → สถานี → กลับเขต SSB · ตัดค่าผิดปกติ (IQR) → มัธยฐานขาไป + ขากลับ → เฉลี่ยเป็นค่าเดียว */
 const DTC_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dtc-central';
 let DTC=null, DTC_F='all', DTC_DAYS=90, DTC_Y=0;
+let DTC_KIND='st', DTC_P=null;   // st = โรงงาน ↔ ปลายทาง · pair = ปลายทาง ↔ ปลายทาง (งานหลายจุด · คุณน้อง 27 ต.ค.)
 async function dtcGet(qs){
   const c=new AbortController(), t=setTimeout(()=>c.abort(),90000);
   try{const r=await fetch(DTC_EDGE+'?userId='+encodeURIComponent(MY_UID)+'&days='+DTC_DAYS+'&'+qs,{signal:c.signal});const d=await r.json();if(!d.success)throw new Error(d.error||'โหลดไม่ได้');return d;}
@@ -621,13 +622,21 @@ async function dtcGet(qs){
 }
 function openDtc(){
   $('dtcOv').classList.add('on');$('dtcDrw').classList.add('on');$('dtcDrw').setAttribute('aria-hidden','false');
-  if(DTC)dtcList(); else dtcLoad();
+  if(DTC_KIND==='pair'?DTC_P:DTC)dtcList(); else dtcLoad();
 }
+function dtcKind(k){DTC_KIND=k;DTC_Y=0;if(k==='pair'?DTC_P:DTC)dtcList();else dtcLoad();}
+const dtcKindSeg=()=>'<div class="dr-tools"><div class="seg" role="group" aria-label="ชนิดเส้นทาง">'
+  +[['st','🏭 โรงงาน ↔ ปลายทาง'],['pair','📍 ปลายทาง ↔ ปลายทาง']].map(k=>'<button type="button" class="'+(DTC_KIND===k[0]?'on':'')+'" onclick="dtcKind(\''+k[0]+'\')">'+k[1]+'</button>').join('')+'</div></div>';
+const dtcDaySeg=()=>'<div class="seg" role="group" aria-label="ช่วงเวลา">'+[[90,'90 วัน'],[180,'180 วัน'],[365,'1 ปี'],[800,'ทั้งหมด']].map(d=>'<button type="button" class="'+(DTC_DAYS===d[0]?'on':'')+'" onclick="DTC_DAYS='+d[0]+';DTC=null;DTC_P=null;dtcLoad()">'+d[1]+'</button>').join('')+'</div>';
 function closeDtc(){$('dtcOv').classList.remove('on');$('dtcDrw').classList.remove('on');$('dtcDrw').setAttribute('aria-hidden','true');}
 async function dtcLoad(){
   $('dtcBack').style.display='none';$('dtcT').textContent='📡 ค่ากลางจาก DTC';$('dtcSub').textContent='';
   $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังรวมเที่ยวจาก GPS ทุกคัน</div>';
-  try{DTC=await dtcGet('action=routes');(DTC.routes||[]).forEach(dtcRound);dtcList();}
+  try{
+    if(DTC_KIND==='pair'){DTC_P=await dtcGet('action=routes&kind=pair');(DTC_P.routes||[]).forEach(r=>{r.raw=r.central;r.central=dtcR(r.central);});}
+    else{DTC=await dtcGet('action=routes');(DTC.routes||[]).forEach(dtcRound);}
+    dtcList();
+  }
   catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcLoad()">↻ ลองใหม่</button></div>';}
 }
 /* ค่ากลางที่โชว์/ใช้ = ปัดเป็นกม.เต็ม (.5 ขึ้นไปปัดขึ้น ต่ำกว่าปัดลง · คุณน้อง 26 ต.ค.) · ส่วนต่างเทียบตารางคิดจากค่าที่ปัดแล้ว */
@@ -640,13 +649,14 @@ function dtcLvl(r){   // เทียบกับค่าในตาราง:
   return (a<=1||p<=.05)?'ok':p<=.15?'warn':'bad';
 }
 function dtcList(){
+  if(DTC_KIND==='pair')return dtcPairList();
   $('dtcBack').style.display='none';$('dtcT').textContent='📡 ค่ากลางจาก DTC';
   $('dtcSub').textContent='เที่ยวจริงจาก GPS '+(DTC.days>=800?'ทั้งหมด':DTC.days>=365?'1 ปีล่าสุด':DTC.days+' วันล่าสุด')+' · มีข้อมูล '+dtcTh(DTC.from)+' – '+dtcTh(DTC.to);
   const R=DTC.routes||[], cnt={all:R.length,has:0,none:0,bad:0};
   R.forEach(r=>{const l=dtcLvl(r);if(l==='none')cnt.none++;else{cnt.has++;if(l==='bad')cnt.bad++;}});
-  let h='<div class="note" style="margin-bottom:10px">ค่ากลาง = เฉลี่ยของ <b>มัธยฐานขาไป</b> (ออก SSB → สถานี) กับ <b>มัธยฐานขากลับ</b> (สถานี → เข้า SSB) · นับจาก<b>ป้อมยาม SSB</b> ถ้ารถไม่ผ่านป้อมยามใช้จุดอื่นในโรงงาน (ลานจอด/ห้องชั่ง/จุดโหลด) · ใช้<b>เที่ยววิ่งตรง</b> (ไม่จอดที่อื่นเกิน 15 นาทีระหว่างทาง) · ตัดค่าผิดปกติออกก่อน · แตะสถานีเพื่อดูเที่ยวที่เอามาคิด</div>'
+  let h=dtcKindSeg()+'<div class="note" style="margin-bottom:10px">ค่ากลาง = เฉลี่ยของ <b>มัธยฐานขาไป</b> (ออก SSB → สถานี) กับ <b>มัธยฐานขากลับ</b> (สถานี → เข้า SSB) · นับจาก<b>ป้อมยาม SSB</b> ถ้ารถไม่ผ่านป้อมยามใช้จุดอื่นในโรงงาน (ลานจอด/ห้องชั่ง/จุดโหลด) · ใช้<b>เที่ยววิ่งตรง</b> (ไม่จอดที่อื่นเกิน 15 นาทีระหว่างทาง) · ตัดค่าผิดปกติออกก่อน · แตะสถานีเพื่อดูเที่ยวที่เอามาคิด</div>'
     +'<div class="dr-tools"><input class="search" id="dtcQ" placeholder="🔎 ค้นสถานี…" oninput="dtcRows()" aria-label="ค้นสถานี">'
-    +'<div class="seg" role="group" aria-label="ช่วงเวลา">'+[[90,'90 วัน'],[180,'180 วัน'],[365,'1 ปี'],[800,'ทั้งหมด']].map(d=>'<button type="button" class="'+(DTC_DAYS===d[0]?'on':'')+'" onclick="DTC_DAYS='+d[0]+';dtcLoad()">'+d[1]+'</button>').join('')+'</div></div>'
+    +dtcDaySeg()+'</div>'
     +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
     +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
     +'<div class="dr-tools"><button type="button" class="btn sm ghost" onclick="dtcMonthly()">📅 รายงานรายเดือน</button>'
@@ -698,6 +708,52 @@ async function dtcOpen(i){
     +'<div class="dact" style="margin-top:10px">'+(r.current&&r.current.id?'<button class="btn sm" onclick="dtcUse('+i+')">ใช้ค่านี้แก้ในตาราง</button>':'<button class="btn sm" onclick="dtcUse('+i+')">+ เพิ่มเป็นสถานีใหม่</button>')+'</div></div>'
     +tl(d.out,'ขาไป')+tl(d.back,'ขากลับ');
   $('dtcBody').innerHTML=h;
+}
+/* 📍 ปลายทาง ↔ ปลายทาง — ออกจากจุดที่จอดจริง (≥ 15 นาที) → ถึงจุดที่จอดจริงถัดไป ในเที่ยวเดียวกัน (Edge kind=pair)
+ * ซ่อนคู่ที่ห่างกันไม่ถึง 1 กม. (หมุดซ้อนที่เดียวกัน เช่น อู่ QSPD 2 หมุด) */
+function dtcPairList(){
+  $('dtcBack').style.display='none';$('dtcT').textContent='📡 ค่ากลางจาก DTC';
+  $('dtcSub').textContent='ปลายทาง ↔ ปลายทาง · เที่ยวจริงจาก GPS '+(DTC_P.days>=800?'ทั้งหมด':DTC_P.days>=365?'1 ปีล่าสุด':DTC_P.days+' วันล่าสุด')+' · มีข้อมูล '+dtcTh(DTC_P.from)+' – '+dtcTh(DTC_P.to);
+  const tiny=(DTC_P.routes||[]).filter(r=>r.raw<1).length;   // ดูค่าก่อนปัด (0.6 ปัดเป็น 1 แต่ยังเป็นหมุดซ้อนที่เดียวกัน)
+  $('dtcBody').innerHTML=dtcKindSeg()
+    +'<div class="note" style="margin-bottom:10px">สำหรับงานหลายจุด เช่น ลาน → สวนบิ๊กแกลง · 7-11 → LOSCAM · นับจาก<b>ออกจุดที่จอดจริง</b> (จอด 15 นาทีขึ้นไป) ถึง<b>จุดที่จอดถัดไป</b> ในเที่ยวเดียวกัน · ผ่านหมุดเฉยๆ ไม่นับ · ค่ากลาง = เฉลี่ยมัธยฐาน 2 ทิศ (มีทิศเดียว = ใช้ทิศนั้น) · ตัดค่าผิดปกติก่อน'
+    +(tiny?' · ซ่อน '+tiny+' คู่ที่ห่างกันไม่ถึง 1 กม. (หมุดซ้อนที่เดียวกัน)':'')+'</div>'
+    +'<div class="dr-tools"><input class="search" id="dtcQ" placeholder="🔎 ค้นจุด เช่น LOSCAM / บิ๊กแกลง…" oninput="dtcPairRows()" aria-label="ค้นจุด">'+dtcDaySeg()+'</div>'
+    +'<div class="dr-tools"><button type="button" class="btn sm ghost" onclick="dtcMonthly()">📅 รายงานรายเดือน</button>'
+    +'<span class="note">ตารางค่ากลางยังเก็บได้แค่ โรงงาน ↔ ปลายทาง — ระยะคู่นี้ไว้ดูประกอบก่อน</span></div>'
+    +'<div id="dtcRows"></div>';
+  dtcPairRows(); $('dtcBody').scrollTop=DTC_Y;
+}
+function dtcPairRows(){
+  const q=norm(($('dtcQ')||{}).value);
+  let R=(DTC_P.routes||[]).map((r,i)=>Object.assign({_i:i},r)).filter(r=>r.raw>=1);
+  if(q)R=R.filter(r=>norm(r.a+' '+r.b).indexOf(q)>=0);
+  if(!R.length){$('dtcRows').innerHTML='<div class="empty">ไม่พบคู่จุดที่ตรงเงื่อนไข</div>';return;}
+  const md=v=>v==null?'–':nf(v,1);
+  $('dtcRows').innerHTML=R.map(r=>'<div class="dr-row" tabindex="0" role="button" onclick="dtcPairOpen('+r._i+')" onkeydown="if(event.key===\'Enter\')dtcPairOpen('+r._i+')" style="grid-template-columns:minmax(0,1fr) 78px">'
+    +'<div style="min-width:0"><div class="st">'+esc(r.a)+' <span style="color:var(--txt2)">↔</span> '+esc(r.b)+'</div>'
+    +'<div class="n">'+r.trips+' เที่ยว · → '+md(r.out.median)+' / ← '+md(r.back.median)+(r.out.median==null||r.back.median==null?' · <span style="color:var(--warn)">มีทิศเดียว</span>':'')+'</div></div>'
+    +'<div class="v"><b>'+nf(r.central,0)+'</b><span>กม.</span></div></div>').join('');
+}
+async function dtcPairOpen(i){
+  const r=DTC_P.routes[i]; if(!r)return;
+  DTC_Y=$('dtcBody').scrollTop;
+  $('dtcBack').style.display='';$('dtcBack').onclick=dtcList;$('dtcT').textContent=r.a+' ↔ '+r.b;
+  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,0)+' กม. · '+r.trips+' เที่ยว';
+  $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดเที่ยว</div>';$('dtcBody').scrollTop=0;
+  let d; try{d=await dtcGet('action=trips&kind=pair&key='+encodeURIComponent(r.key));}
+  catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcPairOpen('+i+')">↻ ลองใหม่</button></div>';return;}
+  const legBox=(k,x)=>{const L=x.list||[],used=L.filter(t=>t.used).length;
+    return '<div class="leg"><div class="k">'+esc(k)+'</div><div class="v">'+(x.median==null?'–':nf(x.median,2))+'</div><div class="s">มัธยฐาน '+used+' จาก '+L.length+' เที่ยว</div></div>';};
+  const tl=(x,ttl)=>{const L=x.list||[]; if(!L.length)return '';
+    return '<div class="tsec">'+esc(ttl)+'<span>'+L.filter(t=>t.used).length+' ใช้ · '+L.filter(t=>!t.used).length+' ตัดทิ้ง'+(x.lo!=null?' · ช่วงปกติ '+nf(Math.max(0,x.lo),1)+'–'+nf(x.hi,1):'')+'</span></div>'
+      +L.map(t=>'<div class="tr'+(t.used?'':' cut')+'"><div class="km">'+nf(t.km,2)+'</div>'
+        +'<div style="min-width:0"><div>'+esc(t.plate)+'</div><small>'+new Date(t.at).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+'</small></div>'
+        +'<div style="text-align:right">'+(t.used?'<span class="dpill ok">ใช้</span>':'<span class="dpill bad">'+esc(t.why)+'</span>')+'</div></div>').join('');};
+  const ab=d.a+' → '+d.b, ba=d.b+' → '+d.a;
+  $('dtcBody').innerHTML='<div class="legs">'+legBox(ab+' (กม.)',d.out)+legBox(ba+' (กม.)',d.back)+'</div>'
+    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีทิศเดียว ใช้ทิศนั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b></div></div>'
+    +tl(d.out,ab)+tl(d.back,ba);
 }
 /* 📅 รายงานเทียบรายเดือน (cron วันที่ 1 · ต่างเกิน 5% และ ≥ 5 เที่ยว · แจ้ง LINE DEV) */
 const MTH=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
