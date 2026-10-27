@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>แจกงาน Packing · SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261014a"></script>
+<script src="ssb-pin-gate.js?v=20261009a"></script>
+<style>
+  :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--accent:#0d6efd;--warn:#b8860b;--danger:#c8352f;--gold1:#a77b12;--gold2:#d4a72c}
+  @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--accent:#4a9bff;--warn:#e0b84a;--danger:#e5645d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 40px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 14px}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+  h1{font-size:17px;margin:0}.sub{font-size:12px;color:var(--txt2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .grow{flex:1}
+  .btn{padding:10px 18px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .btn.gold{background:linear-gradient(135deg,var(--gold1),var(--gold2))}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt2);font-weight:500}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--card);color:var(--txt);font:inherit;font-size:13px;cursor:pointer}
+  .chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0 4px}
+  .kpi{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.kpi span{font-size:11.5px;color:var(--txt2)}
+  .kpi.bad b{color:var(--danger)} .kpi.warn b{color:var(--warn)}
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+  th{background:var(--card2);font-size:11.5px;color:var(--txt2);font-weight:600;white-space:nowrap;position:sticky;top:0}
+  tr.skip td{opacity:.5} tr.del td{background:rgba(200,53,47,.07);text-decoration:line-through}
+  tr.add td:first-child{box-shadow:inset 3px 0 var(--primary)} tr.chg td:first-child{box-shadow:inset 3px 0 var(--warn)}
+  td.cf{background:rgba(184,134,11,.13)}
+  .how{font-size:10.5px;color:var(--txt2);display:block}
+  .miss{color:var(--danger);font-weight:600}
+  .tag{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--txt2);margin:1px 2px 0 0}
+  .tag.out{color:var(--warn);border-color:var(--warn)} .tag.bad{color:var(--danger);border-color:var(--danger)} .tag.ok{color:var(--primary);border-color:var(--primary)}
+  select,input[list]{font:inherit;font-size:12.5px;padding:4px 6px;border:1px solid var(--line2);border-radius:7px;background:var(--card2);color:var(--txt);max-width:230px}
+  .note{font-size:12px;color:var(--txt2);line-height:1.7}
+  .msg{text-align:center;color:var(--txt2);padding:30px}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:50;opacity:0;transition:.3s;pointer-events:none;max-width:92vw}
+  .toast.on{opacity:1}.toast.err{background:var(--danger)}
+  .sticky{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 0 0;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
+    <div class="logo">📦</div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-27a</span></div></div>
+  </div>
+  <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
+</div>
+<input type="file" id="file" accept=".xlsx,.xls" hidden>
+<div class="toast" id="toast"></div>
+<script>
+const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-plan';
+const LIFF_ID='2010274217-Ot7vGhri';
+let MY_UID='', ME=null, PLAN=null, LK=null, UP=null, BUSY=false;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const S=x=>String(x==null?'':x).replace(/\s+/g,' ').trim();
+function toast(t,err){const e=$('toast');e.textContent=t;e.className='toast on'+(err?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>e.className='toast',3200);}
+const thDate=iso=>{const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);return m?(+m[3])+'/'+(+m[2])+'/'+(+m[1]+543):'—';};
+async function get(a,extra){const r=await fetch(EDGE+'?action='+a+'&userId='+encodeURIComponent(MY_UID)+(extra||''));return r.json();}
+async function post(b){const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},b))});return r.json();}
+
+/* ── อ่านไฟล์รายวัน (SheetJS) · คอลัมน์ A=0: ล้อ · ชื่อ · นามสกุล · ทะเบียน · ลูกค้า · เวลาลง · พาเลท · ลัง · ค่าลง · เด็กรถ · นัดเด็กรถ ──
+   ⚙️ กติกาเดียวกับที่ทดสอบกับไฟล์ ก.ย. 69 (ตรง 403/439) · ห้ามใช้ \b กับภาษาไทย */
+const PK_GROUPS=/^(4 ?ล้อ|6 ?ล้อ|10 ?ล้อ)/;   // เฉพาะรถ PK (คุณน้อง 27 ต.ค.) · ไม่เอา ขนส่งนอก / รถฝ่ายไร่
+const NOJOB=/^(รอมีงาน|ออกเวร|รถสแปร์|สแปร์|แสปร์|ซ่อม|กลับจาก|ลา(\s|$|ป่วย|กิจ|พัก|บวช|คลอด)|หางผ้าใบสแปร์|หยุด|พักร้อน|เป็นเด็กรถ|แป็นเด็กรถ|เรียนงาน|ขาดงาน|ติดแอร์|ติดพัดลม|ติดฟิล์ม|ทำกระจก|ล้างรถ|ต่อภาษี|ต่อทะเบียน|ตรวจสภาพ|เช็คระยะ|ลงปูน|ซื้อของ|ลากหาง|\.+$|-+$)/;
+const DAY_JOB=/ดับเพลิง|ดับพลิง/;   // แสปร์ดับเพลิง = งานกดรับ ค่าแรงรายวัน (คุณน้อง 27 ต.ค.) · = pk-plan DAY_JOB
+function parseSheet(aoa){
+  let date='';
+  for(const r of aoa.slice(0,4)){ const m=r.map(S).join(' ').match(/(\d{1,2})\.(\d{1,2})\.(25\d\d|20\d\d)/); if(m){ let y=+m[3]; if(y>2400)y-=543; date=y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); break; } }
+  const rows=[]; let g='',start=false,last=null;
+  aoa.forEach((c,i)=>{
+    const line=c.map(S).join(' ');
+    if(/รายชื่อเด็กรถ/.test(line)){ start=null; return; }
+    if(start===null) return;
+    if(!start){ if(/ทะเบียนรถ/.test(line)&&/ลูกค้า/.test(line)) start=true; return; }
+    if(S(c[0])) g=S(c[0]);
+    const plate=S(c[3]), job=S(c[4]);
+    if(!plate&&S(c[9])&&last){ last.helpers.push(S(c[9])); return; }
+    last=null;
+    if(!plate||!PK_GROUPS.test(g)||!job) return;
+    last={row:i+1,group:g,name:S(S(c[1])+' '+S(c[2])).replace(/^\.+\s*/,''),plate,job,time:S(c[5]),pallet:S(c[6]),cases:S(c[7]),fee:S(c[8]),helpers:S(c[9])?[S(c[9])]:[],helperTime:S(c[10]),pick:DAY_JOB.test(job)||!NOJOB.test(job)};
+    rows.push(last);
+  });
+  return {date,rows};
+}
+function xlsxLib(){ if(window.XLSX) return Promise.resolve(window.XLSX);
+  return new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';s.onload=()=>ok(window.XLSX);s.onerror=()=>no(new Error('โหลดตัวอ่าน Excel ไม่ได้'));document.head.appendChild(s);}); }
+async function onFile(f){
+  if(!f) return;
+  try{
+    const X=await xlsxLib(), wb=X.read(await f.arrayBuffer(),{type:'array'});
+    const aoa=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
+    const p=parseSheet(aoa);
+    if(!p.date) return toast('อ่านวันที่ไม่ได้ — แถวบนสุดต้องมีวันที่ เช่น "อังคาร 1.9.2569"',true);
+    if(!p.rows.length) return toast('ไม่พบรถ PK ในไฟล์ — ใช้ไฟล์ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน"',true);
+    UP={fileName:f.name,date:p.date,rows:p.rows,pv:null};
+    await runPreview();
+  }catch(e){ toast('อ่านไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
+}
+async function runPreview(){
+  if(!UP) return;
+  const d=await post({action:'preview',date:UP.date,fileName:UP.fileName,rows:UP.rows});
+  if(!d.ok){ toast('❌ '+(d.error||'ตรวจไฟล์ไม่สำเร็จ'),true); if(!UP.pv){UP=null;} return; }
+  UP.pv=d; render();
+}
+function setRow(i,k,v){ const r=UP.rows[i]; if(!r) return; r[k]=v; clearTimeout(setRow._t); setRow._t=setTimeout(runPreview,250); }
+async function saveUp(b){
+  if(BUSY||!UP||!UP.pv) return; BUSY=true; b.disabled=true; b.textContent='กำลังบันทึก…';
+  try{
+    const d=await post({action:'commit',date:UP.date,fileName:UP.fileName,rows:UP.rows});
+    if(!d.ok){ toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); if(d.table){UP.pv=d;render();} return; }
+    toast('✅ บันทึกแพลน '+thDate(UP.date)+' '+d.revName+' แล้ว'+(d.remembered?' · จำการจับคู่ '+d.remembered+' รายการ':''));
+    const date=UP.date; UP=null; await load(date);
+  }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดใหม่ให้ตรวจ',true); }
+  finally{ BUSY=false; }
+}
+
+/* ── วาด ── */
+const howTag=h=>h?'<span class="how">'+esc(h)+'</span>':'';
+function drvCell(r,i,edit){
+  const nm=r.driver_name?esc(r.driver_name)+(r.driver_active?'':' <span class="tag bad" title="ยังไม่ได้เปิดใช้ LINE — จะไม่ได้การ์ดงาน">LINE ยังไม่เปิด</span>'):'<span class="miss">❌ หาไม่เจอ</span>';
+  let h=nm+'<span class="how">ในไฟล์: '+esc(r.driver_raw||'—')+(r.driver_how?' · '+esc(r.driver_how):'')+'</span>';
+  if(edit&&LK){ const cur=UP.rows[i].driverCode||'';
+    h+='<select aria-label="เลือกคนขับ" onchange="setRow('+i+',\'driverCode\',this.value)"><option value="">'+(r.driver_code?'— เปลี่ยนคนขับ —':'— เลือกคนขับ —')+'</option>'
+      +LK.drivers.map(d=>'<option value="'+esc(d.code)+'"'+(d.code===cur?' selected':'')+'>'+esc(d.name)+' · '+esc(d.group)+(d.active?'':' (LINE ยังไม่เปิด)')+'</option>').join('')+'</select>'; }
+  return h;
+}
+function stCell(r,i,edit){
+  if(r.pay_mode==='day') return '<span class="tag out">ค่าแรงรายวัน</span><span class="how">ไม่มีปลายทาง · ไม่ต้องผูกค่ากลาง</span>';
+  let h=r.station_name?esc(r.station_name)+(r.station_km?' <span class="tag">'+esc(r.station_km)+' กม.</span>':''):'<span class="miss">ยังไม่ผูกค่ากลาง</span>';
+  h+=howTag(r.station_how);
+  if(edit&&LK){ const cur=UP.rows[i].stationId||'';
+    h+='<input list="stList" placeholder="พิมพ์ค้นสถานี…" aria-label="เลือกสถานีค่ากลาง" value="'+esc(cur?((LK.stations.find(s=>String(s.id)===String(cur))||{}).name||''):'')+'" onchange="pickSt('+i+',this.value)">'; }
+  return h;
+}
+function pickSt(i,name){ const s=LK.stations.find(x=>x.name===name); setRow(i,'stationId',s?s.id:''); if(name&&!s) toast('ไม่พบสถานีชื่อนี้ — เลือกจากรายการ',true); }
+function helperCell(hs,time){
+  if(!hs||!hs.length) return '<span class="how">ไม่มี</span>';
+  return hs.map(h=>'<span class="tag'+(h.outside?' out':'')+'">'+esc(h.name)+(h.outside?' · นอก':'')+'</span>').join('')+(time?'<span class="how">นัด '+esc(time)+'</span>':'');
+}
+const KIND={add:'ใหม่',chg:'แก้ไข',same:'เหมือนเดิม',del:'ตัดออก',skip:'ไม่สร้างงาน'};
+function jobRows(list,edit){
+  return list.map((r,i)=>{
+    const cf=r.cf||[], c=k=>cf.indexOf(k)>=0?' class="cf"':'';
+    const idx=edit?UP.rows.findIndex(x=>x.row===r.excel_row):-1;
+    return '<tr class="'+esc(r.kind||'')+'">'
+      +(edit?'<td>'+(r.kind==='del'?'':'<input type="checkbox" aria-label="สร้างงาน" '+(r.pick?'checked':'')+' onchange="setRow('+idx+',\'pick\',this.checked)">')+'</td>':'')
+      +'<td>'+esc(r.truck_group||'')+'<span class="how">'+esc(r.plate||r.plate_raw)+'</span></td>'
+      +'<td'+c('driver_code')+'>'+drvCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
+      +'<td'+c('job_text')+'>'+esc(r.job_text)+(r.extras?'<span class="how">+ '+esc(r.extras)+'</span>':'')+'</td>'
+      +'<td'+c('station_id')+'>'+stCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
+      +'<td'+c('unload_time')+'>'+esc(r.unload_time||'—')+'</td>'
+      +'<td'+c('pallets')+'>'+(r.pallets?esc(r.pallets)+(/^\d+$/.test(r.pallets)?' เลท':''):'')+(r.cases?'<span class="how">'+esc(r.cases)+(/^\d+$/.test(r.cases)?' ลัง':'')+'</span>':'')+'</td>'
+      +'<td'+c('unload_fee_text')+'>'+esc(r.unload_fee_text||'')+'</td>'
+      +'<td'+c('helper_txt')+'>'+helperCell(r.helpers,r.helper_time)+'</td>'
+      +'<td>'+(edit?'<span class="tag'+(r.kind==='add'?' ok':r.kind==='del'?' bad':'')+'">'+KIND[r.kind]+'</span>'+(r.txt?'<span class="how">'+esc(r.txt)+'</span>':''):'<span class="tag">'+esc(STAT[r.status]||r.status)+'</span>'+(r.cancelled?'<span class="tag bad">ยกเลิก</span>':''))+'</td>'
+      +'</tr>';
+  }).join('');
+}
+const STAT={new:'ยังไม่แจก',sent:'แจกแล้ว · รอรับ',accepted:'รับงานแล้ว',started:'เริ่มงาน',done:'เสร็จ'};
+const HEAD=edit=>'<tr>'+(edit?'<th>สร้าง</th>':'')+'<th>รถ</th><th>คนขับ</th><th>งาน (ตามไฟล์)</th><th>ปลายทาง (ค่ากลาง)</th><th>เวลาลง</th><th>พาเลท/ลัง</th><th>ค่าลง</th><th>เด็กรถ</th><th>'+(edit?'เทียบฉบับก่อน':'สถานะ')+'</th></tr>';
+function render(){
+  let h='';
+  if(UP&&UP.pv){
+    const d=UP.pv, c=d.counts;
+    h+='<div class="card"><div class="row"><b style="font-size:15px">ตรวจไฟล์ '+esc(UP.fileName)+'</b><span class="tag">วันที่ '+thDate(d.date)+'</span><span class="tag">'+esc(d.revName)+'</span>'+(d.dispatched?'<span class="tag out">แจกงานแล้ว — บันทึกฉบับนี้ระบบจะส่งการ์ดเฉพาะงานที่เปลี่ยน (ขั้นถัดไป)</span>':'')+'</div>'
+      +'<div class="kpis"><div class="kpi"><b>'+c.picked+'</b><span>งานที่จะสร้าง (จาก '+c.rows+' แถวรถ PK)</span></div>'
+      +'<div class="kpi'+(c.noDriver?' bad':'')+'"><b>'+c.noDriver+'</b><span>หาคนขับไม่เจอ (ต้องแก้)</span></div>'
+      +'<div class="kpi'+(c.noStation?' warn':'')+'"><b>'+c.noStation+'</b><span>ยังไม่ผูกค่ากลาง'+(c.day?' (+ รายวัน '+c.day+')':'')+'</span></div>'
+      +'<div class="kpi'+(c.noLine?' warn':'')+'"><b>'+c.noLine+'</b><span>คนขับยังไม่เปิด LINE</span></div>'
+      +(d.isNew?'':'<div class="kpi"><b>+'+c.add+' / ~'+c.chg+' / −'+c.del+'</b><span>ใหม่ / แก้ / ตัดออก</span></div>')+'</div>'
+      +'<div class="note">ติ๊ก "สร้าง" = ให้ระบบสร้างงานให้คนขับ (ระบบติ๊กให้ตามกติกา: รอมีงาน/ซ่อม/ลา/ออกเวร/รถสแปร์/เป็นเด็กรถ/ลงปูน/ซื้อของ = ไม่ติ๊ก · แสปร์ดับเพลิง = ติ๊ก ค่าแรงรายวัน) · เลือกคนขับ/สถานีเองครั้งเดียว ระบบจำไว้ใช้ครั้งหน้า · ปลายทางที่ยังไม่ผูก ค่าแรงจะคิดจากระยะจริง</div>'
+      +'<div class="tw" style="margin-top:10px"><table>'+HEAD(true)+jobRows(d.table,true)+'</table></div>'
+      +'<div class="sticky"><button class="btn ghost" onclick="UP=null;render()">ยกเลิก</button><span class="grow"></span>'
+      +'<button class="btn" onclick="saveUp(this)"'+(c.noDriver||!c.picked||d.unchanged?' disabled':'')+'>💾 บันทึกแพลน '+esc(d.revName)+' ('+c.picked+' งาน)</button></div></div>';
+  }
+  h+='<div class="card"><div class="row"><b style="font-size:15px">แพลนที่บันทึกแล้ว</b><span class="grow"></span>'
+    +(ME&&ME.canEdit?'<button class="btn gold" onclick="$(\'file\').click()">⬆ อัปโหลดใบแจ้งงานประจำวัน</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
+  const plans=(PLAN&&PLAN.plans)||[];
+  if(plans.length) h+='<div class="row" style="margin-top:10px">'+plans.map(p=>'<button class="chip'+(PLAN.plan&&PLAN.plan.id===p.id?' on':'')+'" onclick="load(\''+p.work_date+'\')">'+thDate(p.work_date)+(p.rev?' · R'+p.rev:'')+(p.dispatched_at?' ✓':'')+'</button>').join('')+'</div>';
+  if(PLAN&&PLAN.plan){
+    const pl=PLAN.plan, js=PLAN.jobs||[], live=js.filter(j=>!j.cancelled);
+    h+='<div class="kpis"><div class="kpi"><b>'+live.length+'</b><span>งาน · '+thDate(pl.work_date)+'</span></div>'
+      +'<div class="kpi"><b>'+live.filter(j=>j.status==='accepted').length+'</b><span>คนขับรับงานแล้ว</span></div>'
+      +'<div class="kpi'+(live.filter(j=>!j.station_id).length?' warn':'')+'"><b>'+live.filter(j=>!j.station_id).length+'</b><span>ยังไม่ผูกค่ากลาง</span></div>'
+      +'<div class="kpi"><b>'+(pl.rev?'Revised '+pl.rev:'ฉบับแรก')+'</b><span>'+((PLAN.revs||[]).slice(-1)[0]?esc(PLAN.revs.slice(-1)[0].uploaded_by_name||''):'')+'</span></div></div>'
+      +'<div class="tw" style="margin-top:8px"><table>'+HEAD(false)+jobRows(js,false)+'</table></div>'
+      +'<div class="sticky"><span class="note">ขั้นถัดไป: ปุ่ม "แจกงาน" ส่งการ์ดให้คนขับใน LINE → คนขับกดรับ → ระบบสร้างออเดอร์ (กำลังทำ)</span><span class="grow"></span><button class="btn" disabled title="กำลังทำ">📲 แจกงานทั้งวัน</button></div>';
+  } else if(!(UP&&UP.pv)) h+='<div class="msg">ยังไม่มีแพลน — กด "อัปโหลดใบแจ้งงานประจำวัน"</div>';
+  h+='</div>';
+  if(LK) h+='<datalist id="stList">'+LK.stations.map(s=>'<option value="'+esc(s.name)+'">'+esc((s.type||'')+(s.km?' · '+s.km+' กม.':''))+'</option>').join('')+'</datalist>';
+  $('body').innerHTML=h;
+}
+async function load(date){
+  const d=await get('getPlan',date?'&date='+encodeURIComponent(date):'');
+  if(d.denied){ $('body').innerHTML='<div class="msg" style="color:var(--danger)">'+esc(d.error||'หน้านี้สำหรับแอดมิน Packing')+'</div>'; return; }
+  if(!d.ok){ $('body').innerHTML='<div class="msg">'+esc(d.error||'โหลดไม่สำเร็จ')+' <button class="btn ghost" onclick="load()">↻ ลองใหม่</button></div>'; return; }
+  PLAN=d; ME=d.me; render();
+  if(!LK&&ME.canEdit){ get('lookups').then(x=>{ if(x.ok){LK=x; if(UP&&UP.pv) render();} }).catch(()=>{}); }
+}
+$('file').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; onFile(f); };
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
+    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(!MY_UID){$('body').innerHTML='<div class="msg">ไม่พบ LINE UID</div>';return;}
+    let info=null; try{ info=await ssbAdminPinInfo(MY_UID); }catch(e){}
+    const ok = info&&info.isDev ? await ssbPinGate(MY_UID) : await ssbAdminPin(MY_UID,{info,text:'เข้าหน้าแจกงาน Packing'});
+    if(ok) load(); else $('body').innerHTML='<div class="msg">🔐 ต้องใส่ PIN ก่อนเข้าหน้านี้<br><button class="btn" style="margin-top:12px" onclick="location.reload()">ใส่ PIN อีกครั้ง</button></div>';
+  }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+esc(e)+'</div>';}
+})();
+</script>
+</body>
+</html>
