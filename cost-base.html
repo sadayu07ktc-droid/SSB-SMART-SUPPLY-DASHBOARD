@@ -77,6 +77,21 @@
   .dbox .hint{font-size:11.5px;color:var(--txt2);margin-top:6px;line-height:1.6}
   .dbox .hint.w{color:var(--warn)}
   .dbox .gchips{margin:4px 0 0}
+  /* 👤 คนขับ/งาน + 📐 ขนาดกระบะ (2026-10-27) */
+  .who{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:4px;font-size:12px;color:var(--txt2)}
+  .who b{color:var(--txt);font-weight:600}
+  .st{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 8px;border-radius:999px;margin-left:4px;background:var(--card2);color:var(--txt2)}
+  .st.ok{background:rgba(46,165,103,.15);color:var(--primary)} .st.busy{background:rgba(13,110,253,.14);color:var(--accent)} .st.off{background:rgba(200,53,47,.12);color:var(--danger)}
+  .spec{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;padding:8px 10px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:12px}
+  .spec .k{font-weight:700;color:var(--txt)}
+  .spec .grow{flex:1}
+  .spec.none{color:var(--txt2)}
+  .dbox.wide{max-width:520px}
+  .dbox fieldset{border:1px solid var(--line);border-radius:10px;padding:4px 12px 12px;margin:12px 0 0}
+  .dbox legend{font-size:12px;font-weight:700;color:var(--txt);padding:0 6px}
+  .dbox .row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .dbox textarea{width:100%;margin-top:3px;padding:7px 9px;border:1px solid var(--line2);border-radius:var(--radius);background:var(--card2);color:var(--txt);font:inherit;font-size:13px;resize:vertical}
+  .dbox .pay{font-size:12.5px;margin-top:8px;color:var(--txt2)} .dbox .pay b{color:var(--primary)}
 </style>
 </head>
 <body>
@@ -84,7 +99,7 @@
   <div class="bar">
     <button onclick="goBack()" style="border:1px solid var(--line2);background:var(--card);color:var(--txt);border-radius:10px;width:38px;height:38px;font-size:18px;cursor:pointer">←</button>
     <div class="logo">🏭</div>
-    <div><h1>ฐานต้นทุนรถ</h1><div class="sub">ทะเบียนรถ (รายการให้คนขับเลือก) + ต้นทุนต่อคัน (คงที่ · ผันแปร · ดำเนินงาน · ค่าเสื่อม) <span style="opacity:.6">· build 2026-10-19b</span></div></div>
+    <div><h1>ฐานต้นทุนรถ</h1><div class="sub">ทะเบียนรถ (รายการให้คนขับเลือก) + ต้นทุนต่อคัน (คงที่ · ผันแปร · ดำเนินงาน · ค่าเสื่อม) <span style="opacity:.6">· build 2026-10-27a</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -198,7 +213,7 @@ function render(){
   }).join('')+'<span class="grow"></span>'
     +(me.canEdit?'<button type="button" class="btn sm" onclick="editVeh()">+ เพิ่มรถ</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
   h+='<div id="warn"></div>';
-  h+='<input class="search" id="q" placeholder="🔎 ค้นทะเบียน / รุ่น…" oninput="filt()">';
+  h+='<input class="search" id="q" placeholder="🔎 ค้นทะเบียน / รุ่น / คนขับ…" oninput="filt()">';
 
   // การ์ดต่อคัน (ใช้งานก่อน · เลิกใช้ไว้ท้าย) · ทุกกลุ่มอยู่ใน DOM ซ่อนด้วยชิป (แก้ตัวเลขค้างไว้แล้วสลับกลุ่มไม่หาย)
   const typeOf=v=>v.vehicle_type||'';
@@ -220,12 +235,14 @@ function render(){
     if(tx){ const dl=Math.floor((tx-Date.now())/864e5);
       ageChip+=`<span class="tag${dl<0?' bad':''}"${dl>=0&&dl<=30?' style="color:var(--warn);border-color:var(--warn)"':''} title="วันหมดอายุภาษี">🧾 ภาษี${dl<0?'หมดแล้ว':'หมด'} ${esc(thDate(v.tax_expiry_date))}${dl>=0&&dl<=30?' · อีก '+dl+' วัน':''}</span>`; }
     const off=v.status==='เลิกใช้';
-    h+=`<div class="veh${off?' off':''}" data-g="${esc(vg(v))}" data-key="${esc((v.plate+' '+mdl+' '+typeOf(v)).toLowerCase())}">`
-      +`<div class="vhead"><div><div class="plate">🚚 ${esc(v.plate||'-')}</div><div class="vmodel">${esc(mdl)}</div></div>`
+    const who=(v.drivers||[]).map(x=>x.name).join(' ');
+    h+=`<div class="veh${off?' off':''}" data-g="${esc(vg(v))}" data-key="${esc((v.plate+' '+mdl+' '+typeOf(v)+' '+(v.body_type||'')+' '+who).toLowerCase())}">`
+      +`<div class="vhead"><div><div class="plate">${v.unit_kind==='หาง'?'🔗':'🚚'} ${esc(v.plate||'-')}</div><div class="vmodel">${esc(mdl)}</div>${whoLine(v)}</div>`
       +`<div style="display:flex;flex-wrap:wrap;gap:5px;justify-content:flex-end;align-items:center">${ageChip}${depNote}`
       +(typeOf(v)?`<span class="tag">${esc(typeOf(v))}</span>`:'<span class="tag bad" title="ไม่ระบุประเภท = ค่าแรงต้องเดาประเภทจากทะเบียน">⚠️ ไม่ระบุประเภท</span>')
       +`<span class="tag${off?' bad':''}">${esc(v.status||'ใช้งาน')}</span>`
       +(me.canEdit&&v.id?`<button type="button" class="vbtn" onclick="editVeh('${v.id}')">✏️ แก้ทะเบียน/ประเภท</button>`:'')+`</div></div>`
+      +specStrip(v,me)
       +`<div class="g3 key">${inp(KEY,v,'')}</div>`
       +`<div class="g3" style="margin-top:9px">${inp(CTX,v)}</div>`
       +`<span class="more" onclick="this.nextElementSibling.classList.toggle('on');this.textContent=this.nextElementSibling.classList.contains('on')?'▲ ซ่อนรายละเอียด':'▾ รายละเอียดต้นทุน'">▾ รายละเอียดต้นทุน</span>`
@@ -268,7 +285,7 @@ function filt(){
 }
 
 /* ── เพิ่ม/แก้รถ ── */
-function closeVeh(){ $('dlgVeh').classList.remove('on'); }
+function closeVeh(){ $('dlgVeh').classList.remove('on'); $('vBox').classList.remove('wide'); }
 function editVeh(id){
   const me=DATA.me, v=id?DATA.vehicles.find(x=>String(x.id)===String(id)):null;
   const P=v?String(v.plate||'').split(',').map(s=>s.trim()):[];
@@ -306,6 +323,105 @@ function editVeh(id){
 }
 $('dlgVeh').addEventListener('click',e=>{ if(e.target.id==='dlgVeh') closeVeh(); });
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeVeh(); });
+
+/* ── 👤 คนขับประจำ + งานที่วิ่งอยู่ (2026-10-27) ──
+   ป้ายหัวตรง = คนขับประจำ · ตรงแค่หาง = คนขับคันอื่นที่ใช้หางนี้อยู่ */
+const headOf=p=>String(p||'').split(',')[0].replace(/\s+/g,'');
+function stCls(s){ return s==='ว่าง'?'ok':/ลา|พัก|ซ่อม|ไม่ว่าง/.test(s)?'off':s?'busy':''; }
+function whoLine(v){
+  if(!Array.isArray(v.drivers)) return '';   // ทางสำรอง GAS ไม่ส่งรายชื่อคนขับ → ไม่เดาว่าเป็นรถสแปร์
+  const ds=v.drivers, jobs=v.jobs||[], hd=headOf(v.plate);
+  let h='';
+  if(ds.length) h+=ds.map(d=>{
+    const own=headOf(d.plate)===hd;
+    return `<span>${own?'👤':'🔗'} <b>${esc(d.name||d.code)}</b>${own?'':' (ใช้หางนี้ · '+esc(d.plate)+')'}<span class="st ${stCls(d.status)}">${esc(d.status||'ไม่ทราบสถานะ')}</span>${d.line&&d.line!=='Active'?'<span class="st" title="ยังไม่ได้เปิดใช้งาน LINE">LINE '+esc(d.line)+'</span>':''}</span>`;
+  }).join('');
+  else h+=`<span>${v.unit_kind==='หาง'?'🔗 หางสำรอง · ยังไม่มีหัวลากต่ออยู่':'🔁 รถสแปร์ · ไม่มีคนขับประจำ'}</span>`;
+  if(jobs.length) h+=`<span title="${esc(jobs.map(j=>j.id+' '+j.status+' '+j.driver).join('\n'))}">🚚 วิ่งอยู่ <b>${jobs.length}</b> งาน · ${esc(jobs[0].id)} <span class="st busy">${esc(jobs[0].status)}</span>${jobs.length>1?' +'+(jobs.length-1):''}</span>`;
+  return '<div class="who">'+h+'</div>';
+}
+
+/* ── 📐 ขนาดกระบะ / น้ำหนัก ทุกกลุ่ม (2026-10-27 คุณน้อง) ──
+   หัวลาก = หัวไม่มีกระบะ ต่อหางเทรลเลอร์ · 10 ล้อ (แม่-ลูก) = หัวมีกระบะ ต่อหางลูก · พื้นเรียบ = สูงว่าง ใช้ 4 ม. − ความสูงพื้นกระบะ */
+const HEAD_KINDS=['หัวลาก','10 ล้อ','6 ล้อ','4 ล้อ'];
+const BODY_LIST=['4 ล้อ ตู้ทึบ','6 ล้อ ตู้ทึบ','10 ล้อ ตู้ทึบ','แม่-ลูก กระบะ','แม่-ลูก พื้นเรียบ','แม่-ลูก คอก','เทรลเลอร์ ผ้าใบ','เทรลเลอร์ ตู้ทึบ','เทรลเลอร์ พื้นเรียบ','หาง พื้นเรียบ','หางเทรลเลอร์ ตู้ผ้าใบสไลด์','กระบะดั้มพ์','รถ CPO'];
+const LEGAL_H=400;
+const n0=x=>{const n=parseFloat(x);return isNaN(n)?null:n;};
+function bedTxt(w,l,h,deck){
+  w=n0(w);l=n0(l);h=n0(h); if(w==null&&l==null&&h==null) return '';
+  const hh=h!=null?nf(h):(deck?'พื้นเรียบ ≤'+nf(LEGAL_H-deck):'พื้นเรียบ');
+  return (w!=null?nf(w):'?')+'×'+(l!=null?nf(l):'?')+'×'+hh;
+}
+function specStrip(v,me){
+  const kind=v.unit_kind==='หาง'?'หางสำรอง':(v.head_kind||'');
+  const hb=bedTxt(v.head_w_cm,v.head_l_cm,v.head_h_cm,n0(v.deck_h_cm)), tb=bedTxt(v.tail_w_cm,v.tail_l_cm,v.tail_h_cm,n0(v.deck_h_cm));
+  const tare=n0(v.tare_kg), gvw=n0(v.gvw_kg), pay=tare!=null&&gvw!=null?gvw-tare:null;
+  const btn=me.canEdit&&v.id?`<button type="button" class="vbtn" onclick="editSpec('${v.id}')">📐 ขนาด/น้ำหนัก</button>`:'';
+  if(!kind&&!v.body_type&&!hb&&!tb&&gvw==null) return `<div class="spec none">📐 ยังไม่มีขนาดกระบะ / น้ำหนัก<span class="grow"></span>${btn}</div>`;
+  const bits=[];
+  if(kind||v.body_type) bits.push('<span class="k">'+esc([kind,v.body_type].filter(Boolean).join(' · '))+'</span>');
+  if(hb) bits.push('หัว '+esc(hb));
+  if(tb) bits.push('หาง '+esc(tb));
+  if(n0(v.deck_h_cm)) bits.push('พื้นกระบะสูง '+nf(v.deck_h_cm));
+  if(pay!=null) bits.push('บรรทุกได้ <b>'+nf(pay)+'</b> กก.');
+  else if(gvw!=null) bits.push('รวมตามกฎหมาย '+nf(gvw)+' กก.');
+  if(v.needs_tarp===true) bits.push('<span class="st ok">ได้ค่าคลุมผ้าใบ</span>');
+  else if(v.needs_tarp===false) bits.push('<span class="st">ไม่ได้ค่าคลุมผ้าใบ</span>');
+  return `<div class="spec" title="${esc(v.spec_note||'')}">📐 ${bits.join(' · ')} <span style="opacity:.7">(ซม.)</span><span class="grow"></span>${btn}</div>`;
+}
+function editSpec(id){
+  const v=DATA.vehicles.find(x=>String(x.id)===String(id)); if(!v) return;
+  if(DIRTY){ toast('มีตัวเลขต้นทุนที่แก้ค้างไว้ — กด 💾 บันทึกเข้าฐานก่อน',true); return; }
+  const twoPlates=String(v.plate||'').indexOf(',')>=0;
+  let kind=v.unit_kind==='หาง'?'หาง':(v.head_kind||''), tarp=v.needs_tarp===true?'true':v.needs_tarp===false?'false':'';
+  const val=k=>v[k]==null?'':r4(v[k]);
+  const num=(k,lbl,ph)=>`<label>${lbl}<input type="number" inputmode="decimal" step="any" min="0" id="sp_${k}" value="${val(k)}" placeholder="${ph||''}"></label>`;
+  const bodies=BODY_LIST.indexOf(v.body_type||'')<0&&v.body_type?[v.body_type].concat(BODY_LIST):BODY_LIST;
+  $('vBox').classList.add('wide');
+  $('vBox').innerHTML=`<h2 id="vT">📐 ขนาด/น้ำหนัก ${esc(v.plate)}</h2>
+    <label>ชนิดหัว</label><div class="gchips" id="spK">${HEAD_KINDS.concat(['หาง']).map(x=>`<button type="button" class="gchip${x===kind?' on':''}" data-v="${x}">${x==='หาง'?'🔗 หางสำรอง (ไม่มีหัว)':x==='หัวลาก'?'🚛 หัวลาก':x}</button>`).join('')}</div>
+    <div class="hint" id="spKH"></div>
+    <label>รูปทรงกระบะ<input id="sp_body" list="spBodies" value="${esc(v.body_type||'')}" maxlength="40" placeholder="เช่น แม่-ลูก พื้นเรียบ"><datalist id="spBodies">${bodies.map(b=>`<option value="${esc(b)}">`).join('')}</datalist></label>
+    <fieldset id="spHead"><legend>กระบะบนหัว (ซม.)</legend><div class="row3">${num('head_w_cm','กว้าง')}${num('head_l_cm','ยาว')}${num('head_h_cm','สูงที่บรรทุกได้','พื้นเรียบ = ว่าง')}</div></fieldset>
+    <fieldset id="spTail"><legend>กระบะบนหาง (ซม.)</legend><div class="row3">${num('tail_w_cm','กว้าง')}${num('tail_l_cm','ยาว')}${num('tail_h_cm','สูงที่บรรทุกได้','พื้นเรียบ = ว่าง')}</div></fieldset>
+    ${num('deck_h_cm','พื้นกระบะสูงจากพื้นถนน (ซม.)','เช่น 140')}
+    <div class="hint">พื้นเรียบไม่มีคอก → เว้นช่อง "สูง" ว่าง ระบบคิดความสูงวางของ = ${LEGAL_H} (กฎหมายสูงรวม 4 ม.) − ความสูงพื้นกระบะ</div>
+    <div class="row2">${num('tare_kg','น้ำหนักรถเปล่า หัว+หาง (กก.)')}${num('gvw_kg','น้ำหนักรวมสูงสุดตามกฎหมาย (กก.)')}</div>
+    <div class="pay" id="spPay"></div>
+    <label>ค่าคลุมผ้าใบ (ค่าแรงคนขับ)</label><div class="gchips" id="spT">${[['true','🟢 ได้ (กระบะเปิด/พื้นเรียบ/คอก)'],['false','ไม่ได้ (ตู้ทึบ/ผ้าใบในตัว)'],['','ไม่ระบุ (ตามประเภทงาน)']].map(x=>`<button type="button" class="gchip${x[0]===tarp?' on':''}" data-v="${x[0]}">${x[1]}</button>`).join('')}</div>
+    <label>หมายเหตุ<textarea id="sp_note" rows="2" maxlength="300">${esc(v.spec_note||'')}</textarea></label>
+    <div class="dact"><button type="button" class="btn ghost" id="vX">ยกเลิก</button><button type="button" class="btn" id="vOk">บันทึก</button></div>`;
+  const vis=()=>{
+    const noHead=kind==='หัวลาก'||kind==='หาง', hasTail=twoPlates||kind==='หัวลาก'||kind==='หาง'||kind==='10 ล้อ';
+    $('spHead').style.display=noHead?'none':''; $('spTail').style.display=hasTail?'':'none';
+    $('spKH').textContent=kind==='หัวลาก'?'หัวลากไม่มีกระบะ ของอยู่บนหางเทรลเลอร์ · ต่อได้เฉพาะหางเทรลเลอร์'
+      :kind==='10 ล้อ'?'หัวมีกระบะ (แม่) · ต่อหางลูกได้':kind==='หาง'?'หางที่ไม่มีหัว ใช้สลับกับรถคันอื่น · ไม่ขึ้นเป็นรถให้เลือกขับ':'';
+  };
+  const pay=()=>{ const t=n0($('sp_tare_kg').value), g=n0($('sp_gvw_kg').value);
+    $('spPay').innerHTML=t!=null&&g!=null?(g>t?'บรรทุกได้ <b>'+nf(g-t)+'</b> กก.':'<span style="color:var(--danger)">น้ำหนักรวมต้องมากกว่าน้ำหนักรถเปล่า</span>'):''; };
+  const pick=(box,set)=>$(box).querySelectorAll('.gchip').forEach(b=>b.onclick=()=>{ $(box).querySelectorAll('.gchip').forEach(x=>x.classList.toggle('on',x===b)); set(b.dataset.v); });
+  pick('spK',x=>{kind=x;vis();}); pick('spT',x=>tarp=x);
+  ['sp_tare_kg','sp_gvw_kg'].forEach(k=>$(k).oninput=pay); vis(); pay();
+  $('vX').onclick=closeVeh;
+  $('vOk').onclick=async()=>{
+    const g=k=>$('sp_'+k)?$('sp_'+k).value.trim():'';
+    const shown=id=>$(id).style.display!=='none';
+    const bad=['head_w_cm','head_l_cm','head_h_cm','tail_w_cm','tail_l_cm','tail_h_cm','deck_h_cm','tare_kg','gvw_kg'].find(k=>g(k)!==''&&!(parseFloat(g(k))>0));
+    if(bad){ toast('ตัวเลขต้องมากกว่า 0',true); $('sp_'+bad).focus(); return; }
+    const spec={ unit_kind:kind==='หาง'?'หาง':'', head_kind:kind==='หาง'?'':kind, body_type:$('sp_body').value.trim(),
+      head_w_cm:shown('spHead')?g('head_w_cm'):'', head_l_cm:shown('spHead')?g('head_l_cm'):'', head_h_cm:shown('spHead')?g('head_h_cm'):'',
+      tail_w_cm:shown('spTail')?g('tail_w_cm'):'', tail_l_cm:shown('spTail')?g('tail_l_cm'):'', tail_h_cm:shown('spTail')?g('tail_h_cm'):'',
+      deck_h_cm:g('deck_h_cm'), tare_kg:g('tare_kg'), gvw_kg:g('gvw_kg'), needs_tarp:tarp===''?null:tarp==='true', spec_note:$('sp_note').value.trim() };
+    const b=$('vOk'); b.disabled=true; b.textContent='กำลังบันทึก…';
+    try{
+      const r=await fetch(EDGE_AW,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'saveVehicleSpec',userId:MY_UID,id:v.id,spec})});
+      const d=await r.json();
+      if(!d.ok){ toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); b.disabled=false; b.textContent='บันทึก'; return; }
+      toast('✅ บันทึกขนาด '+v.plate+' แล้ว'); closeVeh(); load();
+    }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); closeVeh(); load(); }
+  };
+  $('dlgVeh').classList.add('on');
+}
 
 async function save(){
   // รวมค่าต่อ plate จากทุก input ที่ถูกแก้ (ส่งเฉพาะ plate ที่มี input)
