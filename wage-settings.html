@@ -259,6 +259,14 @@ function render(){
   PORDER.forEach(k=>{ const val=d.params[k]?d.params[k].value:0; h+=`<label>${PLBL[k]||k}<input type="number" step="any" data-p="${k}" value="${val}"${k==='wait_rate_per_hr'?' oninput="renderDp()"':''}></label>`; });
   h+='</div></div>';
 
+  // 📦 ค่าเด็กลงของ Packing — เรทเดียวทุกร้าน (คุณน้อง 27 ต.ค.) · ค่าจ้างลงของ/ค่าตักพาเลท ตั้งต่อร้านที่หน้า 📍 ค่ากลาง
+  const PKH=[['pk_helper_out','เด็กนอก (บ./เที่ยว · ทุกชนิดรถ)',350],['pk_helper_in_4w','เด็กใน รถ 4 ล้อ (บ./คน)',350],['pk_helper_in_big','เด็กใน รถ 6 ล้อ / 10 ล้อ / พ่วง (บ./คน)',400]];
+  if(PKH.some(x=>d.params[x[0]])){
+    h+='<div class="card"><div class="ch">📦 ค่าเด็กลงของ Packing (เรทเดียวทุกร้าน)</div><div class="grid">';
+    PKH.forEach(([k,l,dv])=>{ const val=d.params[k]?d.params[k].value:dv; h+=`<label>${l}<input type="number" step="any" min="0" data-p="${k}" value="${val}"></label>`; });
+    h+='</div><div class="note" style="margin-top:6px">เลือกเด็กนอก/เด็กใน และจำนวนคนตอนจ่ายงานแต่ละเที่ยว · เด็กนอก = คนขับเบิกเงินไป · เด็กใน = จ่ายรอบ 1-15 / 16-สิ้นเดือน · เด็กใน 4 ล้อ ปกติ 1 คน · 6 ล้อขึ้นไป 2-3 คน · ค่าจ้างลงของและค่าตักพาเลทตั้งต่อร้านที่หน้า 📍 ค่ากลาง</div></div>';
+  }
+
   // ⏱️ เวลารอลงของ ตาม DP Type — บันทึกแยกด้วยปุ่มในการ์ด (ไม่ผูกกับปุ่มบันทึกล่าง)
   h+='<div id="dpCard"></div>';
 

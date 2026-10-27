@@ -87,6 +87,13 @@
   .f .hint{font-size:11.5px;color:var(--txt2);margin-top:3px}
   .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .chk{display:flex;align-items:center;gap:8px;font-size:13px;margin:4px 0 12px}
+  /* 📦 ค่าใช้จ่ายร้าน Packing — โชว์เมื่อประเภทงาน = Packing */
+  .pkbox{border:1px solid var(--line2);border-radius:10px;padding:8px 12px 10px;margin:0 0 11px;background:var(--card2)}
+  .pkbox legend{font-size:12.5px;font-weight:700;padding:0 4px}
+  .pkbox .pkh{font-size:12px;color:var(--txt2);margin:2px 0 6px}
+  .pkbox .f{margin-bottom:0}
+  .f4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  @media(max-width:520px){.f4{grid-template-columns:1fr 1fr}}
   .chk input{width:18px;height:18px}
   .dact{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
   .dact .sp{margin-right:auto}
@@ -172,7 +179,7 @@
     <div class="f2">
       <div class="f"><label for="edKm">ระยะเที่ยวเดียว (กม.)</label><input id="edKm" type="number" step="1" min="1" inputmode="numeric" oninput="kmHint()"><div class="hint" id="edKmHint"></div></div>
       <div class="f"><label for="edType">ประเภทงาน</label>
-        <select id="edType"><option value="">— ไม่ระบุ —</option><option>สวน</option><option>ลาน</option><option>Packing</option><option>Bulk</option><option>ส่งน้ำ</option><option>อื่นๆ</option></select></div>
+        <select id="edType" onchange="pkShow()"><option value="">— ไม่ระบุ —</option><option>สวน</option><option>ลาน</option><option>Packing</option><option>Bulk</option><option>ส่งน้ำ</option><option>อื่นๆ</option></select></div>
     </div>
     <div class="f"><label for="edCode">รหัสสวน / ลาน ที่ใช้ค่ากลางนี้</label>
       <select id="edCode" onchange="fillPickups();dupCheck()"></select>
@@ -181,6 +188,19 @@
       <input id="edPickup" list="pkList" placeholder="เว้นว่าง = ใช้กับทุกจุดรับของสวนนี้" oninput="dupCheck()"><datalist id="pkList"></datalist></div>
     <div class="f"><label for="edDp">DP Type (เวลารอลงของ)</label><select id="edDp"></select>
       <div class="hint">ใช้คิดค่ารอ = ชม.รอ × เรทค่ารอ · ตั้งชม.รอของแต่ละ DP Type ที่หน้า ⚙️ ตั้งค่าต้นทุน/ค่าแรง</div></div>
+    <!-- 📦 ค่าใช้จ่ายร้านปลายทาง Packing (คุณน้อง 27 ต.ค.) · ระบุไปกับงานที่จ่ายคนขับ -->
+    <fieldset class="pkbox" id="edPk" hidden>
+      <legend>📦 ค่าใช้จ่ายที่ร้าน (Packing)</legend>
+      <div class="pkh">ค่าจ้างลงของ (บาท/ครั้ง ตามชนิดรถ)</div>
+      <div class="f4">
+        <div class="f"><label for="edPk4">4 ล้อ</label><input id="edPk4" type="number" min="0" step="any" inputmode="decimal" placeholder="—"></div>
+        <div class="f"><label for="edPk6">6 ล้อ</label><input id="edPk6" type="number" min="0" step="any" inputmode="decimal" placeholder="—"></div>
+        <div class="f"><label for="edPk10">10 ล้อ (เดี่ยว)</label><input id="edPk10" type="number" min="0" step="any" inputmode="decimal" placeholder="—"></div>
+        <div class="f"><label for="edPkT">พ่วง</label><input id="edPkT" type="number" min="0" step="any" inputmode="decimal" placeholder="—"></div>
+      </div>
+      <div class="f" style="margin-top:8px"><label for="edPkPal">ค่าตักพาเลท (บาท/พาเลท · เรทหน้าร้าน)</label><input id="edPkPal" type="number" min="0" step="any" inputmode="decimal" placeholder="— ไม่มี / ยังไม่รู้"></div>
+      <div class="hint" id="edPkHelp"></div>
+    </fieldset>
     <div class="f"><label for="edNote">หมายเหตุ</label><input id="edNote" placeholder="ไม่บังคับ"></div>
     <label class="chk"><input type="checkbox" id="edActive" checked> ใช้งาน (ปิด = ระบบไม่เอาไปคิด)</label>
     <div class="dact">
@@ -382,6 +402,7 @@ function openEdit(id,preset){
   $('edPickup').value=ED.pickup_point||'';
   $('edNote').value=ED.note||'';
   fillDp(ED.dp_type||'');
+  PK_F.forEach(([el,k])=>{$(el).value=ED[k]!=null?ED[k]:'';}); pkShow();
   $('edActive').checked=ED.active!==false;
   $('edDel').style.display=id?'':'none';
   kmHint(); dupCheck(); openOv('ovEdit');
@@ -394,9 +415,19 @@ function openNewFromMiss(i){
   const k=(DATA.codes||[]).find(x=>x.code===c), multi=k&&k.pickups.length>1;
   openEdit(null,{station:m.name||c,garden_code:c,pickup_point:multi?(m.pickup||''):'',job_type:t});
 }
+/* 📦 Packing: ค่าจ้างลงของ ตามชนิดรถ + ค่าตักพาเลท ต่อร้าน · ค่าเด็กลงของ (นอก/ใน) เรทเดียวทุกร้าน อยู่หน้าตั้งค่าค่าแรง */
+const PK_F=[['edPk4','pk_unload_4w'],['edPk6','pk_unload_6w'],['edPk10','pk_unload_10w'],['edPkT','pk_unload_trailer'],['edPkPal','pk_pallet_fee']];
+function pkShow(){
+  const on=$('edType').value==='Packing'; $('edPk').hidden=!on;
+  if(on)$('edPkHelp').textContent='ค่าเด็กลงของ (นอก 350/เที่ยว · ใน 4 ล้อ 350/คน · 6-10 ล้อ/พ่วง 400/คน) เรทเดียวทุกร้าน ตั้งที่หน้า ⚙️ ตั้งค่าต้นทุน/ค่าแรง · เลือกนอก/ใน และจำนวนคนตอนจ่ายงาน · ช่องว่าง = ไม่มี/ยังไม่รู้';
+}
 async function saveEdit(){
   const row={id:ED&&ED.id||undefined,station:$('edStation').value.trim(),km:$('edKm').value,job_type:$('edType').value,
     garden_code:$('edCode').value,pickup_point:$('edPickup').value.trim(),note:$('edNote').value.trim(),dp_type:$('edDp').value,active:$('edActive').checked};
+  const pk=row.job_type==='Packing';   // ไม่ใช่ Packing = ล้างค่าใช้จ่ายร้าน
+  for(const [el,k] of PK_F){const s=pk?$(el).value.trim():'', v=s===''?null:Number(s);
+    if(v!=null&&!(v>=0)){toast('ค่าใช้จ่ายต้องเป็นตัวเลข 0 ขึ้นไป',true);$(el).focus();return;}
+    row[k]=v;}
   if(!row.station){toast('กรอกชื่อสถานี',true);$('edStation').focus();return;}
   if(!(kmRound(row.km)>=1)){toast('กรอกระยะเที่ยวเดียว (อย่างน้อย 1 กม.)',true);$('edKm').focus();return;}
   row.km=kmRound(row.km);
