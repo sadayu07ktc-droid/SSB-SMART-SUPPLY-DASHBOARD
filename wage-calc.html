@@ -698,7 +698,9 @@
     var tripHard=LEGS.some(function(l){return JOB_HARDSHIP[l.job];});
     // ก้อนบวก (gate ต่อ toggle)
     var loadWage=T.load?P.loadRate*loadHours:0;                            // AI (loadHours=ชม.)
-    var tarp=(T.tarp&&tripTarp)?P.tarpFee:0;                               // AJ
+    // 🆕 2026-10-27 ค่าคลุมผ้าใบตามรถ (= Edge wage-calc vehicleTarp): รถผ้าใบในตัว/ตู้ทึบ (vehTarp=false) ไม่ได้ · จำลอง/รถไร่ (null) = ตามประเภทงาน
+    var tarpVehOff=(s.vehTarp===false);
+    var tarp=(T.tarp&&tripTarp&&!tarpVehOff)?P.tarpFee:0;                 // AJ
     var hooklift=(T.hooklift&&tripHook)?P.hookliftFee:0;                   // BC
     var hardship=(T.hardship&&tripHard)?P.hardshipFee:0;                   // BE
     var waitHrs=Number(s.waitHrs||0);
@@ -749,7 +751,7 @@
     if(bkKg.w>0&&qty>0)products.push({label:bkKg.label||'สินค้า',unit:'กก.',qty:qty,share:bkKg.w/totW});
     if(bkPk.w>0&&(s.qtyPk||0)>0)products.push({label:'Packing',unit:'ชิ้น',qty:s.qtyPk,share:bkPk.w/totW});
     products.forEach(function(p){p.cost=costTotal*p.share;p.costN=costNoDepr*p.share;});
-    return {legs:legs,timeWage:timeWage,loadWage:loadWage,tarp:tarp,overnight:overnight,hooklift:hooklift,hardship:hardship,give:give,viaL:viaL,waitHrs:waitHrs,wait:wait,via:T.via,vehType:veh,totalHrs:totalHrs,bonusOn:bonusOn,fullTime:fullTime,pctSum:pctSum,loadHours:loadHours,dist:totalDist,fuelDist:fuelDist,kmplA:kmplA,benchL:benchL,benchKmpl:benchKmpl,actualL:actualL,fuelAdj:fuelAdj,fuelTimeBonus:fuelTimeBonus,giveHrs:giveHrs,bonus:bonus,net:wageNet,
+    return {legs:legs,timeWage:timeWage,loadWage:loadWage,tarp:tarp,tarpVehOff:(T.tarp&&tripTarp&&tarpVehOff),overnight:overnight,hooklift:hooklift,hardship:hardship,give:give,viaL:viaL,waitHrs:waitHrs,wait:wait,via:T.via,vehType:veh,totalHrs:totalHrs,bonusOn:bonusOn,fullTime:fullTime,pctSum:pctSum,loadHours:loadHours,dist:totalDist,fuelDist:fuelDist,kmplA:kmplA,benchL:benchL,benchKmpl:benchKmpl,actualL:actualL,fuelAdj:fuelAdj,fuelTimeBonus:fuelTimeBonus,giveHrs:giveHrs,bonus:bonus,net:wageNet,
       fuelCostCo:fuelCostCo,fixedCost:fixedCost,effFixed:effFixed,varCost:varCost,extraCost:extraCost,opsCost:opsCost,deprVal:deprVal,costTotal:costTotal,costNoDepr:costNoDepr,qty:qty,unit:unit,products:products};
   }
 
@@ -792,6 +794,7 @@
     if(!c.via&&T.giveOn&&c.give>0)h+=row('ให้เพิ่มตามเวลาวิ่ง ('+c.giveHrs.toFixed(2)+' ชม. × '+P.givePerHr.toFixed(2)+')','+'+money(c.give)+' บ.','color:var(--success);font-weight:600');
     if(c.loadWage>0)h+=row('ค่าขึ้น-ลงของ (รวม '+Math.round(c.loadHours*60)+' นาที)','+'+money(c.loadWage)+' บ.','color:var(--success);font-weight:600');
     if(c.tarp>0)h+=row('ค่าคลุมผ้าใบ (เหมาต่อเที่ยว)','+'+money(c.tarp)+' บ.','color:var(--success);font-weight:600');
+    else if(c.tarpVehOff)h+=row('ค่าคลุมผ้าใบ — รถคันนี้ไม่ได้ (ผ้าใบในตัว/ตู้ทึบ · ตั้งในหน้าฐานต้นทุนรถ)','0 บ.','color:var(--txt2);font-size:11.5px');
     if(c.wait>0)h+=row('ค่ารอ ('+c.waitHrs+' ชม. × '+P.waitRate+')','+'+money(c.wait)+' บ.','color:var(--success);font-weight:600');
     if(!c.via&&c.hooklift>0)h+=row('ค่ายกกระบะ ฮุคลิฟท์','+'+money(c.hooklift)+' บ.','color:var(--success);font-weight:600');
     if(c.hardship>0)h+=row('💪 Hardship Fee (งานสวน)','+'+money(c.hardship)+' บ.','color:var(--success);font-weight:600');
@@ -1194,7 +1197,7 @@
     function attempt(n){
       return _wageOrdersFetch(uid).then(function(d){
         if(d&&d.ok&&d.orders){   // ตอบสำเร็จ (รวมกรณีช่วงนี้ว่าง = array ว่าง) → ไม่ retry
-          ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'',model:vehOf(o.vehType||o.model),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.centralKm||0,sysWage:(o.wage==null?null:+o.wage),heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0};});
+          ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'',model:vehOf(o.vehType||o.model),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.centralKm||0,sysWage:(o.wage==null?null:+o.wage),heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0,vehTarp:(o.vehTarp===true||o.vehTarp===false)?o.vehTarp:null};});
           window._ordersReal=true; T.ordIdx=0; if(window.uiProfile)uiProfile.set({status:'admin'});
           if(T.mode==='order'){buildSource();renderLegs();render();}
           return;
