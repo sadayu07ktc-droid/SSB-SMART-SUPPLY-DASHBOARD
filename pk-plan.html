@@ -39,12 +39,10 @@
   tr.add td:first-child{box-shadow:inset 3px 0 var(--primary)} tr.chg td:first-child{box-shadow:inset 3px 0 var(--warn)}
   td.cf{background:rgba(184,134,11,.13)}
   .how{font-size:10.5px;color:var(--txt2);display:block}
-  .dlg{position:fixed;inset:0;background:rgba(10,20,30,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
-  .dlg-in{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:460px;max-height:92vh;overflow:auto;box-shadow:0 12px 40px rgba(0,0,0,.25)}
-  .fld{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;font-size:12.5px;color:var(--txt2)}
-  .fld input,.fld select,.fld textarea{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line2);border-radius:9px;background:var(--card2);color:var(--txt);max-width:none}
-  .fld2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .st-Waiting{color:var(--warn);border-color:var(--warn)} .st-Planned,.st-Loading{color:var(--accent);border-color:var(--accent)} .st-Delivered{color:var(--primary);border-color:var(--primary)} .st-ยกเลิก{color:var(--danger);border-color:var(--danger)}
+  .dlg{position:fixed;inset:0;background:rgba(10,20,30,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
+  .dlg-in{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .dlg-in p{margin:8px 0 14px;font-size:13.5px;color:var(--txt2);white-space:pre-line}
   .stop+.stop{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
   .miss{color:var(--danger);font-weight:600}
   .tag{display:inline-block;white-space:nowrap;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--txt2);margin:1px 2px 0 0}
@@ -62,7 +60,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-27c</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-27d</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -83,7 +81,7 @@ async function post(b){const r=await fetch(EDGE,{method:'POST',headers:{'Content
 /* ── อ่านไฟล์รายวัน (SheetJS) · คอลัมน์ A=0: ล้อ · ชื่อ · นามสกุล · ทะเบียน · ลูกค้า · เวลาลง · พาเลท · ลัง · ค่าลง · เด็กรถ · นัดเด็กรถ ──
    ⚙️ กติกาเดียวกับที่ทดสอบกับไฟล์ ก.ย. 69 (ตรง 403/439) · ห้ามใช้ \b กับภาษาไทย */
 const PK_GROUPS=/^(4 ?ล้อ|6 ?ล้อ|10 ?ล้อ)/;   // เฉพาะรถ PK (คุณน้อง 27 ต.ค.) · ไม่เอา ขนส่งนอก / รถฝ่ายไร่
-const NOJOB=/^(รอมีงาน|ออกเวร|รถสแปร์|สแปร์|แสปร์|ซ่อม|กลับจาก|ลา(\s|$|ป่วย|กิจ|พัก|บวช|คลอด)|หางผ้าใบสแปร์|หยุด|พักร้อน|เป็นเด็กรถ|แป็นเด็กรถ|เรียนงาน|ขาดงาน|ติดแอร์|ติดพัดลม|ติดฟิล์ม|ทำกระจก|ล้างรถ|ต่อภาษี|ต่อทะเบียน|ตรวจสภาพ|เช็คระยะ|ลงปูน|ซื้อของ|ลากหาง|\.+$|-+$)/;
+const NOJOB=/^(รอมีงาน|ออกเวร|รถสแปร์|สแปร์|แสปร์|ซ่อม|กลับจาก|ลา(\s|$|ป่วย|กิจ|พัก|บวช|คลอด)|หางผ้าใบสแปร์|หยุด|พักร้อน|เป็นเด็กรถ|แป็นเด็กรถ|เรียนงาน|ขาดงาน|ติดแอร์|ติดพัดลม|ติดฟิล์ม|ทำกระจก|ล้างรถ|ต่อภาษี|ต่อทะเบียน|ตรวจสภาพ|เช็คระยะ|ลงปูน|ซื้อของ|ลากหาง|ถ่ายน้ำมัน|เปลี่ยนน้ำมัน|เปลี่ยนยาง|ปะยาง|เข้าอู่|เข้าศูนย์|อัดจารบี|ล้างแอร์|เติมแอร์|\.+$|-+$)/;   // ถ่ายน้ำมันเครื่อง/ซ่อมบำรุงรถ = ไม่ใช่งาน (คุณน้อง 27 ต.ค.)
 const DAY_JOB=/ดับเพลิง|ดับพลิง/;   // แสปร์ดับเพลิง = งานกดรับ ค่าแรงรายวัน (คุณน้อง 27 ต.ค.) · = pk-plan DAY_JOB
 function parseSheet(aoa){
   let date='';
@@ -187,9 +185,19 @@ function jobRows(list,edit){
       +'<td'+(cf.indexOf('pallets')>=0||cf.indexOf('cases')>=0?' class="cf"':'')+'>'+qtyCell(r)+'</td>'
       +'<td'+c('unload_fee_text')+'>'+esc(r.unload_fee_text||'')+'</td>'
       +'<td'+c('helper_txt')+'>'+helperCell(r.helpers,r.helper_time)+'</td>'
-      +'<td>'+(edit?'<span class="tag'+(r.kind==='add'?' ok':r.kind==='del'?' bad':'')+'">'+KIND[r.kind]+'</span>'+(r.txt?'<span class="how">'+esc(r.txt)+'</span>':''):'<span class="tag">'+esc(STAT[r.status]||r.status)+'</span>'+(r.cancelled?'<span class="tag bad">ยกเลิก</span>':''))+'</td>'
+      +'<td>'+(edit?'<span class="tag'+(r.kind==='add'?' ok':r.kind==='del'?' bad':'')+'">'+KIND[r.kind]+'</span>'+(r.txt?'<span class="how">'+esc(r.txt)+'</span>':''):savedStat(r))+'</td>'
       +'</tr>';
   }).join('');
+}
+// ช่องสถานะในแพลนที่บันทึกแล้ว · ขอรถไร่จากใบงานนี้ได้เลย (ไม่ต้องกรอก) → ไปคิว "📦 Packing ค้างจัดรถ" ของงานไร่
+function savedStat(r){
+  if(r.cancelled) return '<span class="tag bad">ตัดออก</span>';
+  if(r.farm_req_id){ const q=((TR&&TR.requests)||[]).find(x=>x.request_id===r.farm_req_id);
+    return '<span class="tag st-'+esc(q?q.status:'Waiting')+'">🚜 '+esc(q?(TR_LABEL[q.status]||q.status):'ขอรถไร่แล้ว')+'</span>'+(q&&q.driver_name?'<span class="how">'+esc(q.driver_name)+' '+esc(q.plate||'')+'</span>':'')
+      +(q&&q.status==='Waiting'&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:3px 9px;font-size:11.5px;margin-top:4px" onclick="trCancel(this,\''+esc(r.farm_req_id)+'\')">ยกเลิกขอรถไร่</button>':''); }
+  const busy=['accepted','started','done'].indexOf(r.status)>=0;
+  return '<span class="tag">'+esc(STAT[r.status]||r.status)+'</span>'
+    +(!busy&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:3px 9px;font-size:11.5px;margin-top:4px;white-space:nowrap" onclick="trJob(this,'+Number(r.id)+')">🚜 ขอรถไร่</button>':'');
 }
 const STAT={new:'ยังไม่แจก',sent:'แจกแล้ว · รอรับ',accepted:'รับงานแล้ว',started:'เริ่มงาน',done:'เสร็จ'};
 const HEAD=edit=>'<tr>'+(edit?'<th>สร้าง</th>':'')+'<th>รถ</th><th>คนขับ</th><th>งาน (ตามไฟล์)</th><th>ปลายทาง (ค่ากลาง)</th><th>เวลาลง</th><th>พาเลท/ลัง</th><th>ค่าลง</th><th>เด็กรถ</th><th>'+(edit?'เทียบฉบับก่อน':'สถานะ')+'</th></tr>';
@@ -209,7 +217,7 @@ function render(){
       +'<button class="btn" onclick="saveUp(this)"'+(c.noDriver||!c.picked||d.unchanged?' disabled':'')+'>💾 บันทึกแพลน '+esc(d.revName)+' ('+c.picked+' งาน)</button></div></div>';
   }
   h+='<div class="card"><div class="row"><b style="font-size:15px">แพลนที่บันทึกแล้ว</b><span class="grow"></span>'
-    +(ME&&ME.canEdit?'<button class="btn ghost" style="font-weight:700;color:var(--txt)" onclick="trOpen()">🚜 ขอรถไร่</button><button class="btn gold" onclick="$(\'file\').click()">⬆ อัปโหลดใบแจ้งงานประจำวัน</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
+    +(ME&&ME.canEdit?'<button class="btn gold" onclick="$(\'file\').click()">⬆ อัปโหลดใบแจ้งงานประจำวัน</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
   const plans=(PLAN&&PLAN.plans)||[];
   if(plans.length) h+='<div class="row" style="margin-top:10px">'+plans.map(p=>'<button class="chip'+(PLAN.plan&&PLAN.plan.id===p.id?' on':'')+'" onclick="load(\''+p.work_date+'\')">'+thDate(p.work_date)+(p.rev?' · R'+p.rev:'')+(p.dispatched_at?' ✓':'')+'</button>').join('')+'</div>';
   if(PLAN&&PLAN.plan){
@@ -243,40 +251,34 @@ function trCard(){
         +'<td>'+(r.status==='Waiting'&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="trCancel(this,\''+esc(r.request_id)+'\')">ยกเลิก</button>':'')+'</td></tr>').join('')+'</table></div>'
       :'<div class="note" style="margin-top:8px">ยังไม่มีคำขอ</div>')+'</div>';
 }
-function trOpen(){
-  const tmr=new Date(Date.now()+31*36e5).toISOString().slice(0,10), pd=PLAN&&PLAN.plan&&PLAN.plan.work_date, def=pd&&pd>=tmr.slice(0,10)?pd:tmr;
-  const types=(TR&&TR.types)||['พ่วง','10 ล้อ','ไม่ระบุ'];
-  const w=document.createElement('div'); w.className='dlg'; w.id='trDlg';
-  w.innerHTML='<div class="dlg-in" role="dialog" aria-label="ขอรถไร่"><b style="font-size:16px">🚜 ขอรถไร่</b><div class="note" style="margin:2px 0 12px">คำขอจะไปที่งานไร่ — แอดมินไร่จัดรถ + คนขับให้</div>'
-    +'<div class="fld2"><label class="fld">วันที่ต้องการรถ *<input type="date" id="trDate" value="'+def+'"></label>'
-    +'<label class="fld">ประเภทรถ<select id="trType">'+types.map(t=>'<option>'+esc(t)+'</option>').join('')+'</select></label></div>'
-    +'<label class="fld">ปลายทาง / ลูกค้า *<input id="trDest" list="stList" placeholder="เช่น 7-11 มหาชัย"></label>'
-    +'<div class="fld2"><label class="fld">เวลาโหลด<input id="trLoad" placeholder="เช่น 06:00"></label><label class="fld">เวลาลงสินค้า<input id="trUnload" placeholder="เช่น 13:00"></label></div>'
-    +'<div class="fld2"><label class="fld">สินค้า<input id="trItems" placeholder="เช่น น้ำมันปาล์มขวด"></label><label class="fld">จำนวน<input id="trQty" placeholder="เช่น 26 เลท / 1456 ลัง"></label></div>'
-    +'<div class="fld2"><label class="fld">จำนวนรถ (คัน)<input type="number" id="trN" min="1" max="10" value="1"></label><span></span></div>'
-    +'<label class="fld">หมายเหตุ<textarea id="trNote" rows="2" placeholder="เช่น เก็บของเสียกลับด้วย"></textarea></label>'
-    +'<div class="row"><button class="btn ghost" onclick="trClose()">ยกเลิก</button><span class="grow"></span><button class="btn" id="trGo" onclick="trSend(this)">ส่งคำขอไปงานไร่</button></div></div>';
-  w.onclick=e=>{ if(e.target===w) trClose(); };
-  document.body.appendChild(w); setTimeout(()=>{ const x=$('trDest'); if(x&&x.focus) x.focus(); },50);
-}
-function trClose(){ const w=$('trDlg'); if(w) w.remove(); }
-async function trSend(b){
+// กล่องยืนยัน (แทน confirm() ของเบราว์เซอร์)
+function askYes(title,msg,ok,danger){ return new Promise(res=>{
+  const w=document.createElement("div"); w.className="dlg";
+  w.innerHTML='<div class="dlg-in" role="dialog" aria-label="'+esc(title)+'"><b style="font-size:16px">'+esc(title)+'</b><p>'+esc(msg)+'</p><div class="row"><button class="btn ghost" data-a="0">ไม่ใช่</button><span class="grow"></span><button class="btn" data-a="1"'+(danger?' style="background:var(--danger)"':"")+'>'+esc(ok||"ยืนยัน")+'</button></div></div>';
+  const done=v=>{ w.remove(); res(v); };
+  w.onclick=e=>{ const a=e.target&&e.target.getAttribute&&e.target.getAttribute("data-a"); if(a!=null) done(a==="1"); else if(e.target===w) done(false); };
+  document.body.appendChild(w);
+}); }
+// ขอรถไร่จากใบงาน — ระบบดึงวันที่/ปลายทางทุกจุด/จำนวน/เวลาลง/เด็กรถ/ค่าลง จากใบงานเอง (ไม่ต้องกรอก)
+async function trJob(b,id){
   if(BUSY) return;
-  const v=id=>S(($(id)||{}).value);
-  if(!v('trDate')) return toast('เลือกวันที่ต้องการรถ',true);
-  if(!v('trDest')) return toast('ใส่ปลายทาง / ลูกค้า',true);
-  BUSY=true; b.disabled=true; b.textContent='กำลังส่ง…';
+  const j=((PLAN&&PLAN.jobs)||[]).find(x=>Number(x.id)===Number(id)); if(!j) return;
+  const dest=((Array.isArray(j.stops)&&j.stops.length)?j.stops.map(s=>s.station_name||s.name):[j.dest_text||j.job_text]).join(" + ");
+  if(!(await askYes("🚜 ขอรถไร่","แทนรถ PK "+(j.plate||j.plate_raw||"")+(j.driver_name?" ("+j.driver_name+")":"")+"\n"+thDate(PLAN.plan.work_date)+" · "+dest+"\n\nคำขอจะไปที่งานไร่ (📦 Packing ค้างจัดรถ) · ใบงานนี้จะไม่แจกให้คนขับ PK","ส่งคำขอไปงานไร่"))) return;
+  BUSY=true; b.disabled=true; b.textContent="กำลังส่ง…";
   try{
-    const d=await post({action:'truckReq',date:v('trDate'),destination:v('trDest'),vehicleType:v('trType'),vehicleCount:v('trN'),loadTime:v('trLoad'),unloadTime:v('trUnload'),items:v('trItems'),qty:v('trQty'),note:v('trNote')});
-    if(!d.ok){ toast('❌ '+(d.error||'ส่งไม่สำเร็จ'),true); return; }
-    trClose(); toast('✅ ส่งคำขอรถไร่แล้ว '+((d.request&&d.request.request_id)||'')); await trLoad();
-  }catch(e){ toast('ไม่แน่ใจว่าส่งสำเร็จ — ดูรายการคำขอก่อนส่งซ้ำ',true); trLoad(); }
-  finally{ BUSY=false; if(b.isConnected){ b.disabled=false; b.textContent='ส่งคำขอไปงานไร่'; } }
+    const d=await post({action:"truckReqJob",jobId:id});
+    if(!d.ok){ toast("❌ "+(d.error||"ส่งไม่สำเร็จ"),true); return; }
+    toast("✅ ขอรถไร่แล้ว "+((d.request&&d.request.request_id)||"")+" — ไปที่งานไร่แล้ว");
+    await Promise.all([trLoad(),load(PLAN.plan.work_date)]);
+  }catch(e){ toast("ไม่แน่ใจว่าส่งสำเร็จ — โหลดหน้าใหม่ให้ตรวจก่อนกดซ้ำ",true); }
+  finally{ BUSY=false; if(b.isConnected){ b.disabled=false; b.textContent="🚜 ขอรถไร่"; } }
 }
 async function trCancel(b,id){
-  if(BUSY) return; BUSY=true; b.disabled=true;
-  try{ const d=await post({action:'truckReqCancel',requestId:id}); toast(d.ok?'ยกเลิกคำขอแล้ว':'❌ '+(d.error||'ยกเลิกไม่สำเร็จ'),!d.ok); await trLoad(); }
-  catch(e){ toast('ยกเลิกไม่สำเร็จ',true); }
+  if(BUSY) return; if(!(await askYes("ยกเลิกขอรถไร่","คำขอ "+id+"\nใบงานจะกลับเป็นรถ PK","ยกเลิกคำขอ",true))) return;
+  BUSY=true; b.disabled=true;
+  try{ const d=await post({action:"truckReqCancel",requestId:id}); toast(d.ok?"ยกเลิกคำขอแล้ว":"❌ "+(d.error||"ยกเลิกไม่สำเร็จ"),!d.ok); await Promise.all([trLoad(),PLAN&&PLAN.plan?load(PLAN.plan.work_date):null]); }
+  catch(e){ toast("ยกเลิกไม่สำเร็จ",true); }
   finally{ BUSY=false; }
 }
 async function load(date){
