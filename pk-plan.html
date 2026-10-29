@@ -42,6 +42,12 @@
   .st-Waiting{color:var(--warn);border-color:var(--warn)} .st-Planned,.st-Loading{color:var(--accent);border-color:var(--accent)} .st-Delivered{color:var(--primary);border-color:var(--primary)} .st-ยกเลิก{color:var(--danger);border-color:var(--danger)}
   .dlg{position:fixed;inset:0;background:rgba(10,20,30,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
   .dlg-in{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .dlg-in.wide{max-width:760px;max-height:90vh;display:flex;flex-direction:column;padding:16px 16px 12px}
+  .dq-list{overflow:auto;margin-top:10px;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+  .dq{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card2)}
+  .dq-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .dq-h b{font-size:14px}
+  .k-free{color:var(--primary);border-color:var(--primary)} .k-busy{color:var(--accent);border-color:var(--accent)} .k-repair{color:var(--warn);border-color:var(--warn)} .k-leave{color:var(--danger);border-color:var(--danger)}
   .dlg-in p{margin:8px 0 14px;font-size:13.5px;color:var(--txt2);white-space:pre-line}
   .stop+.stop{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
   .miss{color:var(--danger);font-weight:600}
@@ -60,7 +66,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-27d</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29a</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -86,7 +92,7 @@ const DAY_JOB=/ดับเพลิง|ดับพลิง/;   // แสป�
 function parseSheet(aoa){
   let date='';
   for(const r of aoa.slice(0,4)){ const m=r.map(S).join(' ').match(/(\d{1,2})\.(\d{1,2})\.(25\d\d|20\d\d)/); if(m){ let y=+m[3]; if(y>2400)y-=543; date=y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); break; } }
-  const rows=[]; let g='',start=false,last=null,skipped=0;
+  const rows=[],off=[]; let g='',start=false,last=null,skipped=0;
   aoa.forEach((c,i)=>{
     const line=c.map(S).join(' ');
     if(/รายชื่อเด็กรถ/.test(line)){ start=null; return; }
@@ -97,11 +103,11 @@ function parseSheet(aoa){
     if(!plate&&S(c[9])&&last){ last.helpers.push(S(c[9])); return; }
     last=null;
     if(!plate||!PK_GROUPS.test(g)||!job) return;
-    if(!DAY_JOB.test(job)&&NOJOB.test(job)){ skipped++; return; }   // ไม่ใช่งาน (รอมีงาน/ซ่อม/ลา/ออกเวร/สแปร์/ซื้อของ…) = ตัดออกเลย (คุณน้อง 27 ต.ค.)
+    if(!DAY_JOB.test(job)&&NOJOB.test(job)){ skipped++; off.push({row:i+1,name:S(S(c[1])+' '+S(c[2])).replace(/^\.+\s*/,''),plate,job}); return; }   // เก็บไว้โชว์คิวคนขับ (ลา/ซ่อม/รอมีงาน…)   // ไม่ใช่งาน (รอมีงาน/ซ่อม/ลา/ออกเวร/สแปร์/ซื้อของ…) = ตัดออกเลย (คุณน้อง 27 ต.ค.)
     last={row:i+1,group:g,name:S(S(c[1])+' '+S(c[2])).replace(/^\.+\s*/,''),plate,job,time:S(c[5]),pallet:S(c[6]),cases:S(c[7]),fee:S(c[8]),helpers:S(c[9])?[S(c[9])]:[],helperTime:S(c[10]),pick:true};
     rows.push(last);
   });
-  return {date,rows,skipped};
+  return {date,rows,skipped,off};
 }
 function xlsxLib(){ if(window.XLSX) return Promise.resolve(window.XLSX);
   return new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';s.onload=()=>ok(window.XLSX);s.onerror=()=>no(new Error('โหลดตัวอ่าน Excel ไม่ได้'));document.head.appendChild(s);}); }
@@ -113,7 +119,7 @@ async function onFile(f){
     const p=parseSheet(aoa);
     if(!p.date) return toast('อ่านวันที่ไม่ได้ — แถวบนสุดต้องมีวันที่ เช่น "อังคาร 1.9.2569"',true);
     if(!p.rows.length) return toast('ไม่พบรถ PK ในไฟล์ — ใช้ไฟล์ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน"',true);
-    UP={fileName:f.name,date:p.date,rows:p.rows,skipped:p.skipped,pv:null};
+    UP={fileName:f.name,date:p.date,rows:p.rows,skipped:p.skipped,off:p.off,pv:null};
     await runPreview();
   }catch(e){ toast('อ่านไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
 }
@@ -127,7 +133,7 @@ function setRow(i,k,v){ const r=UP.rows[i]; if(!r) return; r[k]=v; clearTimeout(
 async function saveUp(b){
   if(BUSY||!UP||!UP.pv) return; BUSY=true; b.disabled=true; b.textContent='กำลังบันทึก…';
   try{
-    const d=await post({action:'commit',date:UP.date,fileName:UP.fileName,rows:UP.rows});
+    const d=await post({action:'commit',date:UP.date,fileName:UP.fileName,rows:UP.rows,off:UP.off||[]});
     if(!d.ok){ toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); if(d.table){UP.pv=d;render();} return; }
     toast('✅ บันทึกแพลน '+thDate(UP.date)+' '+d.revName+' แล้ว'+(d.remembered?' · จำการจับคู่ '+d.remembered+' รายการ':''));
     const date=UP.date; UP=null; await load(date);
@@ -217,6 +223,7 @@ function render(){
       +'<button class="btn" onclick="saveUp(this)"'+(c.noDriver||!c.picked||d.unchanged?' disabled':'')+'>💾 บันทึกแพลน '+esc(d.revName)+' ('+c.picked+' งาน)</button></div></div>';
   }
   h+='<div class="card"><div class="row"><b style="font-size:15px">แพลนที่บันทึกแล้ว</b><span class="grow"></span>'
+    +'<button class="btn ghost" style="font-weight:700;color:var(--txt)" onclick="dqOpen()">👥 คิวคนขับ</button>'
     +(ME&&ME.canEdit?'<button class="btn gold" onclick="$(\'file\').click()">⬆ อัปโหลดใบแจ้งงานประจำวัน</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
   const plans=(PLAN&&PLAN.plans)||[];
   if(plans.length) h+='<div class="row" style="margin-top:10px">'+plans.map(p=>'<button class="chip'+(PLAN.plan&&PLAN.plan.id===p.id?' on':'')+'" onclick="load(\''+p.work_date+'\')">'+thDate(p.work_date)+(p.rev?' · R'+p.rev:'')+(p.dispatched_at?' ✓':'')+'</button>').join('')+'</div>';
@@ -250,6 +257,42 @@ function trCard(){
         +'<td><span class="tag st-'+esc(r.status)+'">'+esc(TR_LABEL[r.status]||r.status)+'</span>'+(r.driver_name?'<span class="how">'+esc(r.driver_name)+' '+esc(r.plate||'')+'</span>':'')+'</td>'
         +'<td>'+(r.status==='Waiting'&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="trCancel(this,\''+esc(r.request_id)+'\')">ยกเลิก</button>':'')+'</td></tr>').join('')+'</table></div>'
       :'<div class="note" style="margin-top:8px">ยังไม่มีคำขอ</div>')+'</div>';
+}
+/* ── 👥 คิวคนขับ Packing: ว่าง / มีงาน / ลา·ซ่อม ของวันที่เลือก (จากแพลน + แถวลา/ซ่อม/รอมีงานในไฟล์ + ลาในระบบ) ── */
+let DQ={date:'',data:null,f:'all'};
+const DQ_F=[['all','ทั้งหมด',()=>true],['free','ว่าง',d=>d.kind==='free'],['busy','มีงาน',d=>d.kind==='busy'],['leave','ลา / ซ่อม',d=>d.kind==='leave'||d.kind==='repair'],['none','ไม่อยู่ในแพลน',d=>d.kind==='none'||d.kind==='other']];
+function dqOpen(){
+  const td=new Date(Date.now()+7*36e5).toISOString().slice(0,10);
+  DQ.date=(PLAN&&PLAN.plan&&PLAN.plan.work_date)||td; DQ.f='all'; DQ.data=null;
+  let w=$('dqDlg'); if(!w){ w=document.createElement('div'); w.className='dlg'; w.id='dqDlg'; w.onclick=e=>{ if(e.target===w) dqClose(); }; document.body.appendChild(w); }
+  dqRender(); dqLoad();
+}
+function dqClose(){ const w=$('dqDlg'); if(w) w.remove(); }
+async function dqLoad(){
+  const want=DQ.date; DQ.data=null; dqRender();
+  try{ const d=await get('driverQueue','&date='+encodeURIComponent(want)); if(DQ.date!==want) return; DQ.data=d.ok?d:{error:d.error||'โหลดไม่สำเร็จ'}; }
+  catch(e){ DQ.data={error:'โหลดไม่สำเร็จ'}; }
+  dqRender();
+}
+function dqRender(){
+  const w=$('dqDlg'); if(!w) return;
+  const d=DQ.data, ds=(d&&d.drivers)||[];
+  let h='<div class="dlg-in wide" role="dialog" aria-label="คิวคนขับ Packing"><div class="row"><b style="font-size:16px">👥 คิวคนขับ Packing</b>'
+    +'<input type="date" value="'+esc(DQ.date)+'" aria-label="วันที่" onchange="DQ.date=this.value;dqLoad()" style="font:inherit;font-size:13px;padding:5px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--card2);color:var(--txt)">'
+    +'<span class="grow"></span><button class="btn ghost" style="padding:6px 12px" onclick="dqClose()" aria-label="ปิด">✕</button></div>';
+  if(!d) h+='<div class="msg">กำลังโหลดคิวคนขับ…</div>';
+  else if(d.error) h+='<div class="msg">'+esc(d.error)+' <button class="btn ghost" onclick="dqLoad()">↻ ลองใหม่</button></div>';
+  else{
+    h+='<div class="row" style="margin-top:10px">'+DQ_F.map(f=>{ const n=ds.filter(f[2]).length; return '<button class="chip'+(DQ.f===f[0]?' on':'')+'" onclick="DQ.f=\''+f[0]+'\';dqRender()">'+f[1]+' <b>'+n+'</b></button>'; }).join('')+'</div>'
+      +'<div class="note" style="margin-top:6px">'+(d.plan?'แพลน '+thDate(d.date)+(d.plan.rev?' · Revised '+d.plan.rev:'')+(d.plan.hasOff?'':' · ⚠️ ไฟล์ฉบับนี้อัปโหลดก่อนมีระบบคิว — ไม่มีข้อมูล ลา/ซ่อม/รอมีงาน (อัปโหลดใหม่จะมี)'):'ยังไม่มีแพลนวันที่ '+thDate(d.date)+' — โชว์ได้แค่ ลาที่แจ้งในระบบ')+'</div>';
+    const fl=(DQ_F.find(f=>f[0]===DQ.f)||DQ_F[0])[2], rows=ds.filter(fl);
+    h+='<div class="dq-list">'+(rows.length?rows.map(x=>'<div class="dq"><div class="dq-h"><b>'+esc(x.name)+'</b><span class="tag">'+esc(x.code)+'</span>'
+        +'<span class="tag k-'+esc(x.kind)+'">'+esc(x.label)+'</span>'+(x.lineActive?'':'<span class="tag bad">LINE ยังไม่เปิด</span>')+(x.checkin?'<span class="tag ok">ลงเวลา '+esc(x.checkin)+'</span>':'')+'</div>'
+        +'<div class="how">🚚 '+esc(x.plate||'ไม่มีรถประจำ')+(x.vehicle?' · '+esc(x.vehicle):'')+(x.offText&&x.kind!=='busy'?' · ในไฟล์: '+esc(x.offText):'')+(x.statusNote?' · '+esc(x.statusNote):'')+'</div>'
+        +(x.jobs.length?x.jobs.map(j=>'<div class="how">'+(j.farm?'🚜 ขอรถไร่แทน · ':'')+(j.day?'ค่าแรงรายวัน · ':'')+esc(j.dest||'')+(j.time?' · ลง '+esc(j.time):'')+' · '+esc(j.farm?'':(STAT[j.status]||j.status))+(j.plate&&j.plate!==x.plate?' · รถ '+esc(j.plate):'')+'</div>').join(''):'')
+        +'</div>').join(''):'<div class="msg">ไม่มีคนขับในกลุ่มนี้</div>')+'</div>';
+  }
+  w.innerHTML=h+'</div>';
 }
 // กล่องยืนยัน (แทน confirm() ของเบราว์เซอร์)
 function askYes(title,msg,ok,danger){ return new Promise(res=>{
