@@ -66,7 +66,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29b</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29c</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -294,7 +294,10 @@ function dqRender(){
         +(x.jobs.length?x.jobs.map(j=>'<div class="how">'+(j.farm?'🚜 ขอรถไร่แทน · ':'')+(j.day?'ค่าแรงรายวัน · ':'')+esc(j.dest||'')+(j.time?' · ลง '+esc(j.time):'')+' · '+esc(j.farm?'':(STAT[j.status]||j.status))+(j.plate&&j.plate!==x.plate?' · รถ '+esc(j.plate):'')+'</div>').join(''):'')
         +'</div>').join(''):'<div class="msg">ไม่มีคนขับในกลุ่มนี้</div>')+'</div>';
   }
+  // วาดใหม่ทั้งกล่อง → จำตำแหน่งเลื่อนรายการไว้ (กด ↑↓ แล้วไม่เด้งกลับบนสุด · คุณน้อง 29 ต.ค.)
+  const ol=w.querySelector&&w.querySelector('.dq-list'), top=ol?ol.scrollTop:0;
   w.innerHTML=h+'</div>';
+  const nl=w.querySelector&&w.querySelector('.dq-list'); if(nl&&top) nl.scrollTop=top;
 }
 /* 🛣️ คิวระยะไกล — แยก 4/6/10 ล้อ · ยังไม่ได้งานไกลตั้งแต่วันจัดคิว อยู่หน้า (ตามลำดับที่แอดมินจัด) · ได้งานไกลแล้วต่อท้าย · เกณฑ์ กม. แก้ได้เฉพาะ DEV */
 function dqTabs(){ return '<div class="row" style="margin-top:10px;border-bottom:1px solid var(--line);padding-bottom:8px">'
