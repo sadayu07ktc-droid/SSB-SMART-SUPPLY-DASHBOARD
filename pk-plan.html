@@ -66,7 +66,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29c</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29d</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -307,7 +307,7 @@ function longHtml(d){
   let h='<div class="row" style="margin-top:8px"><span class="note">งานไกล = ปลายทางค่ากลาง ≥ <b>'+esc(L.km)+' กม.</b> (เที่ยวเดียว)</span>'
     +(d.isDev?'<input type="number" id="lkKm" min="50" max="2000" value="'+esc(L.km)+'" aria-label="เกณฑ์ระยะไกล" style="width:80px;font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line2);border-radius:8px;background:var(--card2);color:var(--txt)"><button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="lkSaveKm(this)">บันทึกเกณฑ์ (DEV)</button>':'')+'</div>'
     +'<div class="note">ใครยังไม่ได้งานไกลอยู่หน้าคิว · ได้งานไกลแล้วไปต่อท้าย'+(L.ordered?'':' · ⚠️ ยังไม่ได้จัดลำดับแรก — กด "จัดลำดับ" ในแต่ละกลุ่ม')+'</div><div class="dq-list">';
-  ['4 ล้อ','6 ล้อ','10 ล้อ'].forEach(c=>{
+  ['4 ล้อ','6 ล้อ','10 ล้อ','พ่วง'].filter(c=>(L.classes[c]||[]).length).forEach(c=>{   // กลุ่มไม่มีคนขับ = ไม่โชว์ (เช่น 10 ล้อเดี่ยว)
     const rs=(DQ.edit&&DQ.edit.cls===c)?DQ.edit.list:(L.classes[c]||[]), ed=DQ.edit&&DQ.edit.cls===c;
     h+='<div class="dq"><div class="dq-h"><b>'+c+'</b><span class="tag">'+rs.length+' คน</span><span class="grow"></span>'
       +(d.canEdit&&rs.length?(ed?'<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="DQ.edit=null;dqRender()">ยกเลิก</button><button class="btn" style="padding:5px 12px;font-size:12.5px" onclick="lkSave(this)">บันทึกลำดับ</button>'
