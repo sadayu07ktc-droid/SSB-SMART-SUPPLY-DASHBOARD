@@ -66,7 +66,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29a</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29b</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -157,7 +157,8 @@ function stCell(r,i,edit){
   if(r.pay_mode==='day') return '<span class="tag out">ค่าแรงรายวัน</span><span class="how">ไม่มีปลายทาง · ไม่ต้องผูกค่ากลาง</span>';
   const ss=stopsOf(r), multi=ss.length>1;
   if(!ss.length) return '<span class="miss">ยังไม่ผูกค่ากลาง</span>';
-  return (multi?'<span class="tag ok">ส่ง '+ss.length+' จุด</span>':'')+ss.map((s,k)=>{
+  const LK_KM=(PLAN&&PLAN.longKm)||300, far=ss.some(s=>Number(s.km)>=LK_KM);
+  return (far?'<span class="tag k-busy" title="ปลายทาง ≥ '+LK_KM+' กม. — นับเข้าคิวระยะไกล">🛣️ งานไกล</span>':'')+(multi?'<span class="tag ok">ส่ง '+ss.length+' จุด</span>':'')+ss.map((s,k)=>{
     let h='<div class="stop">'+(multi?'<b>'+(k+1)+'.</b> ':'')+(s.station_name?esc(s.station_name)+(s.km?' <span class="tag">'+esc(s.km)+' กม.</span>':''):'<span class="miss">'+(multi?esc(s.name)+' — ':'')+'ยังไม่ผูกค่ากลาง</span>')+howTag(s.how);
     if(edit&&LK){ const cur=((UP.rows[i].stationIds||[])[k])||'';
       h+='<input list="stList" placeholder="พิมพ์ค้นสถานี…" aria-label="เลือกสถานีค่ากลาง จุดที่ '+(k+1)+'" value="'+esc(cur?((LK.stations.find(x=>String(x.id)===String(cur))||{}).name||''):'')+'" onchange="pickSt('+i+','+k+',this.value)">'; }
@@ -259,7 +260,7 @@ function trCard(){
       :'<div class="note" style="margin-top:8px">ยังไม่มีคำขอ</div>')+'</div>';
 }
 /* ── 👥 คิวคนขับ Packing: ว่าง / มีงาน / ลา·ซ่อม ของวันที่เลือก (จากแพลน + แถวลา/ซ่อม/รอมีงานในไฟล์ + ลาในระบบ) ── */
-let DQ={date:'',data:null,f:'all'};
+let DQ={date:'',data:null,f:'all',tab:'day',edit:null};
 const DQ_F=[['all','ทั้งหมด',()=>true],['free','ว่าง',d=>d.kind==='free'],['busy','มีงาน',d=>d.kind==='busy'],['leave','ลา / ซ่อม',d=>d.kind==='leave'||d.kind==='repair'],['none','ไม่อยู่ในแพลน',d=>d.kind==='none'||d.kind==='other']];
 function dqOpen(){
   const td=new Date(Date.now()+7*36e5).toISOString().slice(0,10);
@@ -282,8 +283,9 @@ function dqRender(){
     +'<span class="grow"></span><button class="btn ghost" style="padding:6px 12px" onclick="dqClose()" aria-label="ปิด">✕</button></div>';
   if(!d) h+='<div class="msg">กำลังโหลดคิวคนขับ…</div>';
   else if(d.error) h+='<div class="msg">'+esc(d.error)+' <button class="btn ghost" onclick="dqLoad()">↻ ลองใหม่</button></div>';
+  else if(DQ.tab==='long') h+=dqTabs()+longHtml(d);
   else{
-    h+='<div class="row" style="margin-top:10px">'+DQ_F.map(f=>{ const n=ds.filter(f[2]).length; return '<button class="chip'+(DQ.f===f[0]?' on':'')+'" onclick="DQ.f=\''+f[0]+'\';dqRender()">'+f[1]+' <b>'+n+'</b></button>'; }).join('')+'</div>'
+    h+=dqTabs()+'<div class="row" style="margin-top:10px">'+DQ_F.map(f=>{ const n=ds.filter(f[2]).length; return '<button class="chip'+(DQ.f===f[0]?' on':'')+'" onclick="DQ.f=\''+f[0]+'\';dqRender()">'+f[1]+' <b>'+n+'</b></button>'; }).join('')+'</div>'
       +'<div class="note" style="margin-top:6px">'+(d.plan?'แพลน '+thDate(d.date)+(d.plan.rev?' · Revised '+d.plan.rev:'')+(d.plan.hasOff?'':' · ⚠️ ไฟล์ฉบับนี้อัปโหลดก่อนมีระบบคิว — ไม่มีข้อมูล ลา/ซ่อม/รอมีงาน (อัปโหลดใหม่จะมี)'):'ยังไม่มีแพลนวันที่ '+thDate(d.date)+' — โชว์ได้แค่ ลาที่แจ้งในระบบ')+'</div>';
     const fl=(DQ_F.find(f=>f[0]===DQ.f)||DQ_F[0])[2], rows=ds.filter(fl);
     h+='<div class="dq-list">'+(rows.length?rows.map(x=>'<div class="dq"><div class="dq-h"><b>'+esc(x.name)+'</b><span class="tag">'+esc(x.code)+'</span>'
@@ -293,6 +295,46 @@ function dqRender(){
         +'</div>').join(''):'<div class="msg">ไม่มีคนขับในกลุ่มนี้</div>')+'</div>';
   }
   w.innerHTML=h+'</div>';
+}
+/* 🛣️ คิวระยะไกล — แยก 4/6/10 ล้อ · ยังไม่ได้งานไกลตั้งแต่วันจัดคิว อยู่หน้า (ตามลำดับที่แอดมินจัด) · ได้งานไกลแล้วต่อท้าย · เกณฑ์ กม. แก้ได้เฉพาะ DEV */
+function dqTabs(){ return '<div class="row" style="margin-top:10px;border-bottom:1px solid var(--line);padding-bottom:8px">'
+  +[['day','📋 สถานะวันนี้'],['long','🛣️ คิวระยะไกล']].map(t=>'<button class="chip'+(DQ.tab===t[0]?' on':'')+'" onclick="DQ.tab=\''+t[0]+'\';DQ.edit=null;dqRender()">'+t[1]+'</button>').join('')+'</div>'; }
+function longHtml(d){
+  const L=d.long; if(!L) return '<div class="msg">ไม่มีข้อมูลคิว</div>';
+  let h='<div class="row" style="margin-top:8px"><span class="note">งานไกล = ปลายทางค่ากลาง ≥ <b>'+esc(L.km)+' กม.</b> (เที่ยวเดียว)</span>'
+    +(d.isDev?'<input type="number" id="lkKm" min="50" max="2000" value="'+esc(L.km)+'" aria-label="เกณฑ์ระยะไกล" style="width:80px;font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line2);border-radius:8px;background:var(--card2);color:var(--txt)"><button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="lkSaveKm(this)">บันทึกเกณฑ์ (DEV)</button>':'')+'</div>'
+    +'<div class="note">ใครยังไม่ได้งานไกลอยู่หน้าคิว · ได้งานไกลแล้วไปต่อท้าย'+(L.ordered?'':' · ⚠️ ยังไม่ได้จัดลำดับแรก — กด "จัดลำดับ" ในแต่ละกลุ่ม')+'</div><div class="dq-list">';
+  ['4 ล้อ','6 ล้อ','10 ล้อ'].forEach(c=>{
+    const rs=(DQ.edit&&DQ.edit.cls===c)?DQ.edit.list:(L.classes[c]||[]), ed=DQ.edit&&DQ.edit.cls===c;
+    h+='<div class="dq"><div class="dq-h"><b>'+c+'</b><span class="tag">'+rs.length+' คน</span><span class="grow"></span>'
+      +(d.canEdit&&rs.length?(ed?'<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="DQ.edit=null;dqRender()">ยกเลิก</button><button class="btn" style="padding:5px 12px;font-size:12.5px" onclick="lkSave(this)">บันทึกลำดับ</button>'
+        :'<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="lkEdit(\''+c+'\')">✎ จัดลำดับ</button>'):'')+'</div>';
+    h+=rs.length?rs.map((x,i)=>'<div class="row" style="margin-top:6px;gap:8px;flex-wrap:nowrap"><b style="min-width:26px;font-size:16px;font-variant-numeric:tabular-nums;color:'+(i===0&&!ed?'var(--primary)':'var(--txt2)')+'">'+(i+1)+'</b>'
+        +'<div class="grow" style="min-width:0">'+esc(x.name)+' <span class="tag k-'+esc(x.kind)+'">'+esc(x.label)+'</span><span class="how">'+esc(x.plate||'')+' · '+(x.last?'งานไกลล่าสุด '+thDate(x.last.date)+' '+esc(x.last.dest)+(x.last.km?' ('+esc(x.last.km)+' กม.)':''):'ยังไม่ได้งานไกล'+(x.resetAt?' ตั้งแต่จัดคิว '+thDate(x.resetAt):''))+'</span></div>'
+        +(ed?'<button class="btn ghost" style="padding:2px 9px" aria-label="ขึ้น" onclick="lkMove('+i+',-1)"'+(i?'':' disabled')+'>↑</button><button class="btn ghost" style="padding:2px 9px" aria-label="ลง" onclick="lkMove('+i+',1)"'+(i<rs.length-1?'':' disabled')+'>↓</button>':'')+'</div>').join('')
+      :'<div class="how">ไม่มีคนขับกลุ่มนี้</div>';
+    h+='</div>';
+  });
+  return h+'</div>';
+}
+function lkEdit(c){ DQ.edit={cls:c,list:((DQ.data.long.classes[c])||[]).slice()}; dqRender(); }
+function lkMove(i,dir){ const l=DQ.edit.list, j=i+dir; if(j<0||j>=l.length) return; const t=l[i]; l[i]=l[j]; l[j]=t; dqRender(); }
+async function lkSave(b){
+  if(BUSY||!DQ.edit) return;
+  if(!(await askYes('บันทึกลำดับคิวระยะไกล '+DQ.edit.cls,'ลำดับนี้เป็นจุดเริ่มใหม่ — นับงานไกลตั้งแต่วันนี้ ใครได้งานไกลหลังจากนี้จะไปต่อท้าย','บันทึกลำดับ'))) return;
+  BUSY=true; b.disabled=true;
+  try{ const d=await post({action:'saveLongOrder',cls:DQ.edit.cls,codes:DQ.edit.list.map(x=>x.code)});
+    if(!d.ok){ toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); return; }
+    toast('✅ บันทึกลำดับคิว '+DQ.edit.cls+' แล้ว'); DQ.edit=null; BUSY=false; await dqLoad(); }
+  catch(e){ toast('บันทึกไม่สำเร็จ',true); }
+  finally{ BUSY=false; }
+}
+async function lkSaveKm(b){
+  const km=Number(($('lkKm')||{}).value); if(!(km>=50&&km<=2000)) return toast('เกณฑ์ต้องอยู่ระหว่าง 50–2000 กม.',true);
+  if(BUSY) return; BUSY=true; b.disabled=true;
+  try{ const d=await post({action:'setLongKm',km}); toast(d.ok?'✅ เกณฑ์ระยะไกล = '+d.km+' กม.':'❌ '+(d.error||'บันทึกไม่สำเร็จ'),!d.ok); if(d.ok){ if(PLAN) PLAN.longKm=d.km; BUSY=false; await dqLoad(); } }
+  catch(e){ toast('บันทึกไม่สำเร็จ',true); }
+  finally{ BUSY=false; }
 }
 // กล่องยืนยัน (แทน confirm() ของเบราว์เซอร์)
 function askYes(title,msg,ok,danger){ return new Promise(res=>{
