@@ -95,6 +95,10 @@
   .pkbox .hint{font-size:11.5px;color:var(--txt2);margin-top:8px;line-height:1.6}
   .pkbox .f{margin-bottom:0}
   .f4{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+  .hint.geo{font-size:12px;color:var(--txt2);margin-top:5px;line-height:1.7}
+  .hint.geo a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap} .hint.geo a:hover{text-decoration:underline}
+  .hint.geo .w{color:var(--warn);font-weight:600}
+  .geo-ln{font-size:11px;color:var(--txt2);margin-top:2px;font-variant-numeric:tabular-nums}
   @media(max-width:520px){.f4{grid-template-columns:1fr 1fr}}
   .chk input{width:18px;height:18px}
   .dact{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:6px}
@@ -182,7 +186,7 @@
   <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="edTitle">
     <h2 id="edTitle">แก้ค่ากลาง</h2>
     <div class="warnbox" id="edWarn"></div>
-    <div class="f"><label for="edStation">ชื่อสถานี</label><input id="edStation" placeholder="เช่น ลาน คลองพลู"></div>
+    <div class="f"><label for="edStation">ชื่อสถานี</label><input id="edStation" placeholder="เช่น ลาน คลองพลู"><div class="hint geo" id="edGeo"></div></div>
     <div class="f2">
       <div class="f"><label for="edKm">ระยะเที่ยวเดียว (กม.)</label><input id="edKm" type="number" step="1" min="1" inputmode="numeric" oninput="kmHint()"><div class="hint" id="edKmHint"></div></div>
       <div class="f"><label for="edType">ประเภทงาน</label>
@@ -274,6 +278,7 @@
       <div class="f"><label for="prKm">ระยะ A ↔ B (กม.)</label><input id="prKm" type="number" min="1" step="1" inputmode="numeric"></div>
       <div class="f"><label for="prNote">หมายเหตุ</label><input id="prNote" placeholder="ไม่บังคับ"></div>
     </div>
+    <div class="hint geo" id="prGeo"></div>
     <label class="chk"><input type="checkbox" id="prActive" checked> ใช้งาน (ปิด = ระบบไม่เอาไปคิด)</label>
     <div class="hint" id="prMeta" style="font-size:11.5px;color:var(--txt2);margin-top:6px"></div>
     <div class="dact"><button class="btn ghost" onclick="closeOv('ovPair')">ยกเลิก</button><button class="btn" id="prSave" onclick="savePair()">บันทึก</button></div>
@@ -352,7 +357,7 @@ async function load(){
       n=>{if(!DATA)$('body').innerHTML='<div class="ldr"><div class="ring"></div>หลังบ้านตอบช้า กำลังลองใหม่ (ครั้งที่ '+n+'/3)</div>';});
     if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
     if(!d.ok){$('body').innerHTML='<div class="msg">โหลดไม่ได้: '+esc(d.error||'ผิดพลาด')+' <button class="btn sm" onclick="load()">↻ ลองใหม่</button></div>';return;}
-    DATA=d; render(); if(STORES===null) stLoad();
+    DATA=d; render(); if(STORES===null) stLoad(); if(!GEO) geoLoad();
   }catch(e){$('body').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e&&e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="$(\'body\').innerHTML=\'<div class=ldr><div class=ring></div>กำลังโหลดค่ากลาง</div>\';load()">↻ ลองใหม่</button></div>';}
 }
 
@@ -417,6 +422,41 @@ function renderView(){
   $('viewBox').innerHTML=h+'<div class="list" id="list"></div>';
   renderList();
 }
+/* ── 📍 พิกัด (โชว์อย่างเดียว · คุณน้อง 30 ต.ค.) · Edge dtc-central stationGeo: ผูกรหัส = พิกัดสวน/ลาน/จุดรับ/ลูกค้า Bulk · ไม่งั้นหมุด DTC ชื่อเดียวกัน ── */
+let GEO=null;
+const nkey=s=>String(s||'').replace(/\s+/g,'').toLowerCase();
+async function geoLoad(){
+  try{ const r=await fetch(DTC_EDGE+'?action=stationGeo&userId='+encodeURIComponent(MY_UID)); const d=await r.json(); if(!d.success) throw 0;
+    GEO={stations:d.stations||{},names:d.names||{}}; if(DATA&&$('list')) renderList(); }catch(e){ GEO=null; }
+}
+const llTxt=(a,b)=>Number(a).toFixed(5)+', '+Number(b).toFixed(5);
+const mapA=(a,b,t)=>'<a href="https://www.google.com/maps?q='+a+','+b+'" target="_blank" rel="noopener">'+(t||'🗺️ เปิดแผนที่')+'</a>';
+function geoOfName(name){   // ปลายทางของคู่: สถานีค่ากลางชื่อตรงก่อน (ใช้พิกัดเดียวกับฝั่ง 🏭) ไม่งั้นหมุด DTC
+  if(!GEO||!name) return null;
+  const r=(DATA.rows||[]).find(x=>nkey(x.station)===nkey(name)), s=r&&GEO.stations[String(r.id)];
+  if(s) return {lat:s.lat,lng:s.lng,src:s.src};
+  const n=GEO.names[nkey(name)]; return n?{lat:n[0],lng:n[1],src:'หมุด DTC'}:null;
+}
+function havKm(a,b){const R=6371,r=Math.PI/180,dl=(b.lat-a.lat)*r,dn=(b.lng-a.lng)*r,x=Math.sin(dl/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin(dn/2)**2;return 2*R*Math.asin(Math.sqrt(x));}
+// ระยะถนนเทียบเส้นตรง: น้อยกว่าเส้นตรง = เป็นไปไม่ได้ · มากกว่า 3 เท่า (เส้นตรง ≥ 3 กม.) = น่าสงสัย
+function pairCheck(km,a,b){ if(!a||!b) return null; const s=havKm(a,b); const w=km>0&&(km<s*0.95||(s>=3&&km>s*3)); return {s,w}; }
+function geoStation(){
+  const el=$('edGeo'); if(!el) return;
+  if(!ED||!ED.id){el.innerHTML='';return;}
+  if(!GEO){el.textContent='📍 กำลังโหลดพิกัด…';return;}
+  const g=GEO.stations[String(ED.id)];
+  if(!g){el.innerHTML='<span class="w">⚠️ ไม่มีพิกัด</span> — ไม่เจอหมุด DTC ชื่อนี้ และยังไม่ได้ผูกรหัสสวน/ลานที่มีพิกัด';return;}
+  el.innerHTML='📍 '+llTxt(g.lat,g.lng)+' · จาก'+esc(g.src)+' · '+mapA(g.lat,g.lng)
+    +(g.gap!=null?(g.gap>500?' · <span class="w">⚠️ ห่างหมุด DTC '+nf(g.gap,0)+' ม.</span>':' · ตรงหมุด DTC ('+nf(g.gap,0)+' ม.)'):(g.src!=='หมุด DTC'&&!g.poi?' · ไม่มีหมุด DTC ชื่อนี้':''));
+}
+function geoPair(){
+  const el=$('prGeo'); if(!el) return;
+  if(!GEO){el.textContent='📍 กำลังโหลดพิกัด…';return;}
+  const A=$('prA').value.trim(), B=$('prB').value.trim(), a=geoOfName(A), b=geoOfName(B), km=kmRound($('prKm').value);
+  const ln=(t,g)=>t?(g?'📍 '+esc(t)+': '+llTxt(g.lat,g.lng)+' ('+esc(g.src)+') '+mapA(g.lat,g.lng,'🗺️'):'<span class="w">⚠️ '+esc(t)+': ไม่มีพิกัด</span>'):'';
+  const c=pairCheck(km,a,b);
+  el.innerHTML=[ln(A,a),ln(B,b),c?'📏 ระยะเส้นตรง '+nf(c.s,1)+' กม.'+(km>0?' · ค่ากลาง '+km+' กม. = '+nf(km/c.s,2)+' เท่า':'')+(c.w?' · <span class="w">⚠️ ระยะน่าสงสัย</span>':'')+' · '+'<a href="https://www.google.com/maps/dir/'+a.lat+','+a.lng+'/'+b.lat+','+b.lng+'" target="_blank" rel="noopener">🧭 ดูเส้นทาง</a>':''].filter(Boolean).join('<br>');
+}
 /* ── 🔁 ตาราง ปลายทาง ↔ ปลายทาง (Edge dtc-central pairTable / savePair · แก้ได้เฉพาะ DEV) ── */
 let PAIRS=null, PFILTER='all', PED=null;
 function setPF(f){PFILTER=f;document.querySelectorAll('#viewBox .seg:not(.jseg) button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));renderList();}
@@ -438,11 +478,14 @@ function renderPairs(){
   if(!PAIRS){$('list').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดคู่ปลายทาง</div>';return;}
   const rows=pairRowsView();
   if(!rows.length){$('list').innerHTML='<div class="empty">ไม่พบคู่ที่ตรงเงื่อนไข</div>';return;}
-  $('list').innerHTML=rows.slice(0,600).map(p=>'<div class="row'+(p.active===false?' off':'')+'" tabindex="0" role="button" onclick="openPair('+p.id+')" onkeydown="if(event.key===\'Enter\')openPair('+p.id+')">'
+  $('list').innerHTML=rows.slice(0,600).map(p=>{
+    const a=geoOfName(p.station_a), b=geoOfName(p.station_b), c=pairCheck(Math.round(p.km),a,b);
+    const gl=GEO?'<div class="geo-ln">'+(a?'📍 A '+llTxt(a.lat,a.lng):'⚠️ A ไม่มีพิกัด')+' · '+(b?'B '+llTxt(b.lat,b.lng):'⚠️ B ไม่มีพิกัด')+(c?' · เส้นตรง '+nf(c.s,1)+' กม.':'')+'</div>':'';
+    return '<div class="row'+(p.active===false?' off':'')+'" tabindex="0" role="button" onclick="openPair('+p.id+')" onkeydown="if(event.key===\'Enter\')openPair('+p.id+')">'
     +'<div class="cA"><div class="st">'+esc(p.station_a)+' <span style="color:var(--txt2)">↔</span> '+esc(p.station_b)+'</div><div class="meta">'
-      +(p.active===false?'<span class="pill bad">ปิดใช้</span>':'')+(p.note?'<span class="pill">'+esc(String(p.note).slice(0,60))+'</span>':'')+'</div></div>'
+      +(p.active===false?'<span class="pill bad">ปิดใช้</span>':'')+(c&&c.w?'<span class="pill warn" title="ค่ากลางเทียบระยะเส้นตรงผิดปกติ">⚠️ ระยะน่าสงสัย</span>':'')+(p.note?'<span class="pill">'+esc(String(p.note).slice(0,60))+'</span>':'')+'</div>'+gl+'</div>'
     +'<div class="km kA"><b>'+nf(p.km,0)+'</b> กม.<span>ระหว่างปลายทาง</span></div>'
-    +'<div class="code"><span class="nm">'+(p.updated_by?esc(p.updated_by):'')+'</span></div><div class="chev">›</div></div>').join('')
+    +'<div class="code"><span class="nm">'+(p.updated_by?esc(p.updated_by):'')+'</span></div><div class="chev">›</div></div>';}).join('')
     +(rows.length>600?'<div class="note" style="text-align:center;padding:8px">แสดง 600 จาก '+rows.length+' คู่ — พิมพ์ค้นเพื่อดูคู่อื่น</div>':'');
 }
 function openPair(id){
@@ -451,6 +494,7 @@ function openPair(id){
   $('prList').innerHTML=(DATA.rows||[]).filter(r=>r.active!==false).map(r=>'<option value="'+esc(r.station)+'">').join('');
   $('prA').value=PED.station_a||''; $('prB').value=PED.station_b||''; $('prKm').value=PED.km!=null?nf(PED.km,0).replace(/,/g,''):''; $('prNote').value=PED.note||'';
   $('prActive').checked=PED.active!==false;
+  ['prA','prB','prKm'].forEach(i=>{$(i).oninput=geoPair;}); geoPair();
   $('prMeta').textContent=PED.updated_at?'แก้ล่าสุด: '+(PED.updated_by||'—')+' · '+new Date(PED.updated_at).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
   openOv('ovPair'); setTimeout(()=>$(id?'prKm':'prA').focus(),50);
 }
@@ -579,6 +623,8 @@ function renderList(){
         +(r.job_type?'<span class="pill">'+esc(r.job_type)+'</span>':'')
         +(r.pickup_point?'<span class="pill warn">จุดรับ: '+esc(r.pickup_point)+'</span>':'')
         +(r.dp_type?'<span class="pill">⏱️ '+esc(r.dp_type)+(dpHours(r.dp_type)!=null?' · รอ '+nf(dpHours(r.dp_type))+' ชม.':' · ไม่มีในตาราง')+'</span>':'')
+        +(GEO&&!GEO.stations[String(r.id)]?'<span class="pill warn" title="ไม่เจอหมุด DTC ชื่อนี้ และยังไม่ผูกสวน/ลานที่มีพิกัด">⚠️ ไม่มีพิกัด</span>':'')
+        +(GEO&&GEO.stations[String(r.id)]&&GEO.stations[String(r.id)].gap>500?'<span class="pill warn" title="พิกัดสวน/ลานที่ผูก ห่างจากหมุด DTC ชื่อเดียวกัน">⚠️ ห่างหมุด '+nf(GEO.stations[String(r.id)].gap/1000,1)+' กม.</span>':'')
         +(STORES&&STORES[String(r.id)]&&(STORES[String(r.id)].team||STORES[String(r.id)].phones.length)?'<span class="pill ok" title="มีข้อมูลร้าน (ทีมลง/เบอร์/ค่าจอด)">📞 '+esc(STORES[String(r.id)].team||telFmt(STORES[String(r.id)].phones[0]))+'</span>':'')
         +(r.active===false?'<span class="pill bad">ปิดใช้</span>':'')+'</div></div>'
       +'<div class="km kA"><b>'+nf(r.km,0)+'</b> กม.<span>ไป-กลับ '+nf(r.km*2,0)+'</span></div>'
@@ -629,6 +675,7 @@ function openEdit(id,preset){
   PK_F.forEach(([el,k])=>{$(el).value=ED[k]!=null?ED[k]:'';}); pkShow();
   $('edActive').checked=ED.active!==false;
   $('edDel').style.display=id?'':'none';
+  geoStation();
   kmHint(); dupCheck(); openOv('ovEdit');
   setTimeout(()=>$(id?'edKm':'edStation').focus(),50);
 }
