@@ -1212,7 +1212,11 @@ async function dtcOpen(i){
         +'<div style="min-width:0"><div>'+esc(t.plate)+' <small>· '+(t.gate?'ป้อมยาม':esc(t.ssb))+'</small></div><small>'+new Date(t.at).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+(t.via?' · แวะ '+esc(t.via):'')+'</small></div>'
         +'<div style="text-align:right">'+(t.used?'<span class="dpill ok">ใช้</span>':'<span class="dpill bad">'+esc(t.why)+'</span>')+'</div></div>').join('');};
   let h='<div class="legs">'+legBox('ขาไป SSB → สถานี (กม.)',d.out)+legBox('ขากลับ สถานี → SSB (กม.)',d.back)+'</div>'
-    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีขาเดียว ใช้ขานั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b>'
+    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null
+      ?(d.out.direct!=null&&d.out.direct!==d.back.direct   // ขาหนึ่งวิ่งตรง อีกขามีแต่เที่ยวแวะ → ใช้ขาวิ่งตรง (Edge summarize · 30 ต.ค.)
+        ?(d.out.direct?'ขากลับมีแต่เที่ยวแวะหลายจุด ใช้ขาไป (วิ่งตรง) = ':'ขาไปมีแต่เที่ยวแวะหลายจุด ใช้ขากลับ (วิ่งตรง) = ')
+        :'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ')
+      :'มีขาเดียว ใช้ขานั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b>'
     +(r.current&&r.current.km!=null?'<br>ในตาราง: <b>'+esc(r.current.station)+'</b> '+nf(r.current.km,0)+' กม. ('+esc(r.current.by)+') · ต่าง '+(r.diff>0?'+':'')+nf(r.diff,0)+' กม.':(r.current?'<br>ผูก '+esc(r.current.by)+' แต่ยังไม่มีแถวในตาราง':'<br>ยังไม่มีสถานีนี้ในตาราง'))+'</div>'
     +'<div class="dact" style="margin-top:10px">'+(r.current&&r.current.id?'<button class="btn sm" onclick="dtcUse('+i+')">ใช้ค่านี้แก้ในตาราง</button>':'<button class="btn sm" onclick="dtcUse('+i+')">+ เพิ่มเป็นสถานีใหม่</button>')+'</div></div>'
     +dtcNightBox(r.nights)
