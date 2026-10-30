@@ -263,6 +263,22 @@
     <div class="dact"><button class="btn ghost" onclick="closeOv('ovAsk')">ยกเลิก</button><button class="btn danger" id="askOk">ยืนยัน</button></div>
   </div>
 </div>
+<!-- 🔁 แก้คู่ ปลายทาง ↔ ปลายทาง (central_pairs · DEV) -->
+<div class="ov" id="ovPair" onclick="if(event.target===this)closeOv('ovPair')">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="prT">
+    <h2 id="prT">แก้ระยะคู่ปลายทาง</h2>
+    <div class="note" style="margin-bottom:10px">ระยะระหว่างปลายทาง 2 ที่ (ใช้ทั้งสองทิศ) · คิดค่าแรงงานหลายจุด: โรงงาน → จุดแรก + จุด ↔ จุด + จุดสุดท้าย → โรงงาน</div>
+    <div class="f"><label for="prA">ปลายทาง A</label><input id="prA" list="prList" placeholder="ชื่อสถานีตามตารางค่ากลาง"></div>
+    <div class="f"><label for="prB">ปลายทาง B</label><input id="prB" list="prList" placeholder="ชื่อสถานีตามตารางค่ากลาง"><datalist id="prList"></datalist></div>
+    <div class="f2">
+      <div class="f"><label for="prKm">ระยะ A ↔ B (กม.)</label><input id="prKm" type="number" min="1" step="1" inputmode="numeric"></div>
+      <div class="f"><label for="prNote">หมายเหตุ</label><input id="prNote" placeholder="ไม่บังคับ"></div>
+    </div>
+    <label class="chk"><input type="checkbox" id="prActive" checked> ใช้งาน (ปิด = ระบบไม่เอาไปคิด)</label>
+    <div class="hint" id="prMeta" style="font-size:11.5px;color:var(--txt2);margin-top:6px"></div>
+    <div class="dact"><button class="btn ghost" onclick="closeOv('ovPair')">ยกเลิก</button><button class="btn" id="prSave" onclick="savePair()">บันทึก</button></div>
+  </div>
+</div>
 <!-- สรุปก่อนนำเข้าไฟล์ -->
 <div class="ov" id="ovImp" onclick="if(event.target===this)closeOv('ovImp')">
   <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="impT">
@@ -286,7 +302,7 @@
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
-let MY_UID='', DATA=null, FILTER='all', ED=null, PICK=null;
+let MY_UID='', DATA=null, FILTER='all', ED=null, PICK=null, VIEW='st', JT='';
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const nf=(n,d)=>{const x=parseFloat(n);return isNaN(x)?'–':x.toLocaleString('th-TH',{minimumFractionDigits:d||0,maximumFractionDigits:d==null?2:d});};
@@ -363,22 +379,195 @@ function render(){
     h+='</div>';
   }
 
-  h+='<div class="tools"><input class="search" id="q" placeholder="🔎 ค้นสถานี / รหัส / ชื่อสวน…" oninput="renderList()" aria-label="ค้นหา">'
-    +'<div class="seg" role="group" aria-label="กรอง">'
-    +[['all','ทั้งหมด'],['linked','ผูกแล้ว'],['unlinked','ยังไม่ผูก']].map(f=>'<button type="button" data-f="'+f[0]+'" class="'+(FILTER===f[0]?'on':'')+'" onclick="setF(\''+f[0]+'\')">'+f[1]+'</button>').join('')
-    +'</div><button class="btn" onclick="openEdit(null)">+ เพิ่มสถานี</button></div>'
-    +'<div class="tools"><button class="btn ghost" onclick="exportCsv(this)">⬇️ ดาวน์โหลดไฟล์ (Excel)</button>'
-    +'<label class="btn ghost" for="impFile" style="display:inline-block">⬆️ นำเข้าไฟล์ที่แก้แล้ว</label>'
-    +'<input type="file" id="impFile" accept=".csv,.xlsx,text/csv" hidden onchange="importFile(this)">'
-    +'<span class="note">แก้หลายแถวทีเดียว: ดาวน์โหลด → แก้ใน Excel → นำเข้า (อัปเดตแถวเดิม ไม่เพิ่มซ้ำ)</span></div>'
-    +'<div class="list" id="list"></div>';
+  // 🏭 / 🔁 สลับตาราง (คุณน้อง 30 ต.ค.: ต้องมีชิปแยกระหว่างโรงงาน-ปลายทาง) · คู่ปลายทางอยู่ตาราง central_pairs
+  h+='<div class="tools"><div class="seg kseg" role="group" aria-label="ตาราง">'
+    +[['st','🏭 โรงงาน → ปลายทาง ('+rows.length+')'],['pair','🔁 ปลายทาง ↔ ปลายทาง ('+(PAIRS?PAIRS.length:'…')+')']].map(k=>'<button type="button" data-k="'+k[0]+'" class="'+(VIEW===k[0]?'on':'')+'" onclick="setView(\''+k[0]+'\')">'+k[1]+'</button>').join('')
+    +'</div></div><div id="viewBox"></div>';
   $('body').innerHTML=h;
+  renderView();
+}
+/* ชิปประเภทงาน (เฉพาะ 🏭) · "" / null = ยังไม่ระบุ */
+const JT_CHIPS=[['','ทุกประเภท'],['สวน','สวน'],['ลาน','ลาน'],['Packing','Packing'],['Bulk','Bulk'],['ส่งน้ำ','ส่งน้ำ'],['อื่นๆ','อื่นๆ'],['-','ยังไม่ระบุ']];
+const jtOf=r=>{const t=String(r.job_type||'').trim();return JOB_TYPES.indexOf(t)>=0?t:'-';};
+function setView(k){VIEW=k;document.querySelectorAll('.kseg button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));renderView();if(k==='pair'&&!PAIRS)pairLoad();}
+function setJT(t){JT=t;document.querySelectorAll('.jseg button').forEach(b=>b.classList.toggle('on',b.dataset.j===t));renderList();}
+function renderView(){
+  let h='';
+  if(VIEW==='pair'){
+    h='<div class="tools"><input class="search" id="q" placeholder="🔎 ค้นชื่อปลายทาง…" oninput="renderList()" aria-label="ค้นหาคู่ปลายทาง">'
+      +'<div class="seg" role="group" aria-label="กรอง">'+[['all','ทั้งหมด'],['on','ใช้งาน'],['off','ปิดใช้']].map(f=>'<button type="button" data-f="'+f[0]+'" class="'+(PFILTER===f[0]?'on':'')+'" onclick="setPF(\''+f[0]+'\')">'+f[1]+'</button>').join('')+'</div>'
+      +'<button class="btn" onclick="openPair(null)">+ เพิ่มคู่</button></div>'
+      +'<div class="tools"><button class="btn ghost" onclick="pairExport(this)">⬇️ ดาวน์โหลดไฟล์ (Excel)</button>'
+      +'<label class="btn ghost" for="impPair" style="display:inline-block">⬆️ นำเข้าไฟล์ที่แก้แล้ว</label>'
+      +'<input type="file" id="impPair" accept=".xlsx" hidden onchange="pairImport(this)">'
+      +'<span class="note">ระยะระหว่างปลายทาง 2 ที่ (ใช้ทั้งสองทิศ) · แก้ได้เฉพาะ DEV · ค่าจาก DTC เพิ่มได้ที่ลิ้นชัก 📡</span></div>';
+  }else{
+    const cnt={}; (DATA.rows||[]).forEach(r=>{const t=jtOf(r);cnt[t]=(cnt[t]||0)+1;});
+    h='<div class="tools"><div class="seg jseg" role="group" aria-label="ประเภทงาน" style="flex-wrap:wrap">'
+      +JT_CHIPS.filter(c=>!c[0]||cnt[c[0]]).map(c=>'<button type="button" data-j="'+c[0]+'" class="'+(JT===c[0]?'on':'')+'" onclick="setJT(\''+c[0]+'\')">'+c[1]+' <small>'+(c[0]?cnt[c[0]]:(DATA.rows||[]).length)+'</small></button>').join('')+'</div></div>'
+      +'<div class="tools"><input class="search" id="q" placeholder="🔎 ค้นสถานี / รหัส / ชื่อสวน…" oninput="renderList()" aria-label="ค้นหา">'
+      +'<div class="seg" role="group" aria-label="กรอง">'
+      +[['all','ทั้งหมด'],['linked','ผูกแล้ว'],['unlinked','ยังไม่ผูก']].map(f=>'<button type="button" data-f="'+f[0]+'" class="'+(FILTER===f[0]?'on':'')+'" onclick="setF(\''+f[0]+'\')">'+f[1]+'</button>').join('')
+      +'</div><button class="btn" onclick="openEdit(null)">+ เพิ่มสถานี</button></div>'
+      +'<div class="tools"><button class="btn ghost" onclick="exportCsv(this)">⬇️ ดาวน์โหลดไฟล์ (Excel)</button>'
+      +'<label class="btn ghost" for="impFile" style="display:inline-block">⬆️ นำเข้าไฟล์ที่แก้แล้ว</label>'
+      +'<input type="file" id="impFile" accept=".csv,.xlsx,text/csv" hidden onchange="importFile(this)">'
+      +'<span class="note">แก้หลายแถวทีเดียว: ดาวน์โหลด → แก้ใน Excel → นำเข้า (อัปเดตแถวเดิม ไม่เพิ่มซ้ำ)</span></div>';
+  }
+  $('viewBox').innerHTML=h+'<div class="list" id="list"></div>';
   renderList();
 }
-function setF(f){FILTER=f;document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));renderList();}
+/* ── 🔁 ตาราง ปลายทาง ↔ ปลายทาง (Edge dtc-central pairTable / savePair · แก้ได้เฉพาะ DEV) ── */
+let PAIRS=null, PFILTER='all', PED=null;
+function setPF(f){PFILTER=f;document.querySelectorAll('#viewBox .seg:not(.jseg) button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));renderList();}
+async function pairLoad(){
+  try{ const r=await fetch(DTC_EDGE+'?action=pairTable&userId='+encodeURIComponent(MY_UID)); const d=await r.json();
+    if(!d.success) throw new Error(d.error||'โหลดไม่ได้');
+    PAIRS=d.pairs||[];
+    const b=document.querySelector('.kseg button[data-k="pair"]'); if(b) b.textContent='🔁 ปลายทาง ↔ ปลายทาง ('+PAIRS.length+')';
+    if(VIEW==='pair') renderList();
+  }catch(e){ if(VIEW==='pair'&&$('list')) $('list').innerHTML='<div class="empty">โหลดตารางคู่ปลายทางไม่ได้ — '+esc(e.message||e)+' <button class="btn sm" onclick="pairLoad()">↻ ลองใหม่</button></div>'; }
+}
+function pairRowsView(){
+  const q=norm(($('q')||{}).value); let rows=(PAIRS||[]).slice();
+  if(PFILTER==='on')rows=rows.filter(p=>p.active!==false); if(PFILTER==='off')rows=rows.filter(p=>p.active===false);
+  if(q)rows=rows.filter(p=>norm(p.station_a+' '+p.station_b+' '+(p.note||'')).indexOf(q)>=0);
+  return rows;
+}
+function renderPairs(){
+  if(!PAIRS){$('list').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดคู่ปลายทาง</div>';return;}
+  const rows=pairRowsView();
+  if(!rows.length){$('list').innerHTML='<div class="empty">ไม่พบคู่ที่ตรงเงื่อนไข</div>';return;}
+  $('list').innerHTML=rows.slice(0,600).map(p=>'<div class="row'+(p.active===false?' off':'')+'" tabindex="0" role="button" onclick="openPair('+p.id+')" onkeydown="if(event.key===\'Enter\')openPair('+p.id+')">'
+    +'<div class="cA"><div class="st">'+esc(p.station_a)+' <span style="color:var(--txt2)">↔</span> '+esc(p.station_b)+'</div><div class="meta">'
+      +(p.active===false?'<span class="pill bad">ปิดใช้</span>':'')+(p.note?'<span class="pill">'+esc(String(p.note).slice(0,60))+'</span>':'')+'</div></div>'
+    +'<div class="km kA"><b>'+nf(p.km,0)+'</b> กม.<span>ระหว่างปลายทาง</span></div>'
+    +'<div class="code"><span class="nm">'+(p.updated_by?esc(p.updated_by):'')+'</span></div><div class="chev">›</div></div>').join('')
+    +(rows.length>600?'<div class="note" style="text-align:center;padding:8px">แสดง 600 จาก '+rows.length+' คู่ — พิมพ์ค้นเพื่อดูคู่อื่น</div>':'');
+}
+function openPair(id){
+  PED=id?(PAIRS||[]).find(p=>p.id===id):{active:true};
+  $('prT').textContent=id?'แก้ระยะคู่ปลายทาง':'เพิ่มคู่ปลายทาง';
+  $('prList').innerHTML=(DATA.rows||[]).filter(r=>r.active!==false).map(r=>'<option value="'+esc(r.station)+'">').join('');
+  $('prA').value=PED.station_a||''; $('prB').value=PED.station_b||''; $('prKm').value=PED.km!=null?nf(PED.km,0).replace(/,/g,''):''; $('prNote').value=PED.note||'';
+  $('prActive').checked=PED.active!==false;
+  $('prMeta').textContent=PED.updated_at?'แก้ล่าสุด: '+(PED.updated_by||'—')+' · '+new Date(PED.updated_at).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  openOv('ovPair'); setTimeout(()=>$(id?'prKm':'prA').focus(),50);
+}
+async function pairPost(rec){
+  const r=await fetch(DTC_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action:'savePair',userId:MY_UID},rec))});
+  return r.json();
+}
+async function savePair(){
+  const rec={id:PED&&PED.id||undefined,a:$('prA').value.trim(),b:$('prB').value.trim(),km:kmRound($('prKm').value),note:$('prNote').value.trim(),active:$('prActive').checked};
+  if(!rec.a||!rec.b){toast('กรอกชื่อปลายทางให้ครบทั้ง 2 ฝั่ง',true);return;}
+  if(!(rec.km>=1)){toast('กรอกระยะ (อย่างน้อย 1 กม.)',true);$('prKm').focus();return;}
+  const b=$('prSave');b.disabled=true;b.textContent='กำลังบันทึก…';
+  try{ const d=await pairPost(rec);
+    if(d.success){toast('✅ บันทึก '+rec.a+' ↔ '+rec.b+' = '+rec.km+' กม. แล้ว');closeOv('ovPair');await pairLoad();}
+    else toast('❌ '+(d.denied?'แก้ได้เฉพาะ DEV':(d.error||'บันทึกไม่ได้')),true);
+  }catch(e){toast('❌ บันทึกไม่ได้ — ลองใหม่',true);}
+  b.disabled=false;b.textContent='บันทึก';
+}
+function setF(f){FILTER=f;document.querySelectorAll('#viewBox .seg:not(.jseg) button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));renderList();}
+/* ⬇️⬆️ Excel คู่ปลายทาง (รูปแบบเดียวกับไฟล์ค่ากลาง) · นำเข้า: id/ชื่อคู่ตรง = แก้แถวเดิม · ไม่มี = เพิ่ม · ช่องว่าง = คงค่าเดิม · บันทึกทีละคู่ (DEV) */
+const PR_COLS=[['id','id (ห้ามแก้)',8,1],['a','ปลายทาง A',34],['b','ปลายทาง B',34],['km','ระยะ A ↔ B (กม.)',12],['note','หมายเหตุ',30],['active','ใช้งาน(ใช่/ไม่)',10],['upd','แก้ล่าสุด (อ่านอย่างเดียว)',22,1]];
+async function pairExport(b){
+  if(!PAIRS){toast('ยังโหลดตารางคู่ปลายทางไม่เสร็จ',true);return;}
+  const done=btnBusy(b,'กำลังสร้าง…');
+  try{
+    const X=await xrtLib(),NAVY='1E293B',LN='CBD5E1',F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'1E293B'}},o||{});
+    const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
+    const al={vertical:'top',wrapText:true}, cell=(v,s)=>({v:v==null?'':String(v),t:'s',s});
+    const sh={font:F({bold:true,color:{rgb:'FFFFFF'}}),fill:{fgColor:{rgb:NAVY}},border:bd,alignment:{horizontal:'center',vertical:'center',wrapText:true}};
+    const sk={font:F({sz:8,italic:true,color:{rgb:'94A3B8'}}),fill:{fgColor:{rgb:'F1F5F9'}},border:bd,alignment:{horizontal:'center'}};
+    const ro={font:F({sz:9,color:{rgb:'64748B'}}),fill:{fgColor:{rgb:'F1F5F9'}},border:bd,alignment:al};
+    const d0={font:F(),border:bd,alignment:al},d1={font:F(),border:bd,fill:{fgColor:{rgb:'F8FAFC'}},alignment:al};
+    const now=new Date(), rows=[[cell('ตารางระยะคู่ปลายทาง (ปลายทาง ↔ ปลายทาง · ใช้คิดงานหลายจุด) · SSB Smart Supply',{font:F({sz:15,bold:true,color:{rgb:'0F2A1E'}})})],
+      [cell('ดาวน์โหลดเมื่อ '+now.toLocaleString('th-TH',{dateStyle:'long',timeStyle:'short'})+' · ระยะใช้ได้ทั้งสองทิศ (A → B = B → A) · แก้ได้เฉพาะ DEV',{font:F({sz:9.5,color:{rgb:'64748B'}})})],
+      PR_COLS.map(c=>cell(c[1],sh)),PR_COLS.map(c=>cell(c[0],sk))];
+    PAIRS.slice().sort((x,y)=>String(x.station_a).localeCompare(String(y.station_a),'th')).forEach((p,i)=>{
+      const v={id:p.id,a:p.station_a,b:p.station_b,km:p.km!=null?Math.round(p.km):'',note:p.note||'',active:p.active===false?'ไม่':'ใช่',upd:(p.updated_by||'')+(p.updated_at?' · '+new Date(p.updated_at).toLocaleDateString('th-TH'):'')};
+      rows.push(PR_COLS.map(c=>cell(v[c[0]],c[3]?ro:i%2?d1:d0)));});
+    const ws={}; rows.forEach((r,ri)=>r.forEach((v,ci)=>{ws[X.utils.encode_cell({r:ri,c:ci})]=v;}));
+    ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:PR_COLS.length-1}});
+    ws['!merges']=[{s:{r:0,c:0},e:{r:0,c:PR_COLS.length-1}},{s:{r:1,c:0},e:{r:1,c:PR_COLS.length-1}}];
+    ws['!cols']=PR_COLS.map(c=>({wch:c[2]})); ws['!rows']=[{hpt:26},{hpt:16},{hpt:30},{hpt:13}]; ws['!freeze']={xSplit:0,ySplit:4};
+    ws['!autofilter']={ref:X.utils.encode_range({s:{r:2,c:0},e:{r:rows.length-1,c:PR_COLS.length-1}})};
+    const H=t=>({v:t,t:'s',s:{font:F(),alignment:{wrapText:true,vertical:'top'}}});
+    const help=[[{v:'วิธีใช้ไฟล์ระยะคู่ปลายทาง',t:'s',s:{font:F({sz:15,bold:true})}}],[H('')],
+      [H('1'),H('แก้ระยะ/หมายเหตุ/ใช้งาน ในแผ่น "คู่ปลายทาง" แล้วนำเข้ากลับที่หน้าตารางค่ากลาง → ชิป 🔁 ปลายทาง ↔ ปลายทาง → นำเข้าไฟล์ที่แก้แล้ว')],
+      [H('2'),H('ห้ามแก้แถวคีย์ภาษาอังกฤษ (แถวที่ 4) และคอลัมน์ id · id ว่าง = เพิ่มคู่ใหม่ (กรอกชื่อ A, B และระยะให้ครบ)')],
+      [H('3'),H('ช่องว่าง = คงค่าเดิม · ลบแถวทิ้ง = ไม่ลบออกจากระบบ (ปิดใช้ให้ใส่ "ไม่" ในคอลัมน์ใช้งาน)')],
+      [H('4'),H('ชื่อปลายทางควรตรงกับชื่อสถานีในตารางค่ากลาง · คู่เดียวกันสลับ A/B ถือเป็นแถวเดียวกัน')],
+      [H('5'),H('ก่อนบันทึกระบบแสดงสรุป แก้ / เพิ่ม / ผิดพลาด ให้ตรวจก่อนยืนยัน · แก้ได้เฉพาะ DEV')]];
+    const wh={}; help.forEach((r,ri)=>r.forEach((v,ci)=>{wh[X.utils.encode_cell({r:ri,c:ci})]=v;}));
+    wh['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:help.length-1,c:1}}); wh['!cols']=[{wch:6},{wch:110}];
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'คู่ปลายทาง'); X.utils.book_append_sheet(wb,wh,'วิธีใช้');
+    xrtSave(new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),'ระยะคู่ปลายทาง_'+xrtYmd(now)+'.xlsx');
+    toast('⬇️ ดาวน์โหลดแล้ว '+PAIRS.length+' คู่');
+  }catch(e){toast('❌ สร้างไฟล์ไม่สำเร็จ: '+(e.message||e),true);}
+  finally{done();}
+}
+const pKey=(a,b)=>{const x=norm(a),y=norm(b);return x<=y?x+'|'+y:y+'|'+x;};
+let PPLAN=null;
+async function pairImport(inp){
+  const f=inp.files&&inp.files[0]; inp.value=''; if(!f)return;
+  if(!PAIRS){toast('ยังโหลดตารางคู่ปลายทางไม่เสร็จ',true);return;}
+  let tbl; try{ tbl=await readXlsx(await f.arrayBuffer()); }catch(e){toast('❌ อ่านไฟล์ไม่ได้: '+(e.message||e),true);return;}
+  let h=-1; for(let i=0;i<Math.min(tbl.length,10);i++){ if((tbl[i]||[]).some(c=>/ปลายทาง\s*A/.test(c))){h=i;break;} }
+  if(h<0){toast('❌ ไม่เจอหัวคอลัมน์ "ปลายทาง A" — ใช้ไฟล์ที่ดาวน์โหลดจากชิป 🔁',true);return;}
+  const H=tbl[h].map(x=>String(x||'').trim()), ix={}; PR_COLS.forEach(([k,l])=>{ix[k]=H.indexOf(l);});
+  const nx=(tbl[h+1]||[]).map(x=>String(x||'').trim()); if(nx.indexOf('a')>=0&&nx.indexOf('km')>=0) h++;
+  const byId={}, byKey={}; PAIRS.forEach(p=>{byId[p.id]=p;byKey[pKey(p.station_a,p.station_b)]=p;});
+  const P={upd:[],ins:[],same:0,skip:0,err:[]}, seen={};
+  for(let i=h+1;i<tbl.length;i++){
+    const c=tbl[i]||[], g=k=>ix[k]<0?'':String(c[ix[k]]==null?'':c[ix[k]]).trim(), line=i+1;
+    const id=parseInt(g('id'),10), a=g('a'), b=g('b'), kmS=g('km').replace(/,/g,'');
+    if(!id&&!a&&!b&&!kmS)continue;
+    let base=id>0?byId[id]:null;
+    if(id>0&&!base){P.err.push('แถว '+line+': ไม่พบ id '+id+' (คู่ใหม่ให้ลบเลข id ออก)');continue;}
+    const A=a||(base&&base.station_a)||'', B=b||(base&&base.station_b)||'';
+    if(!A||!B){P.err.push('แถว '+line+': กรอกชื่อปลายทางให้ครบ A และ B');continue;}
+    if(norm(A)===norm(B)){P.err.push('แถว '+line+': A กับ B เป็นที่เดียวกัน');continue;}
+    const k=pKey(A,B); if(!base)base=byKey[k]||null;
+    if(seen[k]){P.err.push('แถว '+line+': คู่ '+A+' ↔ '+B+' ซ้ำกับแถว '+seen[k]+' ในไฟล์');continue;} seen[k]=line;
+    if(!base&&!kmS){P.skip++;continue;}
+    const km=kmS?kmRound(kmS):Math.round(base.km);
+    if(!(km>=1&&km<=3000)){P.err.push('แถว '+line+' ('+A+' ↔ '+B+'): ระยะ "'+g('km')+'" ไม่ถูกต้อง');continue;}
+    const act=g('active')?!/^(ไม่|no|false|0|ปิด)/i.test(g('active')):(base?base.active!==false:true);
+    const rec={id:base?base.id:undefined,a:A,b:B,km,note:g('note')||(base&&base.note)||'',active:act};
+    if(base){ const other=byKey[k]; if(other&&other.id!==base.id){P.err.push('แถว '+line+': คู่นี้มีอยู่แล้ว (id '+other.id+')');continue;}
+      const d=[]; if(A!==base.station_a||B!==base.station_b)d.push('ชื่อ: '+base.station_a+' ↔ '+base.station_b+' → '+A+' ↔ '+B);
+      if(km!==Math.round(base.km))d.push('ระยะ: '+Math.round(base.km)+' → '+km); if(String(rec.note)!==String(base.note||''))d.push('หมายเหตุ: '+(base.note||'—')+' → '+(rec.note||'—'));
+      if(act!==(base.active!==false))d.push('ใช้งาน: '+(base.active!==false?'ใช่':'ไม่')+' → '+(act?'ใช่':'ไม่'));
+      if(!d.length){P.same++;continue;} P.upd.push({rec,diff:d}); }
+    else P.ins.push({rec});
+  }
+  PPLAN=P;
+  const st=(k,v)=>'<div class="stat"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';
+  let o='<div class="stats" style="margin-top:0">'+st('แก้คู่เดิม',P.upd.length)+st('เพิ่มคู่ใหม่',P.ins.length)+st('ไม่เปลี่ยน / ข้าม',P.same+P.skip)+'</div>';
+  if(P.err.length)o+='<div class="errbox"><b>ต้องแก้ไฟล์ก่อนนำเข้า ('+P.err.length+' แถว)</b><br>'+P.err.slice(0,30).map(esc).join('<br>')+'</div>';
+  const list=P.upd.map(u=>'<div><b>'+esc(u.rec.a)+' ↔ '+esc(u.rec.b)+'</b><br><small>'+u.diff.map(esc).join(' · ')+'</small></div>').concat(P.ins.map(x=>'<div><b>+ เพิ่ม '+esc(x.rec.a)+' ↔ '+esc(x.rec.b)+'</b><br><small>'+x.rec.km+' กม.</small></div>'));
+  if(list.length)o+='<div class="plist">'+list.join('')+'</div>';
+  $('impT').textContent='ตรวจก่อนนำเข้า · คู่ปลายทาง'; $('impBody').innerHTML=o;
+  const n=P.upd.length+P.ins.length, bt=$('impOk'); bt.onclick=pairDoImport;
+  bt.disabled=!n||P.err.length>0; bt.textContent=P.err.length?'แก้ไฟล์ก่อน':(n?'นำเข้า '+n+' คู่':'ไม่มีอะไรเปลี่ยน');
+  openOv('ovImp');
+}
+async function pairDoImport(){
+  const list=PPLAN.upd.map(u=>u.rec).concat(PPLAN.ins.map(x=>x.rec)), bt=$('impOk'); bt.disabled=true; bt.textContent='กำลังนำเข้า…';
+  let ok=0; const bad=[];
+  for(const r of list){ try{ const d=await pairPost(r); if(d.success) ok++; else { bad.push(r.a+' ↔ '+r.b+': '+(d.denied?'แก้ได้เฉพาะ DEV':(d.error||'ไม่สำเร็จ'))); if(d.denied) break; } }catch(e){ bad.push(r.a+' ↔ '+r.b+': บันทึกไม่ได้'); } }
+  await pairLoad();
+  if(bad.length){ toast('⚠️ นำเข้าแล้ว '+ok+' คู่ · ไม่สำเร็จ '+bad.length,true); $('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+bad.slice(0,20).map(esc).join('<br>')+'</div>'); bt.textContent='ปิด'; bt.disabled=false; bt.onclick=()=>closeOv('ovImp'); }
+  else { toast('✅ นำเข้าแล้ว '+ok+' คู่'); closeOv('ovImp'); }
+}
 function renderList(){
+  if(VIEW==='pair') return renderPairs();
   const q=norm(($('q')||{}).value);
   let rows=(DATA.rows||[]).slice();
+  if(JT) rows=rows.filter(r=>jtOf(r)===JT);
   if(FILTER==='linked')rows=rows.filter(r=>r.garden_code);
   if(FILTER==='unlinked')rows=rows.filter(r=>!r.garden_code);
   if(q)rows=rows.filter(r=>norm(r.station+' '+(r.garden_code||'')+' '+codeName(r.garden_code)+' '+(r.pickup_point||'')+' '+(r.job_type||'')+' '+(r.dp_type||'')).indexOf(q)>=0);
@@ -820,6 +1009,7 @@ function showPlan(P){
   if(P.skip)h+='<div class="note" style="margin-top:8px">ข้าม '+P.skip+' แถวที่ยังไม่กรอกระยะ · แถวที่ไม่อยู่ในไฟล์ไม่ถูกลบ</div>';
   if((P.st.length||P.stNew.length)&&!ST_CAN)h+='<div class="errbox" style="margin-top:8px">บัญชีนี้แก้ข้อมูลร้านไม่ได้ (เฉพาะ DEV / แอดมิน Packing / ผู้จัดการ) — ส่วน 📞 จะไม่ถูกบันทึก</div>';
   $('impBody').innerHTML=h;
+  $('impT').textContent='ตรวจก่อนนำเข้า'; $('impOk').onclick=doImport;   // ใช้กล่องเดียวกับนำเข้าคู่ปลายทาง → คืนปุ่มเป็นของค่ากลาง
   const n=P.upd.length+P.ins.length+(ST_CAN?P.st.length+P.stNew.length:0), b=$('impOk');
   b.disabled=!n||P.err.length>0; b.textContent=P.err.length?'แก้ไฟล์ก่อน':(n?'นำเข้า '+n+' แถว':'ไม่มีอะไรเปลี่ยน');
   openOv('ovImp');
