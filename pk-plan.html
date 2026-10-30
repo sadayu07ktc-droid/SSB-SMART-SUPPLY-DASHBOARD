@@ -67,7 +67,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30c</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30d</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -189,6 +189,18 @@ function helperCell(hs,time){
   if(!hs||!hs.length) return '<span class="how">ไม่มี</span>';
   return hs.map(h=>'<span class="tag'+(h.outside?' out':'')+'">'+esc(h.name)+(h.outside?' · นอก':'')+'</span>').join('')+(time?'<span class="how">นัด '+esc(time)+'</span>':'');
 }
+// CO / COA / PO = เอกสารที่คนขับต้องรับกลับ (คุณน้อง 30 ต.ค.) → ป้ายแยกจากงานเสริม (= pk-plan splitDocs)
+const DOC_RE=/^(CO|COA|PO)$/i;
+function splitDocs(t){ const s=S(t).replace(/[()]/g,' ');
+  const docs=[...new Set(s.split(/\s*[+·,\/]\s*|\s+/).map(S).filter(p=>DOC_RE.test(p)).map(p=>p.toUpperCase()))];
+  const rest=s.split(/\s*[+·,\/]\s*/).map(p=>S(p).split(' ').filter(w=>!DOC_RE.test(w)).join(' ')).filter(Boolean).join(' · ');
+  return {docs,rest}; }
+function extrasCell(extras,stops){
+  const e=splitDocs(extras), docs=e.docs.slice();
+  (Array.isArray(stops)?stops:[]).forEach(s=>splitDocs(s.task).docs.forEach(d=>{ if(docs.indexOf(d)<0) docs.push(d); }));
+  return (docs.length?'<span class="tag out" title="คนขับต้องรับเอกสารกลับ">📄 รับเอกสารกลับ '+esc(docs.join(' · '))+'</span>':'')
+    +(e.rest?'<span class="how">+ '+esc(e.rest)+'</span>':'');
+}
 const KIND={add:'ใหม่',chg:'แก้ไข',same:'เหมือนเดิม',del:'ตัดออก',skip:'ไม่สร้างงาน'};
 function jobRows(list,edit){
   return list.map((r,i)=>{
@@ -198,7 +210,7 @@ function jobRows(list,edit){
       +(edit?'<td>'+(r.kind==='del'?'':'<input type="checkbox" aria-label="สร้างงาน" '+(r.pick?'checked':'')+' onchange="setRow('+idx+',\'pick\',this.checked)">')+'</td>':'')
       +'<td>'+esc(r.truck_group||'')+'<span class="how">'+esc(r.plate||r.plate_raw)+'</span></td>'
       +'<td'+c('driver_code')+'>'+drvCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
-      +'<td'+c('job_text')+'>'+esc(r.job_text)+(r.extras?'<span class="how">+ '+esc(r.extras)+'</span>':'')+'</td>'
+      +'<td'+c('job_text')+'>'+esc(r.job_text)+extrasCell(r.extras,r.stops)+'</td>'
       +'<td'+c('stops')+'>'+stCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
       +'<td'+c('unload_time')+'>'+esc(r.unload_time||'—')+'</td>'
       +'<td'+(cf.indexOf('pallets')>=0||cf.indexOf('cases')>=0?' class="cf"':'')+'>'+qtyCell(r)+'</td>'
