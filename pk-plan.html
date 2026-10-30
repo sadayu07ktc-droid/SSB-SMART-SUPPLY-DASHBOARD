@@ -66,7 +66,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-29d</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30a</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -135,7 +135,8 @@ async function saveUp(b){
   try{
     const d=await post({action:'commit',date:UP.date,fileName:UP.fileName,rows:UP.rows,off:UP.off||[]});
     if(!d.ok){ toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); if(d.table){UP.pv=d;render();} return; }
-    toast('✅ บันทึกแพลน '+thDate(UP.date)+' '+d.revName+' แล้ว'+(d.remembered?' · จำการจับคู่ '+d.remembered+' รายการ':''));
+    const ln=d.line&&!d.line.error?' · ส่งการ์ด LINE: ใหม่ '+(d.line.sentNew||0)+' / แก้ '+(d.line.chg||0)+' / ยกเลิก '+(d.line.cx||0):'';
+    toast('✅ บันทึกแพลน '+thDate(UP.date)+' '+d.revName+' แล้ว'+(d.remembered?' · จำการจับคู่ '+d.remembered+' รายการ':'')+ln);
     const date=UP.date; UP=null; await load(date);
   }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดใหม่ให้ตรวจ',true); }
   finally{ BUSY=false; }
@@ -203,7 +204,9 @@ function savedStat(r){
     return '<span class="tag st-'+esc(q?q.status:'Waiting')+'">🚜 '+esc(q?(TR_LABEL[q.status]||q.status):'ขอรถไร่แล้ว')+'</span>'+(q&&q.driver_name?'<span class="how">'+esc(q.driver_name)+' '+esc(q.plate||'')+'</span>':'')
       +(q&&q.status==='Waiting'&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:3px 9px;font-size:11.5px;margin-top:4px" onclick="trCancel(this,\''+esc(r.farm_req_id)+'\')">ยกเลิกขอรถไร่</button>':''); }
   const busy=['accepted','started','done'].indexOf(r.status)>=0;
-  return '<span class="tag">'+esc(STAT[r.status]||r.status)+'</span>'
+  const lab=r.status==='sent'&&r.needs_ack?'แก้ไขแล้ว · รอกดรับใหม่':(STAT[r.status]||r.status);
+  return '<span class="tag'+(busy?' ok':r.status==='sent'?' out':'')+'">'+esc(lab)+'</span>'
+    +(r.order_id&&busy?'<span class="how">'+esc(r.order_id)+'</span>':'')
     +(!busy&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:3px 9px;font-size:11.5px;margin-top:4px;white-space:nowrap" onclick="trJob(this,'+Number(r.id)+')">🚜 ขอรถไร่</button>':'');
 }
 const STAT={new:'ยังไม่แจก',sent:'แจกแล้ว · รอรับ',accepted:'รับงานแล้ว',started:'เริ่มงาน',done:'เสร็จ'};
@@ -212,7 +215,7 @@ function render(){
   let h='';
   if(UP&&UP.pv){
     const d=UP.pv, c=d.counts;
-    h+='<div class="card"><div class="row"><b style="font-size:15px">ตรวจไฟล์ '+esc(UP.fileName)+'</b><span class="tag">วันที่ '+thDate(d.date)+'</span><span class="tag">'+esc(d.revName)+'</span>'+(d.dispatched?'<span class="tag out">แจกงานแล้ว — บันทึกฉบับนี้ระบบจะส่งการ์ดเฉพาะงานที่เปลี่ยน (ขั้นถัดไป)</span>':'')+'</div>'
+    h+='<div class="card"><div class="row"><b style="font-size:15px">ตรวจไฟล์ '+esc(UP.fileName)+'</b><span class="tag">วันที่ '+thDate(d.date)+'</span><span class="tag">'+esc(d.revName)+'</span>'+(d.dispatched?'<span class="tag out">แจกงานแล้ว — บันทึกฉบับนี้ระบบส่งการ์ดให้คนขับเฉพาะงานที่เพิ่ม/แก้/ตัดออก</span>':'')+'</div>'
       +'<div class="kpis"><div class="kpi"><b>'+c.picked+'</b><span>งานที่จะสร้าง (จาก '+c.rows+' งานในไฟล์)</span></div>'
       +'<div class="kpi'+(c.noDriver?' bad':'')+'"><b>'+c.noDriver+'</b><span>หาคนขับไม่เจอ (ต้องแก้)</span></div>'
       +'<div class="kpi'+(c.noStation?' warn':'')+'"><b>'+c.noStation+'</b><span>ยังไม่ผูกค่ากลาง (ครบทุกจุด)'+(c.multi?' · หลายจุด '+c.multi+' งาน':'')+(c.day?' · รายวัน '+c.day:'')+'</span></div>'
@@ -232,11 +235,11 @@ function render(){
     const pl=PLAN.plan, js=PLAN.jobs||[], live=js.filter(j=>!j.cancelled);
     const miss=live.filter(j=>j.pay_mode!=='day'&&(!stopsOf(j).length||stopsOf(j).some(s=>!s.station_id))).length;
     h+='<div class="kpis"><div class="kpi"><b>'+live.length+'</b><span>งาน · '+thDate(pl.work_date)+'</span></div>'
-      +'<div class="kpi"><b>'+live.filter(j=>j.status==='accepted').length+'</b><span>คนขับรับงานแล้ว</span></div>'
+      +'<div class="kpi"><b>'+live.filter(j=>['accepted','started','done'].indexOf(j.status)>=0).length+' / '+live.filter(j=>!j.farm_req_id).length+'</b><span>คนขับรับงานแล้ว</span></div>'
       +'<div class="kpi'+(miss?' warn':'')+'"><b>'+miss+'</b><span>ยังไม่ผูกค่ากลาง</span></div>'
       +'<div class="kpi"><b>'+(pl.rev?'Revised '+pl.rev:'ฉบับแรก')+'</b><span>'+((PLAN.revs||[]).slice(-1)[0]?esc(PLAN.revs.slice(-1)[0].uploaded_by_name||''):'')+'</span></div></div>'
       +'<div class="tw" style="margin-top:8px"><table>'+HEAD(false)+jobRows(js,false)+'</table></div>'
-      +'<div class="sticky"><span class="note">ขั้นถัดไป: ปุ่ม "แจกงาน" ส่งการ์ดให้คนขับใน LINE → คนขับกดรับ → ระบบสร้างออเดอร์ (กำลังทำ)</span><span class="grow"></span><button class="btn" disabled title="กำลังทำ">📲 แจกงานทั้งวัน</button></div>';
+      +dispBar(pl,live);
   } else if(!(UP&&UP.pv)) h+='<div class="msg">ยังไม่มีแพลน — กด "อัปโหลดใบแจ้งงานประจำวัน"</div>';
   h+='</div>';
   h+=trCard();
@@ -337,6 +340,33 @@ async function lkSaveKm(b){
   if(BUSY) return; BUSY=true; b.disabled=true;
   try{ const d=await post({action:'setLongKm',km}); toast(d.ok?'✅ เกณฑ์ระยะไกล = '+d.km+' กม.':'❌ '+(d.error||'บันทึกไม่สำเร็จ'),!d.ok); if(d.ok){ if(PLAN) PLAN.longKm=d.km; BUSY=false; await dqLoad(); } }
   catch(e){ toast('บันทึกไม่สำเร็จ',true); }
+  finally{ BUSY=false; }
+}
+/* ── 📲 แจกงาน → การ์ด LINE ถึงคนขับ (ส่งเฉพาะคนที่ลงทะเบียน LINE แล้ว) · กดซ้ำ = ส่งใบที่ยังไม่ได้ส่ง ── */
+const todayTH=()=>new Date(Date.now()+7*36e5).toISOString().slice(0,10);
+function dispBar(pl,live){
+  const left=live.filter(j=>j.status==='new'&&!j.farm_req_id), past=String(pl.work_date)<todayTH();
+  const info=pl.dispatched_at?'📤 แจกแล้วโดย '+esc(pl.dispatched_by||'—')+' · '+new Date(pl.dispatched_at).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})
+    +(left.length?' · ยังไม่ได้ส่ง '+left.length+' ใบ (คนขับยังไม่ลงทะเบียน LINE / งานเพิ่มใหม่)':' · ส่งครบแล้ว'):'ยังไม่แจกงาน — กดแจกงานแล้วคนขับได้การ์ดใน LINE · คนขับกดรับ → ระบบสร้างออเดอร์ให้';
+  const lab=pl.dispatched_at?'📲 ส่งใบที่ยังไม่ได้ส่ง ('+left.length+')':'📲 แจกงานทั้งวัน ('+left.length+' ใบ)';
+  const can=ME&&ME.canEdit&&left.length&&!past;
+  return (PLAN.testMode?'<div class="note" style="margin-top:8px;color:var(--danger)">🧪 โหมดเทสระบบเปิดอยู่ — การ์ดคนขับติดป้าย "เทสระบบ ไม่ต้องออกรถ" (ยังไม่มีฟอร์มคนขับ Packing)</div>':'')
+    +'<div class="sticky"><span class="note">'+info+(past?' · แพลนวันที่ผ่านมาแล้ว':'')+'</span><span class="grow"></span>'
+    +(ME&&ME.canEdit?'<button class="btn" onclick="dispatchPlan(this)"'+(can?'':' disabled')+'>'+lab+'</button>':'')+'</div>';
+}
+async function dispatchPlan(b){
+  if(BUSY||!PLAN||!PLAN.plan) return;
+  const pl=PLAN.plan, live=(PLAN.jobs||[]).filter(j=>!j.cancelled&&j.status==='new'&&!j.farm_req_id);
+  const drv=new Set(live.map(j=>j.driver_code||j.driver_raw)).size;
+  if(!(await askYes(pl.dispatched_at?'📲 ส่งใบที่ยังไม่ได้ส่ง':'📲 แจกงานทั้งวัน','แพลน '+thDate(pl.work_date)+' · '+live.length+' ใบ · คนขับ '+drv+' คน\n\nระบบส่งการ์ดใน LINE เฉพาะคนขับที่ลงทะเบียนแล้ว · คนขับกดรับ → สร้างออเดอร์ให้เอง','แจกงาน'))) return;
+  BUSY=true; b.disabled=true; b.textContent='กำลังแจกงาน…';
+  try{
+    const d=await post({action:'dispatch',planId:pl.id});
+    if(!d.ok){ toast('❌ '+(d.error||'แจกงานไม่สำเร็จ'),true); return; }
+    const w=(d.waitLine||[]).length;
+    toast('✅ ส่งการ์ดแล้ว '+d.sent+' ใบ'+(w?' · ยังไม่ได้ส่ง '+w+' ใบ (คนขับยังไม่ลงทะเบียน LINE)':'')+(d.failed?' · ส่ง LINE ไม่สำเร็จ '+d.failed:''),!!d.failed);
+    await load(pl.work_date);
+  }catch(e){ toast('ไม่แน่ใจว่าแจกงานสำเร็จ — โหลดหน้าใหม่ให้ตรวจก่อนกดซ้ำ',true); }
   finally{ BUSY=false; }
 }
 // กล่องยืนยัน (แทน confirm() ของเบราว์เซอร์)
