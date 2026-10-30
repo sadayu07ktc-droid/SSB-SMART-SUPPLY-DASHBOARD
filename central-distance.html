@@ -210,6 +210,31 @@
       <div class="pkh" style="margin-top:12px">③ ค่าเด็กลงของ <span>(เรทเดียวทุกร้าน · ไม่ต้องกรอกที่นี่)</span></div>
       <div class="hint" id="edPkHelp"></div>
     </fieldset>
+    <!-- 📞 ข้อมูลร้าน (ทีมลง/เบอร์/ค่าจอด/อัตราค่าลง) · ใช้ในการ์ดคนขับ + หน้าแจกงาน Packing · คุณน้อง 30 ต.ค. -->
+    <fieldset class="pkbox" id="edSt" hidden>
+      <legend>📞 ข้อมูลร้าน (การ์ดคนขับ · หน้าแจกงาน)</legend>
+      <div class="hint" id="edStNote" style="margin-top:0"></div>
+      <div class="f2" style="margin-top:6px">
+        <div class="f"><label for="stTeam">ทีมลงสินค้า</label><input id="stTeam" maxlength="80" placeholder="ชื่อทีม / ผู้ติดต่อ"></div>
+        <div class="f"><label for="stPark">ค่าที่จอด (บาท)</label><input id="stPark" maxlength="40" placeholder="เช่น 110 · ว่าง = ไม่มี"></div>
+      </div>
+      <div class="f2" style="margin-top:8px">
+        <div class="f"><label for="stTel1">เบอร์ 1</label><input id="stTel1" inputmode="tel" maxlength="14" placeholder="08x-xxx-xxxx"></div>
+        <div class="f"><label for="stTel2">เบอร์ 2</label><input id="stTel2" inputmode="tel" maxlength="14" placeholder="ไม่บังคับ"></div>
+      </div>
+      <div class="pkh" style="margin-top:12px">ค่าลงสินค้า <span>(คนขับเห็นแค่ยอดเงิน · รายละเอียดไว้ให้แอดมินคิด)</span></div>
+      <div id="stRates"></div>
+      <button type="button" class="btn ghost sm" style="margin-top:6px" onclick="stAddRate()">+ เพิ่มอัตรา</button>
+      <div class="f2" style="margin-top:10px">
+        <div class="f"><label for="stToll">ค่าทางด่วน (บาท)</label><input id="stToll" maxlength="40" placeholder="เช่น 540 หรือ 665-755"></div>
+        <div class="f"><label for="stPay">วิธีจ่ายค่าลง</label><input id="stPay" list="stPayList" maxlength="60" placeholder="เลือกหรือพิมพ์"><datalist id="stPayList"><option value="จ้างลง-จ่ายเงินสดหน้างาน"><option value="ตั้งหนี้ทีมลง-โอน"><option value="ตั้งหนี้ค่าลงสินค้าCJ"></datalist></div>
+      </div>
+      <div class="f2" style="margin-top:8px">
+        <div class="f"><label for="stDoc">เอกสารบิล Invoice ที่นำกลับ</label><input id="stDoc" list="stDocList" maxlength="80" placeholder="เลือกหรือพิมพ์"><datalist id="stDocList"><option value="เหลือง(วางบิล)+ฟ้า(บัญชี)"><option value="ฟ้า (บัญชี)"></datalist></div>
+        <div class="f"><label for="stPal">พาเลท</label><input id="stPal" list="stPalList" maxlength="60" placeholder="เลือกหรือพิมพ์"><datalist id="stPalList"><option value="แลกเปลี่ยน(นำพาเลทกลับ)"><option value="โอนพาเลท"><option value="ไม่มี"></datalist></div>
+      </div>
+      <div class="hint" id="stMeta"></div>
+    </fieldset>
     <div class="f"><label for="edNote">หมายเหตุ</label><input id="edNote" placeholder="ไม่บังคับ"></div>
     <label class="chk"><input type="checkbox" id="edActive" checked> ใช้งาน (ปิด = ระบบไม่เอาไปคิด)</label>
     <div class="dact">
@@ -311,7 +336,7 @@ async function load(){
       n=>{if(!DATA)$('body').innerHTML='<div class="ldr"><div class="ring"></div>หลังบ้านตอบช้า กำลังลองใหม่ (ครั้งที่ '+n+'/3)</div>';});
     if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
     if(!d.ok){$('body').innerHTML='<div class="msg">โหลดไม่ได้: '+esc(d.error||'ผิดพลาด')+' <button class="btn sm" onclick="load()">↻ ลองใหม่</button></div>';return;}
-    DATA=d; render();
+    DATA=d; render(); if(STORES===null) stLoad();
   }catch(e){$('body').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e&&e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="$(\'body\').innerHTML=\'<div class=ldr><div class=ring></div>กำลังโหลดค่ากลาง</div>\';load()">↻ ลองใหม่</button></div>';}
 }
 
@@ -365,6 +390,7 @@ function renderList(){
         +(r.job_type?'<span class="pill">'+esc(r.job_type)+'</span>':'')
         +(r.pickup_point?'<span class="pill warn">จุดรับ: '+esc(r.pickup_point)+'</span>':'')
         +(r.dp_type?'<span class="pill">⏱️ '+esc(r.dp_type)+(dpHours(r.dp_type)!=null?' · รอ '+nf(dpHours(r.dp_type))+' ชม.':' · ไม่มีในตาราง')+'</span>':'')
+        +(STORES&&STORES[String(r.id)]&&(STORES[String(r.id)].team||STORES[String(r.id)].phones.length)?'<span class="pill ok" title="มีข้อมูลร้าน (ทีมลง/เบอร์/ค่าจอด)">📞 '+esc(STORES[String(r.id)].team||telFmt(STORES[String(r.id)].phones[0]))+'</span>':'')
         +(r.active===false?'<span class="pill bad">ปิดใช้</span>':'')+'</div></div>'
       +'<div class="km kA"><b>'+nf(r.km,0)+'</b> กม.<span>ไป-กลับ '+nf(r.km*2,0)+'</span></div>'
       +'<div class="code">'+(r.garden_code?'<span class="pill ok">ผูกแล้ว</span> <b>'+esc(r.garden_code)+'</b><span class="nm">'+esc(nm)+'</span>':'<span class="pill">ยังไม่ผูกรหัส</span>')+'</div>'
@@ -426,8 +452,48 @@ function openNewFromMiss(i){
 }
 /* 📦 Packing: ค่าจ้างลงของ ตามชนิดรถ + ค่าตักพาเลท ต่อร้าน · ค่าเด็กลงของ (นอก/ใน) เรทเดียวทุกร้าน อยู่หน้าตั้งค่าค่าแรง */
 const PK_F=[['edPk4','pk_unload_4w'],['edPk6','pk_unload_6w'],['edPk10','pk_unload_10w'],['edPkT','pk_unload_trailer'],['edPkPal','pk_pallet_fee']];
+/* 📞 ข้อมูลร้าน (pk_store_info) → Edge pk-plan storeAll / saveStore · สิทธิ์แก้ = DEV / แอดมิน Packing / ผู้จัดการ (ระยะค่ากลางยังแก้ได้เฉพาะ DEV) */
+const PK_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-plan';
+let STORES=null, ST_CAN=false, ST_DENIED=false;
+async function stLoad(){
+  try{ const r=await fetch(PK_EDGE+'?action=storeAll&userId='+encodeURIComponent(MY_UID)); const d=await r.json();
+    if(d.ok){ STORES=d.stores||{}; ST_CAN=!!d.canEdit; if(DATA) renderList(); } else { STORES={}; ST_CAN=false; ST_DENIED=!!d.denied; } }
+  catch(e){ STORES=null; }
+}
+const telFmt=p=>{p=String(p||'').replace(/\D/g,'');return p.length===10?p.slice(0,3)+'-'+p.slice(3,6)+'-'+p.slice(6):p.length===9?p.slice(0,2)+'-'+p.slice(2,5)+'-'+p.slice(5):p;};
+function stRateRow(r){ return '<div class="f2 st-rate" style="grid-template-columns:110px 1fr 34px;margin-bottom:6px">'
+  +'<input class="st-fee" maxlength="40" placeholder="บาท" aria-label="ค่าลง บาท" value="'+esc(r&&r.fee||'')+'">'
+  +'<input class="st-desc" maxlength="160" placeholder="รายละเอียด เช่น ลากลง 1,456 ลัง / ตัดชั้น" aria-label="รายละเอียดอัตรา" value="'+esc(r&&r.desc||'')+'">'
+  +'<button type="button" class="btn ghost sm" aria-label="ลบอัตรานี้" onclick="this.parentNode.remove()">✕</button></div>'; }
+function stAddRate(){ $('stRates').insertAdjacentHTML('beforeend',stRateRow({})); }
+function stFill(){
+  const box=$('edSt'), on=$('edType').value==='Packing'&&ED&&ED.id;
+  box.hidden=!on; if(!on) return;
+  const s=(STORES&&STORES[String(ED.id)])||{};
+  $('stTeam').value=s.team||''; $('stPark').value=s.parking||''; $('stToll').value=s.toll||''; $('stPay').value=s.pay||''; $('stDoc').value=s.doc||''; $('stPal').value=s.pallet||'';
+  $('stTel1').value=telFmt((s.phones||[])[0]); $('stTel2').value=telFmt((s.phones||[])[1]);
+  $('stRates').innerHTML=(s.rates&&s.rates.length?s.rates:[{}]).map(stRateRow).join('');
+  $('edStNote').textContent=STORES==null?'⚠️ โหลดข้อมูลร้านไม่ได้ — บันทึกส่วนนี้ไม่ได้ตอนนี้':ST_DENIED?'ดูข้อมูลร้านได้เฉพาะ DEV / แอดมิน Packing / ผู้จัดการ / ผู้บริหาร':(!ST_CAN?'ดูได้อย่างเดียว (แก้ได้เฉพาะ DEV / แอดมิน Packing / ผู้จัดการ)':'แก้แล้วกด "บันทึก" ด้านล่าง · ช่องว่าง = ไม่มี');
+  $('stMeta').textContent=s.updated_at?'แก้ล่าสุด: '+(s.updated_by||'—')+' · '+new Date(s.updated_at).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+  box.querySelectorAll('input,button').forEach(el=>{el.disabled=STORES==null||!ST_CAN;});
+}
+function stCollect(){
+  return { team:$('stTeam').value.trim(), parking:$('stPark').value.trim(), toll:$('stToll').value.trim(), pay:$('stPay').value.trim(), doc:$('stDoc').value.trim(), pallet:$('stPal').value.trim(),
+    phones:[$('stTel1').value,$('stTel2').value].map(x=>x.replace(/\D/g,'')).filter(Boolean),
+    rates:[...document.querySelectorAll('#stRates .st-rate')].map(d=>({fee:d.querySelector('.st-fee').value.trim(),desc:d.querySelector('.st-desc').value.trim()})).filter(r=>r.fee||r.desc) };
+}
+const stKey=s=>JSON.stringify([s.team||'',s.parking||'',s.toll||'',s.pay||'',s.doc||'',s.pallet||'',(s.phones||[]).slice(0,2),(s.rates||[]).map(r=>[r.fee||'',r.desc||''])]);
+async function stSaveIfChanged(){   // คืน '' = ไม่ต้องบันทึก/บันทึกแล้ว · ข้อความ = ผิดพลาด
+  if($('edSt').hidden||STORES==null||!ST_CAN) return '';
+  const cur=stCollect(), old=(STORES&&STORES[String(ED.id)])||{};
+  if(stKey(cur)===stKey({...old,phones:(old.phones||[]).slice(0,2)})) return '';
+  const bad=cur.phones.filter(p=>!/^0\d{8,9}$/.test(p)); if(bad.length) return 'เบอร์โทรไม่ถูกต้อง ('+bad.join(', ')+')';
+  try{ const r=await fetch(PK_EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action:'saveStore',userId:MY_UID,stationId:ED.id},cur))});
+    const d=await r.json(); if(!d.ok) return d.error||'บันทึกข้อมูลร้านไม่ได้'; await stLoad(); return ''; }
+  catch(e){ return 'บันทึกข้อมูลร้านไม่ได้ — ลองใหม่'; }
+}
 function pkShow(){
-  const on=$('edType').value==='Packing'; $('edPk').hidden=!on;
+  const on=$('edType').value==='Packing'; $('edPk').hidden=!on; stFill();
   if(on)$('edPkHelp').textContent='เด็กนอก 350/เที่ยว · เด็กใน 4 ล้อ 350/คน · 6-10 ล้อ/พ่วง 400/คน — แก้เรทที่หน้า ⚙️ ตั้งค่าต้นทุน/ค่าแรง · เลือกนอก/ใน และจำนวนคนในใบงานแต่ละเที่ยว · ช่อง ①② ว่าง = ไม่มี/ยังไม่รู้';
 }
 async function saveEdit(){
@@ -442,6 +508,12 @@ async function saveEdit(){
   row.km=kmRound(row.km);
   const b=$('edSave');b.disabled=true;b.textContent='กำลังบันทึก…';
   try{
+    // 📞 ข้อมูลร้านบันทึกแยก (pk-plan) — แอดมิน Packing แก้ได้แม้ไม่ใช่ DEV · ค่ากลางไม่เปลี่ยน = ไม่ยิง saveCentralDistance
+    const stErr=await stSaveIfChanged();
+    if(stErr){toast('❌ '+stErr,true);b.disabled=false;b.textContent='บันทึก';return;}
+    const same=ED&&ED.id&&['station','job_type','garden_code','pickup_point','note','dp_type'].every(k=>String(ED[k]||'')===String(row[k]||''))
+      &&Number(ED.km)===Number(row.km)&&(ED.active!==false)===row.active&&PK_F.every(([,k])=>(ED[k]==null?null:Number(ED[k]))===row[k]);
+    if(same){toast('✅ บันทึกข้อมูลร้าน '+row.station+' แล้ว');closeOv('ovEdit');b.disabled=false;b.textContent='บันทึก';renderList();return;}
     const d=await api({action:'saveCentralDistance',row});
     if(d.ok){toast('✅ บันทึก '+row.station+' แล้ว');closeOv('ovEdit');await load();}
     else if(d.unsure){await afterUnsure();}
