@@ -73,6 +73,13 @@
   .ring{width:40px;height:40px;border-radius:50%;border:4px solid var(--line);border-top-color:var(--primary);animation:sp 1s linear infinite}
   @keyframes sp{to{transform:rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.ring{animation-duration:3s}}
+  /* วงหมุนกลางจอระหว่างนำเข้า (คลุมกล่องตรวจ กันกดซ้ำ/ปิดกลางทาง) */
+  .busy{position:absolute;inset:0;z-index:2;display:none;align-items:center;justify-content:center;background:rgba(10,20,30,.35)}
+  .busy.on{display:flex}
+  .busy .bx{background:var(--card);border-radius:16px;padding:24px 30px;min-width:220px;display:flex;flex-direction:column;align-items:center;gap:12px;box-shadow:0 10px 34px rgba(0,0,0,.25)}
+  .busy .ring{width:46px;height:46px}
+  .busy b{font-size:14px;color:var(--txt)}
+  .busy span{font-size:12.5px;color:var(--txt2);font-variant-numeric:tabular-nums}
   .msg{text-align:center;color:var(--txt2);padding:30px}
   /* modal */
   .ov{position:fixed;inset:0;background:rgba(10,20,30,.45);display:none;align-items:flex-end;justify-content:center;z-index:40;padding:0}
@@ -291,6 +298,7 @@
     <div id="impBody"></div>
     <div class="dact"><button class="btn ghost" onclick="closeOv('ovImp')">ยกเลิก</button><button class="btn" id="impOk" onclick="doImport()">นำเข้า</button></div>
   </div>
+  <div class="busy" id="impBusy" role="status" aria-live="polite"><div class="bx"><div class="ring"></div><b>กำลังนำเข้า…</b><span id="impBusyTx"></span></div></div>
 </div>
 <!-- 📡 ค่ากลางจาก DTC -->
 <div class="drov" id="dtcOv" onclick="closeDtc()"></div>
@@ -599,11 +607,12 @@ async function pairImport(inp){
   bt.disabled=!n||P.err.length>0; bt.textContent=P.err.length?'แก้ไฟล์ก่อน':(n?'นำเข้า '+n+' คู่':'ไม่มีอะไรเปลี่ยน');
   openOv('ovImp');
 }
+function impBusy(tx){ const o=$('impBusy'); if(tx===false){o.classList.remove('on');return;} $('impBusyTx').textContent=tx||''; o.classList.add('on'); }
 async function pairDoImport(){
   const list=PPLAN.upd.map(u=>u.rec).concat(PPLAN.ins.map(x=>x.rec)), bt=$('impOk'); bt.disabled=true; bt.textContent='กำลังนำเข้า…';
   let ok=0; const bad=[];
-  for(const r of list){ try{ const d=await pairPost(r); if(d.success) ok++; else { bad.push(r.a+' ↔ '+r.b+': '+(d.denied?'แก้ได้เฉพาะ DEV':(d.error||'ไม่สำเร็จ'))); if(d.denied) break; } }catch(e){ bad.push(r.a+' ↔ '+r.b+': บันทึกไม่ได้'); } }
-  await pairLoad();
+  for(const [i,r] of list.entries()){ impBusy('คู่ปลายทาง '+(i+1)+' / '+list.length); try{ const d=await pairPost(r); if(d.success) ok++; else { bad.push(r.a+' ↔ '+r.b+': '+(d.denied?'แก้ได้เฉพาะ DEV':(d.error||'ไม่สำเร็จ'))); if(d.denied) break; } }catch(e){ bad.push(r.a+' ↔ '+r.b+': บันทึกไม่ได้'); } }
+  impBusy('โหลดตารางใหม่'); await pairLoad(); impBusy(false);
   if(bad.length){ toast('⚠️ นำเข้าแล้ว '+ok+' คู่ · ไม่สำเร็จ '+bad.length,true); $('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+bad.slice(0,20).map(esc).join('<br>')+'</div>'); bt.textContent='ปิด'; bt.disabled=false; bt.onclick=()=>closeOv('ovImp'); }
   else { toast('✅ นำเข้าแล้ว '+ok+' คู่'); closeOv('ovImp'); }
 }
@@ -998,6 +1007,7 @@ function buildPlan(tbl){
     else if(curName[nk])base=curName[nk];
     // คอลัมน์ที่ไม่มีในไฟล์ = ไม่แตะค่าเดิม (กันไฟล์ต้นฉบับที่ไม่มีคอลัมน์รหัสสวน ลบรหัสที่ผูกไว้ทิ้ง)
     ['job_type','garden_code','pickup_point','note','dp_type'].forEach(k=>{if(ix[k]<0)row[k]=base?String(base[k]||''):'';});
+    if(!row.job_type&&base&&base.job_type) row.job_type=String(base.job_type);   // ช่องประเภทงานว่าง = คงค่าเดิม (30 ต.ค. · ไฟล์ที่ไม่ได้กรอกประเภทเคยล้าง Packing ทิ้ง)
     if(row.dp_type){const hit=(DATA.dpTypes||[]).find(d=>norm(d.dp_type)===norm(row.dp_type));if(hit)row.dp_type=hit.dp_type;}   // สะกดเว้นวรรคต่าง → ใช้ชื่อในตาราง
     if(row.job_type){const jt=JOB_TYPES.find(x=>norm(x)===norm(row.job_type));   // packing / PACKING → Packing
       if(jt)row.job_type=jt; else P.warn.push('แถว '+line+': ประเภทงาน "'+row.job_type+'" ไม่อยู่ในรายการ ('+JOB_TYPES.join(' / ')+')');}
@@ -1067,26 +1077,27 @@ async function stPost(id,store){
 }
 async function doImport(){
   const rows=PLAN.upd.map(u=>u.row).concat(PLAN.ins.map(x=>x.row)), b=$('impOk');
-  b.disabled=true; b.textContent='กำลังนำเข้า…';
+  b.disabled=true; b.textContent='กำลังนำเข้า…'; impBusy('เตรียมข้อมูล');
   try{
     // 📞 ข้อมูลร้านของสถานีเดิมก่อน (แยกจากค่ากลาง · แอดมิน Packing ทำได้แม้ไม่ใช่ DEV)
     let stOk=0; const stErr=[];
-    if(ST_CAN) for(const x of PLAN.st){ try{ const d=await stPost(x.id,x.store); if(d.ok) stOk++; else stErr.push(x.station+': '+(d.error||'ไม่สำเร็จ')); }catch(e){ stErr.push(x.station+': บันทึกไม่ได้'); } }
+    if(ST_CAN) for(const [i,x] of PLAN.st.entries()){ impBusy('ข้อมูลร้าน '+(i+1)+' / '+PLAN.st.length); try{ const d=await stPost(x.id,x.store); if(d.ok) stOk++; else stErr.push(x.station+': '+(d.error||'ไม่สำเร็จ')); }catch(e){ stErr.push(x.station+': บันทึกไม่ได้'); } }
     const stMsg=(stOk?' · ข้อมูลร้าน '+stOk+' สถานี':'')+(stErr.length?' · ข้อมูลร้านไม่สำเร็จ '+stErr.length:'');
-    if(!rows.length){ await stLoad(); toast((stErr.length?'⚠️ ':'✅ ')+'นำเข้าแล้ว'+stMsg,!!stErr.length); if(stErr.length)$('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+stErr.map(esc).join('<br>')+'</div>'); else closeOv('ovImp'); b.disabled=false; b.textContent='นำเข้า'; return; }
+    if(!rows.length){ await stLoad(); impBusy(false); toast((stErr.length?'⚠️ ':'✅ ')+'นำเข้าแล้ว'+stMsg,!!stErr.length); if(stErr.length)$('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+stErr.map(esc).join('<br>')+'</div>'); else closeOv('ovImp'); b.disabled=false; b.textContent='นำเข้า'; return; }
+    impBusy('ค่ากลาง '+rows.length+' แถว');
     const d=await api({action:'importCentralDistances',rows});
     if(d.ok){
-      await load();
-      if(ST_CAN) for(const x of PLAN.stNew){ const r=(DATA.rows||[]).find(z=>norm(z.station)===norm(x.station)); if(!r){stErr.push(x.station+': ไม่เจอสถานีใหม่');continue;}
+      impBusy('โหลดตารางใหม่'); await load();
+      if(ST_CAN) for(const [i,x] of PLAN.stNew.entries()){ impBusy('ข้อมูลร้านสถานีใหม่ '+(i+1)+' / '+PLAN.stNew.length); const r=(DATA.rows||[]).find(z=>norm(z.station)===norm(x.station)); if(!r){stErr.push(x.station+': ไม่เจอสถานีใหม่');continue;}
         try{ const s=await stPost(r.id,x.store); if(s.ok) stOk++; else stErr.push(x.station+': '+(s.error||'ไม่สำเร็จ')); }catch(e){ stErr.push(x.station+': บันทึกไม่ได้'); } }
-      await stLoad();
+      await stLoad(); impBusy(false);
       toast('✅ นำเข้าแล้ว: แก้ '+d.updated+' · เพิ่ม '+d.inserted+' แถว'+(stOk?' · ข้อมูลร้าน '+stOk+' สถานี':'')+(stErr.length?' · ⚠️ ข้อมูลร้านไม่สำเร็จ '+stErr.length:''),!!stErr.length);
       closeOv('ovImp');return;}
-    if(d.unsure){await afterUnsure();return;}   // นำเข้าไฟล์เดิมซ้ำได้ แถวที่เข้าแล้วจะนับเป็น "ไม่เปลี่ยน"
+    if(d.unsure){impBusy(false);await afterUnsure();return;}   // นำเข้าไฟล์เดิมซ้ำได้ แถวที่เข้าแล้วจะนับเป็น "ไม่เปลี่ยน"
     toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'นำเข้าไม่ได้')),true);
     if(d.errors)$('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+d.errors.map(esc).join('<br>')+'</div>');
   }catch(e){toast('❌ '+(e.message||e)+' — ลองนำเข้าไฟล์เดิมซ้ำได้ ไม่เกิดแถวซ้ำ',true);}
-  b.disabled=false; b.textContent='นำเข้า '+rows.length+' แถว';
+  impBusy(false); b.disabled=false; b.textContent='นำเข้า '+rows.length+' แถว';
 }
 
 /* ── 📡 ค่ากลางจาก DTC (Edge dtc-central) ──
