@@ -50,6 +50,7 @@
   .k-free{color:var(--primary);border-color:var(--primary)} .k-busy{color:var(--accent);border-color:var(--accent)} .k-repair{color:var(--warn);border-color:var(--warn)} .k-leave{color:var(--danger);border-color:var(--danger)}
   .dlg-in p{margin:8px 0 14px;font-size:13.5px;color:var(--txt2);white-space:pre-line}
   .stop+.stop{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+  .store{font-size:11.5px;color:var(--txt);margin-top:3px} .store a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap} .store a:hover{text-decoration:underline}
   .miss{color:var(--danger);font-weight:600}
   .tag{display:inline-block;white-space:nowrap;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--txt2);margin:1px 2px 0 0}
   .tag.out{color:var(--warn);border-color:var(--warn)} .tag.bad{color:var(--danger);border-color:var(--danger)} .tag.ok{color:var(--primary);border-color:var(--primary)}
@@ -66,7 +67,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30b</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30c</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -161,10 +162,20 @@ function stCell(r,i,edit){
   const LK_KM=(PLAN&&PLAN.longKm)||300, far=ss.some(s=>Number(s.km)>=LK_KM);
   return (far?'<span class="tag k-busy" title="ปลายทาง ≥ '+LK_KM+' กม. — นับเข้าคิวระยะไกล">🛣️ งานไกล</span>':'')+(multi?'<span class="tag ok">ส่ง '+ss.length+' จุด</span>':'')+ss.map((s,k)=>{
     let h='<div class="stop">'+(multi?'<b>'+(k+1)+'.</b> ':'')+(s.station_name?esc(s.station_name)+(s.km?' <span class="tag">'+esc(s.km)+' กม.</span>':''):'<span class="miss">'+(multi?esc(s.name)+' — ':'')+'ยังไม่ผูกค่ากลาง</span>')+howTag(s.how);
+    if(!edit) h+=storeInfo(s);
     if(edit&&LK){ const cur=((UP.rows[i].stationIds||[])[k])||'';
       h+='<input list="stList" placeholder="พิมพ์ค้นสถานี…" aria-label="เลือกสถานีค่ากลาง จุดที่ '+(k+1)+'" value="'+esc(cur?((LK.stations.find(x=>String(x.id)===String(cur))||{}).name||''):'')+'" onchange="pickSt('+i+','+k+',this.value)">'; }
     return h+'</div>';
   }).join('');
+}
+// ทีมลง/เบอร์/ค่าลง/ค่าจอด รายร้าน (ไฟล์แอดมิน "เอกสารที่ต้องนำกลับ" · getPlan.stores) — แอดมินมอนิเตอร์โทรหาทีมลงได้
+const telFmt=p=>p.length===10?p.slice(0,3)+'-'+p.slice(3,6)+'-'+p.slice(6):p.length===9?p.slice(0,2)+'-'+p.slice(2,5)+'-'+p.slice(5):p;
+function storeInfo(s){
+  const st=s&&s.station_id&&PLAN&&PLAN.stores&&PLAN.stores[String(s.station_id)];
+  if(!st||s.pickup||s.dist_only) return '';
+  const fee=st.fees.map(f=>esc(f.fee)).join(' / '), park=st.parking.join(' / ');
+  return '<div class="store">'+(st.team||st.phones.length?'📞 '+esc(st.team||'ทีมลง')+' '+st.phones.map(p=>'<a href="tel:'+esc(p)+'">'+esc(telFmt(p))+'</a>').join(' · '):'')
+    +(fee||park?'<span class="how">'+(fee?'ค่าลง '+fee:'')+(park?(fee?' · ':'')+'จอด '+esc(park):'')+'</span>':'')+'</div>';
 }
 function pickSt(i,k,name){ const s=LK.stations.find(x=>x.name===name), r=UP.rows[i]; if(!r) return;
   const ids=(r.stationIds||[]).slice(); ids[k]=s?s.id:''; setRow(i,'stationIds',ids);
