@@ -66,7 +66,7 @@
   <div class="bar">
     <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
     <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30a</span></div></div>
+    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30b</span></div></div>
   </div>
   <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
 </div>
@@ -145,7 +145,7 @@ async function saveUp(b){
 /* ── วาด ── */
 const howTag=h=>h?'<span class="how">'+esc(h)+'</span>':'';
 function drvCell(r,i,edit){
-  const nm=r.driver_name?esc(r.driver_name)+(r.driver_active?'':' <span class="tag bad" title="ยังไม่ได้เปิดใช้ LINE — จะไม่ได้การ์ดงาน">LINE ยังไม่เปิด</span>'):'<span class="miss">❌ หาไม่เจอ</span>';
+  const nm=r.driver_name?esc(r.driver_name)+(r.driver_active!==false?'':' <span class="tag bad" title="ยังไม่ได้เปิดใช้ LINE — จะไม่ได้การ์ดงาน">LINE ยังไม่เปิด</span>'):'<span class="miss">❌ หาไม่เจอ</span>';
   let h=nm+'<span class="how">ในไฟล์: '+esc(r.driver_raw||'—')+(r.driver_how?' · '+esc(r.driver_how):'')+'</span>';
   if(edit&&LK){ const cur=UP.rows[i].driverCode||'';
     h+='<select aria-label="เลือกคนขับ" onchange="setRow('+i+',\'driverCode\',this.value)"><option value="">'+(r.driver_code?'— เปลี่ยนคนขับ —':'— เลือกคนขับ —')+'</option>'
