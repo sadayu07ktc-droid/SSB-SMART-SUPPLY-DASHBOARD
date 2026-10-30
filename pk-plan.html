@@ -229,7 +229,7 @@ function savedStat(r){
   const busy=['accepted','started','done'].indexOf(r.status)>=0;
   const lab=r.status==='sent'&&r.needs_ack?'แก้ไขแล้ว · รอกดรับใหม่':(STAT[r.status]||r.status);
   return '<span class="tag'+(busy?' ok':r.status==='sent'?' out':'')+'">'+esc(lab)+'</span>'
-    +(r.order_id&&busy?'<span class="how">'+esc(r.order_id)+'</span>':'')
+    +(r.order_id?'<span class="how">'+esc(r.order_id)+'</span>':'')   // ORD-PK ออกตอนแจกงาน (ออเดอร์จริงเกิดตอนคนขับกดรับ)
     +(!busy&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:3px 9px;font-size:11.5px;margin-top:4px;white-space:nowrap" onclick="trJob(this,'+Number(r.id)+')">🚜 ขอรถไร่</button>':'');
 }
 const STAT={new:'ยังไม่แจก',sent:'แจกแล้ว · รอรับ',accepted:'รับงานแล้ว',started:'เริ่มงาน',done:'เสร็จ'};
