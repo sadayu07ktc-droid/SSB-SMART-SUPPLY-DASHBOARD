@@ -290,7 +290,8 @@ let DQ={date:'',data:null,f:'all',tab:'day',edit:null};
 const DQ_F=[['all','ทั้งหมด',()=>true],['free','ว่าง',d=>d.kind==='free'],['busy','มีงาน',d=>d.kind==='busy'],['leave','ลา / ซ่อม',d=>d.kind==='leave'||d.kind==='repair'],['none','ไม่อยู่ในแพลน',d=>d.kind==='none'||d.kind==='other']];
 function dqOpen(){
   const td=new Date(Date.now()+7*36e5).toISOString().slice(0,10);
-  DQ.date=(PLAN&&PLAN.plan&&PLAN.plan.work_date)||td; DQ.f='all'; DQ.data=null;
+  const wd=String((PLAN&&PLAN.plan&&PLAN.plan.work_date)||''), lim=new Date(Date.parse(td+'T00:00:00Z')+30*864e5).toISOString().slice(0,10);
+  DQ.date=(wd>=td&&wd<=lim)?wd:td; DQ.f='all'; DQ.data=null;   // แพลนวันนี้/ล่วงหน้าใกล้ ๆ = วันของแพลน · แพลนเก่า/ไกลผิดปกติ = วันนี้
   let w=$('dqDlg'); if(!w){ w=document.createElement('div'); w.className='dlg'; w.id='dqDlg'; w.onclick=e=>{ if(e.target===w) dqClose(); }; document.body.appendChild(w); }
   dqRender(); dqLoad();
 }
@@ -422,8 +423,18 @@ async function trCancel(b,id){
   catch(e){ toast("ยกเลิกไม่สำเร็จ",true); }
   finally{ BUSY=false; }
 }
+// เปิดหน้าโดยไม่ระบุวัน: วันนี้ → วันถัดไปที่ใกล้สุดภายใน 30 วัน → วันล่าสุดที่ผ่านมา (เดิมเปิดวันไกลสุดเสมอ · แพลนล่วงหน้า/แพลนเทสปี 2099 เลยบังวันนี้)
+function defaultPlanDate(plans,today){
+  const dates=(plans||[]).map(p=>String(p.work_date)).sort();
+  const lim=new Date(Date.parse(today+'T00:00:00Z')+30*864e5).toISOString().slice(0,10);
+  return dates.find(x=>x>=today&&x<=lim)||dates.filter(x=>x<today).pop()||dates.pop()||'';
+}
 async function load(date){
-  const d=await get('getPlan',date?'&date='+encodeURIComponent(date):'');
+  let d=await get('getPlan',date?'&date='+encodeURIComponent(date):'');
+  if(!date&&d.ok&&d.plan){
+    const pick=defaultPlanDate(d.plans,todayTH());
+    if(pick&&pick!==String(d.plan.work_date)) d=await get('getPlan','&date='+encodeURIComponent(pick));
+  }
   if(d.denied){ $('body').innerHTML='<div class="msg" style="color:var(--danger)">'+esc(d.error||'หน้านี้สำหรับแอดมิน Packing')+'</div>'; return; }
   if(!d.ok){ $('body').innerHTML='<div class="msg">'+esc(d.error||'โหลดไม่สำเร็จ')+' <button class="btn ghost" onclick="load()">↻ ลองใหม่</button></div>'; return; }
   PLAN=d; ME=d.me; render();
