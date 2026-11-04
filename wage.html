@@ -466,6 +466,28 @@ function cmpFail(orderId,fast,why){
     $('drBody').innerHTML='<div class="msg">โหลดรายละเอียดไม่สำเร็จ '+why+'<br><button class="btn ghost" style="margin-top:12px" onclick="openDetail(\''+orderId+'\')">↻ ลองใหม่</button></div>';
   }
 }
+/* 📦 Packing: คนขับไม่ได้เลือกหนัก/เบาตอนออกโรงงาน → แอดมินแก้ตรงนี้ถ้ามีเคสพิเศษ แล้วคิดค่าแรงใหม่ (คุณน้อง 2026-11-04) */
+const LOAD_EDGE_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/order-plate';
+const LOAD_POINTS=[['load_start','สภาพรถเริ่ม','เลขไมล์เริ่ม','ออกจากโรงงาน'],['load_ramp_place','สภาพรถลานวางกระบะ','เลขไมล์ลานวางกระบะ','จุดแรก'],['load_customer','สภาพรถลูกค้า','เลขไมล์ลูกค้า','ออกจากจุดส่ง'],['load_ramp_return','สภาพรถลานขากลับ','เลขไมล์ลานขากลับ','จุดขากลับ']];
+function loadEditBlock(orderId,w,raw,st){
+  if(!raw||(w.jobType||'')!=='Packing') return '';
+  const pts=LOAD_POINTS.filter(p=>raw[p[1]]&&raw[p[2]]); if(!pts.length) return '';
+  const locked=!!(st&&st.locked);
+  const btn=(p,v)=>{const on=raw[p[1]]===v;return '<button class="btn '+(on?'':'ghost')+'" style="padding:4px 12px;font-size:12.5px"'+(on||locked?' disabled':'')+' onclick="setLoadState(\''+orderId+'\',\''+p[0]+'\',\''+v+'\',\''+p[3]+'\',this)">'+v+'</button>';};
+  return '<div style="border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 10px"><div style="font-size:12.5px;font-weight:700;margin-bottom:6px">สภาพรถแต่ละช่วง'+(locked?' <span style="font-weight:400;color:var(--txt2)">· จ่ายแล้ว แก้ไม่ได้</span>':'')+'</div>'
+    +pts.map(p=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;font-size:13px"><span>'+p[3]+'</span><span style="display:flex;gap:6px">'+btn(p,'หนัก')+btn(p,'เบา')+'</span></div>').join('')+'</div>';
+}
+async function setLoadState(orderId,field,value,label,el){
+  if(!(await uiConfirm({title:label+': เปลี่ยนเป็นรถ'+value+'?',msg:'ระบบจะคิดค่าแรงเที่ยวนี้ใหม่ทันที'})))return;
+  el.disabled=true;el.textContent='กำลังคิด…';
+  let r=null;
+  try{ r=await fetch(LOAD_EDGE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'setLoad',userId:MY_UID,orderId,field,value})}).then(x=>x.json()); }catch(_){}
+  if(!r||!r.success){ uiAlert('❌ '+((r&&r.error)||'แก้สภาพรถไม่สำเร็จ')); openDetail(orderId); return; }
+  let d=null;
+  for(let tr=1;tr<=3&&!d;tr++){ try{d=await recomputeApi([orderId]);}catch(_){d=null;await new Promise(z=>setTimeout(z,1500*tr));} }
+  if(!d||!d.ok||!d.done) uiAlert('แก้สภาพรถแล้ว แต่คิดค่าแรงใหม่ไม่สำเร็จ — กด "คิดใหม่เที่ยวนี้"');
+  await loadReport(); openDetail(orderId);
+}
 function renderDetail(orderId,res,pending){
   // ลิ้นชักโชว์ "ค่าที่บันทึกไว้" = ตัวเดียวกับตาราง/รายงาน (ไม่ใช่คิดสด) · ค่าสดใช้เทียบ ถ้าต่าง = บอก + ปุ่มคิดใหม่
   const live=res.wage, st=res.stored, c=res.cost;
@@ -483,6 +505,7 @@ function renderDetail(orderId,res,pending){
   h+='<div id="calcSt">'+calcStatus(orderId,w,live,st,isStored,pending)+'</div>';
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   (w.legs||[]).forEach(l=>h+=row(`${l.weight} ${l.distKm} กม. × ${l.pct}% ÷ 50`,money(l.runWage)+' บ.'));
+  h+=loadEditBlock(orderId,w,res.raw,st);
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
   if(w.tarp>0)h+=row('ค่าคลุมผ้าใบ',money(w.tarp)+' บ.');
   const via=!!(w.snapshot&&w.snapshot.toggles&&w.snapshot.toggles.viaLiters);
