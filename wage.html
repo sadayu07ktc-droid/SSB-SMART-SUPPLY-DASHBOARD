@@ -216,7 +216,7 @@
   <div id="drBody"><div class="msg">กำลังโหลด…</div></div>
 </aside>
 
-<script src="wage-ui.js?v=20261105"></script>
+<script src="wage-ui.js?v=20261105b"></script>
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -449,9 +449,9 @@ function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[
  *   ① ค่าที่บันทึกไว้ + ต้นทุนบริษัท + ข้อมูลดิบ จาก Supabase (wage-stored · <1 วิ) → ครบทั้งลิ้นชัก
  *   ② "เทียบกับตั้งค่าปัจจุบัน" = GAS getWageMonitor คิดสด (15-60 วิ) → กดปุ่มเมื่อต้องการ (ไม่ยิงทุกครั้งที่เปิด = ประหยัดโควต้า GAS)
  *   ยังไม่เคยบันทึกค่าแรง / Supabase ไม่ตอบ → คิดสดที่ GAS อัตโนมัติแบบเดิม */
-let DR_SEQ=0, DR_ZONES=null, DR_DEST=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท · DR_DEST = ปลายทาง+ประวัติแก้หมุด
+let DR_SEQ=0, DR_ZONES=null, DR_DEST=null, DR_GPS=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท · DR_DEST = ปลายทาง+ประวัติแก้หมุด · DR_GPS = จุดจอดจาก GPS (Promise/ผล)
 async function openDetail(orderId){
-  const seq=++DR_SEQ; DR_ZONES=null; DR_DEST=null;
+  const seq=++DR_SEQ; DR_ZONES=null; DR_DEST=null; DR_GPS=null;
   $('ov').classList.add('on');$('dr').classList.add('on');
   $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังโหลดค่าเที่ยว</span></div>';
   try{
@@ -517,7 +517,66 @@ async function setLoadState(orderId,field,value,label,el){
   if(!d||!d.ok||!d.done) uiAlert('แก้สภาพรถแล้ว แต่คิดค่าแรงใหม่ไม่สำเร็จ — กด "คิดใหม่เที่ยวนี้"');
   await loadReport(); openDetail(orderId);
 }
-/* 🏁 ปลายทางจริงของเที่ยว + แก้หมุด + ประวัติ (คุณน้อง 2026-11-05) · ค่าว่าง = โรงงาน */
+/* 🏁 ปลายทางจริงของเที่ยว + แก้หมุด + ประวัติ (คุณน้อง 2026-11-05) · ค่าว่าง = จบที่โรงงาน
+ *   ดูจากพิกัดที่รถจอดจริง (Edge trip-dest) แล้วถาม "ใช่ที่นี่ไหม" ให้แอดมินยืนยัน · ไม่บันทึกเองโดยไม่มีคนกด */
+const TRIP_DEST_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/trip-dest';
+const DEST_FACTORY='จบที่โรงงาน (ไม่มีจุดส่งอื่น)';
+const destHere=(s)=>s.name||(s.lat+', '+s.lng);
+const destMapUrl=(s)=>'https://www.google.com/maps?q='+s.lat+','+s.lng;
+function destMins(m){m=+m||0;const h=Math.floor(m/60);return (h?h+' ชม. ':'')+(m%60||!h?(m%60)+' นาที':'');}
+function destGps(orderId){
+  if(!DR_GPS)DR_GPS=fetch(TRIP_DEST_URL+'?action=suggest&userId='+encodeURIComponent(MY_UID)+'&orderId='+encodeURIComponent(orderId)).then(r=>r.json()).catch(()=>({ok:false,error:'เชื่อมต่อไม่สำเร็จ'}));
+  return DR_GPS;
+}
+async function destGpsPaint(orderId,locked,seq){
+  const g=await destGps(orderId);
+  const box=$('destGps'); if(seq!==DR_SEQ||!box)return;
+  box.innerHTML=destGpsHtml(orderId,g,locked);
+}
+function destGpsHtml(orderId,g,locked){
+  const replay='<a href="replay.html?order='+encodeURIComponent(orderId)+'" target="_blank" rel="noopener">ดูเส้นทางบนแผนที่</a>';
+  const note=(t)=>'<div style="margin-top:7px;font-size:12px;color:var(--txt2);line-height:1.55">'+t+'</div>';
+  if(g.skip)return '';
+  if(!g.ok)return note('อ่าน GPS ไม่สำเร็จ'+(g.error?' ('+_escS(g.error)+')':'')+' · '+replay);
+  if(!g.gpsOk)return note('ตรวจจาก GPS ไม่ได้: '+_escS(g.why||'')+' · '+replay);
+  const stops=g.stops||[], s=g.suggest, cur=g.current||'';
+  const list=stops.length?'<details style="margin-top:7px;font-size:12px"><summary style="cursor:pointer;color:var(--txt2)">จุดจอดทั้งหมดของเที่ยวนี้ ('+stops.length+')</summary>'
+    +stops.map(x=>'<div style="padding:5px 0 0;line-height:1.5"><span style="color:var(--txt2)">'+destTime(x.arr)+' · '+destMins(x.mins)+'</span>'+(x.pickup?' <b>จุดรับ</b>':'')+'<br>'+_escS(destHere(x))+(x.poi?' <span style="color:var(--txt2)">'+_escS(x.poi)+'</span>':'')+' · <a href="'+destMapUrl(x)+'" target="_blank" rel="noopener">แผนที่</a></div>').join('')
+    +'<div style="padding-top:6px">'+replay+'</div></details>':'';
+  const box=(html)=>'<div style="margin-top:8px;padding:9px 11px;border:1px solid var(--warn,#c98a12);border-radius:9px;background:rgba(201,138,18,.09);font-size:13px;line-height:1.6">'+html+'</div>';
+  const btns=(ok)=>locked?'':'<div style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px">'+ok+'<button class="btn ghost" style="padding:5px 12px;font-size:12.5px" onclick="editDest(\''+orderId+'\',this)">ไม่ใช่ เลือกเอง</button></div>';
+  if(s&&!g.match){
+    const back=g.backAt?'จุดจอดสุดท้ายก่อนกลับโรงงาน':'จุดจอดสุดท้ายของเที่ยว (GPS ยังไม่เห็นรถกลับเข้าโรงงาน)';
+    const yes=s.station?'<button class="btn" style="padding:5px 12px;font-size:12.5px" onclick="destYes(\''+orderId+'\',this)">✅ ใช่ ที่นี่</button>':'';
+    return box('<div style="font-size:12px;color:var(--txt2)">GPS: '+back+'</div>'
+      +'<b>'+_escS(destHere(s))+'</b>'+(s.poi?' <span style="font-size:12px;color:var(--txt2)">'+_escS(s.poi)+'</span>':'')
+      +'<div style="font-size:12px;color:var(--txt2)">ถึง '+destTime(s.arr)+' · จอด '+destMins(s.mins)+' · <a href="'+destMapUrl(s)+'" target="_blank" rel="noopener">แผนที่</a></div>'
+      +(locked?'<div style="margin-top:5px;font-size:12.5px">ไม่ตรงกับปลายทางที่บันทึกไว้ แต่เที่ยวนี้จ่ายแล้ว แก้ไม่ได้</div>':s.station?'<div style="margin-top:5px;font-weight:700">ปลายทางจริงใช่ที่นี่ไหม?</div>':'<div style="margin-top:5px;font-size:12.5px">จุดนี้ยังไม่มีในตารางค่ากลาง ถ้าใช่ ให้ DEV เพิ่มสถานีก่อน จึงจะยืนยันได้</div>')
+      +btns(yes))+list;
+  }
+  if(s)return note('✅ GPS ตรงกัน: จอดที่ '+_escS(destHere(s))+' '+destMins(s.mins))+list;
+  if(cur)return box('GPS ไม่พบว่ารถจอดที่ <b>'+_escS(cur)+'</b> หลังจุดรับ'+(locked?'':'<div style="margin-top:5px;font-weight:700">เที่ยวนี้จบที่โรงงานใช่ไหม?</div>')
+    +btns('<button class="btn" style="padding:5px 12px;font-size:12.5px" onclick="destYes(\''+orderId+'\',this,1)">✅ ใช่ จบที่โรงงาน</button>'))+list;
+  return note('GPS: หลังจุดรับ'+(g.backAt?' กลับโรงงานเลย':'')+' ไม่มีจุดส่งอื่น')+list;
+}
+async function destYes(orderId,el,factory){
+  const g=await destGps(orderId), s=g&&g.suggest, dest=factory?'โรงงาน':(s&&s.station);
+  if(!dest)return;
+  const label=factory?DEST_FACTORY:dest;
+  if(!(await uiConfirm({title:'ยืนยันปลายทาง: '+label+'?',msg:'ระบบบันทึกชื่อแอดมินกับวันเวลาที่ยืนยัน แล้วคิดค่าแรงเที่ยวนี้ใหม่ทันที',okText:'ยืนยัน',icon:'🏁'})))return;
+  const note=factory?'GPS ไม่พบจุดจอดอื่นหลังจุดรับ':('GPS '+destHere(s)+' ถึง '+destTime(s.arr)+' จอด '+destMins(s.mins));
+  await destApply(orderId,dest,note,'ยืนยันจาก GPS',el);
+}
+async function destApply(orderId,dest,note,source,el){
+  el.disabled=true;el.textContent='กำลังคิด…';
+  let w=null;
+  try{ w=await fetch(LOAD_EDGE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'setDest',userId:MY_UID,orderId,dest,note,source})}).then(x=>x.json()); }catch(_){}
+  if(!w||!w.success){ uiAlert('❌ '+((w&&w.error)||'แก้ปลายทางไม่สำเร็จ')); openDetail(orderId); return; }
+  let c=null;
+  for(let tr=1;tr<=3&&!c;tr++){ try{c=await recomputeApi([orderId]);}catch(_){c=null;await new Promise(z=>setTimeout(z,1500*tr));} }
+  if(!c||!c.ok||!c.done) uiAlert('แก้ปลายทางแล้ว แต่คิดค่าแรงใหม่ไม่สำเร็จ — กด "คิดใหม่เที่ยวนี้"');
+  await loadReport(); openDetail(orderId);
+}
 function destTime(iso){
   const t=new Date(iso); if(isNaN(t))return '';
   const b=new Date(t.getTime()+7*3600000),p=n=>('0'+n).slice(-2);
@@ -526,28 +585,29 @@ function destTime(iso){
 function destBlock(orderId,st){
   const d=DR_DEST; if(!d)return '';
   const locked=!!(st&&st.locked), log=d.log||[];
-  let s='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px"><span>🏁 ปลายทาง <b>'+_escS(d.current||'โรงงาน')+'</b></span>';
+  let s='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px"><span>🏁 ปลายทาง <b>'+_escS(d.current||DEST_FACTORY)+'</b></span>';
   if(d.canEdit)s+=locked?'<span style="font-size:12px;color:var(--txt2)">จ่ายแล้ว แก้ไม่ได้</span>':'<button class="btn ghost" style="padding:4px 12px;font-size:12.5px" onclick="editDest(\''+orderId+'\',this)">แก้หมุด</button>';
   s+='</div>';
+  if(d.canEdit){
+    s+='<div id="destGps"><div style="margin-top:7px;font-size:12px;color:var(--txt2)">กำลังอ่านจุดจอดจาก GPS…</div></div>';
+    const seq=DR_SEQ; setTimeout(()=>destGpsPaint(orderId,locked,seq),0);
+  }
   if(log.length)s+='<details style="margin-top:7px;font-size:12px"'+(log.length<=3?' open':'')+'><summary style="cursor:pointer;color:var(--txt2)">ประวัติการแก้ไข ('+log.length+')</summary>'
     +log.map(x=>'<div style="padding:6px 0 0;line-height:1.55"><span style="color:var(--txt2)">'+destTime(x.edited_at)+'</span> · <b>'+_escS(x.editor_name||'—')+'</b><br>'
-      +(x.old_station?_escS(x.old_station):'โรงงาน')+' → '+(x.new_station?_escS(x.new_station):'โรงงาน')
+      +(x.old_station?_escS(x.old_station):'จบที่โรงงาน')+' → '+(x.new_station?_escS(x.new_station):'จบที่โรงงาน')
       +' <span style="color:var(--txt2)">('+_escS(x.source||'แก้หมุด')+')</span>'
       +(x.note?'<br><span style="color:var(--txt2)">'+_escS(x.note)+'</span>':'')+'</div>').join('')+'</details>';
   return '<div style="border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin:0 0 10px">'+s+'</div>';
 }
 async function editDest(orderId,el){
   const d=DR_DEST; if(!d)return;
-  const r=await uiChoose({title:'แก้ปลายทางของเที่ยวนี้',msg:'ระบบบันทึกชื่อแอดมินกับวันเวลาที่แก้ แล้วคิดค่าแรงเที่ยวนี้ใหม่ทันที',options:d.options,value:d.current||'โรงงาน',placeholder:'หมายเหตุ (ถ้ามี)',icon:'🏁'});
+  const g=await destGps(orderId);
+  // ชิป = จุดที่รถจอดจริงหลังจุดรับ (ที่มีในค่ากลาง) + จบที่โรงงาน · อื่นๆ ค้นจากตารางค่ากลางทั้งหมด
+  const after=(g.stops||[]).slice((g.stops||[]).findIndex(x=>x.pickup)+1).filter(x=>x.station).map(x=>x.station);
+  const value=d.current||DEST_FACTORY, options=[...new Set([...after,value,DEST_FACTORY])];
+  const r=await uiChoose({title:'แก้ปลายทางของเที่ยวนี้',msg:'ชิปคือจุดที่รถจอดจริงตาม GPS · ระบบบันทึกชื่อแอดมินกับวันเวลาที่แก้ แล้วคิดค่าแรงเที่ยวนี้ใหม่ทันที',options,value,list:g.stations||[],listPlaceholder:'ค้นหาสถานีอื่น',placeholder:'หมายเหตุ (ถ้ามี)',icon:'🏁'});
   if(!r)return;
-  el.disabled=true;el.textContent='กำลังคิด…';
-  let w=null;
-  try{ w=await fetch(LOAD_EDGE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'setDest',userId:MY_UID,orderId,dest:r.value,note:r.note})}).then(x=>x.json()); }catch(_){}
-  if(!w||!w.success){ uiAlert('❌ '+((w&&w.error)||'แก้ปลายทางไม่สำเร็จ')); openDetail(orderId); return; }
-  let c=null;
-  for(let tr=1;tr<=3&&!c;tr++){ try{c=await recomputeApi([orderId]);}catch(_){c=null;await new Promise(z=>setTimeout(z,1500*tr));} }
-  if(!c||!c.ok||!c.done) uiAlert('แก้ปลายทางแล้ว แต่คิดค่าแรงใหม่ไม่สำเร็จ — กด "คิดใหม่เที่ยวนี้"');
-  await loadReport(); openDetail(orderId);
+  await destApply(orderId,r.value===DEST_FACTORY?'โรงงาน':r.value,r.note,'แก้หมุด',el);
 }
 function renderDetail(orderId,res,pending){
   // ลิ้นชักโชว์ "ค่าที่บันทึกไว้" = ตัวเดียวกับตาราง/รายงาน (ไม่ใช่คิดสด) · ค่าสดใช้เทียบ ถ้าต่าง = บอก + ปุ่มคิดใหม่

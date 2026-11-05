@@ -43,6 +43,7 @@
         + '<h3 id="uimT">' + esc(o.title || '') + '</h3>'
         + (o.msg ? '<p id="uimM">' + esc(o.msg) + '</p>' : '')
         + (o.kind === 'choose' ? '<div class="uim-chips" role="radiogroup" aria-label="' + esc(o.title || '') + '">' + (o.options || []).map(function (x) { return '<button type="button" class="uim-chip' + (x === o.value ? ' on' : '') + '" role="radio" aria-checked="' + (x === o.value) + '" data-v="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>' : '')
+        + (o.kind === 'choose' && o.list && o.list.length ? '<input id="uimList" type="text" list="uimDl" placeholder="' + esc(o.listPlaceholder || 'ค้นหาจากรายการทั้งหมด') + '" aria-label="' + esc(o.listPlaceholder || 'ค้นหาจากรายการทั้งหมด') + '"><datalist id="uimDl">' + o.list.map(function (x) { return '<option value="' + esc(x) + '"></option>'; }).join('') + '</datalist>' : '')
         + (o.kind === 'prompt' ? '<input id="uimIn" type="text" value="' + esc(o.value || '') + '" placeholder="' + esc(o.placeholder || '') + '" aria-label="' + esc(o.title || '') + '">' : '')
         + (o.kind === 'choose' ? '<input id="uimIn" type="text" maxlength="300" placeholder="' + esc(o.placeholder || '') + '" aria-label="หมายเหตุ">' : '')
         + '<div class="uim-f">' + (o.kind === 'alert' ? '' : '<button class="uim-b no" data-r="0">' + esc(o.cancelText || 'ยกเลิก') + '</button>')
@@ -51,6 +52,13 @@
       setTimeout(function () { ov.classList.add('on'); }, 10);   // ไม่ใช้ rAF — แท็บพื้นหลัง/WebView บางตัวไม่ยิง ทำให้กล่องจางค้าง
       var inp = ov.querySelector('#uimIn'), picked = o.value, okBtn = ov.querySelector('.uim-b.ok');
       if (o.kind === 'choose') okBtn.disabled = true;   // ยังไม่ได้เปลี่ยนตัวเลือก = ไม่มีอะไรให้บันทึก
+      var listIn = ov.querySelector('#uimList');
+      if (listIn) listIn.addEventListener('input', function () {   // พิมพ์ค้นหา: ต้องตรงกับรายการเป๊ะจึงบันทึกได้ · ลบหมด = กลับไปค่าเดิม
+        var v = listIn.value.trim(), hit = o.list.indexOf(v) !== -1;
+        picked = hit ? v : o.value;
+        [].forEach.call(ov.querySelectorAll('.uim-chip'), function (x) { var on = hit ? x.dataset.v === v : (!v && x.dataset.v === o.value); x.classList.toggle('on', on); x.setAttribute('aria-checked', on); });
+        okBtn.disabled = !hit || picked === o.value;
+      });
       setTimeout(function () { if (o.kind === 'choose') { var c = ov.querySelector('.uim-chip:not(.on)') || okBtn; c.focus(); } else if (inp) { inp.focus(); inp.select(); } else okBtn.focus(); }, 30);
       function done(ok) {
         if (o.kind === 'choose' && ok && picked === o.value) return;
@@ -71,14 +79,15 @@
       document.addEventListener('keydown', key, true);
       ov.addEventListener('click', function (e) {
         var c = e.target.closest('[data-v]');
-        if (c) { picked = c.dataset.v; [].forEach.call(ov.querySelectorAll('.uim-chip'), function (x) { var on = x === c; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); }); okBtn.disabled = picked === o.value; return; }
+        if (c) { picked = c.dataset.v; if (listIn) listIn.value = ''; [].forEach.call(ov.querySelectorAll('.uim-chip'), function (x) { var on = x === c; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); }); okBtn.disabled = picked === o.value; return; }
         var b = e.target.closest('[data-r]'); if (b) return done(b.dataset.r === '1'); if (e.target === ov) done(o.kind === 'alert');
       });
     });
   }
   window.uiConfirm = function (o) { o = o || {}; return open({ kind: 'confirm', title: o.title || 'ยืนยัน', msg: o.msg, okText: o.okText, cancelText: o.cancelText, icon: o.icon || (o.danger ? '🗑️' : '❓'), danger: o.danger }); };
-  /* เลือก 1 ตัวเลือก + หมายเหตุ → { value, note } | null (ยกเลิก) · ปุ่มบันทึกกดได้เมื่อเปลี่ยนจากค่าเดิมแล้ว */
-  window.uiChoose = function (o) { o = o || {}; return open({ kind: 'choose', title: o.title || 'เลือก', msg: o.msg, options: o.options, value: o.value, placeholder: o.placeholder, okText: o.okText || 'บันทึก', icon: o.icon || '✏️' }); };
+  /* เลือก 1 ตัวเลือก + หมายเหตุ → { value, note } | null (ยกเลิก) · ปุ่มบันทึกกดได้เมื่อเปลี่ยนจากค่าเดิมแล้ว
+   * list + listPlaceholder (ไม่บังคับ) = ช่องค้นหารายการยาวๆ เพิ่มจากชิป */
+  window.uiChoose = function (o) { o = o || {}; return open({ kind: 'choose', title: o.title || 'เลือก', msg: o.msg, options: o.options, value: o.value, placeholder: o.placeholder, list: o.list, listPlaceholder: o.listPlaceholder, okText: o.okText || 'บันทึก', icon: o.icon || '✏️' }); };
   window.uiPrompt = function (o) { o = o || {}; return open({ kind: 'prompt', title: o.title || 'กรอกข้อมูล', msg: o.msg, value: o.value, placeholder: o.placeholder, okText: o.okText || 'บันทึก', icon: o.icon || '✏️' }); };
   window.uiAlert = function (msg, o) {
     o = o || {}; var s = String(msg || ''), bad = /^❌|ไม่สำเร็จ|ผิดพลาด/.test(s), warn = /^⚠️/.test(s);

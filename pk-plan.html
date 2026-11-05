@@ -561,13 +561,16 @@ const NAV_IC={box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/>
   truck:'<path d="M5 17H3V7h11v10H9"/><path d="M14 10h4l3 3v4h-2"/><circle cx="7" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/>',
   dash:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
   track:'<circle cx="6" cy="5" r="2"/><path d="M6 7v10"/><circle cx="6" cy="19" r="2"/><path d="M11 5h9M11 12h9M11 19h9"/><circle cx="6" cy="12" r="1"/>',
-  wage:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>'};
+  wage:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+  usercog:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a5 5 0 0 1 5-5h4"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13.7 14.5l1.7 1M20.6 18.5l1.7 1M13.7 19.5l1.7-1M20.6 15.5l1.7-1"/>'};
 const NAV=[{sec:'งาน Packing'},
   {ic:'box',t:'แจกงาน Packing',on:1,act:'navTop()'},{ic:'users',t:'คิวคนขับ',act:'navQueue()'},{ic:'truck',t:'คำขอรถไร่',act:'navTr()'},
   {sec:'ระบบขนส่ง'},
   {ic:'dash',t:'Command Center',tag:'gold',url:'/ManageDrivers/'},
   {ic:'track',t:'ติดตามสถานะ',s:'ไทม์ไลน์รายออเดอร์',tag:'new',url:'/Order_Status/'},
-  {ic:'wage',t:'รายงานค่าแรง',s:'รายเที่ยว · export Excel',tag:'new',url:'/SSB-SMART-SUPPLY-DASHBOARD/wage.html'}];
+  {ic:'wage',t:'รายงานค่าแรง',s:'รายเที่ยว · export Excel',tag:'new',url:'/SSB-SMART-SUPPLY-DASHBOARD/wage.html'},
+  /* สิทธิ์อยู่ที่เซิร์ฟเวอร์: แอดมิน Packing เห็น/แก้ได้เฉพาะคนขับกลุ่ม Packing (ssb-misc getUsers · user-admin) */
+  {ic:'usercog',t:'ตั้งค่าผู้ใช้งาน',s:'คนขับ · ทะเบียนรถ',url:'/User_Management/'}];
 function navDraw(){
   const uidQ=MY_UID?'?uid='+encodeURIComponent(MY_UID):'';
   $('nav').innerHTML=NAV.map(n=>{
