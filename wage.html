@@ -14,7 +14,8 @@
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 60px}
   .wrap{max-width:1240px;margin:0 auto}
-  .maincols{display:grid;grid-template-columns:1fr;gap:14px}
+  .maincols{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+  #tbl{overflow-x:auto}   /* ตารางกว้างเลื่อนในกรอบ หน้าไม่ล้นจอ (popup กลางจอมือถือจึงไม่หลุดขอบ) */
   @media(min-width:1000px){.maincols{grid-template-columns:minmax(0,1fr) 330px;align-items:start}}
   .sumwrap{position:sticky;top:16px}
   .sumhead{font-size:14px;font-weight:800;color:var(--primary);margin-bottom:10px}
@@ -31,7 +32,7 @@
   .sumline{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font-size:11.5px;border-top:1px dashed var(--line)}
   .sumline .sl{color:var(--txt2);flex:none}
   .sumline .sv{text-align:right}
-  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 16px}
+  .bar{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:2px 2px 16px}
   .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
   h1{font-size:17px;margin:0;font-weight:700}.sub{font-size:12px;color:var(--txt2)}
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
@@ -111,6 +112,29 @@
   .grpchip span{font-weight:400;color:var(--txt2)}
   .grpchip:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
   /* 🔄 ป๊อปอัปความคืบหน้า "คำนวณใหม่" — กลางจอ บังหน้าไว้จนเสร็จ (คุณน้อง 26 ต.ค.) */
+  /* ⚠️ popup เที่ยวที่ต้องตรวจ (ไม่มีระยะ · วิ่งจริง/เติมน้ำมันเกินค่ากลาง 5%) */
+  .wachip{border:1px solid var(--danger);background:var(--card);color:var(--danger);border-radius:999px;padding:6px 13px;font:inherit;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .wachip[hidden]{display:none}
+  .wachip:focus-visible{outline:2px solid var(--danger);outline-offset:2px}
+  .wa-ov{position:fixed;inset:0;z-index:180;background:rgba(10,20,15,.5);display:flex;align-items:center;justify-content:center;padding:16px}
+  .wa{width:100%;max-width:560px;max-height:calc(100vh - 32px);display:flex;flex-direction:column;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.3);overflow:hidden}
+  .wa-h{display:flex;align-items:flex-start;gap:10px;padding:18px 20px 12px;border-bottom:1px solid var(--line)}
+  .wa-h h3{margin:0;font-size:16px;font-weight:800;line-height:1.4}
+  .wa-h p{margin:2px 0 0;font-size:12.5px;color:var(--txt2);line-height:1.5}
+  .wa-x{margin-left:auto;flex:none;width:32px;height:32px;border:1px solid var(--line2);border-radius:10px;background:transparent;color:var(--txt2);font-size:15px;cursor:pointer}
+  .wa-b{overflow-y:auto;padding:0 20px 8px}
+  .wa-sec{position:sticky;top:0;background:var(--card);padding:12px 0 6px;font-size:13.5px;font-weight:800;display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px}
+  .wa-sec span{font-weight:400;font-size:12px;color:var(--txt2);white-space:nowrap}
+  .wa-r{display:flex;width:100%;gap:12px;justify-content:space-between;align-items:center;text-align:left;font:inherit;color:inherit;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:6px;cursor:pointer}
+  .wa-r:hover,.wa-r:focus-visible{border-color:var(--primary);outline:none}
+  .wa-m{min-width:0;font-size:12.5px;line-height:1.5}
+  .wa-m b{font-size:13px}
+  .wa-m small{display:block;font-size:11.5px;color:var(--txt2)}
+  .wa-v{flex:none;text-align:right;font-size:11.5px;color:var(--txt2);line-height:1.5;font-variant-numeric:tabular-nums}
+  .wa-v b{display:block;font-size:15px;color:var(--danger)}
+  .wa-t{display:inline-block;font-size:10.5px;font-weight:700;color:var(--danger);border:1px solid var(--danger);border-radius:999px;padding:0 6px;margin-left:5px;white-space:nowrap}
+  .wa-f{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 20px;border-top:1px solid var(--line);font-size:12px}
+  .wa-f a{color:var(--primary);font-weight:700}
   .rcp-ov{position:fixed;inset:0;z-index:190;background:rgba(10,20,15,.5);display:flex;align-items:center;justify-content:center;padding:16px}
   .rcp{width:100%;max-width:420px;background:var(--card);color:var(--txt);border:1px solid var(--line);border-radius:18px;box-shadow:0 22px 60px rgba(0,0,0,.3);padding:22px 22px 18px}
   .rcp h3{margin:0 0 4px;font-size:16px;font-weight:800;display:flex;align-items:center;gap:10px}
@@ -144,6 +168,7 @@
     <div class="logo">฿</div>
     <div><h1>ค่าแรง / ต้นทุน คนขับ</h1><div class="sub">SSB Smart Supply · ล็อกค่าตอนจบงาน</div></div>
     <button class="grpchip" id="grpChip" type="button" onclick="showPicker()" title="เปลี่ยนกลุ่ม">—</button>
+    <button class="wachip" id="waChip" type="button" onclick="waOpen()" hidden></button>
   </div>
   <div id="ldBar" class="ldbar" role="status" aria-live="polite" aria-label="กำลังโหลด"><div class="ldtrack" aria-hidden="true"><i></i></div><span id="ldTxt" class="ldtx">กำลังเข้าสู่ระบบ</span></div>
 
@@ -236,6 +261,7 @@ async function loadReport(){
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
   $('driver').innerHTML='<option value="">ทุกคน</option>'+ds.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
   applyView();
+  waAfterLoad();
 }
 
 const _escS=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -575,8 +601,73 @@ function renderRaw(raw,row){
   if(photos.length){h+='<div class="sec" style="color:var(--txt2)">📷 รูปถ่าย</div>';photos.forEach(k=>h+=`<div class="drow"><span class="l">${k}</span><a href="${raw[k]}" target="_blank" style="color:var(--primary);font-weight:600">เปิดรูป ↗</a></div>`);}
   return h;
 }
-function closeDr(){$('ov').classList.remove('on');$('dr').classList.remove('on');}
+function closeDr(){$('ov').classList.remove('on');$('dr').classList.remove('on');if(WA_BACK){WA_BACK=false;waOpen();}}
 $('ov').onclick=closeDr;
+
+/* ═════ ⚠️ popup เที่ยวที่ต้องตรวจ (คุณน้อง 5 พ.ย. แทนการแจ้ง LINE) · ใช้ ROWS ของกลุ่มที่เลือก จึงขึ้นได้ทั้ง ไร่/Bulk/Packing ═════
+ * ① คู่จุดรูทหลายจุดยังไม่มีระยะ ② วิ่งจริงเกินค่ากลาง 5% ③ เติมน้ำมันรวมเกินลิตรตามเกณฑ์ที่คิดจากค่ากลาง 5%
+ * ไม่นับเที่ยวที่จ่ายแล้ว · เด้งเองเมื่อรายการเปลี่ยน · ปิดแล้วกดป้ายมุมขวาบนเปิดซ้ำได้ · กดเที่ยวเปิดลิ้นชัก ปิดลิ้นชักแล้วกลับมาที่รายการ */
+const WA_OVER=1.05, WA_SEEN=new Set();
+let WA_BACK=false, WA_FOCUS=null;
+function waScan(){
+  const rows=ROWS.filter(r=>!r.locked), rk=r=>(+r.distActual)/(+r.distCentral), rf=r=>(+r.liters)/(+r.benchLiters);
+  const miss=rows.filter(r=>Array.isArray(r.routeMissing)&&r.routeMissing.length);
+  const km=rows.filter(r=>+r.distCentral>0&&+r.distActual>+r.distCentral*WA_OVER).sort((a,b)=>rk(b)-rk(a));
+  const fuel=rows.filter(r=>usedCentral(r)&&+r.benchLiters>0&&+r.liters>+r.benchLiters*WA_OVER).sort((a,b)=>rf(b)-rf(a));
+  const ids=new Set([...miss,...km,...fuel].map(r=>r.orderId));
+  return {miss,km,fuel,ids};
+}
+function waChip(){
+  const c=$('waChip'); if(!c)return;
+  const n=waScan().ids.size; c.hidden=!n; c.textContent='⚠️ ต้องตรวจ '+n+' เที่ยว';
+}
+function waAfterLoad(){
+  const s=waScan(); if(!s.ids.size)return;
+  const key=[window.WAGE_GROUP,$('from').value,$('to').value,$('driver').value,[...s.ids].sort().join()].join('|');
+  if(WA_SEEN.has(key))return; WA_SEEN.add(key);
+  if($('dr').classList.contains('on'))WA_BACK=true; else waOpen();
+}
+function waRow(r,tail,tag,note){
+  const place=placeOf(r.garden,r.dest)||'—';
+  return '<button type="button" class="wa-r" data-id="'+_escS(r.orderId)+'"><span class="wa-m"><b>'+_escS(r.orderId)+'</b>'+(tag||'')
+    +'<small>'+_escS(fmtD(r.date))+' · '+_escS(r.driver||'—')+'</small><small>'+_escS(place)+'</small>'+(note||'')+'</span><span class="wa-v">'+tail+'</span></button>';
+}
+function waOpen(){
+  const s=waScan(); waClose(); if(!s.ids.size)return;
+  const f1=v=>(+v||0).toLocaleString('th-TH',{maximumFractionDigits:1}), kmIds=new Set(s.km.map(r=>r.orderId)), fuelIds=new Set(s.fuel.map(r=>r.orderId));
+  const tag=t=>'<span class="wa-t">'+t+'</span>', pct=(a,b)=>'+'+Math.round((a/b-1)*100)+'%';
+  const g=WG[window.WAGE_GROUP]||{ic:'',t:window.WAGE_GROUP||''};
+  let b='';
+  if(s.miss.length)b+='<div class="wa-sec">📏 ยังไม่มีระยะ '+s.miss.length+' เที่ยว<span>คิดสูตรเดิมไปก่อน</span></div>'
+    +s.miss.map(r=>waRow(r,'','','<small style="color:var(--danger)">'+_escS(r.routeMissing.join(' · '))+'</small>')).join('');
+  if(s.km.length)b+='<div class="wa-sec">🛣️ วิ่งจริงเกินค่ากลาง 5% · '+s.km.length+' เที่ยว<span>จริง / กลาง (กม.)</span></div>'
+    +s.km.map(r=>waRow(r,'<b>'+pct(+r.distActual,+r.distCentral)+'</b>'+f1(r.distActual)+' / '+f1(r.distCentral),
+      (+r.distActual>+r.distCentral*2?tag('เกิน 2 เท่า ตรวจเลขไมล์'):'')+(fuelIds.has(r.orderId)?tag('น้ำมันเกินด้วย'):''))).join('');
+  if(s.fuel.length)b+='<div class="wa-sec">⛽ เติมน้ำมันรวมเกินเกณฑ์ค่ากลาง 5% · '+s.fuel.length+' เที่ยว<span>เติม / เกณฑ์ (ล.)</span></div>'
+    +s.fuel.map(r=>waRow(r,'<b>'+pct(+r.liters,+r.benchLiters)+'</b>'+f1(r.liters)+' / '+f1(r.benchLiters),
+      (+r.liters>+r.benchLiters*2?tag('เกิน 2 เท่า ตรวจลิตร'):'')+(kmIds.has(r.orderId)?tag('วิ่งเกินด้วย'):''))).join('');
+  const ov=document.createElement('div'); ov.className='wa-ov'; ov.id='waOv';
+  ov.innerHTML='<div class="wa" role="dialog" aria-modal="true" aria-labelledby="waT"><div class="wa-h"><div><h3 id="waT">⚠️ เที่ยวที่ต้องตรวจ · '+g.ic+' '+_escS(g.t)+'</h3>'
+    +'<p>'+s.ids.size+' เที่ยวในช่วงที่เลือก · ไม่นับเที่ยวที่จ่ายแล้ว · กดเที่ยวเพื่อดูรายละเอียด</p></div><button type="button" class="wa-x" id="waX" aria-label="ปิด">✕</button></div>'
+    +'<div class="wa-b">'+b+'</div>'
+    +'<div class="wa-f"><span>'+(s.miss.length?'<a href="central-distance.html">เติมระยะที่หน้าค่ากลาง</a>':'')+'</span><button type="button" class="btn ghost" id="waC">ปิด</button></div></div>';
+  document.body.appendChild(ov);
+  WA_FOCUS=document.activeElement;
+  ov.addEventListener('click',e=>{
+    if(e.target===ov||e.target.id==='waX'||e.target.id==='waC'){waClose(true);return;}
+    const row=e.target.closest('.wa-r'); if(row){WA_BACK=true;waClose();openDetail(row.dataset.id);}
+  });
+  ov.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){e.preventDefault();waClose(true);}
+    else if(e.key==='Tab'){const f=[...ov.querySelectorAll('a,button')],i=f.indexOf(document.activeElement);
+      if(e.shiftKey&&i<=0){e.preventDefault();f[f.length-1].focus();}else if(!e.shiftKey&&i===f.length-1){e.preventDefault();f[0].focus();}}
+  });
+  $('waX').focus();
+}
+function waClose(restore){
+  const o=$('waOv'); if(o)o.remove();
+  if(restore&&WA_FOCUS&&WA_FOCUS.focus)try{WA_FOCUS.focus();}catch(e){}
+}
 
 function exportCsv(){
   if(!VIEW.length)return;
@@ -674,6 +765,7 @@ async function togglePaid(orderId,checked,el){
 
 // จ่ายแล้ว/ยกเลิก ทุกเที่ยวที่แสดงอยู่ (ยิงครั้งเดียว)
 function updatePaidAllBtn(){
+  waChip();
   const b=$('paidAll'); if(!b)return;
   const allLocked=VIEW.length>0&&VIEW.every(r=>r.locked);
   b.textContent=allLocked?'☐ ยกเลิกจ่ายทั้งหมด':'☑️ จ่ายแล้วทั้งหมด';
@@ -713,6 +805,7 @@ let PIN_INFO=null; window.WAGE_GROUP='';
 function lastGroup(){try{return localStorage.getItem('ssb_wage_group')||'';}catch(e){return '';}}
 function gpMsg(t){$('gpHi').textContent=t;$('gpSub').textContent='';$('gpGrid').innerHTML='';}
 function showPicker(){
+  WA_BACK=false; waClose();
   $('mainWrap').hidden=true; $('gp').hidden=false; closeDr&&closeDr();
   const allow=(PIN_INFO&&PIN_INFO.groups)||[], last=lastGroup();
   $('gpGrid').innerHTML=Object.keys(WG).map(k=>{const g=WG[k],ok=allow.includes(k),isLast=ok&&k===last;
