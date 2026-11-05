@@ -394,6 +394,7 @@ function render(){
     });
     h+='</div>';
   }
+  h+='<div id="rmBox"></div>';   // ⚠️ คู่จุดค่าแรงรูทหลายจุดที่ยังไม่มีระยะ
 
   // 🏭 / 🔁 สลับตาราง (คุณน้อง 30 ต.ค.: ต้องมีชิปแยกระหว่างโรงงาน-ปลายทาง) · คู่ปลายทางอยู่ตาราง central_pairs
   h+='<div class="tools"><div class="seg kseg" role="group" aria-label="ตาราง">'
@@ -401,6 +402,24 @@ function render(){
     +'</div></div><div id="viewBox"></div>';
   $('body').innerHTML=h;
   renderView();
+  rmLoad();
+}
+/* ⚠️ คู่จุดที่ยังไม่มีระยะ (คุณน้อง 5 พ.ย. "คู่ไหนไม่มีจุด ให้แจ้ง") → Edge route-missing · ไม่มีรายการ = ไม่แสดง
+   เติมระยะแล้วเที่ยวเดิมยังเป็นค่าเดิม ต้องกด "คิดใหม่" ที่หน้ารายงานค่าแรง · โหลดไม่ได้ = เงียบ หน้าหลักยังใช้ได้ */
+let RM_ROWS=null;
+function rmDraw(){
+  const b=$('rmBox'); if(!b||!RM_ROWS||!RM_ROWS.length){ if(b) b.innerHTML=''; return; }
+  const wait=RM_ROWS.filter(x=>!x.filled).length;
+  b.innerHTML='<div class="card"><div class="ch">⚠️ คู่จุดค่าแรงรูทหลายจุดที่ยังไม่มีระยะ</div>'
+    +'<div class="note" style="margin-bottom:4px">เที่ยวเหล่านี้คิดสูตรเดิมไปก่อน · ยังขาด <b>'+wait+'</b> คู่ · เติมระยะแล้วต้องกด "คิดใหม่" ที่หน้ารายงานค่าแรง เลขของเที่ยวเดิมจึงจะเปลี่ยน</div>'
+    +RM_ROWS.map(x=>{ const ids=x.orders.map(o=>o.id);
+      return '<div class="miss"><div><div class="t">'+esc(x.pair)+'</div><div class="s"><b>'+ids.length+'</b> เที่ยว'+(x.jobTypes.length?' · '+esc(x.jobTypes.join(', ')):'')+' · '+esc(ids.slice(0,3).join(', '))+(ids.length>3?' …':'')+'</div></div>'
+        +'<div class="acts"><span class="s" style="font-weight:600;color:'+(x.filled?'var(--ok,#127a2e)':'var(--danger)')+'">'+(x.filled?'มีระยะแล้ว รอคิดใหม่':'รอเติมระยะ')+'</span></div></div>'; }).join('')+'</div>';
+}
+async function rmLoad(){
+  if(RM_ROWS){ rmDraw(); return; }
+  try{ const d=await (window.ssbFetch||fetch)('https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/route-missing?action=list&userId='+encodeURIComponent(MY_UID)).then(r=>r.json());
+    if(d.ok){ RM_ROWS=d.pairs||[]; rmDraw(); } }catch(e){ console.warn('route-missing',e); }
 }
 /* ชิปประเภทงาน (เฉพาะ 🏭) · "" / null = ยังไม่ระบุ */
 const JT_CHIPS=[['','ทุกประเภท'],['สวน','สวน'],['ลาน','ลาน'],['Packing','Packing'],['Bulk','Bulk'],['ส่งน้ำ','ส่งน้ำ'],['อื่นๆ','อื่นๆ'],['-','ยังไม่ระบุ']];

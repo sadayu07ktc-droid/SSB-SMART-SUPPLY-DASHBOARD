@@ -364,6 +364,7 @@ function fuelBlock(w,via,row){
       +'เบา '+f1(w.distLight)+' กม. ÷ '+kl.toFixed(2)+' กม./ล. = '+f1(w.benchLightL)+' ล.'+why(+w.distLight,'l')
       +(w.route?'<div style="color:var(--txt2);opacity:.9">รูทหลายจุด: กม./ล. เป็นค่าเฉลี่ยจากตารางตามชนิดรถแต่ละขา</div>':''));
   } else bd=sub('หนัก '+f1(w.distHeavy)+' กม. + เบา '+f1(w.distLight)+' กม.');
+  if(Array.isArray(w.routeMissing)&&w.routeMissing.length) bd+='<div style="color:var(--danger,#b42318);font-size:12px;margin-top:2px">⚠️ รูทหลายจุดยังไม่มีระยะ: '+_escS(w.routeMissing.join(' · '))+' · คิดสูตรเดิมไปก่อน</div>';
   h+=row('ลิตรตามเกณฑ์ · '+(w.distMode==='central'?'ระยะกลาง ':'ระยะจริง ')+f1(w.distTotal)+' กม.'+bd,f1(bench)+' ล.');
   if(vl>0)h+=row('+ ฮุคลิฟท์ + ให้เพิ่ม แปลงเป็นลิตร'+sub('('+money(w.hooklift)+' + '+money(w.give)+(w.bz&&+w.bz!==1?' [ให้เพิ่ม × BZ '+(+w.bz).toFixed(2)+']':'')+') ÷ '+rate),'+'+(+vl).toFixed(2)+' ล.');
   h+=row('− เติมจริง (โรงงาน + ทาง)'+(w.tripOrders>1?sub('รถคันเดียวกันทั้งทริป '+w.tripOrders+' ออเดอร์ รวม '+f1(w.tripLiters)+' ล. × '+Math.round(w.tripShare*100)+'% (ตามค่ากลาง)'):''),'−'+f1(act)+' ล.');
@@ -506,7 +507,7 @@ function renderDetail(orderId,res,pending){
   h+='<div id="calcSt">'+calcStatus(orderId,w,live,st,isStored,pending)+'</div>';
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   // 🆕 2026-11-05 รูทหลายจุด: โชว์ชื่อช่วง + ชนิดรถรายขา (เดี่ยว = 10 ล้อ)
-  (w.legs||[]).forEach(l=>h+=row((l.name?`<b>${_escS(l.name)}</b>${l.veh?` <span style="color:var(--txt2);font-size:11px">${l.veh==='เดี่ยว'?'10 ล้อ':_escS(l.veh)}${l.src==='mile'?' · ระยะจากเลขไมล์':''}</span>`:''}<br>`:'')+`${l.weight} ${l.distKm} กม. × ${l.pct}% ÷ 50`,money(l.runWage)+' บ.'));
+  (w.legs||[]).forEach(l=>h+=row((l.name?`<b>${_escS(l.name)}</b>${l.veh?` <span style="color:var(--txt2);font-size:11px">${l.veh==='เดี่ยว'?'10 ล้อ':_escS(l.veh)}</span>`:''}<br>`:'')+`${l.weight} ${l.distKm} กม. × ${l.pct}% ÷ 50`,money(l.runWage)+' บ.'));
   h+=loadEditBlock(orderId,w,res.raw,st);
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
   if(w.tarp>0)h+=row('ค่าคลุมผ้าใบ',money(w.tarp)+' บ.');
