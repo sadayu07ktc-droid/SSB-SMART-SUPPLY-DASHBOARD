@@ -61,16 +61,123 @@
   .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:50;opacity:0;transition:.3s;pointer-events:none;max-width:92vw}
   .toast.on{opacity:1}.toast.err{background:var(--danger)}
   .sticky{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 0 0;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  /* ───────── ธีมกระจกเขียว งานขนส่ง (ต้นแบบ glass sidebar ของแดชบอร์ดค่าไฟ · คุณน้อง 5 พ.ย. 69) ───────── */
+  :root{--bg:#e8f4ed;--card:#fff;--card2:#f1f8f4;--line:rgba(27,67,50,.12);--line2:rgba(27,67,50,.22);--txt:#12291e;--txt2:#587064;--primary:#1f7a4d;--accent:#0e7490;
+    --field:rgba(255,255,255,.78);--stick:rgba(255,255,255,.94);--road:#2d6a4f;
+    --glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.8);--glass-line:rgba(255,255,255,.88);--navtx:#2c4438;
+    --glass-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 18px 40px -22px rgba(20,83,55,.38),0 2px 6px -3px rgba(20,83,55,.14);
+    --blob1:#8fdcb2;--blob2:#c6e9a4;--blob3:#f3dc93}
+  @media(prefers-color-scheme:dark){:root{--bg:#07130e;--card:#12211a;--card2:#172a21;--line:rgba(125,215,170,.13);--line2:rgba(125,215,170,.25);--txt:#e4f1ea;--txt2:#90a99c;--primary:#45c285;--accent:#4fb6ce;
+    --field:rgba(20,38,30,.72);--stick:rgba(18,33,26,.96);--road:#5fbf8c;
+    --glass:rgba(16,34,26,.55);--glass-2:rgba(22,44,34,.78);--glass-line:rgba(150,225,190,.17);--navtx:#c5d9ce;
+    --glass-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 20px 44px -24px rgba(0,0,0,.8);
+    --blob1:#0f6b43;--blob2:#14532d;--blob3:#5c4a10}}
+  html{background:var(--bg)}
+  body{padding:0;background:var(--bg)}
+  body::before,body::after{content:'';position:fixed;z-index:-1;border-radius:50%;filter:blur(70px);opacity:.72;pointer-events:none}
+  body::before{width:46vw;height:46vw;left:-10vw;top:-12vw;background:radial-gradient(circle,var(--blob1),transparent 68%)}
+  body::after{width:52vw;height:52vw;right:-14vw;bottom:-18vw;background:radial-gradient(circle,var(--blob2),transparent 66%)}
+  .dash{position:relative;isolation:isolate;display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+  .dash::before{content:'';position:fixed;z-index:-1;width:30vw;height:30vw;right:16vw;top:-9vw;border-radius:50%;filter:blur(80px);opacity:.42;pointer-events:none;background:radial-gradient(circle,var(--blob3),transparent 70%)}
+  .dash.nav-collapsed{grid-template-columns:90px minmax(0,1fr)}   /* ห้าม transition คอลัมน์ grid ที่มี fr */
+  .main{min-width:0;padding:16px 22px 40px}
+  .wrap{max-width:1320px}
+  .bar{padding:2px 2px 10px}
+  .road{height:2px;margin:0 2px 14px;opacity:.5;background:repeating-linear-gradient(90deg,var(--road) 0 18px,transparent 18px 32px)}
+  /* แถบเมนูกระจกลอย */
+  .side{position:sticky;top:14px;z-index:20;margin:14px 0 14px 14px;height:calc(100vh - 28px);width:236px;border-radius:26px;padding:18px 14px 14px;display:flex;flex-direction:column;overflow:visible;
+    background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 4px 12px;white-space:nowrap}
+  .blogo{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,#54c28a,#1f7a4d 58%,#1b4332);box-shadow:0 6px 14px -6px rgba(31,122,77,.75),0 1px 0 rgba(255,255,255,.5) inset}
+  .blogo svg{width:19px;height:19px}
+  .btx b{display:block;font-size:15px;line-height:1.2}.btx small{display:block;font-size:11px;color:var(--txt2)}
+  .side nav{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:2px 8px 10px;margin:0 -8px}
+  .side nav::-webkit-scrollbar{display:none}
+  .nsec{font-size:11px;font-weight:600;color:var(--txt2);letter-spacing:.02em;padding:10px 6px 6px;white-space:nowrap}
+  .nav-i{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;margin-bottom:5px;border:1px solid transparent;border-radius:14px;background:none;color:var(--navtx);font:inherit;font-size:13.5px;text-align:left;text-decoration:none;cursor:pointer;
+    transition:background .2s,color .2s,transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s}
+  .nav-i:hover{background:var(--glass-2);transform:translateX(3px);box-shadow:0 6px 16px -10px rgba(20,83,55,.5)}
+  .nav-i:focus-visible,.nav-toggle:focus-visible,.foot-out:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  .nav-i.on{color:#fff;border-color:rgba(255,255,255,.35);background:linear-gradient(135deg,#3fae78,#1b6b45);box-shadow:0 10px 24px -8px rgba(27,107,69,.7),0 0 0 4px rgba(63,174,120,.15),0 1px 0 rgba(255,255,255,.4) inset}
+  .nav-i.on:hover{transform:none}
+  .nav-i .ic{flex:none;width:18px;height:18px;display:block}
+  .nav-tx{min-width:0;display:block}
+  .nav-tx b{display:flex;align-items:center;gap:6px;font-weight:600;line-height:1.3;white-space:nowrap}
+  .nav-tx small{display:block;font-size:11px;line-height:1.3;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nw{font-style:normal;font-size:10px;font-weight:700;line-height:1;padding:3px 7px;border-radius:999px;background:#1f7a4d;color:#fff}
+  .nw.gold{background:linear-gradient(135deg,#e9b949,#d4a72c);color:#3f2f05}
+  /* ผู้ใช้ + ออกจากระบบ ล่างสุด */
+  .foot{flex:none;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+  .foot[hidden]{display:none}
+  .foot-who{display:flex;align-items:center;gap:10px;padding:0 4px;white-space:nowrap}
+  .foot-av{flex:none;width:34px;height:34px;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#3fae78,#1b6b45)}
+  .foot-tx{min-width:0}.foot-tx b{display:block;font-size:13px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;max-width:150px}.foot-tx small{display:block;font-size:11px;line-height:1.3;color:var(--txt2)}
+  .foot-out{display:flex;align-items:center;gap:10px;width:100%;margin-top:8px;padding:8px 12px;border:1px solid transparent;border-radius:12px;background:none;color:var(--danger);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s}
+  .foot-out:hover{background:rgba(200,53,47,.1)}
+  .foot-out svg{flex:none;width:18px;height:18px}
+  /* ปุ่มหุบเมนู: วงกลมลูกศรคร่อมขอบขวา ระดับเดียวกับโลโก้ */
+  .nav-toggle{position:absolute;right:-15px;top:20px;z-index:5;width:30px;height:30px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff;color:#1b4332;border:1px solid rgba(15,50,35,.1);box-shadow:0 6px 16px -6px rgba(15,50,35,.5),0 1px 0 rgba(255,255,255,.9) inset;transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .2s}
+  .nav-toggle svg{transition:transform .3s cubic-bezier(.22,1,.36,1)}
+  .nav-toggle:hover{transform:scale(1.08);box-shadow:0 8px 20px -6px rgba(31,122,77,.6)}
+  .dash.nav-collapsed .nav-toggle svg{transform:rotate(180deg)}
+  @media(prefers-color-scheme:dark){.nav-toggle{background:#e4f1ea}}
+  @media(min-width:861px){   /* หุบ = เหลือไอคอน · ชี้แล้วกางทับเนื้อหาชั่วคราว (คอลัมน์ไม่ขยับ หน้าไม่กระตุก) */
+    .dash.nav-collapsed .side{width:76px;padding:18px 8px 14px;z-index:30;transition:width .28s cubic-bezier(.22,1,.36,1) .12s,box-shadow .2s,background .2s}
+    .dash.nav-collapsed .side:hover,.dash.nav-collapsed .side:focus-within{width:236px;background:var(--glass-2);box-shadow:var(--glass-shadow),0 24px 60px -20px rgba(20,83,55,.5)}
+    .dash.nav-collapsed .side:hover .nav-toggle svg,.dash.nav-collapsed .side:focus-within .nav-toggle svg{transform:none}
+    .dash.nav-collapsed .brand{padding-left:12px;overflow:hidden;padding-top:4px;padding-bottom:14px;margin:-4px 0 -2px}
+    .dash.nav-collapsed .foot-who{padding-left:12px;overflow:hidden}
+    .dash.nav-collapsed .nav-i{gap:10px;padding:10px 0 10px 20px;overflow:hidden;white-space:nowrap}
+    .dash.nav-collapsed .nav-i:hover{transform:none}
+    .dash.nav-collapsed .foot-out{padding-left:20px;overflow:hidden}
+    .dash.nav-collapsed .btx,.dash.nav-collapsed .nav-tx,.dash.nav-collapsed .nsec,.dash.nav-collapsed .foot-tx,.dash.nav-collapsed .foot-out span{opacity:0;transition:opacity .15s}
+    .dash.nav-collapsed .side:hover :is(.btx,.nav-tx,.nsec,.foot-tx,.foot-out span),.dash.nav-collapsed .side:focus-within :is(.btx,.nav-tx,.nsec,.foot-tx,.foot-out span){opacity:1;transition:opacity .2s .25s}
+  }
+  /* การ์ด/ปุ่มเข้าธีม */
+  .card{background:var(--glass);border-color:var(--glass-line);border-radius:20px;box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
+  .kpi{background:var(--glass-2);border-color:var(--glass-line);border-radius:14px}
+  .tw{background:var(--stick);border-radius:12px}
+  .btn{background:linear-gradient(135deg,#2f9e68,#176b45);box-shadow:0 8px 18px -10px rgba(23,107,69,.7)}
+  .btn.ghost{background:var(--field);border-color:var(--line2);color:var(--txt2);box-shadow:none}
+  .btn.gold{background:linear-gradient(135deg,var(--gold1),var(--gold2))}
+  .chip{background:var(--field)}
+  .chip.on{background:linear-gradient(135deg,#2f9e68,#176b45);border-color:transparent;box-shadow:0 8px 18px -10px rgba(23,107,69,.7)}
+  .sticky{background:var(--stick);border-radius:0 0 12px 12px;padding-left:4px;padding-right:4px}
+  .toast{background:#176b45}.dlg{background:rgba(5,25,16,.48)}
+  /* มือถือ: เมนูเป็นแถบเลื่อนแนวนอนด้านบน · ผู้ใช้/ออกจากระบบอยู่มุมขวาของแถบ */
+  @media(max-width:860px){
+    .dash,.dash.nav-collapsed{grid-template-columns:minmax(0,1fr);min-height:0}
+    .side{position:static;width:auto;height:auto;margin:10px 10px 0;padding:10px 12px;border-radius:20px;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+    .brand{padding:0;flex:1;min-width:0}
+    .side nav{order:3;flex:0 0 100%;display:flex;gap:6px;padding:2px 2px 4px;margin:0}
+    .nsec,.nav-toggle,.nav-tx small,.foot-tx{display:none}
+    .nav-i{flex:none;width:auto;margin:0;padding:8px 12px;font-size:13px}
+    .nav-i:hover{transform:none}
+    .foot{order:2;border:0;padding:0;margin:0;display:flex;align-items:center;gap:4px}
+    .foot-who{padding:0}.foot-out{width:auto;margin:0;padding:8px}.foot-out span{display:none}
+    .main{padding:12px 10px 40px}
+  }
+  @media(prefers-reduced-motion:reduce){.nav-i,.nav-toggle,.nav-toggle svg,.dash.nav-collapsed .side{transition:none}.nav-i:hover,.nav-toggle:hover{transform:none}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="bar">
-    <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
-    <div class="logo">📦</div>
-    <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-10-30d</span></div></div>
-  </div>
-  <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
+<div class="dash" id="dash">
+  <aside class="side" aria-label="เมนูหลัก">
+    <div class="brand"><span class="blogo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3V7h11v10H9"/><path d="M14 10h4l3 3v4h-2"/><circle cx="7" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/></svg></span><span class="btx"><b>SSB Packing</b><small>งานขนส่ง</small></span></div>
+    <nav id="nav" aria-label="เมนู"></nav>
+    <div class="foot" id="foot" hidden>
+      <div class="foot-who" id="footWho"></div>
+      <button type="button" class="foot-out" onclick="navLogout()" title="ออกจากระบบ" aria-label="ออกจากระบบ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>ออกจากระบบ</span></button>
+    </div>
+  </aside>
+  <main class="main"><div class="wrap">
+    <div class="bar">
+      <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
+      <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-11-05a</span></div></div>
+    </div>
+    <div class="road" aria-hidden="true"></div>
+    <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
+  </div></main>
 </div>
 <input type="file" id="file" accept=".xlsx,.xls" hidden>
 <div class="toast" id="toast"></div>
@@ -251,7 +358,6 @@ function render(){
       +'<button class="btn" onclick="saveUp(this)"'+(c.noDriver||!c.picked||d.unchanged?' disabled':'')+'>💾 บันทึกแพลน '+esc(d.revName)+' ('+c.picked+' งาน)</button></div></div>';
   }
   h+='<div class="card"><div class="row"><b style="font-size:15px">แพลนที่บันทึกแล้ว</b><span class="grow"></span>'
-    +'<button class="btn ghost" style="font-weight:700;color:var(--txt)" onclick="dqOpen()">👥 คิวคนขับ</button>'
     +(ME&&ME.canEdit?'<button class="btn gold" onclick="$(\'file\').click()">⬆ อัปโหลดใบแจ้งงานประจำวัน</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
   const plans=(PLAN&&PLAN.plans)||[];
   if(plans.length) h+='<div class="row" style="margin-top:10px">'+plans.map(p=>'<button class="chip'+(PLAN.plan&&PLAN.plan.id===p.id?' on':'')+'" onclick="load(\''+p.work_date+'\')">'+thDate(p.work_date)+(p.rev?' · R'+p.rev:'')+(p.dispatched_at?' ✓':'')+'</button>').join('')+'</div>';
@@ -277,7 +383,7 @@ async function trLoad(){ try{ const d=await get('truckReqs'); if(d.ok){ TR=d; re
 function trCard(){
   if(!TR) return '';
   const rs=TR.requests||[];
-  return '<div class="card"><div class="row"><b style="font-size:15px">🚜 คำขอรถไร่</b><span class="sub">ส่งไปที่งานไร่ (หน้าติดตามออเดอร์ · 📦 Packing ค้างจัดรถ) · 7 วันล่าสุดขึ้นไป</span></div>'
+  return '<div class="card" id="trBox"><div class="row"><b style="font-size:15px">🚜 คำขอรถไร่</b><span class="sub">ส่งไปที่งานไร่ (หน้าติดตามออเดอร์ · 📦 Packing ค้างจัดรถ) · 7 วันล่าสุดขึ้นไป</span></div>'
     +(rs.length?'<div class="tw" style="margin-top:10px"><table><tr><th>วันที่ต้องการ</th><th>ปลายทาง</th><th>รถ</th><th>เวลา</th><th>สินค้า</th><th>ผู้ขอ</th><th>สถานะ</th><th></th></tr>'
       +rs.map(r=>'<tr><td>'+thDate(r.want_date)+'</td><td>'+esc(r.destination||r.customer_name)+'</td><td>'+esc(r.vehicle_type||'')+(r.vehicle_count>1?' ×'+esc(r.vehicle_count):'')+'</td>'
         +'<td>'+(r.load_time?'โหลด '+esc(r.load_time):'')+(r.unload_time?'<span class="how">ลง '+esc(r.unload_time)+'</span>':'')+'</td>'
@@ -438,10 +544,63 @@ async function load(date){
   }
   if(d.denied){ $('body').innerHTML='<div class="msg" style="color:var(--danger)">'+esc(d.error||'หน้านี้สำหรับแอดมิน Packing')+'</div>'; return; }
   if(!d.ok){ $('body').innerHTML='<div class="msg">'+esc(d.error||'โหลดไม่สำเร็จ')+' <button class="btn ghost" onclick="load()">↻ ลองใหม่</button></div>'; return; }
-  PLAN=d; ME=d.me; render();
+  PLAN=d; ME=d.me; render(); if(ME&&ME.name) navWho({name:ME.name});
   if(!TR) trLoad();
   if(!LK&&ME.canEdit){ get('lookups').then(x=>{ if(x.ok){LK=x; if(UP&&UP.pv) render();} }).catch(()=>{}); }
 }
+/* ── เมนูซ้าย + ผู้ใช้ด้านล่าง · ลิงก์ตามเมนูแดชบอร์ด (ส่ง uid ให้หน้าเราเองเหมือน index.html) ── */
+const NAV_IC={box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+  truck:'<path d="M5 17H3V7h11v10H9"/><path d="M14 10h4l3 3v4h-2"/><circle cx="7" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/>',
+  dash:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  track:'<circle cx="6" cy="5" r="2"/><path d="M6 7v10"/><circle cx="6" cy="19" r="2"/><path d="M11 5h9M11 12h9M11 19h9"/><circle cx="6" cy="12" r="1"/>',
+  wage:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>'};
+const NAV=[{sec:'งาน Packing'},
+  {ic:'box',t:'แจกงาน Packing',on:1,act:'navTop()'},{ic:'users',t:'คิวคนขับ',act:'navQueue()'},{ic:'truck',t:'คำขอรถไร่',act:'navTr()'},
+  {sec:'ระบบขนส่ง'},
+  {ic:'dash',t:'Command Center',tag:'gold',url:'/ManageDrivers/'},
+  {ic:'track',t:'ติดตามสถานะ',s:'ไทม์ไลน์รายออเดอร์',tag:'new',url:'/Order_Status/'},
+  {ic:'wage',t:'รายงานค่าแรง',s:'รายเที่ยว · export Excel',tag:'new',url:'/SSB-SMART-SUPPLY-DASHBOARD/wage.html'}];
+function navDraw(){
+  const uidQ=MY_UID?'?uid='+encodeURIComponent(MY_UID):'';
+  $('nav').innerHTML=NAV.map(n=>{
+    if(n.sec) return '<div class="nsec">'+esc(n.sec)+'</div>';
+    const inner='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAV_IC[n.ic]+'</svg><span class="nav-tx"><b>'+esc(n.t)+(n.tag?'<em class="nw'+(n.tag==='gold'?' gold':'')+'">ใหม่</em>':'')+'</b>'+(n.s?'<small>'+esc(n.s)+'</small>':'')+'</span>';
+    return n.url?'<a class="nav-i" title="'+esc(n.t)+'" href="'+esc(n.url+uidQ)+'">'+inner+'</a>'
+      :'<button type="button" class="nav-i'+(n.on?' on':'')+'" title="'+esc(n.t)+'"'+(n.on?' aria-current="page"':'')+' onclick="'+n.act+'">'+inner+'</button>';
+  }).join('');
+}
+const navSmooth=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth';
+function navTop(){ window.scrollTo({top:0,behavior:navSmooth()}); }
+function navQueue(){ if(!MY_UID) return toast('กำลังเข้าสู่ระบบ…'); dqOpen(); }
+function navTr(){ const e=$('trBox'); if(!e) return toast('กำลังโหลดคำขอรถไร่…'); e.scrollIntoView({behavior:navSmooth(),block:'start'}); }
+let NAV_ME={name:'',pic:'',role:''};
+function navWho(p){
+  Object.assign(NAV_ME,p);
+  const n=NAV_ME.name||'ผู้ใช้', w=$('footWho');
+  w.innerHTML=(NAV_ME.pic?'<img class="foot-av" alt="" referrerpolicy="no-referrer" src="'+esc(NAV_ME.pic)+'">':'<span class="foot-av" aria-hidden="true">'+esc(n.slice(0,1))+'</span>')
+    +'<span class="foot-tx"><b title="'+esc(n)+'">'+esc(n)+'</b>'+(NAV_ME.role?'<small>'+esc(NAV_ME.role)+'</small>':'')+'</span>';
+  const im=w.querySelector('img'); if(im) im.onerror=()=>{ NAV_ME.pic=''; navWho({}); };
+  $('foot').hidden=false;
+}
+const NAV_ROLE={ADMIN_PK:'แอดมิน Packing',ADMIN:'แอดมิน',ADMIN_BULK:'แอดมิน Bulk',MANAGER:'ผู้จัดการ',EXECUTIVE:'ผู้บริหาร'};
+async function navLogout(){   // เหมือนแดชบอร์ด/Bulk: ล้างบัตร SSO + ออกจาก LINE → กลับหน้าแดชบอร์ด (ล็อกอินใหม่)
+  if(!(await askYes('ออกจากระบบ','ออกจากระบบ SSB Smart Supply?\nทุกหน้าของแดชบอร์ดจะออกด้วย','ออกจากระบบ',true))) return;
+  try{ window.ssbSession&&ssbSession.clear(); }catch(e){}
+  try{ if(window.liff&&liff.logout&&liff.isLoggedIn&&liff.isLoggedIn()) liff.logout(); }catch(e){}
+  try{ localStorage.removeItem('ssb_admin_pin_v1'); sessionStorage.clear(); }catch(e){}
+  location.href='/SSB-SMART-SUPPLY-DASHBOARD/';
+}
+(function(){   // ปุ่มหุบเมนู · จำสถานะ
+  const dash=$('dash'), btn=document.createElement('button');
+  btn.type='button'; btn.className='nav-toggle'; btn.title='ย่อ/ขยายเมนู'; btn.setAttribute('aria-label','ย่อ/ขยายเมนู');
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+  document.querySelector('.side').appendChild(btn);
+  let col=false; try{ col=localStorage.getItem('pk_nav_collapsed')==='1'; }catch(e){}
+  const apply=()=>{ dash.classList.toggle('nav-collapsed',col); btn.setAttribute('aria-expanded',col?'false':'true'); };
+  btn.onclick=()=>{ col=!col; apply(); btn.blur(); try{ localStorage.setItem('pk_nav_collapsed',col?'1':'0'); }catch(e){} };
+  apply(); navDraw();
+})();
 $('file').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; onFile(f); };
 (async function(){
   try{
@@ -449,7 +608,9 @@ $('file').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; onFile(f);
     if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
     const p=await liff.getProfile(); MY_UID=p.userId||'';
     if(!MY_UID){$('body').innerHTML='<div class="msg">ไม่พบ LINE UID</div>';return;}
+    navDraw(); navWho({name:p.displayName||'',pic:p.pictureUrl||''});
     let info=null; try{ info=await ssbAdminPinInfo(MY_UID); }catch(e){}
+    if(info) navWho({role:info.isDev?'DEV':(NAV_ROLE[info.adminType]||'')});
     const ok = info&&info.isDev ? await ssbPinGate(MY_UID) : await ssbAdminPin(MY_UID,{info,text:'เข้าหน้าแจกงาน Packing'});
     if(ok){ ssbPoi.load(MY_UID).then(()=>{ if(PLAN&&!UP) render(); }); load(); } else $('body').innerHTML='<div class="msg">🔐 ต้องใส่ PIN ก่อนเข้าหน้านี้<br><button class="btn" style="margin-top:12px" onclick="location.reload()">ใส่ PIN อีกครั้ง</button></div>';
   }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+esc(e)+'</div>';}
