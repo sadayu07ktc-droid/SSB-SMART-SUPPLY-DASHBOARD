@@ -180,7 +180,7 @@
   <main class="main"><div class="wrap">
     <div class="bar">
       <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
-      <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-11-05b</span></div></div>
+      <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-11-05d</span></div></div>
     </div>
     <div class="road" aria-hidden="true"></div>
     <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
@@ -323,7 +323,7 @@ function jobRows(list,edit){
     const idx=edit?UP.rows.findIndex(x=>x.row===r.excel_row):-1;
     return '<tr class="'+esc(r.kind||'')+'">'
       +(edit?'<td>'+(r.kind==='del'?'':'<input type="checkbox" aria-label="สร้างงาน" '+(r.pick?'checked':'')+' onchange="setRow('+idx+',\'pick\',this.checked)">')+'</td>':'')
-      +'<td>'+esc(r.truck_group||'')+'<span class="how">'+esc(r.plate||r.plate_raw)+'</span></td>'
+      +'<td>'+esc(r.truck_group||'')+String(r.plate||r.plate_raw||'').split(',').map(x=>x.trim()).filter(Boolean).map(x=>'<span class="how" style="white-space:nowrap">'+esc(x)+'</span>').join('')+'</td>'   /* พ่วง: หัว / หาง คนละบรรทัด */
       +'<td'+c('driver_code')+'>'+drvCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
       +'<td'+c('job_text')+'>'+esc(r.job_text)+extrasCell(r.extras,r.stops)+'</td>'
       +'<td'+c('stops')+'>'+stCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
@@ -573,7 +573,8 @@ function navDraw(){
   $('nav').innerHTML=NAV.map(n=>{
     if(n.sec) return '<div class="nsec">'+esc(n.sec)+'</div>';
     const inner='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAV_IC[n.ic]+'</svg><span class="nav-tx"><b>'+esc(n.t)+(n.tag?'<em class="nw'+(n.tag==='gold'?' gold':'')+'">ใหม่</em>':'')+'</b>'+(n.s?'<small>'+esc(n.s)+'</small>':'')+'</span>';
-    return n.url?'<a class="nav-i" title="'+esc(n.t)+'" href="'+esc(n.url+uidQ)+'">'+inner+'</a>'
+    /* rel=opener: หน้าระบบเดียวกัน · แท็บใหม่ได้สำเนา sessionStorage ที่จำ PIN ไว้ ไม่ต้องใส่ซ้ำ */
+    return n.url?'<a class="nav-i" title="'+esc(n.t)+' (เปิดแท็บใหม่)" href="'+esc(n.url+uidQ)+'" target="_blank" rel="opener">'+inner+'</a>'
       :'<button type="button" class="nav-i'+(n.on?' on':'')+'" title="'+esc(n.t)+'"'+(n.on?' aria-current="page"':'')+' onclick="'+n.act+'">'+inner+'</button>';
   }).join('');
 }

@@ -200,6 +200,8 @@
       <div class="f"><label for="edType">ประเภทงาน</label>
         <select id="edType" onchange="pkShow()"><option value="">— ไม่ระบุ —</option><option>สวน</option><option>ลาน</option><option>Packing</option><option>Bulk</option><option>ส่งน้ำ</option><option>อื่นๆ</option></select></div>
     </div>
+    <div class="f" id="edTyBox" hidden><label for="edPkType">Type (เก็บสถิติงานคนขับ)</label>
+      <select id="edPkType"><option value="">— ยังไม่ระบุ —</option><option>ห้าง</option><option>ยี่ปั๊ว</option><option>อื่นๆ</option></select></div>
     <div class="f"><label for="edCode">รหัสสวน / ลาน ที่ใช้ค่ากลางนี้</label>
       <select id="edCode" onchange="fillPickups();dupCheck()"></select>
       <div class="hint">ออเดอร์ของรหัสนี้จะใช้ระยะนี้คิดค่าแรง · ว่าง = ยังไม่ผูก (ไม่มีออเดอร์ไหนใช้)</div></div>
@@ -402,6 +404,14 @@ function render(){
 }
 /* ชิปประเภทงาน (เฉพาะ 🏭) · "" / null = ยังไม่ระบุ */
 const JT_CHIPS=[['','ทุกประเภท'],['สวน','สวน'],['ลาน','ลาน'],['Packing','Packing'],['Bulk','Bulk'],['ส่งน้ำ','ส่งน้ำ'],['อื่นๆ','อื่นๆ'],['-','ยังไม่ระบุ']];
+/* 🏷️ Type ปลายทาง Packing (คุณน้อง 5 พ.ย.) → Edge central-type (DEV เท่านั้น) */
+const PK_TYPES=['ห้าง','ยี่ปั๊ว','อื่นๆ'], TYPE_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/central-type';
+let TY='';
+function setTY(t){TY=t;renderList();}
+async function tyPost(items){
+  const r=await fetch(TYPE_EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({userId:MY_UID,items})});
+  return r.json();
+}
 const jtOf=r=>{const t=String(r.job_type||'').trim();return JOB_TYPES.indexOf(t)>=0?t:'-';};
 function setView(k){VIEW=k;document.querySelectorAll('.kseg button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));renderView();if(k==='pair'&&!PAIRS)pairLoad();}
 function setJT(t){JT=t;document.querySelectorAll('.jseg button').forEach(b=>b.classList.toggle('on',b.dataset.j===t));renderList();}
@@ -419,6 +429,7 @@ function renderView(){
     const cnt={}; (DATA.rows||[]).forEach(r=>{const t=jtOf(r);cnt[t]=(cnt[t]||0)+1;});
     h='<div class="tools"><div class="seg jseg" role="group" aria-label="ประเภทงาน" style="flex-wrap:wrap">'
       +JT_CHIPS.filter(c=>!c[0]||cnt[c[0]]).map(c=>'<button type="button" data-j="'+c[0]+'" class="'+(JT===c[0]?'on':'')+'" onclick="setJT(\''+c[0]+'\')">'+c[1]+' <small>'+(c[0]?cnt[c[0]]:(DATA.rows||[]).length)+'</small></button>').join('')+'</div></div>'
+      +'<div class="tools" id="tyBox" hidden></div>'
       +'<div class="tools"><input class="search" id="q" placeholder="🔎 ค้นสถานี / รหัส / ชื่อสวน…" oninput="renderList()" aria-label="ค้นหา">'
       +'<div class="seg" role="group" aria-label="กรอง">'
       +[['all','ทั้งหมด'],['linked','ผูกแล้ว'],['unlinked','ยังไม่ผูก']].map(f=>'<button type="button" data-f="'+f[0]+'" class="'+(FILTER===f[0]?'on':'')+'" onclick="setF(\''+f[0]+'\')">'+f[1]+'</button>').join('')
@@ -622,15 +633,21 @@ function renderList(){
   const q=norm(($('q')||{}).value);
   let rows=(DATA.rows||[]).slice();
   if(JT) rows=rows.filter(r=>jtOf(r)===JT);
+  const tb=$('tyBox');
+  if(tb){ tb.hidden=JT!=='Packing';
+    if(JT==='Packing'){ const n={}; rows.forEach(r=>{const k=r.pk_type||'-';n[k]=(n[k]||0)+1;});
+      tb.innerHTML='<div class="seg" role="group" aria-label="Type" style="flex-wrap:wrap">'+[['','ทุก Type',rows.length]].concat(PK_TYPES.map(x=>[x,x,n[x]||0]),[['-','ยังไม่ระบุ',n['-']||0]]).map(c=>'<button type="button" class="'+(TY===c[0]?'on':'')+'" onclick="setTY(\''+c[0]+'\')">'+c[1]+' <small>'+c[2]+'</small></button>').join('')+'</div>';
+      if(TY) rows=rows.filter(r=>(r.pk_type||'-')===TY); } }
   if(FILTER==='linked')rows=rows.filter(r=>r.garden_code);
   if(FILTER==='unlinked')rows=rows.filter(r=>!r.garden_code);
-  if(q)rows=rows.filter(r=>norm(r.station+' '+ssbPoi.text(r.station)+' '+(r.garden_code||'')+' '+codeName(r.garden_code)+' '+(r.pickup_point||'')+' '+(r.job_type||'')+' '+(r.dp_type||'')).indexOf(q)>=0);
+  if(q)rows=rows.filter(r=>norm(r.station+' '+ssbPoi.text(r.station)+' '+(r.garden_code||'')+' '+codeName(r.garden_code)+' '+(r.pickup_point||'')+' '+(r.job_type||'')+' '+(r.pk_type||'')+' '+(r.dp_type||'')).indexOf(q)>=0);
   if(!rows.length){$('list').innerHTML='<div class="empty">ไม่พบสถานีที่ตรงเงื่อนไข</div>';return;}
   $('list').innerHTML=rows.map(r=>{
     const nm=codeName(r.garden_code);
     return '<div class="row'+(r.active===false?' off':'')+'" tabindex="0" role="button" onclick="openEdit('+r.id+')" onkeydown="if(event.key===\'Enter\')openEdit('+r.id+')">'
       +'<div class="cA"><div class="st">'+esc(r.station)+ssbPoi.tag(r.station)+'</div><div class="meta">'
         +(r.job_type?'<span class="pill">'+esc(r.job_type)+'</span>':'')
+        +(r.pk_type?'<span class="pill ok">🏷️ '+esc(r.pk_type)+'</span>':'')
         +(r.pickup_point?'<span class="pill warn">จุดรับ: '+esc(r.pickup_point)+'</span>':'')
         +(r.dp_type?'<span class="pill">⏱️ '+esc(r.dp_type)+(dpHours(r.dp_type)!=null?' · รอ '+nf(dpHours(r.dp_type))+' ชม.':' · ไม่มีในตาราง')+'</span>':'')
         +(GEO&&!GEO.stations[String(r.id)]?'<span class="pill warn" title="ไม่เจอหมุด DTC ชื่อนี้ และยังไม่ผูกสวน/ลานที่มีพิกัด">⚠️ ไม่มีพิกัด</span>':'')
@@ -677,7 +694,7 @@ function openEdit(id,preset){
   $('edTitle').textContent=id?'แก้ค่ากลาง':'เพิ่มสถานี';
   $('edStation').value=ED.station||'';
   $('edKm').value=ED.km!=null?ED.km:'';
-  $('edType').value=ED.job_type||'';
+  $('edType').value=ED.job_type||''; $('edPkType').value=ED.pk_type||'';
   fillCodes(ED.garden_code||''); fillPickups();
   $('edPickup').value=ED.pickup_point||'';
   $('edNote').value=ED.note||'';
@@ -739,13 +756,14 @@ async function stSaveIfChanged(){   // คืน '' = ไม่ต้องบ�
   catch(e){ return 'บันทึกข้อมูลร้านไม่ได้ — ลองใหม่'; }
 }
 function pkShow(){
-  const on=$('edType').value==='Packing'; $('edPk').hidden=!on; stFill();
+  const on=$('edType').value==='Packing'; $('edPk').hidden=!on; $('edTyBox').hidden=!on; stFill();
   if(on)$('edPkHelp').textContent='เด็กนอก 350/เที่ยว · เด็กใน 4 ล้อ 350/คน · 6-10 ล้อ/พ่วง 400/คน — แก้เรทที่หน้า ⚙️ ตั้งค่าต้นทุน/ค่าแรง · เลือกนอก/ใน และจำนวนคนในใบงานแต่ละเที่ยว · ช่อง ①② ว่าง = ไม่มี/ยังไม่รู้';
 }
 async function saveEdit(){
   const row={id:ED&&ED.id||undefined,station:$('edStation').value.trim(),km:$('edKm').value,job_type:$('edType').value,
     garden_code:$('edCode').value,pickup_point:$('edPickup').value.trim(),note:$('edNote').value.trim(),dp_type:$('edDp').value,active:$('edActive').checked};
-  const pk=row.job_type==='Packing';   // ไม่ใช่ Packing = ล้างค่าใช้จ่ายร้าน
+  const pk=row.job_type==='Packing';   // ไม่ใช่ Packing = ล้างค่าใช้จ่ายร้าน + Type
+  const tyNew=pk?$('edPkType').value:'', tyChanged=String(ED&&ED.pk_type||'')!==tyNew;
   for(const [el,k] of PK_F){const s=pk?$(el).value.trim():'', v=s===''?null:Number(s);
     if(v!=null&&!(v>=0)){toast('ค่าใช้จ่ายต้องเป็นตัวเลข 0 ขึ้นไป',true);$(el).focus();return;}
     row[k]=v;}
@@ -759,9 +777,18 @@ async function saveEdit(){
     if(stErr){toast('❌ '+stErr,true);b.disabled=false;b.textContent='บันทึก';return;}
     const same=ED&&ED.id&&['station','job_type','garden_code','pickup_point','note','dp_type'].every(k=>String(ED[k]||'')===String(row[k]||''))
       &&Number(ED.km)===Number(row.km)&&(ED.active!==false)===row.active&&PK_F.every(([,k])=>(ED[k]==null?null:Number(ED[k]))===row[k]);
-    if(same){toast('✅ บันทึกข้อมูลร้าน '+row.station+' แล้ว');closeOv('ovEdit');b.disabled=false;b.textContent='บันทึก';renderList();return;}
+    if(same){
+      if(tyChanged){ const ty=await tyPost([{id:ED.id,pk_type:tyNew}]); if(!ty.ok){toast('❌ '+(ty.error||'บันทึก Type ไม่ได้'),true);b.disabled=false;b.textContent='บันทึก';return;} }
+      toast('✅ บันทึก '+row.station+' แล้ว');closeOv('ovEdit');if(tyChanged)await load();b.disabled=false;b.textContent='บันทึก';renderList();return;}
     const d=await api({action:'saveCentralDistance',row});
-    if(d.ok){toast('✅ บันทึก '+row.station+' แล้ว');closeOv('ovEdit');await load();}
+    if(d.ok){
+      if(tyChanged){   // บันทึกหลังค่ากลาง เพราะหลังบ้านเช็คว่าแถวเป็น Packing แล้ว · สถานีใหม่ต้องโหลดเพื่อรู้ id
+        if(!row.id) await load();
+        const tid=row.id||((DATA.rows||[]).find(x=>norm(x.station)===norm(row.station))||{}).id;
+        const ty=tid?await tyPost([{id:tid,pk_type:tyNew}]):{ok:false,error:'ไม่เจอสถานีใหม่'};
+        if(!ty.ok){toast('⚠️ บันทึก '+row.station+' แล้ว แต่ Type ไม่สำเร็จ: '+(ty.error||''),true);closeOv('ovEdit');await load();b.disabled=false;b.textContent='บันทึก';return;}
+      }
+      toast('✅ บันทึก '+row.station+' แล้ว');closeOv('ovEdit');await load();}
     else if(d.unsure){await afterUnsure();}
     else toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'บันทึกไม่ได้')),true);
   }catch(e){toast('❌ '+e,true);}
@@ -844,7 +871,7 @@ async function exportCsv(b){
       num:o=>Object.assign({},o,{alignment:{horizontal:'right',vertical:'top'}})
     };
     // คอลัมน์: [คีย์, หัวไทย, กว้าง, กลุ่ม, อ่านอย่างเดียว]
-    const C=[['id','id (ห้ามแก้)',8,0,1],['station','สถานี',30,0],['km','ระยะเที่ยวเดียว(กม.)',11,0],['job_type','ประเภทงาน (สวน/ลาน/Packing/Bulk/ส่งน้ำ/อื่นๆ)',17,0],
+    const C=[['id','id (ห้ามแก้)',8,0,1],['station','สถานี',30,0],['km','ระยะเที่ยวเดียว(กม.)',11,0],['job_type','ประเภทงาน (สวน/ลาน/Packing/Bulk/ส่งน้ำ/อื่นๆ)',17,0],['pk_type','Type เฉพาะ Packing (ห้าง/ยี่ปั๊ว/อื่นๆ)',13,0],
       ['garden_code','รหัสสวน/ลาน',12,0],['pickup_point','จุดรับ',16,0],['note','หมายเหตุ',22,0],['active','ใช้งาน(ใช่/ไม่)',9,0],['dp_type','DP Type (เวลารอ)',14,0]]
       .concat(PK_COLS.map(([k,h])=>[k,h,11,1]),ST_COLS.map(([k,h])=>['st_'+k,h,k==='rates'?36:k==='team'?18:13,2]),[['ref_name','ชื่อสวน/ลาน (อ้างอิง ไม่ต้องแก้)',24,3,1]]);
     const GRP=[['ข้อมูลค่ากลาง','1F5D44'],['ค่าใช้จ่ายร้าน (Packing)','8A5A0B'],['📞 ข้อมูลร้าน · ใช้ในการ์ดคนขับ / หน้าแจกงาน','1E4FA3'],['อ้างอิง','64748B']];
@@ -858,7 +885,7 @@ async function exportCsv(b){
     let nMiss=0; const used={};
     (DATA.rows||[]).forEach((r,i)=>{used[norm(r.station)]=1;
       const st=stOf(r.id), base=i%2?S.d1:S.d0;
-      const val={id:r.id,station:r.station,km:r.km,job_type:r.job_type,garden_code:r.garden_code,pickup_point:r.pickup_point,note:r.note,active:r.active===false?'ไม่':'ใช่',dp_type:r.dp_type,ref_name:codeName(r.garden_code)};
+      const val={id:r.id,station:r.station,km:r.km,job_type:r.job_type,pk_type:r.pk_type,garden_code:r.garden_code,pickup_point:r.pickup_point,note:r.note,active:r.active===false?'ไม่':'ใช่',dp_type:r.dp_type,ref_name:codeName(r.garden_code)};
       PK_COLS.forEach(([k])=>{val[k]=r[k];}); ST_COLS.forEach(([k])=>{val['st_'+k]=st[k]||'';});
       rows.push(C.map(c=>cell(val[c[0]],c[4]?S.ro:(c[0]==='km'||c[3]===1)?S.num(base):base)));
     });
@@ -888,6 +915,7 @@ async function exportCsv(b){
       [H('')],[H('ค่าที่ใช้ได้',hb),H('',hb)],
       [H('ระยะเที่ยวเดียว(กม.)'),H('ตัวเลข กม. เที่ยวเดียว SSB → สถานี (ระบบปัดเป็นกม.เต็ม · คิดค่าแรงไป-กลับ ×2)')],
       [H('ประเภทงาน'),H(JOB_TYPES.join(' / '))],[H('ใช้งาน'),H('ใช่ / ไม่')],
+      [H('Type'),H('ห้าง / ยี่ปั๊ว / อื่นๆ · ใส่เฉพาะประเภทงาน Packing · เว้นว่าง = คงค่าเดิม (ล้างค่าทำได้ที่ฟอร์มแก้ในหน้าเว็บ)')],
       [H('ค่าใช้จ่ายร้าน (Packing)'),H('ตัวเลขบาท · ใส่เฉพาะประเภทงาน Packing')],
       [H('เบอร์ทีมลง 1 / 2'),H('เบอร์มือถือ 9–10 หลัก ขึ้นต้นด้วย 0 เช่น 083-472-4740')],
       [H('อัตราค่าลง'),H('บรรทัดละ 1 อัตรา รูปแบบ "ยอด : รายละเอียด" (กด Alt+Enter ขึ้นบรรทัดใหม่ในช่อง) เช่น\n600 : ลากลง 1,456 ลัง\n800 : ลากลง 1,456 ลัง+ตัดชั้น (2L)\nคนขับเห็นแค่ยอดเงิน รายละเอียดไว้ให้แอดมินคิด')],
@@ -990,7 +1018,8 @@ function buildPlan(tbl){
   const cur={},curName={},known={};
   (DATA.rows||[]).forEach(r=>{cur[r.id]=r;curName[norm(r.station)]=r;});
   (DATA.codes||[]).forEach(c=>known[c.code]=1);
-  const P={upd:[],ins:[],same:0,skip:0,err:[],warn:[],st:[],stNew:[]}, seen={};
+  const ixT=find(/^Type\b/i);   // ไฟล์เก่าไม่มีคอลัมน์นี้ = ไม่แตะ Type เดิม
+  const P={upd:[],ins:[],same:0,skip:0,err:[],warn:[],st:[],stNew:[],ty:[],tyNew:[]}, seen={};
   for(let i=h+1;i<tbl.length;i++){
     const c=tbl[i]||[], g=k=>ix[k]<0?'':String(c[ix[k]]==null?'':c[ix[k]]).trim(), line=i+1;
     const station=g('station'), kmS=g('km').replace(/,/g,'');
@@ -1021,6 +1050,14 @@ function buildPlan(tbl){
         row[k]=row.job_type==='Packing'?v:null;});
       if(bad){P.err.push('แถว '+line+' ('+station+'): '+bad+' ต้องเป็นตัวเลข 0 ขึ้นไป');continue;}
       if(lost)P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — ค่าใช้จ่ายร้านจะไม่ถูกบันทึก');}
+    // 🏷️ Type: ช่องว่าง = คงค่าเดิม · ไม่ใช่ Packing = ไม่บันทึก (ย้ายออกจาก Packing = ล้าง) · บันทึกหลังค่ากลางผ่าน central-type
+    if(ixT>=0||(base&&base.pk_type&&row.job_type!=='Packing')){
+      const raw=ixT<0?'':String(c[ixT]==null?'':c[ixT]).trim(), ty=raw?PK_TYPES.find(x=>norm(x)===norm(raw)):'', old=base?String(base.pk_type||''):'';
+      if(raw&&!ty){P.err.push('แถว '+line+' ('+station+'): Type "'+raw+'" ไม่อยู่ในรายการ ('+PK_TYPES.join(' / ')+')');continue;}
+      if(ty&&row.job_type!=='Packing') P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — Type จะไม่ถูกบันทึก');
+      const nu=row.job_type==='Packing'?(ty||old):'';
+      if(nu!==old){ if(base) P.ty.push({id:base.id,station,pk_type:nu,old}); else P.tyNew.push({station,pk_type:nu}); }
+    }
     // 📞 ข้อมูลร้าน: ช่องว่าง = คงค่าเดิม · เฉพาะ Packing · บันทึกแยกผ่าน pk-plan (แอดมิน Packing ได้)
     if(hasSt){
       const gs=k=>ixS[k]<0?'':String(c[ixS[k]]==null?'':c[ixS[k]]).trim();
@@ -1057,24 +1094,36 @@ function buildPlan(tbl){
 function showPlan(P){
   PLAN=P;
   const st=(k,v,bad)=>'<div class="stat'+(bad?' bad':'')+'"><div class="k">'+k+'</div><div class="v">'+v+'</div></div>';
-  let h='<div class="stats" style="margin-top:0">'+st('แก้แถวเดิม',P.upd.length)+st('เพิ่มใหม่',P.ins.length)+st('📞 ข้อมูลร้าน',P.st.length+P.stNew.length)+st('ไม่เปลี่ยน / ข้าม',P.same+P.skip)+'</div>';
+  let h='<div class="stats" style="margin-top:0">'+st('แก้แถวเดิม',P.upd.length)+st('เพิ่มใหม่',P.ins.length)+st('🏷️ Type',P.ty.length+P.tyNew.length)+st('📞 ข้อมูลร้าน',P.st.length+P.stNew.length)+st('ไม่เปลี่ยน / ข้าม',P.same+P.skip)+'</div>';
   if(P.err.length)h+='<div class="errbox"><b>ต้องแก้ไฟล์ก่อนนำเข้า ('+P.err.length+' แถว)</b><br>'+P.err.slice(0,30).map(esc).join('<br>')+'</div>';
   if(P.warn.length)h+='<div class="warnbox" style="display:block;margin-top:10px">'+P.warn.slice(0,20).map(esc).join('<br>')+'</div>';
   const list=P.upd.map(u=>'<div><b>'+esc(u.row.station)+'</b><br><small>'+u.diff.map(esc).join(' · ')+'</small></div>')
     .concat(P.ins.map(x=>'<div><b>+ เพิ่ม '+esc(x.row.station)+'</b><br><small>'+nf(x.row.km,0)+' กม.'+(x.row.garden_code?' · '+esc(x.row.garden_code):' · ยังไม่ผูกรหัส')+(x.row.pickup_point?' · จุดรับ '+esc(x.row.pickup_point):'')+'</small></div>'));
   P.st.concat(P.stNew).forEach(x=>list.push('<div><b>📞 '+esc(x.station)+'</b>'+(x.id?'':' <small>(สถานีใหม่)</small>')+'<br><small>'+x.diff.map(esc).join(' · ')+'</small></div>'));
+  P.ty.forEach(x=>list.push('<div><b>🏷️ '+esc(x.station)+'</b><br><small>Type: '+esc(x.old||'—')+' → '+esc(x.pk_type||'—')+'</small></div>'));
+  P.tyNew.forEach(x=>list.push('<div><b>🏷️ '+esc(x.station)+'</b> <small>(สถานีใหม่)</small><br><small>Type: '+esc(x.pk_type)+'</small></div>'));
   if(list.length)h+='<div class="plist">'+list.join('')+'</div>';
   if(P.skip)h+='<div class="note" style="margin-top:8px">ข้าม '+P.skip+' แถวที่ยังไม่กรอกระยะ · แถวที่ไม่อยู่ในไฟล์ไม่ถูกลบ</div>';
   if((P.st.length||P.stNew.length)&&!ST_CAN)h+='<div class="errbox" style="margin-top:8px">บัญชีนี้แก้ข้อมูลร้านไม่ได้ (เฉพาะ DEV / แอดมิน Packing / ผู้จัดการ) — ส่วน 📞 จะไม่ถูกบันทึก</div>';
   $('impBody').innerHTML=h;
   $('impT').textContent='ตรวจก่อนนำเข้า'; $('impOk').onclick=doImport;   // ใช้กล่องเดียวกับนำเข้าคู่ปลายทาง → คืนปุ่มเป็นของค่ากลาง
-  const n=P.upd.length+P.ins.length+(ST_CAN?P.st.length+P.stNew.length:0), b=$('impOk');
+  const n=P.upd.length+P.ins.length+P.ty.length+(ST_CAN?P.st.length+P.stNew.length:0), b=$('impOk');   // tyNew นับรวมกับแถวเพิ่มใหม่แล้ว
   b.disabled=!n||P.err.length>0; b.textContent=P.err.length?'แก้ไฟล์ก่อน':(n?'นำเข้า '+n+' แถว':'ไม่มีอะไรเปลี่ยน');
   openOv('ovImp');
 }
 async function stPost(id,store){
   const r=await fetch(PK_EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({action:'saveStore',userId:MY_UID,stationId:id},store))});
   return r.json();
+}
+/* 🏷️ บันทึก Type หลังค่ากลางเสมอ (แถวที่เพิ่งเปลี่ยนเป็น Packing จะผ่านด่านหลังบ้าน) · คืนข้อความไว้ต่อท้าย toast */
+async function tyApply(){
+  const items=PLAN.ty.map(x=>({id:x.id,pk_type:x.pk_type}));
+  const lost=[]; PLAN.tyNew.forEach(x=>{const r=(DATA.rows||[]).find(z=>norm(z.station)===norm(x.station)); if(r) items.push({id:r.id,pk_type:x.pk_type}); else lost.push(x.station);});
+  const lostMsg=lost.length?'Type ของสถานีใหม่ไม่ได้บันทึก: '+lost.join(', '):'';
+  if(!items.length) return {msg:'',err:lostMsg};
+  impBusy('Type '+items.length+' แถว');
+  try{ const d=await tyPost(items); return d.ok?{msg:' · Type '+d.updated+' แถว',err:lostMsg}:{msg:'',err:d.error||'บันทึก Type ไม่ได้'}; }
+  catch(e){ return {msg:'',err:'บันทึก Type ไม่ได้ — นำเข้าไฟล์เดิมซ้ำได้'}; }
 }
 async function doImport(){
   const rows=PLAN.upd.map(u=>u.row).concat(PLAN.ins.map(x=>x.row)), b=$('impOk');
@@ -1084,15 +1133,16 @@ async function doImport(){
     let stOk=0; const stErr=[];
     if(ST_CAN) for(const [i,x] of PLAN.st.entries()){ impBusy('ข้อมูลร้าน '+(i+1)+' / '+PLAN.st.length); try{ const d=await stPost(x.id,x.store); if(d.ok) stOk++; else stErr.push(x.station+': '+(d.error||'ไม่สำเร็จ')); }catch(e){ stErr.push(x.station+': บันทึกไม่ได้'); } }
     const stMsg=(stOk?' · ข้อมูลร้าน '+stOk+' สถานี':'')+(stErr.length?' · ข้อมูลร้านไม่สำเร็จ '+stErr.length:'');
-    if(!rows.length){ await stLoad(); impBusy(false); toast((stErr.length?'⚠️ ':'✅ ')+'นำเข้าแล้ว'+stMsg,!!stErr.length); if(stErr.length)$('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+stErr.map(esc).join('<br>')+'</div>'); else closeOv('ovImp'); b.disabled=false; b.textContent='นำเข้า'; return; }
+    if(!rows.length){ const ty0=await tyApply(); if(ty0.err)stErr.push('Type: '+ty0.err); if(PLAN.ty.length)await load(); await stLoad(); impBusy(false); toast((stErr.length?'⚠️ ':'✅ ')+'นำเข้าแล้ว'+stMsg+ty0.msg,!!stErr.length); if(stErr.length)$('impBody').insertAdjacentHTML('afterbegin','<div class="errbox" style="margin:0 0 10px">'+stErr.map(esc).join('<br>')+'</div>'); else closeOv('ovImp'); b.disabled=false; b.textContent='นำเข้า'; return; }
     impBusy('ค่ากลาง '+rows.length+' แถว');
     const d=await api({action:'importCentralDistances',rows});
     if(d.ok){
       impBusy('โหลดตารางใหม่'); await load();
       if(ST_CAN) for(const [i,x] of PLAN.stNew.entries()){ impBusy('ข้อมูลร้านสถานีใหม่ '+(i+1)+' / '+PLAN.stNew.length); const r=(DATA.rows||[]).find(z=>norm(z.station)===norm(x.station)); if(!r){stErr.push(x.station+': ไม่เจอสถานีใหม่');continue;}
         try{ const s=await stPost(r.id,x.store); if(s.ok) stOk++; else stErr.push(x.station+': '+(s.error||'ไม่สำเร็จ')); }catch(e){ stErr.push(x.station+': บันทึกไม่ได้'); } }
+      const ty1=await tyApply(); if(ty1.msg) await load();
       await stLoad(); impBusy(false);
-      toast('✅ นำเข้าแล้ว: แก้ '+d.updated+' · เพิ่ม '+d.inserted+' แถว'+(stOk?' · ข้อมูลร้าน '+stOk+' สถานี':'')+(stErr.length?' · ⚠️ ข้อมูลร้านไม่สำเร็จ '+stErr.length:''),!!stErr.length);
+      toast('✅ นำเข้าแล้ว: แก้ '+d.updated+' · เพิ่ม '+d.inserted+' แถว'+ty1.msg+(stOk?' · ข้อมูลร้าน '+stOk+' สถานี':'')+(stErr.length?' · ⚠️ ข้อมูลร้านไม่สำเร็จ '+stErr.length:'')+(ty1.err?' · ⚠️ '+ty1.err:''),!!(stErr.length||ty1.err));
       closeOv('ovImp');return;}
     if(d.unsure){impBusy(false);await afterUnsure();return;}   // นำเข้าไฟล์เดิมซ้ำได้ แถวที่เข้าแล้วจะนับเป็น "ไม่เปลี่ยน"
     toast('❌ '+(d.denied?'ไม่มีสิทธิ์':(d.error||'นำเข้าไม่ได้')),true);
