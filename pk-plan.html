@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>แจกงาน Packing · SSB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="ssb-read.js?v=20261014a"></script>
 <script src="ssb-pin-gate.js?v=20261009a"></script>
@@ -72,6 +75,10 @@
     --glass:rgba(16,34,26,.55);--glass-2:rgba(22,44,34,.78);--glass-line:rgba(150,225,190,.17);--navtx:#c5d9ce;
     --glass-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 20px 44px -24px rgba(0,0,0,.8);
     --blob1:#0f6b43;--blob2:#14532d;--blob3:#5c4a10}}
+  /* ฟอนต์ชุดเดียวกับแดชบอร์ดค่าไฟ */
+  :root{--fhead:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif;--fbody:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif}
+  body{font-family:var(--fbody);-webkit-font-smoothing:antialiased}
+  h1,.btx b,.kpi b{font-family:var(--fhead)}
   html{background:var(--bg)}
   body{padding:0;background:var(--bg)}
   body::before,body::after{content:'';position:fixed;z-index:-1;border-radius:50%;filter:blur(70px);opacity:.72;pointer-events:none}
@@ -173,7 +180,7 @@
   <main class="main"><div class="wrap">
     <div class="bar">
       <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
-      <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-11-05a</span></div></div>
+      <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-11-05b</span></div></div>
     </div>
     <div class="road" aria-hidden="true"></div>
     <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
