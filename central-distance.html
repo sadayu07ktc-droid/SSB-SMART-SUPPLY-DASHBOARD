@@ -554,11 +554,12 @@ async function savePair(){
 }
 function setF(f){FILTER=f;document.querySelectorAll('#viewBox .seg:not(.jseg) button').forEach(b=>b.classList.toggle('on',b.dataset.f===f));renderList();}
 /* ⬇️⬆️ Excel คู่ปลายทาง (รูปแบบเดียวกับไฟล์ค่ากลาง) · นำเข้า: id/ชื่อคู่ตรง = แก้แถวเดิม · ไม่มี = เพิ่ม · ช่องว่าง = คงค่าเดิม · บันทึกทีละคู่ (DEV) */
-const PR_COLS=[['id','id (ห้ามแก้)',8,1],['a','ปลายทาง A',34],['b','ปลายทาง B',34],['km','ระยะ A ↔ B (กม.)',12],['note','หมายเหตุ',30],['active','ใช้งาน(ใช่/ไม่)',10],['upd','แก้ล่าสุด (อ่านอย่างเดียว)',22,1]];
+const PR_COLS=[['id','id (ห้ามแก้)',8,1],['a','ปลายทาง A',34],['poi_a','รหัส DTC A (อ่านอย่างเดียว)',12,1],['b','ปลายทาง B',34],['poi_b','รหัส DTC B (อ่านอย่างเดียว)',12,1],['km','ระยะ A ↔ B (กม.)',12],['note','หมายเหตุ',30],['active','ใช้งาน(ใช่/ไม่)',10],['upd','แก้ล่าสุด (อ่านอย่างเดียว)',22,1]];
 async function pairExport(b){
   if(!PAIRS){toast('ยังโหลดตารางคู่ปลายทางไม่เสร็จ',true);return;}
   const done=btnBusy(b,'กำลังสร้าง…');
   try{
+    await ssbPoi.load(MY_UID);
     const X=await xrtLib(),NAVY='1E293B',LN='CBD5E1',F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'1E293B'}},o||{});
     const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
     const al={vertical:'top',wrapText:true}, cell=(v,s)=>({v:v==null?'':String(v),t:'s',s});
@@ -570,7 +571,7 @@ async function pairExport(b){
       [cell('ดาวน์โหลดเมื่อ '+now.toLocaleString('th-TH',{dateStyle:'long',timeStyle:'short'})+' · ระยะใช้ได้ทั้งสองทิศ (A → B = B → A) · แก้ได้เฉพาะ DEV',{font:F({sz:9.5,color:{rgb:'64748B'}})})],
       PR_COLS.map(c=>cell(c[1],sh)),PR_COLS.map(c=>cell(c[0],sk))];
     PAIRS.slice().sort((x,y)=>String(x.station_a).localeCompare(String(y.station_a),'th')).forEach((p,i)=>{
-      const v={id:p.id,a:p.station_a,b:p.station_b,km:p.km!=null?Math.round(p.km):'',note:p.note||'',active:p.active===false?'ไม่':'ใช่',upd:(p.updated_by||'')+(p.updated_at?' · '+new Date(p.updated_at).toLocaleDateString('th-TH'):'')};
+      const v={id:p.id,a:p.station_a,poi_a:ssbPoi.text(p.station_a),b:p.station_b,poi_b:ssbPoi.text(p.station_b),km:p.km!=null?Math.round(p.km):'',note:p.note||'',active:p.active===false?'ไม่':'ใช่',upd:(p.updated_by||'')+(p.updated_at?' · '+new Date(p.updated_at).toLocaleDateString('th-TH'):'')};
       rows.push(PR_COLS.map(c=>cell(v[c[0]],c[3]?ro:i%2?d1:d0)));});
     const ws={}; rows.forEach((r,ri)=>r.forEach((v,ci)=>{ws[X.utils.encode_cell({r:ri,c:ci})]=v;}));
     ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:PR_COLS.length-1}});
@@ -875,6 +876,7 @@ async function exportCsv(b){
   const done=btnBusy(b||document.createElement('button'),'กำลังสร้าง…');
   try{
     if(STORES===null) await stLoad();
+    await ssbPoi.load(MY_UID);
     const X=await xrtLib(), NAVY='1E293B', LN='CBD5E1', F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'1E293B'}},o||{});
     const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
     const al={vertical:'top',wrapText:true};
@@ -890,7 +892,7 @@ async function exportCsv(b){
       num:o=>Object.assign({},o,{alignment:{horizontal:'right',vertical:'top'}})
     };
     // คอลัมน์: [คีย์, หัวไทย, กว้าง, กลุ่ม, อ่านอย่างเดียว]
-    const C=[['id','id (ห้ามแก้)',8,0,1],['station','สถานี',30,0],['km','ระยะเที่ยวเดียว(กม.)',11,0],['job_type','ประเภทงาน (สวน/ลาน/Packing/Bulk/ส่งน้ำ/อื่นๆ)',17,0],['pk_type','Type เฉพาะ Packing (ห้าง/ยี่ปั๊ว/อื่นๆ)',13,0],
+    const C=[['id','id (ห้ามแก้)',8,0,1],['station','สถานี',30,0],['dtc_code','รหัส DTC (อ่านอย่างเดียว)',12,0,1],['km','ระยะเที่ยวเดียว(กม.)',11,0],['job_type','ประเภทงาน (สวน/ลาน/Packing/Bulk/ส่งน้ำ/อื่นๆ)',17,0],['pk_type','Type เฉพาะ Packing (ห้าง/ยี่ปั๊ว/อื่นๆ)',13,0],
       ['garden_code','รหัสสวน/ลาน',12,0],['pickup_point','จุดรับ',16,0],['note','หมายเหตุ',22,0],['active','ใช้งาน(ใช่/ไม่)',9,0],['dp_type','DP Type (เวลารอ)',14,0]]
       .concat(PK_COLS.map(([k,h])=>[k,h,11,1]),ST_COLS.map(([k,h])=>['st_'+k,h,k==='rates'?36:k==='team'?18:13,2]),[['ref_name','ชื่อสวน/ลาน (อ้างอิง ไม่ต้องแก้)',24,3,1]]);
     const GRP=[['ข้อมูลค่ากลาง','1F5D44'],['ค่าใช้จ่ายร้าน (Packing)','8A5A0B'],['📞 ข้อมูลร้าน · ใช้ในการ์ดคนขับ / หน้าแจกงาน','1E4FA3'],['อ้างอิง','64748B']];
@@ -904,14 +906,14 @@ async function exportCsv(b){
     let nMiss=0; const used={};
     (DATA.rows||[]).forEach((r,i)=>{used[norm(r.station)]=1;
       const st=stOf(r.id), base=i%2?S.d1:S.d0;
-      const val={id:r.id,station:r.station,km:r.km,job_type:r.job_type,pk_type:r.pk_type,garden_code:r.garden_code,pickup_point:r.pickup_point,note:r.note,active:r.active===false?'ไม่':'ใช่',dp_type:r.dp_type,ref_name:codeName(r.garden_code)};
+      const val={id:r.id,station:r.station,dtc_code:ssbPoi.text(r.station),km:r.km,job_type:r.job_type,pk_type:r.pk_type,garden_code:r.garden_code,pickup_point:r.pickup_point,note:r.note,active:r.active===false?'ไม่':'ใช่',dp_type:r.dp_type,ref_name:codeName(r.garden_code)};
       PK_COLS.forEach(([k])=>{val[k]=r[k];}); ST_COLS.forEach(([k])=>{val['st_'+k]=st[k]||'';});
       rows.push(C.map(c=>cell(val[c[0]],c[4]?S.ro:(c[0]==='km'||c[3]===1)?S.num(base):base)));
     });
     (DATA.missing||[]).forEach(m=>{   // ต่อท้าย: สวน/ลานที่ยังไม่มีค่ากลาง — กรอกระยะแล้วนำเข้าได้เลย (เว้นว่าง = ข้าม)
       const k=(DATA.codes||[]).find(x=>x.code===m.code), multi=k&&k.pickups.length>1;
       const st=(m.name||m.code)+(multi&&m.pickup?' ('+m.pickup+')':''); if(used[norm(st)])return; used[norm(st)]=1; nMiss++;
-      const val={station:st,job_type:/^LT-/i.test(m.code)?'ลาน':'สวน',garden_code:m.code,pickup_point:multi?(m.pickup||''):'',active:'ใช่',ref_name:(m.name||'')+' · ยังไม่มีค่ากลาง '+m.orders+' ออเดอร์ — กรอกระยะ'};
+      const val={station:st,dtc_code:ssbPoi.text(st)||ssbPoi.text(m.name),job_type:/^LT-/i.test(m.code)?'ลาน':'สวน',garden_code:m.code,pickup_point:multi?(m.pickup||''):'',active:'ใช่',ref_name:(m.name||'')+' · ยังไม่มีค่ากลาง '+m.orders+' ออเดอร์ — กรอกระยะ'};
       rows.push(C.map(c=>cell(val[c[0]],c[4]?S.ro:S.miss)));
     });
     const ws={}; rows.forEach((row,ri)=>row.forEach((v,ci)=>{ws[X.utils.encode_cell({r:ri,c:ci})]=v;}));
@@ -932,6 +934,7 @@ async function exportCsv(b){
       [H('4'),H('ก่อนบันทึกจริง ระบบแสดงสรุป แก้แถวเดิม / เพิ่มใหม่ / ผิดพลาด (เก่า → ใหม่) ให้ตรวจก่อนกดยืนยัน')],
       [H('5'),H('สิทธิ์: ระยะค่ากลาง/รหัส = DEV เท่านั้น · ข้อมูลร้าน = DEV / แอดมิน Packing / ผู้จัดการ')],
       [H('')],[H('ค่าที่ใช้ได้',hb),H('',hb)],
+      [H('รหัส DTC'),H('เลขหมุดใน DTC เช่น ST-32741 ไว้ยืนยันว่าเป็นที่เดียวกัน · ระบบหาจากชื่อสถานี · ว่าง = ไม่มีหมุดชื่อนี้ · อัปโหลดแล้วไม่อ่านคอลัมน์นี้')],
       [H('ระยะเที่ยวเดียว(กม.)'),H('ตัวเลข กม. เที่ยวเดียว SSB → สถานี (ระบบปัดเป็นกม.เต็ม · คิดค่าแรงไป-กลับ ×2)')],
       [H('ประเภทงาน'),H(JOB_TYPES.join(' / '))],[H('ใช้งาน'),H('ใช่ / ไม่')],
       [H('Type'),H('ห้าง / ยี่ปั๊ว / อื่นๆ · ใส่เฉพาะประเภทงาน Packing · เว้นว่าง = คงค่าเดิม (ล้างค่าทำได้ที่ฟอร์มแก้ในหน้าเว็บ)')],
@@ -1027,7 +1030,7 @@ function buildPlan(tbl){
   const H=tbl[h].map(x=>String(x||'').trim()), find=re=>H.findIndex(x=>re.test(x));
   // ชื่อสถานี: "สถานี" ตรงตัว > "สถานีที่2" (ไฟล์ DATABASE.xlsx ต้นฉบับ — สถานีที่1 คือจุดออก SSB) > มีคำว่าสถานี
   let stI=H.findIndex(x=>x==='สถานี'); if(stI<0)stI=find(/สถานีที่\s*2/); if(stI<0)stI=find(/สถานี/);
-  const ix={id:find(/^id\b/i),station:stI,km:find(/ระยะ/),job_type:find(/ประเภท/),garden_code:find(/รหัส/),pickup_point:find(/จุดรับ/),note:find(/หมายเหตุ/),active:find(/ใช้งาน/),dp_type:find(/DP\s*Type/i)};
+  const ix={id:find(/^id\b/i),station:stI,km:find(/ระยะ/),job_type:find(/ประเภท/),garden_code:H.findIndex(x=>/รหัส/.test(x)&&!/DTC/i.test(x)),pickup_point:find(/จุดรับ/),note:find(/หมายเหตุ/),active:find(/ใช้งาน/),dp_type:find(/DP\s*Type/i)};
   PK_COLS.forEach(([k,l])=>{ix[k]=H.indexOf(l);});
   const hasPk=PK_COLS.some(([k])=>ix[k]>=0);
   const ixS={}; ST_COLS.forEach(([k,l])=>{ixS[k]=H.indexOf(l);}); const hasSt=ST_COLS.some(([k])=>ixS[k]>=0);
@@ -1296,6 +1299,7 @@ async function dtcOpen(i){
     +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null
       ?(d.out.direct!=null&&d.out.direct!==d.back.direct   // ขาหนึ่งวิ่งตรง อีกขามีแต่เที่ยวแวะ → ใช้ขาวิ่งตรง (Edge summarize · 30 ต.ค.)
         ?(d.out.direct?'ขากลับมีแต่เที่ยวแวะหลายจุด ใช้ขาไป (วิ่งตรง) = ':'ขาไปมีแต่เที่ยวแวะหลายจุด ใช้ขากลับ (วิ่งตรง) = ')
+        :d.pick==='short'?'ขาไปกับขากลับต่างกันเกิน 20% ขาที่ยาวกว่ามักออกจากหรือแวะที่อื่น จึงใช้ขาที่สั้นกว่า = '
         :'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ')
       :'มีขาเดียว ใช้ขานั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b>'
     +(r.current&&r.current.km!=null?'<br>ในตาราง: <b>'+esc(r.current.station)+'</b> '+nf(r.current.km,0)+' กม. ('+esc(r.current.by)+') · ต่าง '+(r.diff>0?'+':'')+nf(r.diff,0)+' กม.':(r.current?'<br>ผูก '+esc(r.current.by)+' แต่ยังไม่มีแถวในตาราง':'<br>ยังไม่มีสถานีนี้ในตาราง'))+'</div>'
@@ -1313,7 +1317,7 @@ function dtcPairList(){
   const all=DTC_P.routes||[], R=all.filter(dtcPairShown), tiny=all.length-R.length, cnt={all:R.length,has:0,none:0,bad:0};
   R.forEach(r=>{const l=dtcLvl(r);if(l==='none')cnt.none++;else{cnt.has++;if(l==='bad')cnt.bad++;}});
   $('dtcBody').innerHTML=dtcChgBox(DTC_P,r=>r.a+' ↔ '+r.b,'dtcPairOpen')+dtcKindSeg()
-    +'<div class="note" style="margin-bottom:10px">สำหรับงานหลายจุด เช่น ลาน → สวนบิ๊กแกลง · 7-11 → LOSCAM · นับจาก<b>ออกจุดที่จอดจริง</b> (จอด 15 นาทีขึ้นไป) ถึง<b>จุดที่จอดถัดไป</b> · ไม่ต้องรอรถกลับเข้าโรงงาน (งานค้างคืนก็นับ) · ผ่านหมุดเฉยๆ / ผ่านโรงงาน / ห่างเกิน 24 ชม. ไม่นับ · ค่ากลาง = เฉลี่ยมัธยฐาน 2 ทิศ (มีทิศเดียว = ใช้ทิศนั้น) · ตัดค่าผิดปกติก่อน'
+    +'<div class="note" style="margin-bottom:10px">สำหรับงานหลายจุด เช่น ลาน → สวนบิ๊กแกลง · 7-11 → LOSCAM · นับจาก<b>ออกจุดที่จอดจริง</b> (จอด 15 นาทีขึ้นไป) ถึง<b>จุดที่จอดถัดไป</b> · ไม่ต้องรอรถกลับเข้าโรงงาน (งานค้างคืนก็นับ) · ผ่านหมุดเฉยๆ / ผ่านโรงงาน / ห่างเกิน 24 ชม. ไม่นับ · ค่ากลาง = เฉลี่ยมัธยฐาน 2 ทิศ (มีทิศเดียว = ใช้ทิศนั้น · 2 ทิศต่างเกิน 20% = ใช้ทิศที่สั้นกว่า) · ตัดค่าผิดปกติก่อน'
     +(tiny?' · ซ่อน '+tiny+' คู่ที่ห่างกันไม่ถึง 1 กม. (หมุดซ้อนที่เดียวกัน)':'')+'</div>'
     +'<div class="dr-tools"><input class="search" id="dtcQ" placeholder="🔎 ค้นจุด เช่น LOSCAM / บิ๊กแกลง…" oninput="dtcPairRows()" aria-label="ค้นจุด">'+dtcDaySeg()+'</div>'
     +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
@@ -1362,7 +1366,7 @@ async function dtcPairOpen(i){
         +'<div style="text-align:right">'+(t.used?'<span class="dpill ok">ใช้</span>':'<span class="dpill bad">'+esc(t.why)+'</span>')+'</div></div>').join('');};
   const ab=d.a+' → '+d.b, ba=d.b+' → '+d.a;
   $('dtcBody').innerHTML='<div class="legs">'+legBox(ab+' (กม.)',d.out)+legBox(ba+' (กม.)',d.back)+'</div>'
-    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = ':'มีทิศเดียว ใช้ทิศนั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b></div></div>'
+    +'<div class="card" style="padding:11px 13px;margin-bottom:6px"><div class="note">ค่ากลาง = '+(d.out.median!=null&&d.back.median!=null?(d.pick==='short'?'2 ทิศต่างกันเกิน 20% ทิศที่ยาวกว่ามักอ้อมหรือแวะที่อื่น จึงใช้ทิศที่สั้นกว่า = ':'('+nf(d.out.median,2)+' + '+nf(d.back.median,2)+') ÷ 2 = '):'มีทิศเดียว ใช้ทิศนั้น = ')+nf(d.central,2)+' → ปัดเป็น <b style="font-size:15px">'+nf(dtcR(d.central),0)+' กม.</b></div></div>'
     +tl(d.out,ab)+tl(d.back,ba);
 }
 /* 📅 รายงานเทียบรายเดือน (cron วันที่ 1 · ต่างเกิน 5% และ ≥ 5 เที่ยว · แจ้ง LINE DEV) */
@@ -1413,6 +1417,7 @@ const DTC_X={
   offHint:'ปิดใช้สถานีให้ทำที่ฟอร์มแก้ในหน้าค่ากลาง', rows:[],
   cols:[
     {k:'dtc',h:'สถานี DTC',w:34,ro:1,get:r=>r.station},
+    {k:'poi',h:'รหัส DTC',w:12,ro:1,get:r=>ssbPoi.text(r.station)},
     {k:'dtc_km',h:'ค่ากลาง DTC (กม.)',w:12,ro:1,get:r=>r.central},
     {k:'trips',h:'จำนวนเที่ยว',w:9,ro:1,get:r=>r.trips},
     {k:'out_med',h:'ขาไป มัธยฐาน',w:11,ro:1,get:r=>r.out.median==null?'':r.out.median},
@@ -1483,7 +1488,9 @@ const DTC_XP={
   offHint:'ยังเลิกใช้คู่ผ่านไฟล์ไม่ได้ แจ้ง DEV', newHint:'แถวที่ id ว่าง = ยังไม่มีในตาราง · ใส่ระยะแล้วจะถูกเพิ่มเป็นคู่ใหม่ (ชื่อตามคอลัมน์ จุด A / จุด B)', rows:[],
   cols:[
     {k:'dtc_a',h:'จุด A (DTC)',w:30,ro:1,get:r=>r.a},
+    {k:'poi_a',h:'รหัส DTC จุด A',w:12,ro:1,get:r=>ssbPoi.text(r.a)},
     {k:'dtc_b',h:'จุด B (DTC)',w:30,ro:1,get:r=>r.b},
+    {k:'poi_b',h:'รหัส DTC จุด B',w:12,ro:1,get:r=>ssbPoi.text(r.b)},
     {k:'dtc_km',h:'ค่ากลาง DTC (กม.)',w:12,ro:1,get:r=>r.central},
     {k:'trips',h:'จำนวนเที่ยว',w:9,ro:1,get:r=>r.trips},
     {k:'ab_med',h:'A → B มัธยฐาน',w:11,ro:1,get:r=>r.out.median==null?'':r.out.median},
@@ -1523,6 +1530,7 @@ function xrtYmd(d){const p=n=>('0'+n).slice(-2);return d.getFullYear()+p(d.getMo
 async function xrtDownload(S,b){
   const done=btnBusy(b,'กำลังสร้าง…');
   try{
+    await ssbPoi.load(MY_UID);
     const X=await xrtLib(),NAVY='1E293B',LN='CBD5E1';
     const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
     const F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'1E293B'}},o||{});
