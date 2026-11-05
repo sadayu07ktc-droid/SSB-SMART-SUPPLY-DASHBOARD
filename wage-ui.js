@@ -17,6 +17,11 @@
     + '.uim input{width:100%;box-sizing:border-box;margin-top:12px;padding:10px 12px;border:1px solid var(--line2,#cfd5db);border-radius:10px;background:var(--card2,#f6f8fa);color:var(--txt,#1a2530);font:inherit;font-size:14px}'
     + '.uim input::placeholder{color:var(--txt2,#6b7785);opacity:.7}'
     + '.uim input:focus{outline:2px solid var(--primary,#1f8a52);outline-offset:1px}'
+    + '.uim-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}'
+    + '.uim-chip{flex:1 1 120px;padding:10px 12px;border:1px solid var(--line2,#cfd5db);border-radius:10px;background:var(--card2,#f6f8fa);color:var(--txt,#1a2530);font:inherit;font-size:13.5px;font-weight:600;cursor:pointer}'
+    + '.uim-chip.on{background:var(--primary,#1f8a52);border-color:var(--primary,#1f8a52);color:#fff}'
+    + '.uim-chip:focus-visible{outline:2px solid var(--primary,#1f8a52);outline-offset:2px}'
+    + '.uim-b:disabled{opacity:.45;cursor:not-allowed}'
     + '.uim-f{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}'
     + '.uim-b{border:0;border-radius:10px;padding:9px 18px;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}'
     + '.uim-b.ok{background:var(--primary,#1f8a52);color:#fff}.uim-b.ok.danger{background:var(--danger,#c8352f)}'
@@ -37,16 +42,20 @@
         + (o.icon ? '<div class="uim-ic' + (o.danger ? ' danger' : '') + '" aria-hidden="true">' + o.icon + '</div>' : '')
         + '<h3 id="uimT">' + esc(o.title || '') + '</h3>'
         + (o.msg ? '<p id="uimM">' + esc(o.msg) + '</p>' : '')
+        + (o.kind === 'choose' ? '<div class="uim-chips" role="radiogroup" aria-label="' + esc(o.title || '') + '">' + (o.options || []).map(function (x) { return '<button type="button" class="uim-chip' + (x === o.value ? ' on' : '') + '" role="radio" aria-checked="' + (x === o.value) + '" data-v="' + esc(x) + '">' + esc(x) + '</button>'; }).join('') + '</div>' : '')
         + (o.kind === 'prompt' ? '<input id="uimIn" type="text" value="' + esc(o.value || '') + '" placeholder="' + esc(o.placeholder || '') + '" aria-label="' + esc(o.title || '') + '">' : '')
+        + (o.kind === 'choose' ? '<input id="uimIn" type="text" maxlength="300" placeholder="' + esc(o.placeholder || '') + '" aria-label="หมายเหตุ">' : '')
         + '<div class="uim-f">' + (o.kind === 'alert' ? '' : '<button class="uim-b no" data-r="0">' + esc(o.cancelText || 'ยกเลิก') + '</button>')
         + '<button class="uim-b ok' + (o.danger ? ' danger' : '') + '" data-r="1">' + esc(o.okText || 'ตกลง') + '</button></div></div>';
       document.body.appendChild(ov);
       setTimeout(function () { ov.classList.add('on'); }, 10);   // ไม่ใช้ rAF — แท็บพื้นหลัง/WebView บางตัวไม่ยิง ทำให้กล่องจางค้าง
-      var inp = ov.querySelector('#uimIn');
-      setTimeout(function () { if (inp) { inp.focus(); inp.select(); } else ov.querySelector('.uim-b.ok').focus(); }, 30);
+      var inp = ov.querySelector('#uimIn'), picked = o.value, okBtn = ov.querySelector('.uim-b.ok');
+      if (o.kind === 'choose') okBtn.disabled = true;   // ยังไม่ได้เปลี่ยนตัวเลือก = ไม่มีอะไรให้บันทึก
+      setTimeout(function () { if (o.kind === 'choose') { var c = ov.querySelector('.uim-chip:not(.on)') || okBtn; c.focus(); } else if (inp) { inp.focus(); inp.select(); } else okBtn.focus(); }, 30);
       function done(ok) {
+        if (o.kind === 'choose' && ok && picked === o.value) return;
         document.removeEventListener('keydown', key, true);
-        var val = o.kind === 'prompt' ? (ok ? inp.value : null) : (o.kind === 'alert' ? undefined : !!ok);
+        var val = o.kind === 'choose' ? (ok ? { value: picked, note: inp.value.trim() } : null) : o.kind === 'prompt' ? (ok ? inp.value : null) : (o.kind === 'alert' ? undefined : !!ok);
         ov.classList.remove('on'); setTimeout(function () { ov.remove(); }, 170);
         if (last && last.focus) try { last.focus(); } catch (e) {}
         resolve(val);
@@ -60,10 +69,16 @@
         }
       }
       document.addEventListener('keydown', key, true);
-      ov.addEventListener('click', function (e) { var b = e.target.closest('[data-r]'); if (b) return done(b.dataset.r === '1'); if (e.target === ov) done(o.kind === 'alert'); });
+      ov.addEventListener('click', function (e) {
+        var c = e.target.closest('[data-v]');
+        if (c) { picked = c.dataset.v; [].forEach.call(ov.querySelectorAll('.uim-chip'), function (x) { var on = x === c; x.classList.toggle('on', on); x.setAttribute('aria-checked', on); }); okBtn.disabled = picked === o.value; return; }
+        var b = e.target.closest('[data-r]'); if (b) return done(b.dataset.r === '1'); if (e.target === ov) done(o.kind === 'alert');
+      });
     });
   }
   window.uiConfirm = function (o) { o = o || {}; return open({ kind: 'confirm', title: o.title || 'ยืนยัน', msg: o.msg, okText: o.okText, cancelText: o.cancelText, icon: o.icon || (o.danger ? '🗑️' : '❓'), danger: o.danger }); };
+  /* เลือก 1 ตัวเลือก + หมายเหตุ → { value, note } | null (ยกเลิก) · ปุ่มบันทึกกดได้เมื่อเปลี่ยนจากค่าเดิมแล้ว */
+  window.uiChoose = function (o) { o = o || {}; return open({ kind: 'choose', title: o.title || 'เลือก', msg: o.msg, options: o.options, value: o.value, placeholder: o.placeholder, okText: o.okText || 'บันทึก', icon: o.icon || '✏️' }); };
   window.uiPrompt = function (o) { o = o || {}; return open({ kind: 'prompt', title: o.title || 'กรอกข้อมูล', msg: o.msg, value: o.value, placeholder: o.placeholder, okText: o.okText || 'บันทึก', icon: o.icon || '✏️' }); };
   window.uiAlert = function (msg, o) {
     o = o || {}; var s = String(msg || ''), bad = /^❌|ไม่สำเร็จ|ผิดพลาด/.test(s), warn = /^⚠️/.test(s);

@@ -216,7 +216,7 @@
   <div id="drBody"><div class="msg">กำลังโหลด…</div></div>
 </aside>
 
-<script src="wage-ui.js?v=20261006"></script>
+<script src="wage-ui.js?v=20261105"></script>
 <script>
 const GAS_URL='https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
 const LIFF_ID='2010274217-Ot7vGhri';
@@ -449,14 +449,15 @@ function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[
  *   ① ค่าที่บันทึกไว้ + ต้นทุนบริษัท + ข้อมูลดิบ จาก Supabase (wage-stored · <1 วิ) → ครบทั้งลิ้นชัก
  *   ② "เทียบกับตั้งค่าปัจจุบัน" = GAS getWageMonitor คิดสด (15-60 วิ) → กดปุ่มเมื่อต้องการ (ไม่ยิงทุกครั้งที่เปิด = ประหยัดโควต้า GAS)
  *   ยังไม่เคยบันทึกค่าแรง / Supabase ไม่ตอบ → คิดสดที่ GAS อัตโนมัติแบบเดิม */
-let DR_SEQ=0, DR_ZONES=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท
+let DR_SEQ=0, DR_ZONES=null, DR_DEST=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท · DR_DEST = ปลายทาง+ประวัติแก้หมุด
 async function openDetail(orderId){
-  const seq=++DR_SEQ; DR_ZONES=null;
+  const seq=++DR_SEQ; DR_ZONES=null; DR_DEST=null;
   $('ov').classList.add('on');$('dr').classList.add('on');
   $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังโหลดค่าเที่ยว</span></div>';
   try{
     const q=await api({action:'getWageStored',userId:MY_UID,orderId});
     if(seq!==DR_SEQ)return;
+    DR_DEST=q&&q.destInfo||null;
     if(q&&q.ok&&q.stored&&q.stored.snapshot){
       DR_ZONES=q.zones||null; q.stored.settingsAt=q.settingsAt||'';
       renderDetail(orderId,{wage:q.info||{},stored:q.stored,cost:q.cost||null,raw:q.raw},true); return;
@@ -516,6 +517,38 @@ async function setLoadState(orderId,field,value,label,el){
   if(!d||!d.ok||!d.done) uiAlert('แก้สภาพรถแล้ว แต่คิดค่าแรงใหม่ไม่สำเร็จ — กด "คิดใหม่เที่ยวนี้"');
   await loadReport(); openDetail(orderId);
 }
+/* 🏁 ปลายทางจริงของเที่ยว + แก้หมุด + ประวัติ (คุณน้อง 2026-11-05) · ค่าว่าง = โรงงาน */
+function destTime(iso){
+  const t=new Date(iso); if(isNaN(t))return '';
+  const b=new Date(t.getTime()+7*3600000),p=n=>('0'+n).slice(-2);
+  return p(b.getUTCDate())+'/'+p(b.getUTCMonth()+1)+'/'+b.getUTCFullYear()+' '+p(b.getUTCHours())+':'+p(b.getUTCMinutes())+' น.';
+}
+function destBlock(orderId,st){
+  const d=DR_DEST; if(!d)return '';
+  const locked=!!(st&&st.locked), log=d.log||[];
+  let s='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px"><span>🏁 ปลายทาง <b>'+_escS(d.current||'โรงงาน')+'</b></span>';
+  if(d.canEdit)s+=locked?'<span style="font-size:12px;color:var(--txt2)">จ่ายแล้ว แก้ไม่ได้</span>':'<button class="btn ghost" style="padding:4px 12px;font-size:12.5px" onclick="editDest(\''+orderId+'\',this)">แก้หมุด</button>';
+  s+='</div>';
+  if(log.length)s+='<details style="margin-top:7px;font-size:12px"'+(log.length<=3?' open':'')+'><summary style="cursor:pointer;color:var(--txt2)">ประวัติการแก้ไข ('+log.length+')</summary>'
+    +log.map(x=>'<div style="padding:6px 0 0;line-height:1.55"><span style="color:var(--txt2)">'+destTime(x.edited_at)+'</span> · <b>'+_escS(x.editor_name||'—')+'</b><br>'
+      +(x.old_station?_escS(x.old_station):'โรงงาน')+' → '+(x.new_station?_escS(x.new_station):'โรงงาน')
+      +' <span style="color:var(--txt2)">('+_escS(x.source||'แก้หมุด')+')</span>'
+      +(x.note?'<br><span style="color:var(--txt2)">'+_escS(x.note)+'</span>':'')+'</div>').join('')+'</details>';
+  return '<div style="border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin:0 0 10px">'+s+'</div>';
+}
+async function editDest(orderId,el){
+  const d=DR_DEST; if(!d)return;
+  const r=await uiChoose({title:'แก้ปลายทางของเที่ยวนี้',msg:'ระบบบันทึกชื่อแอดมินกับวันเวลาที่แก้ แล้วคิดค่าแรงเที่ยวนี้ใหม่ทันที',options:d.options,value:d.current||'โรงงาน',placeholder:'หมายเหตุ (ถ้ามี)',icon:'🏁'});
+  if(!r)return;
+  el.disabled=true;el.textContent='กำลังคิด…';
+  let w=null;
+  try{ w=await fetch(LOAD_EDGE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'setDest',userId:MY_UID,orderId,dest:r.value,note:r.note})}).then(x=>x.json()); }catch(_){}
+  if(!w||!w.success){ uiAlert('❌ '+((w&&w.error)||'แก้ปลายทางไม่สำเร็จ')); openDetail(orderId); return; }
+  let c=null;
+  for(let tr=1;tr<=3&&!c;tr++){ try{c=await recomputeApi([orderId]);}catch(_){c=null;await new Promise(z=>setTimeout(z,1500*tr));} }
+  if(!c||!c.ok||!c.done) uiAlert('แก้ปลายทางแล้ว แต่คิดค่าแรงใหม่ไม่สำเร็จ — กด "คิดใหม่เที่ยวนี้"');
+  await loadReport(); openDetail(orderId);
+}
 function renderDetail(orderId,res,pending){
   // ลิ้นชักโชว์ "ค่าที่บันทึกไว้" = ตัวเดียวกับตาราง/รายงาน (ไม่ใช่คิดสด) · ค่าสดใช้เทียบ ถ้าต่าง = บอก + ปุ่มคิดใหม่
   const live=res.wage, st=res.stored, c=res.cost;
@@ -530,6 +563,7 @@ function renderDetail(orderId,res,pending){
   const place=placeOf(w.garden,w.dest);
   let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate||''} · ${w.vehType||(live.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
+  h+=destBlock(orderId,st);
   h+='<div id="calcSt">'+calcStatus(orderId,w,live,st,isStored,pending)+'</div>';
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   // 🆕 2026-11-05 รูทหลายจุด: โชว์ชื่อช่วง + ชนิดรถรายขา (เดี่ยว = 10 ล้อ)
