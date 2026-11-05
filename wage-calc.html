@@ -303,6 +303,8 @@
     var t=(d-a)/((top-a)||1);t=Math.max(0,Math.min(1,t));return kk[i-1]+t*(kk[i]-kk[i-1]);}
   function bench13Blend(distH,distL,veh){var Z=TABLE13[veh];if(!Z)return 0;
     var L=0,rh=distH>0?blendKmpl(distH,Z.h):0,rl=distL>0?blendKmpl(distL,Z.l):0;if(rh>0)L+=distH/rh;if(rl>0)L+=distL/rl;return L;}
+  // รูทหลายจุด: เรทจากระยะหนัก/เบารวมทั้งเที่ยว · ตารางตามชนิดรถของขานั้น (⚠️ ตรง Edge wage-calc + computeTripWage.gs)
+  function routeBench(legs,dH,dL){var L=0;legs.forEach(function(l){var Z=TABLE13[l.veh];if(!Z||!(l.dist>0))return;var hv=l.weight==='heavy',k=blendKmpl(hv?dH:dL,hv?Z.h:Z.l);if(k>0)L+=l.dist/k;});return L;}
   function tierIdx(d){for(var i=0;i<SPEED_TIERS.length;i++){if(d<=SPEED_TIERS[i].max)return i;}return SPEED_TIERS.length-1;}
   function speedFor(d){return SPEED_TIERS[tierIdx(d)].speed;}
   // 🆕 V.2 "ให้เพิ่มตามเวลาวิ่ง" — ตารางความเร็วตามระยะ (interpolate) ตรง Mastersheet ชีต ความเร็ววตามระยะทาง · คนละตารางกับ SPEED_TIERS
@@ -442,8 +444,17 @@
 
   // ── ช่วงงาน (legs) : ประเภทงาน + เบา/หนัก + มีขึ้น/ลงไหม ──
   var legBox=document.getElementById('legs');
+  function _escRt(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function renderLegs(){
     var c=calc();var totalMin=0;var h='';
+    if(c.legs[0]&&c.legs[0].isRoute){   // รูทหลายจุดที่คิดไว้แล้ว = อ่านอย่างเดียว (จำนวนขาไม่เท่าแบบฟอร์มแก้ขา)
+      c.legs.forEach(function(l){
+        h+='<div class="leg"><div class="lh">'+_escRt(l.name)+'<div style="font-weight:400;font-size:10.5px;color:var(--txt2);margin-top:1px">'+(l.veh==='เดี่ยว'?'10 ล้อ':_escRt(l.veh||''))+' · '+(l.weight==='heavy'?'หนัก':'เบา')+' · '+l.dist.toFixed(1)+' กม.</div></div>'
+          +'<div class="lr"><span class="lsum">'+money(l.sum)+' บ.</span></div></div>';
+      });
+      legBox.innerHTML=h+'<div style="margin-top:4px;font-size:12px;color:var(--txt2)">เที่ยวนี้คิดตามรูทจริงทุกจุด · แก้ขาในหน้านี้ไม่ได้</div>';
+      return;
+    }
     LEGS.forEach(function(l,idx){
       var lc=c.legs[idx];totalMin+=lc.upMin+lc.downMin;
       var jt=JOB_TYPES[l.job]||{up:0,down:0};
@@ -651,6 +662,15 @@
   // ── คำนวณ (จาก legs) ──
   // ── R.5: ระยะแต่ละขา (ยังไม่คิดชม./ค่าวิ่ง — คิดจากยอดรวมทั้งเที่ยวแล้วแบ่งทีหลัง) ──
   function computeLegs(s){
+    // 🆕 2026-11-05 รูทหลายจุด (ที่คิดไว้แล้วในระบบ) — ระยะ/หนักเบา/ชนิดรถ ตามขาจริง · ตรง Edge wage-calc buildRoute
+    if(s.routeLegs&&s.routeLegs.length&&T.distMode==='central'){
+      var rj=JOB_TYPES[(LEGS[0]&&LEGS[0].job)||'ปาล์ม']||{up:30,down:30},rn=s.routeLegs.length;
+      return s.routeLegs.map(function(l,i){
+        var hv=l.weight==='heavy',upM=i===0?rj.up:0,dnM=i===rn-1?rj.down:0;
+        return {name:l.name,weight:l.weight,job:(LEGS[0]&&LEGS[0].job)||'ปาล์ม',dist:+l.km||0,pct:T.weight?(hv?P.heavyPct:P.lightPct):100,veh:l.veh,isRoute:true,
+          up:upM/60,upMin:upM,down:dnM/60,downMin:dnM,tOut:'',tIn:'',realMin:0,sum:0,speed:0,driveMin:0};
+      });
+    }
     var distActual=LEGS.reduce(function(a,l){return a+(l.distKey?(s[l.distKey]||0):(l.dist||0));},0);
     var mult=(T.distMode==='central'&&s.distCentral>0&&distActual>0)?(s.distCentral/distActual):1;
     // ค่ากลาง → แบ่งเท่ากันทุกขาที่วิ่งจริง (2 ขา = ครึ่ง/ครึ่ง) · ตรงกับ computeTripWage.gs legKm (2026-10-07)
@@ -683,7 +703,7 @@
     // ค่าวิ่งต่อขา : ชม.ขา = ค่ากลาง→BJ÷จำนวนขา · จริง→BJ×สัดส่วนระยะ · legWage=ROUND(run×ชม×2×%) รายขา
     var timeWage=0;
     legs.forEach(function(l){
-      var legHrs=l.dist<=0?0:((T.distMode==='central')?totalHrs/nLeg:(distTotal>0?totalHrs*(l.dist/distTotal):0));
+      var legHrs=l.dist<=0?0:((T.distMode==='central'&&!l.isRoute)?totalHrs/nLeg:(distTotal>0?totalHrs*(l.dist/distTotal):0));
       // R.11: ค่าวิ่งขา = run × ชม.ขา × %หนัก/เบา ÷ ค่ากลาง((heavy+light)/2=50) — เท่ากับ ×1.4/×0.6 (เลิก ×2)
       var lw=Math.round(T.weight?(P.runRate*legHrs*l.pct/((P.heavyPct+P.lightPct)/2)):(P.runRate*legHrs));
       l.sum=lw; l.sumFull=P.runRate*legHrs; l.travelFull=l.sumFull; l.effPct=l.pct; l.driveMin=(l.realMin>0?l.realMin:Math.round(legHrs*60)); l.speed=legHrs>0?l.dist/legHrs:0;
@@ -715,6 +735,7 @@
     // น้ำมัน (เกณฑ์ตามประเภทรถ) — R.11 default = ตามระยะหนักเบา (ตาราง⑬)
     var benchL;
     benchL=benchFor(T.fuelBench,veh,distHeavy,distLight);   // 6 โหมด: weight/tier/single/⑬ตามระยะ/⑬เรทช่วง/⑬เกลี่ย
+    if(legs[0]&&legs[0].isRoute&&T.fuelBench==='hlblend')benchL=routeBench(legs,distHeavy,distLight);
     var viaL=T.via?(hooklift+give)/(P.fuelRate||1):0;                      // AM
     var benchKmpl=benchL>0?fuelDist/benchL:single;
     var fuelAdj=T.fuelPenalty?(benchL+viaL-actualL)*P.fuelRate:0;          // AN
@@ -742,7 +763,7 @@
     //    แล้วคิดต่อหน่วยแยก: Packing = บ./ชิ้น (qtyPk) · ปาล์ม/Bulk = บ./กก. (qty)
     var bkKg={w:0,label:''},bkPk={w:0};
     legs.forEach(function(l,i){
-      var jb=LEGS[i].job||'สินค้า';
+      var jb=l.job||'สินค้า';
       var w=T.weight?(l.pct||0):(l.dist||0);
       if(jb==='Packing')bkPk.w+=w; else {bkKg.w+=w; if(!bkKg.label)bkKg.label=jb;}
     });
@@ -1045,11 +1066,11 @@
     var distHeavy=legs.filter(function(l){return l.weight==='heavy';}).reduce(function(a,l){return a+l.dist;},0), distLight=distTotal-distHeavy;
     var totalHrs=distTotal<=0?0:(T.speedCalc==='interp'?distTotal/bonusSpeed(distTotal):(T.speedCalc==='stair'?stairHours(distTotal):distTotal/(speedFor(distTotal)||1)));
     var nLeg=legs.filter(function(l){return l.dist>0;}).length||1, travel=0;
-    legs.forEach(function(l){var lh=l.dist<=0?0:((T.distMode==='central')?totalHrs/nLeg:(distTotal>0?totalHrs*(l.dist/distTotal):0));travel+=Math.round(T.weight?(P.runRate*lh*2*l.pct/100):(P.runRate*lh));});
+    legs.forEach(function(l){var lh=l.dist<=0?0:((T.distMode==='central'&&!l.isRoute)?totalHrs/nLeg:(distTotal>0?totalHrs*(l.dist/distTotal):0));travel+=Math.round(T.weight?(P.runRate*lh*2*l.pct/100):(P.runRate*lh));});
     var updown=T.load?P.loadRate*legs.reduce(function(a,l){return a+l.up+l.down;},0):0;
     var tripHook=LEGS.some(function(l){return JOB_HOOKLIFT[l.job];}), tripHard=LEGS.some(function(l){return JOB_HARDSHIP[l.job];});
     var hooklift=(T.hooklift&&tripHook)?P.hookliftFee:0, hardship=(T.hardship&&tripHard)?P.hardshipFee:0, give=T.giveOn?P.givePerHr*totalHrs:0;
-    var benchL=benchFor(T.fuelBench,veh,distHeavy,distLight);   // เดิมไม่รองรับตาราง⑬ (ตกไปใช้หนัก/เบา)
+    var benchL=(legs[0]&&legs[0].isRoute&&T.fuelBench==='hlblend')?routeBench(legs,distHeavy,distLight):benchFor(T.fuelBench,veh,distHeavy,distLight);   // เดิมไม่รองรับตาราง⑬ (ตกไปใช้หนัก/เบา)
     var viaL=T.via?(hooklift+give)/(P.fuelRate||1):0, fuelAdj=T.fuelPenalty?(benchL+viaL-o.litersFilled)*P.fuelRate:0;
     var extra=T.via?0:(hooklift+give);
     return {travel:travel,updown:updown,fuel:fuelAdj,give:give,net:Math.round(travel+updown+fuelAdj+hardship+extra)};
@@ -1197,7 +1218,7 @@
     function attempt(n){
       return _wageOrdersFetch(uid).then(function(d){
         if(d&&d.ok&&d.orders){   // ตอบสำเร็จ (รวมกรณีช่วงนี้ว่าง = array ว่าง) → ไม่ retry
-          ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'',model:vehOf(o.vehType||o.model),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.centralKm||0,sysWage:(o.wage==null?null:+o.wage),heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0,vehTarp:(o.vehTarp===true||o.vehTarp===false)?o.vehTarp:null};});
+          ORDERS=d.orders.map(function(o){return {id:o.id,driver:o.driver||'-',plate:o.plate||'-',brand:'',model:vehOf(o.vehType||o.model),dest:o.dest||'-',date:o.date||'',distActual:+o.distActual||0,distCentral:+o.centralKm||0,routeLegs:o.routeLegs||null,sysWage:(o.wage==null?null:+o.wage),heavyKm:+o.heavyKm||0,lightKm:+o.lightKm||0,yardKm:0,yardHomeKm:0,litersFilled:+o.litersFilled||0,qty:+o.qty||0,extraCost:+o.extraCost||0,nights:+o.nights||0,lifts:+o.lifts||0,vehTarp:(o.vehTarp===true||o.vehTarp===false)?o.vehTarp:null};});
           window._ordersReal=true; T.ordIdx=0; if(window.uiProfile)uiProfile.set({status:'admin'});
           if(T.mode==='order'){buildSource();renderLegs();render();}
           return;
