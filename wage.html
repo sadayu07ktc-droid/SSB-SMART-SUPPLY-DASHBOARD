@@ -642,10 +642,10 @@ function waOpen(){
     +s.miss.map(r=>waRow(r,'','','<small style="color:var(--danger)">'+_escS(r.routeMissing.join(' · '))+'</small>')).join('');
   if(s.km.length)b+='<div class="wa-sec">🛣️ วิ่งจริงเกินค่ากลาง 5% · '+s.km.length+' เที่ยว<span>จริง / กลาง (กม.)</span></div>'
     +s.km.map(r=>waRow(r,'<b>'+pct(+r.distActual,+r.distCentral)+'</b>'+f1(r.distActual)+' / '+f1(r.distCentral),
-      (+r.distActual>+r.distCentral*2?tag('เกิน 2 เท่า ตรวจเลขไมล์'):'')+(fuelIds.has(r.orderId)?tag('น้ำมันเกินด้วย'):''))).join('');
+      (+r.distActual>+r.distCentral*2?tag('เกิน 2 เท่า อาจวิ่งจุดอื่น'):'')+(fuelIds.has(r.orderId)?tag('น้ำมันเกินด้วย'):''))).join('');
   if(s.fuel.length)b+='<div class="wa-sec">⛽ เติมน้ำมันรวมเกินเกณฑ์ค่ากลาง 5% · '+s.fuel.length+' เที่ยว<span>เติม / เกณฑ์ (ล.)</span></div>'
     +s.fuel.map(r=>waRow(r,'<b>'+pct(+r.liters,+r.benchLiters)+'</b>'+f1(r.liters)+' / '+f1(r.benchLiters),
-      (+r.liters>+r.benchLiters*2?tag('เกิน 2 เท่า ตรวจลิตร'):'')+(kmIds.has(r.orderId)?tag('วิ่งเกินด้วย'):''))).join('');
+      (+r.liters>+r.benchLiters*2?tag('เกิน 2 เท่า'):'')+(kmIds.has(r.orderId)?tag('วิ่งเกินด้วย'):''))).join('');
   const ov=document.createElement('div'); ov.className='wa-ov'; ov.id='waOv';
   ov.innerHTML='<div class="wa" role="dialog" aria-modal="true" aria-labelledby="waT"><div class="wa-h"><div><h3 id="waT">⚠️ เที่ยวที่ต้องตรวจ · '+g.ic+' '+_escS(g.t)+'</h3>'
     +'<p>'+s.ids.size+' เที่ยวในช่วงที่เลือก · ไม่นับเที่ยวที่จ่ายแล้ว · กดเที่ยวเพื่อดูรายละเอียด</p></div><button type="button" class="wa-x" id="waX" aria-label="ปิด">✕</button></div>'
