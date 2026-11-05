@@ -8,6 +8,7 @@
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="ssb-read.js?v=20261014a"></script>
 <script src="ssb-pin-gate.js?v=20261009a"></script>
+<script src="ssb-poi.js?v=20261105a"></script>
 <style>
   :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--accent:#0d6efd;--warn:#b8860b;--danger:#c8352f;--radius:8px}
   @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--accent:#4a9bff;--warn:#e0b84a;--danger:#e5645d}}
@@ -365,7 +366,7 @@ async function load(){
       n=>{if(!DATA)$('body').innerHTML='<div class="ldr"><div class="ring"></div>หลังบ้านตอบช้า กำลังลองใหม่ (ครั้งที่ '+n+'/3)</div>';});
     if(d.denied){$('body').innerHTML='<div class="msg" style="color:var(--danger)">ไม่มีสิทธิ์ (เฉพาะแอดมิน)</div>';return;}
     if(!d.ok){$('body').innerHTML='<div class="msg">โหลดไม่ได้: '+esc(d.error||'ผิดพลาด')+' <button class="btn sm" onclick="load()">↻ ลองใหม่</button></div>';return;}
-    DATA=d; render(); if(STORES===null) stLoad(); if(!GEO) geoLoad();
+    DATA=d; render(); if(STORES===null) stLoad(); if(!GEO) geoLoad(); ssbPoi.load(MY_UID).then(()=>{ if($('list')) renderList(); const dq=$('dtcQ'); if(dq&&dq.oninput) dq.oninput(); });
   }catch(e){$('body').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e&&e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="$(\'body\').innerHTML=\'<div class=ldr><div class=ring></div>กำลังโหลดค่ากลาง</div>\';load()">↻ ลองใหม่</button></div>';}
 }
 
@@ -490,7 +491,7 @@ function renderPairs(){
     const a=geoOfName(p.station_a), b=geoOfName(p.station_b), c=pairCheck(Math.round(p.km),a,b);
     const gl=GEO?'<div class="geo-ln">'+(a?'📍 A '+llTxt(a.lat,a.lng):'⚠️ A ไม่มีพิกัด')+' · '+(b?'B '+llTxt(b.lat,b.lng):'⚠️ B ไม่มีพิกัด')+(c?' · เส้นตรง '+nf(c.s,1)+' กม.':'')+'</div>':'';
     return '<div class="row'+(p.active===false?' off':'')+'" tabindex="0" role="button" onclick="openPair('+p.id+')" onkeydown="if(event.key===\'Enter\')openPair('+p.id+')">'
-    +'<div class="cA"><div class="st">'+esc(p.station_a)+' <span style="color:var(--txt2)">↔</span> '+esc(p.station_b)+'</div><div class="meta">'
+    +'<div class="cA"><div class="st">'+esc(p.station_a)+ssbPoi.tag(p.station_a)+' <span style="color:var(--txt2)">↔</span> '+esc(p.station_b)+ssbPoi.tag(p.station_b)+'</div><div class="meta">'
       +(p.active===false?'<span class="pill bad">ปิดใช้</span>':'')+(c&&c.w?'<span class="pill warn" title="ค่ากลางเทียบระยะเส้นตรงผิดปกติ">⚠️ ระยะน่าสงสัย</span>':'')+(p.note?'<span class="pill">'+esc(String(p.note).slice(0,60))+'</span>':'')+'</div>'+gl+'</div>'
     +'<div class="km kA"><b>'+nf(p.km,0)+'</b> กม.<span>ระหว่างปลายทาง</span></div>'
     +'<div class="code"><span class="nm">'+(p.updated_by?esc(p.updated_by):'')+'</span></div><div class="chev">›</div></div>';}).join('')
@@ -623,12 +624,12 @@ function renderList(){
   if(JT) rows=rows.filter(r=>jtOf(r)===JT);
   if(FILTER==='linked')rows=rows.filter(r=>r.garden_code);
   if(FILTER==='unlinked')rows=rows.filter(r=>!r.garden_code);
-  if(q)rows=rows.filter(r=>norm(r.station+' '+(r.garden_code||'')+' '+codeName(r.garden_code)+' '+(r.pickup_point||'')+' '+(r.job_type||'')+' '+(r.dp_type||'')).indexOf(q)>=0);
+  if(q)rows=rows.filter(r=>norm(r.station+' '+ssbPoi.text(r.station)+' '+(r.garden_code||'')+' '+codeName(r.garden_code)+' '+(r.pickup_point||'')+' '+(r.job_type||'')+' '+(r.dp_type||'')).indexOf(q)>=0);
   if(!rows.length){$('list').innerHTML='<div class="empty">ไม่พบสถานีที่ตรงเงื่อนไข</div>';return;}
   $('list').innerHTML=rows.map(r=>{
     const nm=codeName(r.garden_code);
     return '<div class="row'+(r.active===false?' off':'')+'" tabindex="0" role="button" onclick="openEdit('+r.id+')" onkeydown="if(event.key===\'Enter\')openEdit('+r.id+')">'
-      +'<div class="cA"><div class="st">'+esc(r.station)+'</div><div class="meta">'
+      +'<div class="cA"><div class="st">'+esc(r.station)+ssbPoi.tag(r.station)+'</div><div class="meta">'
         +(r.job_type?'<span class="pill">'+esc(r.job_type)+'</span>':'')
         +(r.pickup_point?'<span class="pill warn">จุดรับ: '+esc(r.pickup_point)+'</span>':'')
         +(r.dp_type?'<span class="pill">⏱️ '+esc(r.dp_type)+(dpHours(r.dp_type)!=null?' · รอ '+nf(dpHours(r.dp_type))+' ชม.':' · ไม่มีในตาราง')+'</span>':'')
@@ -1193,14 +1194,14 @@ function dtcRows(){
   if(DTC_F==='none')R=R.filter(r=>dtcLvl(r)==='none');
   if(DTC_F==='bad')R=R.filter(r=>dtcLvl(r)==='bad');
   if(DTC_F==='night')R=R.filter(r=>r.nights&&r.nights.mode>0).sort((a,b)=>b.nights.mode-a.nights.mode||b.trips-a.trips);
-  if(q)R=R.filter(r=>norm(r.station+' '+(r.current?r.current.station+' '+r.current.by:'')).indexOf(q)>=0);
+  if(q)R=R.filter(r=>norm(r.station+' '+ssbPoi.text(r.station)+' '+(r.current?r.current.station+' '+r.current.by:'')).indexOf(q)>=0);
   if(!R.length){$('dtcRows').innerHTML='<div class="empty">'+(DTC.routes&&DTC.routes.length?'ไม่พบสถานีที่ตรงเงื่อนไข':'ยังไม่มีเที่ยวจาก DTC — ระบบกำลังดึงประวัติย้อนหลัง ลองใหม่ภายหลัง')+'</div>';return;}
   $('dtcRows').innerHTML=R.map(r=>{
     const l=dtcLvl(r), one=r.out.median==null||r.back.median==null;
     const cur=l==='none'?'<span class="dpill none">ไม่มีในตาราง</span>'
       :'<span class="dpill '+l+'">'+(r.diff>0?'+':'')+nf(r.diff,0)+'</span><span>ตาราง '+nf(r.current.km,0)+'</span>';
     return '<div class="dr-row" tabindex="0" role="button" onclick="dtcOpen('+r._i+')" onkeydown="if(event.key===\'Enter\')dtcOpen('+r._i+')">'
-      +'<div style="min-width:0"><div class="st">'+esc(r.station)+'</div><div class="n">'+r.trips+' เที่ยว · ไป '+(r.out.median==null?'–':nf(r.out.median,1))+' / กลับ '+(r.back.median==null?'–':nf(r.back.median,1))
+      +'<div style="min-width:0"><div class="st">'+esc(r.station)+ssbPoi.tag(r.station)+'</div><div class="n">'+r.trips+' เที่ยว · ไป '+(r.out.median==null?'–':nf(r.out.median,1))+' / กลับ '+(r.back.median==null?'–':nf(r.back.median,1))
         +(one?' · <span style="color:var(--warn)">มีขาเดียว</span>':'')+((r.out.median!=null&&!r.out.direct)||(r.back.median!=null&&!r.back.direct)?' · <span style="color:var(--warn)">มีแต่เที่ยวแวะ</span>':'')
         +(r.nights&&r.nights.max>0?' · <span style="color:var(--accent)">'+dtcNightTx(r.nights)+'</span>':'')+'</div></div>'
       +'<div class="v"><b>'+nf(r.central,0)+'</b><span>กม.</span></div>'
@@ -1211,7 +1212,7 @@ async function dtcOpen(i){
   const r=DTC.routes[i]; if(!r)return;
   DTC_Y=$('dtcBody').scrollTop;
   $('dtcBack').style.display='';$('dtcBack').onclick=dtcList;$('dtcT').textContent=r.station;
-  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,0)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,0)+' กม.':'');
+  $('dtcSub').textContent=(ssbPoi.text(r.station)?ssbPoi.text(r.station)+' · ':'')+'ค่ากลาง DTC '+nf(r.central,0)+' กม.'+(r.current&&r.current.km!=null?' · ในตาราง '+nf(r.current.km,0)+' กม.':'');
   $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดเที่ยว</div>';$('dtcBody').scrollTop=0;
   let d; try{d=await dtcGet('action=trips&station='+encodeURIComponent(r.station));}
   catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcOpen('+i+')">↻ ลองใหม่</button></div>';return;}
@@ -1263,14 +1264,14 @@ function dtcPairRows(){
   if(DTC_PF==='has')R=R.filter(r=>dtcLvl(r)!=='none');
   if(DTC_PF==='none')R=R.filter(r=>dtcLvl(r)==='none');
   if(DTC_PF==='bad')R=R.filter(r=>dtcLvl(r)==='bad');
-  if(q)R=R.filter(r=>norm(r.a+' '+r.b).indexOf(q)>=0);
+  if(q)R=R.filter(r=>norm(r.a+' '+r.b+' '+ssbPoi.text(r.a)+' '+ssbPoi.text(r.b)).indexOf(q)>=0);
   if(!R.length){$('dtcRows').innerHTML='<div class="empty">ไม่พบคู่จุดที่ตรงเงื่อนไข</div>';return;}
   const md=v=>v==null?'–':nf(v,1);
   $('dtcRows').innerHTML=R.map(r=>{const l=dtcLvl(r);
     const cur=l==='none'?'<span class="dpill none">ไม่มีในตาราง</span>'
       :'<span class="dpill '+l+'">'+(r.diff>0?'+':'')+nf(r.diff,0)+'</span><span>ตาราง '+nf(r.current.km,0)+'</span>';
     return '<div class="dr-row" tabindex="0" role="button" onclick="dtcPairOpen('+r._i+')" onkeydown="if(event.key===\'Enter\')dtcPairOpen('+r._i+')">'
-      +'<div style="min-width:0"><div class="st">'+esc(r.a)+' <span style="color:var(--txt2)">↔</span> '+esc(r.b)+'</div>'
+      +'<div style="min-width:0"><div class="st">'+esc(r.a)+ssbPoi.tag(r.a)+' <span style="color:var(--txt2)">↔</span> '+esc(r.b)+ssbPoi.tag(r.b)+'</div>'
       +'<div class="n">'+r.trips+' เที่ยว · → '+md(r.out.median)+' / ← '+md(r.back.median)+(r.out.median==null||r.back.median==null?' · <span style="color:var(--warn)">มีทิศเดียว</span>':'')+'</div></div>'
       +'<div class="v"><b>'+nf(r.central,0)+'</b><span>กม.</span></div>'
       +'<div class="v">'+cur+'</div></div>';}).join('');
@@ -1279,7 +1280,7 @@ async function dtcPairOpen(i){
   const r=DTC_P.routes[i]; if(!r)return;
   DTC_Y=$('dtcBody').scrollTop;
   $('dtcBack').style.display='';$('dtcBack').onclick=dtcList;$('dtcT').textContent=r.a+' ↔ '+r.b;
-  $('dtcSub').textContent='ค่ากลาง DTC '+nf(r.central,0)+' กม. · '+r.trips+' เที่ยว'+(r.current?' · ในตาราง '+nf(r.current.km,0)+' กม.':'');
+  $('dtcSub').textContent=[ssbPoi.text(r.a),ssbPoi.text(r.b)].filter(Boolean).join(' ↔ ')+(ssbPoi.text(r.a)||ssbPoi.text(r.b)?' · ':'')+'ค่ากลาง DTC '+nf(r.central,0)+' กม. · '+r.trips+' เที่ยว'+(r.current?' · ในตาราง '+nf(r.current.km,0)+' กม.':'');
   $('dtcBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังโหลดเที่ยว</div>';$('dtcBody').scrollTop=0;
   let d; try{d=await dtcGet('action=trips&kind=pair&key='+encodeURIComponent(r.key));}
   catch(e){$('dtcBody').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcPairOpen('+i+')">↻ ลองใหม่</button></div>';return;}
