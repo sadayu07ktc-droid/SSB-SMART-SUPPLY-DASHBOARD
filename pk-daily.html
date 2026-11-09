@@ -176,6 +176,13 @@ main{padding-block:14px 120px}
 .otl details{border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin-bottom:6px;background:var(--surface)}.otl summary{cursor:pointer;list-style-position:inside}
 .otl ul{margin:6px 0 2px 18px;padding:0;font-size:12.5px;max-height:190px;overflow:auto}.otl li{margin:2px 0}.otn{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .clrl{margin:4px 0 8px 18px;padding:0;line-height:1.7}
+.lpds{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface)}
+.lpdh{padding:9px 12px;font-weight:700;background:var(--mallbg,var(--surface2));display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.lpdt{width:100%;border-collapse:collapse;font-size:13px}.lpdt th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:left;padding:6px 12px;border-bottom:1px solid var(--line)}
+.lpdt td{padding:7px 12px;border-bottom:1px dashed var(--line);vertical-align:top}.lpdt .n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.lpdt tfoot td{font-weight:700;border-bottom:0;border-top:1px solid var(--line);background:var(--surface2)}
+.lpsk{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.5}.lpsk b{color:var(--ink);font-weight:600}
+.lpq{float:right;font-weight:700;font-variant-numeric:tabular-nums;margin-left:10px}
 .tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;border-radius:999px;padding:0 7px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);white-space:nowrap;vertical-align:1px}
 /* จุดส่งในแถว: เห็นครบทุกจุด */
 .sl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 8px;align-items:baseline;font-size:13px}
@@ -690,18 +697,37 @@ async function lpPick(file){if(LPX.busy)return;LPX.busy=true;const b=$('lpImp'),
     if(!rows.length){await askModal({title:'ไม่พบ PO ในไฟล์',icon:'📄',ok:'ปิด',cancel:null,html:'<p>ต้องมีหัวคอลัมน์ <b>เลขที่ P/O · รายการสินค้า · จำนวน</b> (แบบไฟล์แพลน 7-11 ของแอดมินห้าง)</p>'+(skip.length?'<p class="note">ชีตที่ข้าม: '+esc(skip.join(', '))+'</p>':'')});return;}
     if(b)b.textContent='⏳ กำลังตรวจกับระบบ…';
     const pv=await lpCall({action:'lpImport',file:file.name,rows,apply:false});
-    const go=await lpPreview(pv,file.name,skip);if(!go)return;
+    const go=await lpPreview(pv,file.name,skip,rows);if(!go)return;
     if(b)b.textContent='⏳ กำลังบันทึก…';
     const ap=await lpCall({action:'lpImport',file:file.name,rows,apply:true});
     lpReload(ap);toast('✅ นำเข้าแพลน PO แล้ว · ใหม่ '+ap.add.length+' · แก้ '+ap.change.length+(ap.errors.length?' · ข้าม '+ap.errors.length+' (ผิดพลาด)':'')+' · Loading Planner โหลดใหม่แล้ว');
   }catch(e){toast('❌ '+(e.message||e));}finally{LPX.busy=false;if(b&&b.isConnected){b.disabled=false;b.textContent=t0;}}}
 function lpGrp(cls,title,n,body,open){return n?'<details class="lpg '+cls+'"'+(open?' open':'')+'><summary><b>'+title+'</b> <span class="lpn">'+n+'</span></summary><div class="lpgb">'+body+'</div></details>':'';}
-function lpPreview(r,fname,skip){const ok=r.add.length+r.change.length;
+/* ยอดจากไฟล์ที่อ่านในหน้า (ไม่ใช่ค่าที่ระบบคำนวณ) · หน่วย = ลัง ตามคอลัมน์ "จำนวน" ของไฟล์ · PO ที่ผิดพลาดไม่นับ */
+const lpQn=v=>Number(v||0).toLocaleString('en-US',{maximumFractionDigits:2});
+const lpTot=x=>(x&&x.lines||[]).reduce((a,l)=>a+(+l.q||0),0);
+function lpIsoTh(d){const m=String(d||'').match(/^(\d{4})-(\d{2})-(\d{2})$/);if(!m)return esc(d||'ไม่มีวันส่ง');const dt=new Date(+m[1],+m[2]-1,+m[3]);
+  return ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'][dt.getDay()]+' '+(+m[3])+' '+['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][+m[2]]+' '+String((+m[1]+543)%100).padStart(2,'0');}
+function lpDaySum(rows,r){const bad=new Set(r.errors.map(x=>x.po)),good=(rows||[]).filter(x=>!bad.has(x.po));if(!good.length)return '';
+  const D={},allDc=new Set();good.forEach(x=>{const d=D[x.date]=D[x.date]||{po:0,q:0,dc:new Set(),sku:{}};const dc=String(x.dc).slice(0,4);
+    d.po++;d.q+=lpTot(x);d.dc.add(dc);allDc.add(dc);x.lines.forEach(l=>{d.sku[l.p]=(d.sku[l.p]||0)+(+l.q||0);});});
+  const ds=Object.keys(D).sort(),T=ds.reduce((a,k)=>a+D[k].q,0);
+  return '<div class="lpds"><div class="lpdh">📅 สรุปตามวันส่ง <span class="note">'+ds.length+' วัน · '+good.length+' PO · รวม <b>'+lpQn(T)+'</b> ลัง</span></div>'
+    +'<div class="tw"><table class="lpdt"><thead><tr><th>วันส่ง</th><th class="n">PO</th><th class="n">คลัง</th><th class="n">ยอดรวม (ลัง)</th></tr></thead><tbody>'
+    +ds.map(k=>{const d=D[k],sk=Object.entries(d.sku).sort((a,b)=>b[1]-a[1]);
+      return '<tr><td><b>'+lpIsoTh(k)+'</b><div class="lpsk">'+sk.map(([p,q])=>esc(p)+' <b>'+lpQn(q)+'</b>').join(' · ')+'</div></td><td class="n">'+d.po+'</td><td class="n" title="'+esc([...d.dc].sort().join(', '))+'">'+d.dc.size+'</td><td class="n"><b>'+lpQn(d.q)+'</b></td></tr>';}).join('')
+    +'</tbody><tfoot><tr><td>รวม '+ds.length+' วัน</td><td class="n">'+good.length+'</td><td class="n">'+allDc.size+'</td><td class="n">'+lpQn(T)+'</td></tr></tfoot></table></div>'
+    +(bad.size?'<div class="note">ไม่นับ PO ที่ผิดพลาด '+bad.size+' ใบ</div>':'')+'</div>';}
+function lpPreview(r,fname,skip,rows){const ok=r.add.length+r.change.length;
+  const byPo={};(rows||[]).forEach(x=>{byPo[x.po]=x;});
+  const qty=po=>{const x=byPo[po];return x?'<span class="lpq">'+lpQn(lpTot(x))+' ลัง</span>':'';};
+  const lns=(po,fb)=>{const x=byPo[po];return x&&x.lines.length?x.lines.map(l=>esc(l.p)+' <b>'+lpQn(l.q)+'</b>').join(' · '):esc(fb||'');};
   const ln=s=>'<div class="lpr">'+s+'</div>',where=x=>'<span class="note">'+esc(x.sheet?('ชีต '+x.sheet+' · '):'')+'แถว '+x.row+'</span>';
   const html='<div class="lpsum"><span class="c-add">ใหม่ <b>'+r.add.length+'</b></span><span class="c-chg">แก้ไข <b>'+r.change.length+'</b></span><span>ไม่เปลี่ยน <b>'+r.same+'</b></span><span class="c-err">ผิดพลาด <b>'+r.errors.length+'</b></span><span class="c-warn">เตือน <b>'+r.warns.length+'</b></span></div>'
     +'<div class="note">ไฟล์ '+esc(fname)+' · '+r.total+' PO · วันส่ง '+r.dates.map(([d,n])=>esc(lpTh(d))+' ('+n+')').join(', ')+(skip.length?' · ข้ามชีต '+esc(skip.join(', ')):'')+'</div>'
-    +lpGrp('add','➕ เพิ่มใหม่',r.add.length,r.add.map(x=>ln('<b class="mono">'+esc(x.po)+'</b> ส่ง '+esc(lpTh(x.date))+' · '+esc(x.dc.slice(0,4))+'<div class="note">'+esc(x.lines)+'</div>')).join(''),r.add.length<=8)
-    +lpGrp('chg','✏️ แก้ไข (เก่า → ใหม่)',r.change.length,r.change.map(x=>ln('<b class="mono">'+esc(x.po)+'</b> · '+esc(x.dc.slice(0,4))+x.diffs.map(d=>'<div class="lpd"><span>'+esc(d.f)+'</span> <s>'+esc(d.o)+'</s> → <b>'+esc(d.n)+'</b></div>').join(''))).join(''),true)
+    +lpDaySum(rows,r)
+    +lpGrp('add','➕ เพิ่มใหม่',r.add.length,r.add.map(x=>ln(qty(x.po)+'<b class="mono">'+esc(x.po)+'</b> ส่ง '+esc(lpTh(x.date))+' · '+esc(x.dc.slice(0,4))+'<div class="note">'+lns(x.po,x.lines)+'</div>')).join(''),r.add.length<=8)
+    +lpGrp('chg','✏️ แก้ไข (เก่า → ใหม่)',r.change.length,r.change.map(x=>ln(qty(x.po)+'<b class="mono">'+esc(x.po)+'</b> · '+esc(x.dc.slice(0,4))+x.diffs.map(d=>'<div class="lpd"><span>'+esc(d.f)+'</span> <s>'+esc(d.o)+'</s> → <b>'+esc(d.n)+'</b></div>').join(''))).join(''),true)
     +lpGrp('err','⛔ ผิดพลาด · ไม่บันทึก',r.errors.length,r.errors.map(x=>ln('<b class="mono">'+esc(x.po||'—')+'</b> '+esc(x.msg)+' '+where(x))).join(''),true)
     +lpGrp('warn','⚠️ เตือน · บันทึกได้',r.warns.length,r.warns.map(x=>ln('<b class="mono">'+esc(x.po)+'</b> '+esc(x.msg)+' '+where(x))).join(''),r.warns.length<=6)
     +lpGrp('off','📌 ไม่อยู่ในไฟล์ · คงไว้ ไม่ลบ',r.notIn.length,'<div class="note">ถ้า PO ไหนไม่ส่งแล้ว ให้กด ✂️ ตัดจำนวน / ยกเลิก PO</div>'+r.notIn.map(x=>ln('<b class="mono">'+esc(x.po)+'</b> ส่ง '+esc(lpTh(x.date))+' · '+esc(x.dc.slice(0,4)))).join(''),false)
