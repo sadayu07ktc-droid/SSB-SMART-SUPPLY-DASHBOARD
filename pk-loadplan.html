@@ -359,6 +359,9 @@ function axleLoad(r) {
 }
 const axTone = (pct) => (pct > 100 ? "bad" : pct > 90 ? "warn" : "ok");
 const skuOf = (name) => A.sku.find((s) => s.re.test(name)) || A.sku[2];
+// ตราสินค้าบนลัง: ดูจากชื่อสินค้าใน PO ก่อน (ไชโย/ทับทิม/โอก้า) · ไม่ระบุ = ตราตามแม่แบบสินค้า
+const brandOf = (name, s) => { const t = String(name || "") + " "; const f = (x) => /ไชโย/.test(x) ? "chaiyo" : /ทับทิม/.test(x) ? "tubtim" : /โอก้า/.test(x) ? "oka" : "";
+  return f(t) || f(s && s.name) || "tubtim"; };
 
 let dates = [...new Set(POS.map((p) => p.date))], date = dates[0], mode = "auto", trucks = [], sel = 0, assign = {}, nextId = 1;
 // เลขคัน: ระบบจัดใหม่ = เริ่ม #1 ทุกครั้ง · แอดมินเพิ่มรถ = ต่อจากเลขสูงสุดที่มีอยู่
@@ -370,10 +373,10 @@ const ONE_L = new Set(["1l", "oka", "soy"]);   // สินค้า 1 ลิต
 function palletize(po, lay1L) {
   const P = A.pallet, units = [], partial = [];
   po.lines.forEach((ln) => {
-    const s = skuOf(ln.p), lay = lay1L && ONE_L.has(s.k) ? lay1L : s.lay, per = s.per * lay;
+    const s = skuOf(ln.p), lay = lay1L && ONE_L.has(s.k) ? lay1L : s.lay, per = s.per * lay, br = brandOf(ln.p, s);
     const full = Math.floor(ln.q / per), loose = ln.q - full * per;
-    for (let i = 0; i < full; i++) units.push({ segs: [{ s, q: per, lay }], tall: lay > s.lay });
-    if (loose > 0) partial.push({ s, q: loose, lay: Math.ceil(loose / s.per) });
+    for (let i = 0; i < full; i++) units.push({ segs: [{ s, q: per, lay, br }], tall: lay > s.lay });
+    if (loose > 0) partial.push({ s, q: loose, lay: Math.ceil(loose / s.per), br });
   });
   // เศษ: รวมเป็นพาเลทเดียวถ้าความสูงรวมไม่เกิน maxH (ชั้นสินค้าวางทับกัน)
   partial.sort((a, b) => b.lay * b.s.h - a.lay * a.s.h);
@@ -381,8 +384,8 @@ function palletize(po, lay1L) {
   partial.forEach((pt) => {
     const hh = pt.lay * pt.s.h;
     const m = mixed.find((u) => u.hh + hh + P.h <= P.maxH);
-    if (m) { m.segs.push({ s: pt.s, q: pt.q, lay: pt.lay }); m.hh += hh; }
-    else mixed.push({ segs: [{ s: pt.s, q: pt.q, lay: pt.lay }], hh, mix: true });
+    if (m) { m.segs.push({ s: pt.s, q: pt.q, lay: pt.lay, br: pt.br }); m.hh += hh; }
+    else mixed.push({ segs: [{ s: pt.s, q: pt.q, lay: pt.lay, br: pt.br }], hh, mix: true });
   });
   return units.concat(mixed).map((u, i) => {
     const h = P.h + u.segs.reduce((a, g) => a + g.lay * g.s.h, 0);
@@ -1195,13 +1198,17 @@ function seqTotal() { const t = trucks[sel]; return t && t.items.length ? loadSe
 function applySeq(animate) {
   if (!R3 || !R3.seq) return;
   const n = R3.seq.length, st = seqMode ? seqStep : n;
-  R3.seq.forEach((s, k) => { s.g.visible = k < st; s.g.position.y = 0; });
+  R3.seq.forEach((s, k) => { s.g.visible = k < st; s.g.position.set(0, 0, 0); });
   if (R3.hl) { R3.hl.parent && R3.hl.parent.remove(R3.hl); R3.hl = null; }
-  R3.anim = null;
+  if (R3.anim && R3.anim.fk) R3.fkX = R3.anim.x1;   // กดข้ามระหว่างขับ = ถือว่าวางเสร็จ
+  R3.anim = null; fkRest();
   if (seqMode && st > 0) {
     const cur = R3.seq[st - 1];
     R3.hl = new THREE.BoxHelper(cur.g, 0xC9A227); R3.grp.add(R3.hl);
-    if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) { cur.g.position.y = 1.6; R3.anim = { g: cur.g, t0: performance.now() }; }
+    if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      if (R3.fk && !cur.p.hand && cur.x != null) fkStart(cur);   // พาเลท = โฟล์คลิฟท์ตักขึ้น
+      else { cur.g.position.y = 1.6; R3.anim = { g: cur.g, t0: performance.now() }; }   // เศษเรียงมือ = ค่อยๆ วางลง
+    }
   }
 }
 function renderSeq() {
@@ -1316,7 +1323,8 @@ function init3D() {
   });
   (function loop() {
     requestAnimationFrame(loop);
-    if (R3.anim) {   // พาเลทที่กำลังขึ้น ค่อยๆ ลงจากด้านบน
+    if (R3.anim && R3.anim.fk) fkTick(R3.anim, performance.now());
+    else if (R3.anim) {   // เศษเรียงมือ ค่อยๆ ลงจากด้านบน
       const t = Math.min(1, (performance.now() - R3.anim.t0) / 500);
       R3.anim.g.position.y = 1.6 * (1 - t) * (1 - t); if (t >= 1) R3.anim = null;
     }
@@ -1358,7 +1366,9 @@ const wheelCount = (type) => 2 + type.beds.reduce((a, b) => a + b.axles.length *
 const CAB = { "4w": { L: 150, H: 142, fair: 0, stack: 0 }, "6w": { L: 168, H: 176, fair: 0, stack: 1 }, trailer: { L: 182, H: 198, fair: 64, stack: 1 } };
 function addCab(grp, W, S, mat, r, k) {
   const P = CAB[k] || CAB["6w"], cw = W + 6, half = cw / 2, L = P.L, Hc = P.H, B = -64, bv = 7, body = new THREE.Group();
-  const paint = keepMat("cabP", () => stdMat({ color: 0x2d6a4f, roughness: 0.38, envMapIntensity: 0.9 })), paintD = keepMat("cabPD", () => stdMat({ color: 0x1f4d38, roughness: 0.45 }));
+  // สีหัวรถ = ขาวเงา (รถส่วนใหญ่ของบริษัท) · เคลือบเงา clearcoat สะท้อนแสงโกดัง · บังแดด/แถบข้าง = เขียวแบรนด์
+  const paint = keepMat("cabPw", () => new THREE.MeshPhysicalMaterial({ color: 0xbfc5c2, roughness: 0.22, metalness: 0.05, clearcoat: 1, clearcoatRoughness: 0.05, envMapIntensity: 0.9 })),   // ค่าสีต่ำกว่าขาวจริง: ไฟฉากสว่าง ใส่ขาวเต็มจะจ้าแบน (วัดแล้ว 247-251)
+    paintD = keepMat("cabPDw", () => stdMat({ color: 0x1B4332, roughness: 0.4, envMapIntensity: 0.6 }));
   const glass = keepMat("cabG", () => stdMat({ color: 0x1b2a31, roughness: 0.06, metalness: 0.35, envMapIntensity: 1.5 }));
   const chrome = keepMat("cabC", () => stdMat({ color: 0xd9dfdc, roughness: 0.18, metalness: 0.85, envMapIntensity: 1.2 }));
   const dark = keepMat("cabK", () => stdMat({ color: 0x2b302d, roughness: 0.6 })), blk = keepMat("cabB", () => stdMat({ color: 0x121413, roughness: 0.85 }));
@@ -1385,7 +1395,7 @@ function addCab(grp, W, S, mat, r, k) {
   const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 160;
   const cx2 = cv.getContext("2d"); cx2.textBaseline = "middle"; cx2.font = "700 104px " + FONT;
   const t1 = "SSB ", t2 = "Smart Supply", w1 = cx2.measureText(t1).width, w2 = cx2.measureText(t2).width, sx = 512 - (w1 + w2) / 2;
-  cx2.fillStyle = "#E1BE45"; cx2.fillText(t1, sx, 84); cx2.fillStyle = "#ffffff"; cx2.fillText(t2, sx + w1, 84);
+  cx2.fillStyle = "#B8901F"; cx2.fillText(t1, sx, 84); cx2.fillStyle = "#1B4332"; cx2.fillText(t2, sx + w1, 84);   // หัวขาว → ตัวหนังสือเขียวเข้ม/ทอง
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
   const bw = Math.min(cw - 60, 190), badge = new THREE.Mesh(new THREE.PlaneGeometry(bw * S, bw * S * 160 / 1024), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
   const by = wsB - 20; badge.rotation.order = "YXZ"; badge.rotation.y = -Math.PI / 2; badge.rotation.x = -ang; badge.position.set((fx(by) - 0.9) * S, by * S, 0); body.add(badge);
@@ -1404,6 +1414,7 @@ function addCab(grp, W, S, mat, r, k) {
     bx(14, 3, 2, doorR - 16, wsB - 14, sd * (half + 1.5), chrome);
     bx(50, 5, 18, (doorF + doorR) / 2, B - 6, sd * (half + 4), chrome);   // บันไดขึ้นหัว
     const st = new THREE.Mesh(new THREE.PlaneGeometry((L - 20) * S, 9 * S), gold); st.position.set((-L / 2 - 4) * S, (wsB - 34) * S, (z + sd * 0.2) * S); st.rotation.y = rotY; body.add(st);
+    const st2 = new THREE.Mesh(new THREE.PlaneGeometry((L - 20) * S, 5 * S), paintD); st2.position.set((-L / 2 - 4) * S, (wsB - 42) * S, (z + sd * 0.25) * S); st2.rotation.y = rotY; body.add(st2);   // แถบเขียวคู่แถบทอง
     bx(3, 3, 30, -L - 2, wsT - 6, sd * (half + 14), dark); bx(3, 3, 3, -L - 2, wsT - 30, sd * (half + 28), dark);
     bx(7, 54, 20, -L - 6, wsY - 6, sd * (half + 32), dark); bx(7.4, 48, 16, -L - 9.8, wsY - 6, sd * (half + 32), glass);   // กระจกมองข้าง
     const arch = new THREE.Mesh(new THREE.CircleGeometry((r + 9) * S, 20, 0, Math.PI), blk);
@@ -1452,18 +1463,46 @@ function speck(c, w, h, n, a) { for (let i = 0; i < n; i++) { c.fillStyle = (Mat
 function rr(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 const FONT = "'IBM Plex Sans Thai','Segoe UI',Tahoma,sans-serif";
 // ลังกระดาษ 1 ใบต่อ 1 ช่องพื้นผิว (ทำซ้ำตามจำนวนลังจริง) · ด้านข้างมีป้ายสีตามสินค้า = ตรงกับคำอธิบายสีใต้ภาพ
-const paintCarton = (top, col) => (c, w, h) => {
-  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#c99a5e"); g.addColorStop(1, "#b5844b");
-  c.fillStyle = g; c.fillRect(0, 0, w, h); speck(c, w, h, 900, 0.07);
+// ลังแบบลังจริงของสุขสมบูรณ์น้ำมันพืช (ตามรูปลังไชโย): กระดาษคราฟต์ · "ตรา" + ชื่อตราตัวใหญ่สีแดง · ไอคอนข้อควรระวัง · แถบล่างบอกขนาด
+//   แถบล่าง/มุมสามเหลี่ยม = สีตามสินค้า (ตรงกับคำอธิบายสีใต้ภาพ) · ชื่อตรา = ตามชื่อสินค้าใน PO (brandOf)
+const BRAND = { tubtim: { n: "ทับทิม", t: "#c4161c", gem: 1 }, chaiyo: { n: "ไชโย", t: "#c4161c" }, oka: { n: "โอก้า", t: "#d9661a" } };
+function gemIcon(c, x, y, r) {   // พลอยทับทิมเจียระไน
+  c.save(); c.fillStyle = "#d81f3c"; c.beginPath(); c.moveTo(x - r, y - r * 0.25); c.lineTo(x - r * 0.55, y - r * 0.75); c.lineTo(x + r * 0.55, y - r * 0.75); c.lineTo(x + r, y - r * 0.25); c.lineTo(x, y + r); c.closePath(); c.fill();
+  c.strokeStyle = "rgba(255,235,238,.9)"; c.lineWidth = Math.max(1.5, r * 0.07); c.lineJoin = "round"; c.stroke();
+  c.beginPath(); c.moveTo(x - r, y - r * 0.25); c.lineTo(x + r, y - r * 0.25); c.moveTo(x - r * 0.55, y - r * 0.75); c.lineTo(x - r * 0.25, y - r * 0.25); c.lineTo(x, y + r); c.lineTo(x + r * 0.25, y - r * 0.25); c.lineTo(x + r * 0.55, y - r * 0.75); c.stroke();
+  c.fillStyle = "rgba(255,255,255,.5)"; c.beginPath(); c.moveTo(x - r * 0.5, y - r * 0.62); c.lineTo(x - r * 0.18, y - r * 0.62); c.lineTo(x - r * 0.34, y - r * 0.3); c.closePath(); c.fill(); c.restore();
+}
+const sizeTxt = (s) => { const m = /([0-9.]+)L\*([0-9]+)/i.exec((s && s.name) || ""); return m ? m[1] + " ลิตร " + m[2] + " ขวด" : ""; };
+const paintCarton = (top, col, brand, size) => (c, w, h) => {
+  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, "#cfa36a"); g.addColorStop(1, "#bb8d55");
+  c.fillStyle = g; c.fillRect(0, 0, w, h); speck(c, w, h, Math.round(900 * w * h / 65536), 0.06);
+  const u = w / 256;
   if (top) {   // ฝาลังพับ + เทปกาว
     c.fillStyle = col; c.fillRect(w * 0.36, 0, w * 0.28, h); c.fillStyle = "rgba(255,255,255,.25)"; c.fillRect(w * 0.36, 0, w * 0.04, h);   // เทปสีตามสินค้า → มองจากด้านบนก็แยกสินค้าได้
-    c.strokeStyle = "rgba(110,75,35,.35)"; c.lineWidth = 2; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
+    c.strokeStyle = "rgba(110,75,35,.35)"; c.lineWidth = 2 * u; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
   } else {
-    c.fillStyle = "#fbfaf6"; rr(c, w * 0.11, h * 0.31, w * 0.78, h * 0.44, 12); c.fill(); c.fillStyle = col; rr(c, w * 0.15, h * 0.35, w * 0.7, h * 0.36, 9); c.fill();
-    c.fillStyle = "rgba(255,255,255,.85)"; for (let i = 0; i < 11; i++) c.fillRect(w * 0.22 + i * w * 0.05, h * 0.44, i % 3 ? 3 : 7, h * 0.18);
-    c.fillStyle = "rgba(95,62,28,.5)"; c.font = "700 34px sans-serif"; c.fillText("↑↑", w * 0.07, h * 0.25);
+    const B = BRAND[brand] || BRAND.tubtim, ink = col;
+    // มุมสามเหลี่ยมซ้ายบน + ไอคอนข้อควรระวัง 4 ช่อง (กันฝน · ระวังแตก · ห้ามซ้อนเกิน) แบบลังจริง
+    c.fillStyle = ink; c.beginPath(); c.moveTo(0, 0); c.lineTo(w * 0.27, 0); c.lineTo(0, h * 0.27); c.closePath(); c.fill();
+    for (let i = 0; i < 4; i++) { const ix = w * (0.5 + i * 0.115), iy = h * 0.05, is = w * 0.085;
+      c.fillStyle = ink; rr(c, ix, iy, is, is, 3 * u); c.fill(); c.strokeStyle = "rgba(255,255,255,.9)"; c.lineWidth = 2 * u; c.beginPath();
+      if (i === 0) { c.moveTo(ix + is * 0.25, iy + is * 0.75); c.lineTo(ix + is * 0.75, iy + is * 0.25); }
+      else if (i === 1) { c.arc(ix + is / 2, iy + is * 0.5, is * 0.28, Math.PI, 0); c.moveTo(ix + is / 2, iy + is * 0.5); c.lineTo(ix + is / 2, iy + is * 0.82); }
+      else if (i === 2) { c.moveTo(ix + is * 0.3, iy + is * 0.2); c.lineTo(ix + is * 0.7, iy + is * 0.2); c.lineTo(ix + is * 0.6, iy + is * 0.5); c.lineTo(ix + is * 0.4, iy + is * 0.5); c.closePath(); c.moveTo(ix + is / 2, iy + is * 0.5); c.lineTo(ix + is / 2, iy + is * 0.82); }
+      else { for (let k = 0; k < 3; k++) { c.moveTo(ix + is * 0.25, iy + is * (0.3 + k * 0.2)); c.lineTo(ix + is * 0.75, iy + is * (0.3 + k * 0.2)); } }
+      c.stroke(); }
+    // "ตรา" + ชื่อตราตัวใหญ่สีแดง (ขนาดย่อให้พอดีช่อง)
+    let x0 = w * 0.1; if (B.gem) { gemIcon(c, w * 0.15, h * 0.5, w * 0.075); x0 = w * 0.25; }
+    c.fillStyle = B.t; c.textBaseline = "alphabetic"; c.font = "600 " + Math.round(h * 0.07) + "px " + FONT; c.fillText("ตรา", x0, h * 0.6);
+    const tx = x0 + c.measureText("ตรา").width + w * 0.03, maxW = w * 0.92 - tx; let fs = Math.round(h * 0.3);
+    c.font = "700 " + fs + "px " + FONT; while (c.measureText(B.n).width > maxW && fs > 12) { fs -= 2; c.font = "700 " + fs + "px " + FONT; }
+    c.fillText(B.n, tx, h * 0.62);
+    c.fillStyle = "rgba(70,50,25,.75)"; c.font = "600 " + Math.round(h * 0.045) + "px " + FONT; c.fillText("บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด", w * 0.1, h * 0.73);
+    // แถบล่าง: ขนาดสินค้า
+    c.fillStyle = ink; c.fillRect(w * 0.03, h * 0.8, w * 0.94, h * 0.13);
+    if (size) { c.fillStyle = "#ffffff"; c.font = "700 " + Math.round(h * 0.075) + "px " + FONT; c.textBaseline = "middle"; c.fillText(size, w * 0.07, h * 0.865); c.textBaseline = "alphabetic"; }
   }
-  c.strokeStyle = "rgba(92,60,26,.6)"; c.lineWidth = 7; c.strokeRect(0, 0, w, h);   // รอยต่อระหว่างลัง
+  c.strokeStyle = "rgba(92,60,26,.6)"; c.lineWidth = 7 * u; c.strokeRect(0, 0, w, h);   // รอยต่อระหว่างลัง
 };
 function paintWood(c, w, h) {
   c.fillStyle = "#dcbd8c"; c.fillRect(0, 0, w, h);
@@ -1500,10 +1539,10 @@ function palletGeo(L, D, H, S) {   // พาเลทไม้ (ซม.): ไม
   zs.forEach((z) => b.push([L, t, 14, 0, t / 2, z]));
   return (GC[k] = mergeBoxes(b, S));
 }
-function cartonMats(col, nA, nC, lay, bad) {   // [+x,-x,+y,-y,+z,-z] · ทำซ้ำลายตามจำนวนลังแต่ละด้าน
-  return keepMat("ct:" + col + "|" + nA + "|" + nC + "|" + lay + "|" + (bad ? 1 : 0), () => {
+function cartonMats(col, nA, nC, lay, bad, brand, size) {   // [+x,-x,+y,-y,+z,-z] · ทำซ้ำลายตามจำนวนลังแต่ละด้าน
+  return keepMat("ct:" + col + "|" + brand + "|" + size + "|" + nA + "|" + nC + "|" + lay + "|" + (bad ? 1 : 0), () => {
     const tint = bad ? 0xff8f8f : 0xffffff;
-    const side = (rx, ry) => stdMat({ map: cvTex("ctS" + col, 256, 256, paintCarton(false, col), rx, ry), color: tint, roughness: 0.92, envMapIntensity: 0.22 });
+    const side = (rx, ry) => stdMat({ map: cvTex("ctS" + col + brand + size, 512, 512, paintCarton(false, col, brand, size), rx, ry), color: tint, roughness: 0.92, envMapIntensity: 0.22 });
     const top = stdMat({ map: cvTex("ctT" + col, 256, 256, paintCarton(true, col), nA, nC), color: tint, roughness: 0.92, envMapIntensity: 0.22 });
     const sx = side(nC, lay), sz = side(nA, lay);
     return [sx, sx, top, top, sz, sz];
@@ -1529,22 +1568,56 @@ function addBody(grp, b, bx, S) {
   [-1, 1].forEach((s) => { const p = new THREE.Mesh(new THREE.PlaneGeometry((b.L - 12) * S, 26 * S), bandM); p.position.set(cx * S, (b.H - 22) * S, s * (hw + 1) * S); if (s < 0) p.rotation.y = Math.PI; grp.add(p); });
 }
 function addForklift(grp, x, z, rotY, S) {   // โฟล์คลิฟท์สีทอง งาชี้ -x ของตัวเอง · พื้น = -100 ซม.
-  const f = new THREE.Group(), y0 = -100;
+  const f = new THREE.Group(), y0 = -100, lift = new THREE.Group(), mast2 = new THREE.Group();   // lift = แคร่+งา (ยกขึ้น/ยื่นออก) · mast2 = เสาชุดใน ยืดขึ้นครึ่งหนึ่ง
   const body = keepMat("fkB", () => stdMat({ color: 0xe0aa1c, roughness: 0.42, envMapIntensity: 0.8 })), dark = keepMat("fkD", () => stdMat({ color: 0x2b2f2d, roughness: 0.6 })),
     steel = keepMat("fkS", () => stdMat({ color: 0x8d9692, roughness: 0.32, metalness: 0.6, envMapIntensity: 0.9 }));
-  const box = (w, h, d, bx, by, bz, m) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w * S, h * S, d * S), m); o.position.set(bx * S, (y0 + by) * S, bz * S); f.add(o); return o; };
+  const box = (w, h, d, bx, by, bz, m, par) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w * S, h * S, d * S), m); o.position.set(bx * S, (y0 + by) * S, bz * S); (par || f).add(o); return o; };
   box(150, 55, 105, 0, 48, 0, body); box(52, 62, 104, 56, 100, 0, body);
   box(34, 8, 44, -6, 80, 0, dark); box(10, 34, 44, 12, 100, 0, dark);
   [-1, 1].forEach((s) => { box(5, 140, 5, -45, 148, s * 46, dark); box(5, 140, 5, 34, 148, s * 46, dark); });
   box(90, 5, 100, -5, 220, 0, dark);
   [-1, 1].forEach((s) => box(8, 230, 10, -84, 125, s * 30, steel));
-  box(6, 14, 86, -90, 30, 0, steel); box(6, 70, 86, -90, 60, 0, steel);
-  [-1, 1].forEach((s) => box(115, 5, 12, -150, 14, s * 30, steel));
+  [-1, 1].forEach((s) => box(6, 220, 8, -89, 122, s * 24, steel, mast2));
+  box(6, 14, 86, -95, 30, 0, steel, lift); box(6, 70, 86, -95, 60, 0, steel, lift);
+  [-1, 1].forEach((s) => box(115, 5, 12, -150, 14, s * 30, steel, lift));
+  f.add(lift); f.add(mast2);
   [[-48, 1], [-48, -1], [52, 1], [52, -1]].forEach(([wx, s]) => { const t = new THREE.Mesh(new THREE.CylinderGeometry(25 * S, 25 * S, 20 * S, 20), dark); t.rotation.x = Math.PI / 2; t.position.set(wx * S, (y0 + 25) * S, s * 53 * S); f.add(t); });
   box(8, 7, 8, -5, 226, 0, keepMat("fkL", () => stdMat({ color: 0xff8a00, emissive: 0xff7a00, emissiveIntensity: 0.9 })));
   const pl = new THREE.Mesh(palletGeo(100, 120, 15, S), keepMat("wood", () => stdMat({ map: cvTex("wood", 256, 256, paintWood), roughness: 0.85 })));
-  pl.rotation.y = Math.PI / 2; pl.position.set(-150 * S, (y0 + 17) * S, 0); f.add(pl);
-  f.position.set(x * S, 0, z * S); f.rotation.y = rotY; grp.add(f); return f;
+  pl.rotation.y = Math.PI / 2; pl.position.set(-150 * S, (y0 + 17) * S, 0); lift.add(pl);
+  f.position.set(x * S, 0, z * S); f.rotation.y = rotY; grp.add(f);
+  f.userData.fk = { lift, mast2, pl, x, z }; return f;
+}
+// ── โฟล์คลิฟท์ตักพาเลทขึ้นรถทีละขั้น (โหมดลำดับขึ้นของ) · ซม. · งาหันไป +z เข้าหารถ · ศูนย์กลางพาเลทบนงา = ตัวรถ +150 ซม.
+//   ขับจากหน้าคลัง → ยกงาขึ้นระดับพื้นกระบะ/ชั้นที่วาง → ยื่นงาเข้าไปวาง → ลดงา ถอยกลับ
+const FK_MS = 2600;
+function fkPose(x, z, lift, reach, yaw) {
+  const fk = R3.fk, u = fk.userData.fk, S = 0.01;
+  fk.position.set(x * S, 0, z * S); fk.rotation.y = Math.PI / 2 + (yaw || 0);
+  u.lift.position.set(-reach * S, lift * S, 0); u.mast2.position.y = Math.min(lift * 0.5, 115) * S;
+}
+function fkRest() {
+  if (!R3 || !R3.fk) return; const u = R3.fk.userData.fk;
+  if (seqMode) fkPose(R3.fkX != null ? R3.fkX : u.x, R3.fkZ0, 0, 0, 0); else fkPose(u.x, u.z, 0, 0, 0);
+  u.pl.visible = !seqMode;   // ดูทั้งคัน = ถือพาเลทประดับ · โหมดลำดับ = งาว่าง ไปตักพาเลทจริง
+}
+function fkStart(cur) {
+  const u = R3.fk.userData.fk, zT = R3.fkZT;
+  R3.anim = { fk: 1, g: cur.g, t0: performance.now(), x0: R3.fkX != null ? R3.fkX : u.x, x1: cur.x, zS: R3.fkZ0, zT,
+    lh: cur.p.z + 83, rc: Math.max(0, cur.zc - (zT + 150)), pz: cur.p.z, zc: cur.zc };
+  u.pl.visible = false; fkTick(R3.anim, R3.anim.t0);
+}
+function fkTick(a, now) {
+  const k = Math.min(1, (now - a.t0) / FK_MS), S = 0.01;
+  const seg = (a0, a1) => { const v = Math.max(0, Math.min(1, (k - a0) / (a1 - a0))); return v * v * (3 - 2 * v); };
+  const sx = seg(0, 0.16), x = a.x0 + (a.x1 - a.x0) * sx, yaw = Math.abs(a.x1 - a.x0) > 5 ? Math.sign(a.x1 - a.x0) * 0.3 * Math.sin(Math.PI * sx) : 0;
+  const z = a.zS + (a.zT - a.zS) * (seg(0.14, 0.42) - seg(0.84, 1));
+  const placed = k >= 0.74, lift = placed ? (a.lh - 5 * seg(0.74, 0.8)) * (1 - seg(0.84, 1)) : 6 + (a.lh + 3 - 6) * seg(0.26, 0.56) - 3 * seg(0.68, 0.74);
+  const reach = a.rc * seg(0.5, 0.68) * (1 - seg(0.76, 0.88));
+  fkPose(x, z, lift, reach, yaw);
+  if (placed) a.g.position.set(0, 0, 0);
+  else { const d = 150 + reach; a.g.position.set((x + d * Math.sin(yaw) - a.x1) * S, (-83 + lift - a.pz) * S, (z + d * Math.cos(yaw) - a.zc) * S); }
+  if (k >= 1) { R3.fkX = a.x1; R3.anim = null; fkRest(); }
 }
 // ลานโหลด: พื้นปูน · เส้นช่องจอดเหลือง · ผนังโกดัง + ประตูม้วน · ช่องวางของหน้าประตูตามคลังปลายทางของคันนี้
 function addYard(grp, S, x0, x1, W, stops) {
@@ -1561,7 +1634,7 @@ function addYard(grp, S, x0, x1, W, stops) {
   const len = x1 - x0 + 5000, wallH = 540;
   const wall = new THREE.Mesh(new THREE.BoxGeometry(len * S, wallH * S, 30 * S), keepMat("wall" + Math.round(len / 100), () => stdMat({ map: cvTex("wall", 256, 64, paintWall, len / 200, 1), roughness: 0.85 })));
   wall.position.set(mid * S, (y + wallH / 2) * S, (zW - 15) * S); grp.add(wall);
-  const sign = new THREE.Mesh(new THREE.PlaneGeometry(860 * S, 96 * S), keepMat("sign", () => stdMat({ map: cvTex("sign", 1376, 154, paintText("SSB SMART SUPPLY  ·  ท่าโหลดสินค้า PACKING", "#1B4332", "#ffffff", 70)), roughness: 0.5 })));
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(860 * S, 96 * S), keepMat("sign2", () => stdMat({ map: cvTex("sign2", 1376, 154, paintText("SSB SMART SUPPLY  ·  คลังโหลดสินค้า", "#1B4332", "#ffffff", 70)), roughness: 0.5 })));
   sign.position.set(mid * S, (y + 470) * S, (zW + 1) * S); grp.add(sign);
   const gold = keepMat("signG", () => stdMat({ color: 0xC9A227, roughness: 0.4, metalness: 0.3 }));
   const sb = new THREE.Mesh(new THREE.BoxGeometry(860 * S, 8 * S, 4 * S), gold); sb.position.set(mid * S, (y + 418) * S, (zW + 2) * S); grp.add(sb);
@@ -1602,7 +1675,7 @@ function draw3D() {
   const totalL = x0 - gap, W = Math.max(...type.beds.map((b) => b.W));
   addCab(grp, W, S, mat, type.r, type.k);
   addYard(grp, S, -200, totalL, W, (t.dcs || [t.dc]).filter(Boolean).map((c) => ({ code: c, n: (A.dc[c] || {}).n || "" })));
-  addForklift(grp, totalL * 0.62, -(W / 2 + 235), Math.PI / 2, S);
+  R3.fk = addForklift(grp, totalL * 0.62, -(W / 2 + 235), Math.PI / 2, S); R3.fkX = null; R3.fkZ0 = -(W / 2 + 520); R3.fkZT = -(W / 2 + 110);
   const deck = keepMat("deck", () => stdMat({ map: cvTex("deck", 256, 256, paintDeck, 3, 2), roughness: 0.75 })), wood = keepMat("wood", () => stdMat({ map: cvTex("wood", 256, 256, paintWood), roughness: 0.85 }));
   type.beds.forEach((b, bi) => {
     const fl = new THREE.Mesh(new THREE.BoxGeometry(b.L * S, 6 * S, b.W * S), [mat(0x3a3f3c), mat(0x3a3f3c), deck, mat(0x3a3f3c), mat(0x3a3f3c), mat(0x3a3f3c)]);
@@ -1624,7 +1697,7 @@ function draw3D() {
   loadSeq(r).forEach((p) => {
     const pg = new THREE.Group(); grp.add(pg); R3.seq.push({ g: pg, p });
     const sp = p.sp, g = sp.g, b = sp.b, x = bedX[sp.bi] + sp.i * g.along + g.along / 2, z = -b.W / 2 + sp.j * g.across + g.across / 2 + (b.W - g.na * g.across) / 2;
-    const P = A.pallet, inset = 4;
+    const P = A.pallet, inset = 4; Object.assign(R3.seq[R3.seq.length - 1], { x, zc: z });   // ตำแหน่งวางจริง (ซม.) ให้โฟล์คลิฟท์ขับไปวาง
     if (!p.hand) {   // เศษเรียงมือ = ไม่มีพาเลทรอง · พาเลทไม้ (รูปเดียวกันทั้งคัน ใช้แคช)
       const base = new THREE.Mesh(palletGeo(g.along - inset, g.across - inset, P.h, S), wood);
       base.position.set(x * S, p.z * S, z * S); base.userData.u = p.u; pg.add(base); R3.picks.push(base);
@@ -1632,7 +1705,7 @@ function draw3D() {
     let y = p.z + (p.hand ? 0 : P.h);
     p.u.segs.forEach((sg) => {
       const hh = sg.lay * sg.s.h, bad = p.z + p.u.h - (p.hand ? P.h : 0) > b.H, la = g.along - inset - 4, lc = g.across - inset - 4, [nA, nC] = cartonFit(la, lc, sg.s);
-      const m = new THREE.Mesh(new THREE.BoxGeometry(la * S, (hh - 1) * S, lc * S), cartonMats(sg.s.color, nA, nC, sg.lay, bad));
+      const m = new THREE.Mesh(new THREE.BoxGeometry(la * S, (hh - 1) * S, lc * S), cartonMats(sg.s.color, nA, nC, sg.lay, bad, sg.br || brandOf("", sg.s), sizeTxt(sg.s)));
       m.position.set(x * S, (y + hh / 2) * S, z * S); m.userData.u = p.u; pg.add(m); R3.picks.push(m);
       const ed = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x4a3218, transparent: true, opacity: 0.22 }));
       ed.position.copy(m.position); pg.add(ed);
@@ -1678,6 +1751,9 @@ function viewPreset(name) {
   if (name === "side") { tgt.y = 1.0; pos = new THREE.Vector3(m.x, 1.0, fit(R3.span, 3.6)); }
   if (name === "front") { tgt.y = 1.0; pos = new THREE.Vector3(m.x - R3.span / 2 - fit(R3.width, 3.6), 1.4, 0); }
   if (name === "back") { tgt.y = 1.0; pos = new THREE.Vector3(m.x + R3.span / 2 + fit(R3.width, 3.6), 1.6, 0); }
+  if (name === "dock") {   // ฝั่งคลัง: เห็นโฟล์คลิฟท์ขับมาตักขึ้นรถ · กล้องอยู่ในโกดังเสมอ (ผนังห่างรถ ~9.8 ม.) → ยกสูงแทนถอยไกล
+    const d = Math.min(fit(R3.span * 0.8, 3.4), R3.width / 2 + 6.8);   // R3.width = กว้างรถ+1.2 ม. → กล้องห่างผนัง ≥ 1 ม.
+    tgt.set(m.x, 0, -1.2); pos = new THREE.Vector3(m.x - R3.span * 0.08, 2.8 + Math.max(0, fit(R3.span * 0.8, 3.4) - d) * 1.1, -1.2 - d); }
   flyTo(pos, tgt, name);
 }
 function flyTo(pos, tgt, name) {
@@ -1876,7 +1952,9 @@ document.addEventListener("click", (e) => {
     if (a === "play") {
       if (seqTimer) { stopPlay(); renderSeq(); return; }
       if (seqStep >= n) seqStep = 0;
-      seqTimer = setInterval(() => seqGo(seqStep + 1, true), 1100); seqGo(seqStep + 1, true); return;
+      const ms = matchMedia("(prefers-reduced-motion: reduce)").matches ? 1100 : FK_MS + 250;   // รอโฟล์คลิฟท์วางเสร็จก่อนขั้นถัดไป
+      if (R3 && R3.fk) viewPreset("dock");   // หันกล้องไปฝั่งคลังให้เห็นโฟล์คลิฟท์
+      seqTimer = setInterval(() => seqGo(seqStep + 1, true), ms); seqGo(seqStep + 1, true); return;
     }
     if (a === "copy") {
       const txt = seqCopyText();
