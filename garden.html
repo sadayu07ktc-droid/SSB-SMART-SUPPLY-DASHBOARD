@@ -651,7 +651,11 @@ document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeDr(); });
 const FARM_POI_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/farm-poi';
 const POI_KIND={garden:'สวน',pickup:'จุดรับ',ramp:'ลาน'};
 let POI=null, POI_TAB='pickup', POI_F='todo', POI_PICK='';
-async function poiGet(){ const r=await fetch(FARM_POI_URL+'?action=getFarmPoi&userId='+encodeURIComponent(MY_UID)); return r.json(); }
+async function poiGet(since){ const r=await fetch(FARM_POI_URL+'?action=getFarmPoi&userId='+encodeURIComponent(MY_UID)+(since!=null?'&since='+encodeURIComponent(since):'')); return r.json(); }
+/* สรุปความเปลี่ยนแปลง "ตั้งแต่ครั้งก่อนที่เข้า" (2026-11-09) — แอดมินแก้พิกัด + หมุด DTC ใหม่/ย้าย/หาย · เวลาที่เข้าล่าสุดจำในเครื่อง */
+const POI_SEEN_KEY=()=>'ssb_poi_seen_'+MY_UID;
+function poiSeenGet(){ try{ return localStorage.getItem(POI_SEEN_KEY())||''; }catch(e){ return ''; } }
+function poiSeenSet(v){ try{ localStorage.setItem(POI_SEEN_KEY(),v); }catch(e){} }
 async function poiPost(body){ const r=await fetch(FARM_POI_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},body))}); return r.json(); }
 const mDist=d=>d==null?'—':d<1000?nf(d)+' ม.':(d/1000).toFixed(d<10000?1:0)+' กม.';
 function poiLL(s){ const m=String(s||'').match(/(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/); return m?[+m[1],+m[2]]:null; }
@@ -731,14 +735,16 @@ function poiEl(){
 async function openPoi(){
   const d=poiEl(); d.classList.add('on'); document.body.style.overflow='hidden';
   $('#poiBody').innerHTML='<div class="empty" style="padding:50px 10px">กำลังเทียบพิกัดกับหมุด DTC…</div>';
-  await poiLoad();
+  await poiLoad(true);
 }
-function closePoi(){ const d=document.getElementById('poiDlg'); if(d) d.classList.remove('on'); document.body.style.overflow=''; POI_PICK=''; }
-async function poiLoad(){
-  try{ const r=await poiGet();
+function closePoi(){ const d=document.getElementById('poiDlg'); if(d) d.classList.remove('on'); document.body.style.overflow=''; POI_PICK=''; closePoiChg(); }
+async function poiLoad(withChanges){
+  try{ const t0=new Date().toISOString(), r=await poiGet(withChanges?poiSeenGet():null);
     if(r.denied){ $('#poiBody').innerHTML='<div class="empty">หน้านี้สำหรับแอดมินเท่านั้น</div>'; return; }
     if(!r.ok) throw new Error(r.error||'โหลดไม่สำเร็จ');
+    if(!r.changes && POI && POI.changes) r.changes=POI.changes;   // โหลดซ้ำหลังกดปุ่ม → คงสรุปเดิมไว้
     POI=r; poiRender();
+    if(withChanges && r.changes){ poiSeenSet(t0); if((r.changes.list||[]).length) poiChgOpen(); }
   }catch(e){ $('#poiBody').innerHTML=`<div class="empty">โหลดไม่สำเร็จ — ${esc(e.message||e)} <button class="poi-btn" onclick="poiLoad()">↻ ลองใหม่</button></div>`; }
 }
 function poiRender(){
@@ -760,6 +766,7 @@ function poiRender(){
       <div class="poi-tabs">${['pickup','garden','ramp'].map(k=>`<button class="${POI_TAB===k?'on':''}" onclick="POI_TAB='${k}';POI_PICK='';poiRender()">${POI_KIND[k]} <span class="mono">${tabN(k)}</span></button>`).join('')}</div>
       <div class="poi-fl">${[['todo','ต้องตรวจ'],['ok','ยืนยันแล้ว'],['all','ทั้งหมด']].map(([k,l])=>`<button class="${POI_F===k?'on':''}" onclick="POI_F='${k}';poiRender()">${l}<span class="n">${cnt[k]}</span></button>`).join('')}</div>
       <input class="poi-q" id="poiQ" placeholder="ค้นหาชื่อ / รหัส" value="${esc(kw)}" oninput="poiRender()">
+      ${POI.changes?`<button class="poi-btn" onclick="poiChgOpen()" title="แอดมินแก้พิกัด + หมุด DTC ใหม่/ย้าย/หาย ตั้งแต่ครั้งก่อนที่เข้า">🕘 ความเปลี่ยนแปลง <span class="mono">${(POI.changes.list||[]).length}</span></button>`:''}
       <button class="poi-btn" id="poiRef" onclick="poiRefresh()" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>
     </div>
     <div class="poi-tw tscroll"><table><thead><tr><th>${POI_KIND[POI_TAB]}</th><th>พิกัดที่ใช้ตอนนี้</th><th>หมุด DTC ใกล้สุด</th><th>สถานะ</th><th></th></tr></thead>
@@ -767,6 +774,86 @@ function poiRender(){
   if(keepQ){ const q=$('#poiQ'); q.focus(); q.setSelectionRange(q.value.length,q.value.length); }
 }
 function dPill(d){ return d==null?'':`<span class="dpill ${d<=300?'g':d<=2000?'o':'r'}">${mDist(d)}</span>`; }
+
+/* ── popup สรุปความเปลี่ยนแปลงตั้งแต่ครั้งก่อนที่เข้า ── */
+function poiChgCss(){
+  if(document.getElementById('poiChgCss')) return;
+  const st=document.createElement('style'); st.id='poiChgCss'; st.textContent=`
+#poiChg{position:fixed;inset:0;z-index:75;background:rgba(9,22,17,.5);display:none;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto}
+#poiChg.on{display:flex}
+.pc-card{width:720px;max-width:100%;background:var(--bg);border-radius:16px;box-shadow:var(--shadow-lift);overflow:hidden}
+.pc-head{background:var(--pine-deep);color:#EAF3EF;padding:14px 18px;border-bottom:3px solid var(--gold);display:flex;gap:12px;align-items:flex-start}
+.pc-head h3{font-size:16.5px;font-weight:700;line-height:1.35}
+.pc-head .pc-sub{font-size:12px;opacity:.78;margin-top:3px}
+.pc-body{padding:14px 18px 18px;display:flex;flex-direction:column;gap:14px}
+.pc-sum{display:flex;gap:6px;flex-wrap:wrap}
+.pc-sum span{font-size:12px;font-weight:600;padding:4px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft)}
+.pc-sum b{font-family:var(--mono);color:var(--ink);margin-left:3px}
+.pc-sec h4{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+.pc-sec h4 .n{font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);font-weight:600}
+.pc-list{border:1px solid var(--line);border-radius:12px;background:var(--surface);overflow:hidden}
+.pc-it{padding:10px 13px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.pc-it:last-child{border-bottom:0}
+.pc-it .m{flex:1;min-width:0}
+.pc-nm{font-size:13.5px;font-weight:600;color:var(--ink)}
+.pc-nm .k{font-size:11px;font-weight:600;color:var(--ink-faint);margin-left:4px}
+.pc-ln{font-size:12px;color:var(--ink-soft);margin-top:3px;line-height:1.5}
+.pc-ln s{color:var(--ink-faint)}
+.pc-tag{flex:none;font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pc-tag.edit{background:#E3F0FB;color:#185FA5} .pc-tag.new{background:var(--green-bg);color:var(--green)}
+.pc-tag.mv{background:var(--gold-bg);color:var(--gold)} .pc-tag.gone{background:#FBE3DF;color:#A91F12}
+.pc-foot{display:flex;justify-content:flex-end;gap:8px}
+@media(max-width:600px){.pc-it{flex-wrap:wrap}}
+`; document.head.appendChild(st);
+}
+const pcWhen=s=>{ const d=new Date(s); return isNaN(d)?'':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
+const pcMap=ll=>{ const p=poiLL(ll); return p?`<a class="poi-ll" href="https://www.google.com/maps?q=${p[0]},${p[1]}" target="_blank" rel="noopener">${p[0].toFixed(5)}, ${p[1].toFixed(5)}</a>`:'—'; };
+function pcItem(c){
+  const go=(k,code)=>`<button class="poi-btn" onclick="poiChgJump('${k}','${esc(code).replace(/'/g,'&#39;')}')">ดูในตาราง</button>`;
+  if(c.kind==='garden'||c.kind==='pickup'||c.kind==='ramp'){
+    const isNew=!c.oldLoc;
+    const pin=c.pin?(c.pin.guess?`หมุด DTC ใกล้สุด ${esc(c.pin.n)} ${dPill(c.pin.d)}`:`ผูกหมุด ${esc(c.pin.n)} ${dPill(c.pin.d)}`):'ไม่มีหมุด DTC ใกล้';
+    return `<div class="pc-it"><span class="pc-tag edit">${isNew?'ปักใหม่':'แก้พิกัด'}</span><div class="m">
+      <div class="pc-nm">${esc(c.name||c.code)}<span class="k">${POI_KIND[c.kind]} · ${esc(c.code)}${c.parent?' · '+esc(c.parent):''}</span></div>
+      <div class="pc-ln">${isNew?'':`<s>${esc(c.oldLoc)}</s> → `}${pcMap(c.newLL||c.newLoc)}${c.moved!=null?` · ย้าย ${mDist(c.moved)}`:''}</div>
+      <div class="pc-ln">${pin}</div>
+      <div class="pc-ln">โดย ${esc(c.by||'ระบบ')} · ${pcWhen(c.at)}</div></div>${go(c.kind,c.code)}</div>`;
+  }
+  const tag=c.kind==='dtc_new'?['new','หมุดใหม่']:c.kind==='dtc_moved'?['mv','หมุดย้าย']:['gone','หายจาก DTC'];
+  const near=c.near?`ใกล้ ${POI_KIND[c.near.kind]} ${esc(c.near.name)} (${esc(c.near.code)}) ${dPill(c.near.d)}${c.near.linked?' · ผูกอยู่แล้ว':''}`:(c.kind==='dtc_gone'?'':'ไม่มีสวน/จุดรับ/ลานใกล้ (2 กม.)');
+  return `<div class="pc-it"><span class="pc-tag ${tag[0]}">${tag[1]}</span><div class="m">
+    <div class="pc-nm">${esc(c.name||c.code)}<span class="k">${esc(c.code)}${c.parent&&c.kind==='dtc_gone'?' · '+esc(c.parent):''}</span></div>
+    <div class="pc-ln">${c.kind==='dtc_moved'&&c.oldLoc?`<s>${esc(c.oldLoc)}</s> → `:''}${pcMap(c.newLL||c.newLoc)}${c.moved!=null?` · ย้าย ${mDist(c.moved)}`:''}</div>
+    ${near?`<div class="pc-ln">${near}</div>`:''}
+    <div class="pc-ln">${c.kind==='dtc_gone'?'อัปเดตล่าสุด':'พบเมื่อ'} ${pcWhen(c.at)}</div></div>${c.near?go(c.near.kind,c.near.code):''}</div>`;
+}
+function poiChgOpen(){
+  if(!POI||!POI.changes) return;
+  poiChgCss();
+  let d=document.getElementById('poiChg');
+  if(!d){ d=document.createElement('div'); d.id='poiChg'; d.setAttribute('role','dialog'); d.setAttribute('aria-modal','true');
+    d.addEventListener('click',e=>{ if(e.target===d) closePoiChg(); }); document.body.appendChild(d); }
+  const L=POI.changes.list||[];
+  const G=[['แอดมินแก้ / ปักพิกัด',L.filter(c=>!String(c.kind).startsWith('dtc'))],
+           ['หมุด DTC ใหม่',L.filter(c=>c.kind==='dtc_new')],
+           ['หมุด DTC ย้ายตำแหน่ง',L.filter(c=>c.kind==='dtc_moved')],
+           ['หมุดที่หายจาก DTC',L.filter(c=>c.kind==='dtc_gone')]];
+  d.innerHTML=`<div class="pc-card"><div class="pc-head"><div style="flex:1"><h3>🕘 ความเปลี่ยนแปลงพิกัด ตั้งแต่ครั้งก่อนที่เข้า</h3>
+      <div class="pc-sub">ตั้งแต่ ${esc(pcWhen(POI.changes.since))} · ประวัติการแก้พิกัดเริ่มบันทึก 9 พ.ย. 69</div></div>
+      <button class="xbtn" aria-label="ปิด" onclick="closePoiChg()">✕</button></div>
+    <div class="pc-body">
+      <div class="pc-sum">${G.map(g=>`<span>${g[0]}<b>${g[1].length}</b></span>`).join('')}</div>
+      ${L.length?G.filter(g=>g[1].length).map(g=>`<div class="pc-sec"><h4>${g[0]} <span class="n">${g[1].length}</span></h4><div class="pc-list">${g[1].map(pcItem).join('')}</div></div>`).join('')
+        :'<div class="empty" style="padding:24px 10px">ไม่มีการเปลี่ยนแปลงพิกัดตั้งแต่ครั้งก่อนที่เข้า</div>'}
+      <div class="pc-foot"><button class="poi-btn pri" onclick="closePoiChg()">รับทราบ</button></div>
+    </div></div>`;
+  d.classList.add('on');
+}
+function closePoiChg(){ const d=document.getElementById('poiChg'); if(d) d.classList.remove('on'); }
+function poiChgJump(kind,code){
+  closePoiChg(); POI_TAB=kind; POI_F='all'; POI_PICK='';
+  poiRender(); const q=document.getElementById('poiQ'); if(q){ q.value=code; poiRender(); }
+}
 function poiRow(it){
   const s=poiState(it), key=it.kind+'|'+it.code, top=it.near[0];
   const llCell=it.latlng?`<a class="poi-ll" href="https://maps.google.com/?q=${encodeURIComponent(it.latlng)}" target="_blank" rel="noopener">${esc(it.latlng)}</a>${it.isLink?'<div class="poi-sub">🔗 จากลิงก์ Google Maps</div>':''}`
