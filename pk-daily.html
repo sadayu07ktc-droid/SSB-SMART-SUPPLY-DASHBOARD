@@ -365,6 +365,10 @@ main{padding-block:14px 120px}
 .pmode[hidden]{display:none}
 @media (max-width:720px){.pmode{width:100%}.pmode button{flex:1}.pmode button small{display:none}}
 /* แพลนห้าง: แท็บย่อย งานห้าง | Loading Planner */
+.pendc{border:1px dashed var(--gold);background:var(--warnbg);border-radius:14px;padding:10px 12px;margin:0 0 12px}
+.pendc .ph{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center;margin-bottom:8px}.pendc .ph b{font-size:15px;color:var(--warn)}.pendc .ph .sp{flex:1}
+.pendc .pn{font-weight:700;font-variant-numeric:tabular-nums}.pendc .tw{overflow-x:auto}.pendc table{background:var(--surface)}
+.ppill{display:inline-block;padding:2px 9px;border-radius:99px;background:var(--warnbg);color:var(--warn);font-weight:700;font-size:12px;white-space:nowrap;border:1px solid var(--gold)}
 .msub{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);flex:none}
 .msub button{border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;padding:7px 13px;cursor:pointer;color:var(--muted)}
 .msub button+button{border-left:1px solid var(--line)}
@@ -566,8 +570,19 @@ let MSUB='jobs';   /* แท็บย่อยในแพลนห้าง: jo
 const LPSZ={trailer:'10/22 ล้อ','6w':'6 ล้อ','4w':'4 ล้อ'};
 const DCST={W101:107,W501:67,W901:152,W121:158,W151:172,W131:187,W801:169,W301:231,W401:233,W141:241};   /* รหัสคลัง 7-11 → central_distances.id */
 function lpShow(){const h=document.getElementById('lpHost');if(!h)return;const on=PM==='mall'&&MSUB==='lp'&&!document.getElementById('v-plan').hidden;h.hidden=!on;
-  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109');}
+  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109p');}
 /* รถที่ Loading Planner ส่งมา → งานห้างตามขนาดรถ (1 คัน = 1 งาน) · ส่งซ้ำ = อัปเดตงานเดิม (จับคู่วันส่ง+เลขคัน) · คันที่หายไป = ถอนงาน */
+/* ⏳ Pending = PO ที่ Loading Planner ยังไม่ได้จัดลงรถ · วันส่ง → {th,list} · ยังไม่เป็นงานห้าง → ไม่เข้าแพลนรวม/ไม่แจกคนขับ จนกว่าจะจัดลงรถแล้วส่งอีกครั้ง */
+let MP={};
+const pnN=v=>Number(v||0).toLocaleString('en-US');
+function pendN(){return Object.keys(MP).reduce((a,k)=>a+MP[k].list.length,0);}
+function pendHtml(){const ds=Object.keys(MP).filter(k=>MP[k].list.length).sort();if(!ds.length)return'';
+  const rows=ds.flatMap(k=>MP[k].list.map(p=>({...p,th:MP[k].th}))),tot=(f)=>rows.reduce((a,p)=>a+(+p[f]||0),0);
+  return '<div class="pendc" role="region" aria-label="PO รอจัดรถ"><div class="ph"><b>⏳ Pending · PO รอจัดรถ</b><span class="pn">'+rows.length+' PO · '+pnN(tot('pal'))+' พาเลท</span>'
+    +'<span class="note">ยังไม่อยู่คันไหน = ยังไม่เป็นงานห้าง ไม่เข้าแพลนรวม ไม่ถึงคนขับ · จัดลงรถใน Loading Planner แล้วกดส่งอีกครั้ง</span><span class="sp"></span><button class="btn sm" data-msub="lp">📦 ไปจัด PO ลงรถ</button></div>'
+    +'<div class="tw"><table class="jt pt"><thead><tr><th>วันส่ง</th><th>PO</th><th>คลัง / จุดส่ง</th><th>นัดลง</th><th>พาเลท</th><th>ลัง</th><th>กก.</th><th>สถานะ</th></tr></thead><tbody>'
+    +rows.map(p=>'<tr><td>'+esc(p.th)+'</td><td class="mono">'+esc(p.po)+'</td><td><b>'+esc(p.dc)+'</b> '+esc(p.n)+'</td><td class="n">'+(p.t?'<b class="tm">'+esc(p.t)+'</b>':'—')+'</td><td class="n">'+pnN(p.pal)+'</td><td class="n">'+pnN(p.cs)+'</td><td class="n">'+pnN(p.kg)+'</td><td><span class="ppill">⏳ Pending</span></td></tr>').join('')
+    +'</tbody></table></div></div>';}
 function lpImport(d){const keys=new Set(),miss=new Set();let add=0,upd=0,rm=0,lost=0;
   (d.trucks||[]).forEach(t=>{const key=d.date+'#'+t.id;keys.add(key);
     const stops=t.stops.map(s=>{const id=DCST[s.dc];const b=id&&ST.find(x=>x.id===id);if(!b)miss.add(s.dc);
@@ -577,8 +592,9 @@ function lpImport(d){const keys=new Set(),miss=new Set();let add=0,upd=0,rm=0,lo
     if(j){if(j.size!==size&&j.head){j.head='';j.driver='';lost++;}j.size=size;j.stops=stops;j.note=note;upd++;}
     else{MJ.push({id:'H'+(++MJN),size,stops,head:'',driver:'',note,lp:key});add++;}});
   MJ=MJ.filter(j=>{if(j.lp&&j.lp.indexOf(d.date+'#')===0&&!keys.has(j.lp)){rm++;return false;}return true;});
+  const pn=(d.pending||[]).length;MP[d.date]={th:d.dateTH,list:d.pending||[]};   /* ส่งซ้ำ = แทนรายการ Pending ของวันส่งนั้นทั้งชุด */
   syncMall();JE=null;MSUB='jobs';renderAll();window.scrollTo({top:0});
-  toast('รับจาก Loading Planner ส่ง '+d.dateTH+': งานใหม่ '+add+(upd?' · อัปเดต '+upd:'')+(rm?' · ถอน '+rm:'')+(lost?' · เปลี่ยนขนาด '+lost+' งาน ต้องใส่รถใหม่':'')+(miss.size?' · ⚠ ไม่พบสถานี '+[...miss].join(', '):'')+' · ใส่รถ+คนขับตามพี่ปุ๋ยแจ้ง แล้วกดแจกงาน');}
+  toast('รับจาก Loading Planner ส่ง '+d.dateTH+': งานใหม่ '+add+(upd?' · อัปเดต '+upd:'')+(rm?' · ถอน '+rm:'')+(pn?' · ⏳ Pending '+pn+' PO (รอจัดรถ)':'')+(lost?' · เปลี่ยนขนาด '+lost+' งาน ต้องใส่รถใหม่':'')+(miss.size?' · ⚠ ไม่พบสถานี '+[...miss].join(', '):'')+' · ใส่รถ+คนขับตามพี่ปุ๋ยแจ้ง แล้วกดแจกงาน');}
 window.addEventListener('message',e=>{const f=document.getElementById('lpFrame');if(!f||e.source!==f.contentWindow||e.origin!==location.origin)return;const d=e.data||{};
   if(d.type==='lp-ready')f.contentWindow.postMessage({type:'lp-init',pos:LP_POS},location.origin);
   else if(d.type==='lp-send')lpImport(d);});
@@ -672,6 +688,7 @@ function renderMall(){
   let h='<div class="pstat mall hasd"><div class="pin"><b class="t">🏬 แพลนห้าง</b><span>ส่ง '+esc(dateTH($('pdate').value))+' · <b>'+MJ.length+'</b> งาน</span>'
     +(MALL.rev<0?'<span class="pend">ยังไม่แจกงาน</span>':'<span class="ok">✓ แจกแล้ว Rev.'+MALL.rev+'</span><span>'+fmtAt(last.at)+' · โดย '+esc(last.by)+'</span><span>คนขับรับแล้ว <b>'+ackN+'/'+snapIds.length+'</b></span>')
     +(dfx.length?'<span class="pend">⚠ แก้ไข '+dfx.length+' รายการ · ยังไม่ส่ง</span>':'')
+    +(pendN()?'<span class="pend">⏳ Pending '+pendN()+' PO รอจัดรถ</span>':'')
     +'<span class="sp"></span><button class="btn sm" id="rlog">🕘 ประวัติฉบับแก้ไข ('+MALL.log.length+')</button>'
     +'<div class="jflow">'+[['draft','① ร่างงานตามขนาดรถ'],['nodrv','② ใส่รถ + คนขับ ตามพี่ปุ๋ยแจ้ง'],['ready','③ พร้อมแจก'],['sent','④ แจกแล้ว']]
       .map(([k,l])=>'<span class="'+((cnt[k]||(k==='ready'&&cnt.chg))?'on':'')+'">'+l+' <b>'+((cnt[k]||0)+(k==='ready'?(cnt.chg||0):0))+'</b></span>').join('<i>›</i>')+'</div></div>'+dateBig()+'</div>';
@@ -681,7 +698,7 @@ function renderMall(){
   h+='<div class="tools">'+sub+'<button class="btn sm pri mallb" id="jadd">＋ เพิ่มงานห้าง</button><button class="btn sm" id="jexp" title="บันทึกเป็นรูป / PDF / Excel หน้าตาแบบชีตแจ้งงานห้าง">🖼 ใบแจ้งงานห้าง (รูป · PDF · Excel)</button>'+(unsent().length?'<button class="btn sm dang" id="jdelall">🗑 ลบงานที่ยังไม่แจก ('+unsent().length+')</button>':'')+'<span class="note">เลือกขนาดรถก่อน ยังไม่ต้องรู้ทะเบียน · พี่ปุ๋ยแจ้งรถ + คนขับมาแล้ว ค่อยกดงานใส่ แล้วกดแจกงาน · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
   const js=MJ.slice().sort((a,b)=>((a.stops[0]||{}).at||'99')<((b.stops[0]||{}).at||'99')?-1:1);
   const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join(''),dash='<span class="m">—</span>';
-  h+='<div class="sheet"><table class="jt mj"><thead><tr class="g1"><th colspan="10">งานห้าง '+esc(dateTH($('pdate').value))+'</th></tr><tr>'
+  h+=pendHtml()+'<div class="sheet"><table class="jt mj"><thead><tr class="g1"><th colspan="10">งานห้าง '+esc(dateTH($('pdate').value))+'</th></tr><tr>'
     +['งาน','ขนาดรถ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','รถ (พี่ปุ๋ยแจ้ง)','คนขับ','สถานะ'].map(t=>'<th>'+t+'</th>').join('')+'</tr></thead><tbody>';
   js.forEach(j=>{const S=j.stops,d=drvOf(j.driver),s=jst(j,dfx);
     h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b>'+(j.lp?'<span class="lpb" title="'+esc(j.note)+'">📦 LP</span>':'')+'</td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'

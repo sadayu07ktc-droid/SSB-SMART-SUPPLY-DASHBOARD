@@ -43,6 +43,10 @@ button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid 
 @media (max-width:900px){.main{grid-template-columns:1fr}}
 .trucks{display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:2px;min-height:0;flex:1}
 /* คอลัมน์ซ้ายติดจอ: รถ (บน) + PO (ล่าง) เห็นพร้อมกัน → ลาก PO ขึ้นไปวางบนการ์ดรถได้โดยไม่ต้องเลื่อนหน้า */
+.rightcol{display:none} @media (min-width:1240px){.wrap{max-width:1720px}}
+@media (min-width:1240px){.main.three{grid-template-columns:minmax(0,300px) minmax(0,1fr) minmax(0,290px)}
+  .main.three .rightcol{display:flex;flex-direction:column;position:sticky;top:calc(10px + env(safe-area-inset-top,0px));align-self:start;height:calc(100vh - 20px);min-height:0}
+  .main.three .rightcol #poBox{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}}
 .leftcol{position:sticky;top:calc(10px + env(safe-area-inset-top,0px));align-self:start;height:calc(100vh - 20px);display:flex;flex-direction:column;gap:10px;min-height:0}
 .lcard{display:flex;flex-direction:column;min-height:0}
 .leftcol .lcard:first-child{flex:1 1 46%} .leftcol .lcard:last-child{flex:1 1 30%} .leftcol #qBox{flex:1 1 30%}
@@ -232,6 +236,7 @@ details.card summary{cursor:pointer;font-weight:700}
 .wrap{padding-block:12px 40px}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .lpmsg{margin:40px auto;max-width:460px;text-align:center;line-height:1.7}
+.pendbox{margin-top:10px;border:1px dashed #d9b44a;background:var(--goldtint);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
 </style>
 </head>
 <body>
@@ -279,6 +284,7 @@ details.card summary{cursor:pointer;font-weight:700}
       <div id="axlePanel"></div>
       <div class="tscroll"><table><thead><tr><th>PO</th><th>คลัง</th><th>สินค้า</th><th class="r">ลัง</th><th class="r">พาเลท</th><th class="r">กก.</th><th>ย้ายไปคัน</th></tr></thead><tbody id="vPOs"></tbody></table></div>
     </div>
+    <div class="rightcol notpuy" id="rightCol"></div>
   </div>
   <div class="card notfarm notpuy"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>PO ของวันส่งนี้ <span id="poAllCount" class="muted"></span></h2><button class="pchip onlyun" data-onlyun aria-pressed="false" title="ซ่อน PO ที่อยู่บนรถแล้ว">เฉพาะยังไม่จัด</button></div><div class="tscroll"><table><thead><tr><th>PO / SO</th><th>คลัง</th><th>นัดลง</th><th>สินค้า</th><th class="r">ลัง</th><th class="r">พาเลท</th><th class="r">กก.</th><th>อยู่คัน</th></tr></thead><tbody id="poAll"></tbody></table></div></div>
   <div class="toast" id="toast" hidden></div>
@@ -721,7 +727,7 @@ function renderKpis() {
     <div class="kpi"><b>${nf(items.reduce((a, i) => a + i.units.reduce((b, u) => b + u.segs.reduce((c, g) => c + g.q, 0), 0), 0))}</b><span>ลัง</span></div>
     <div class="kpi"><b>${nf(pal)}</b><span>พาเลท (รวมเศษ)</span></div>
     <div class="kpi"><b>${nf(kg / 1000, 1)} ตัน</b><span>รวมน้ำหนักพาเลท</span></div>
-    <div class="kpi"><b>${act.length} คัน</b><span>${real ? "แอดมินจัดจริง " + real + " คัน" : "ไม่มีแพลนจริงเทียบ"}${unassigned ? " · ยังไม่จัด " + unassigned + " PO" : ""}</span></div>
+    <div class="kpi"><b>${act.length} คัน</b><span>${real ? "แอดมินจัดจริง " + real + " คัน" : "ไม่มีแพลนจริงเทียบ"}${unassigned ? " · ⏳ Pending " + unassigned + " PO" : ""}</span></div>
     <div class="kpi"><b>${nf(fillAvg * 100)}%</b><span>เฉลี่ยพื้นที่พาเลทที่ใช้</span></div>`;
   const w = [];
   ev.forEach((r, i) => { const t = act[i];
@@ -738,7 +744,7 @@ function renderKpis() {
   });
   const openN = act.filter((t) => t.open).length;
 
-  if (unassigned) w.push(`<div class="warn">ยังมี ${unassigned} PO ไม่ได้อยู่คันไหน</div>`);
+  if (unassigned) w.push(`<div class="warn">⏳ Pending ${unassigned} PO (ยังไม่ได้อยู่คันไหน)</div>`);
   const sh = act.filter((t) => t.short);
   if (sh.length) w.unshift(`<div class="warn b">⛔ พี่ปุ๋ยให้รถไม่พอ ขาด ${sh.length} คัน (${sh.map((t) => "#" + t.id).join(" ")}) · ${nf(sh.reduce((a, t) => a + t.items.reduce((b, i) => b + i.units.length, 0), 0))} พาเลทยังไม่มีรถ · ดูทางแก้ในกล่องจองรถด้านบน</div>`);
   $("warns").innerHTML = w.join("");
@@ -1127,7 +1133,7 @@ function renderTrucks() {
   }).join("") + (ROLE === "planner" ? '<div class="tnew" id="tNew">＋ ลาก PO มาวางตรงนี้ = รถคันใหม่ (เลือกขนาดที่พอให้เอง)</div>' : trucks.length ? "" : '<div class="note" style="padding:10px">ยังไม่มีรถ</div>');
 }
 function truckOptions(cur) {
-  return `<option value="">— ยังไม่จัด —</option>` + trucks.map((t) => `<option value="${t.id}" ${t.id === cur ? "selected" : ""}>#${t.id} ${esc(A.types.find((x) => x.k === t.type).name)}</option>`).join("") +
+  return `<option value="">⏳ Pending (ยังไม่จัดลงรถ)</option>` + trucks.map((t) => `<option value="${t.id}" ${t.id === cur ? "selected" : ""}>#${t.id} ${esc(A.types.find((x) => x.k === t.type).name)}</option>`).join("") +
     A.types.map((x) => `<option value="new-${x.k}">+ คันใหม่ ${x.name}</option>`).join("");
 }
 function itemRow(it, withTime) {
@@ -1143,7 +1149,7 @@ function poCard(it) {
   const t = tid && trucks.find((x) => x.id === tid);
   return `<div class="poc ${t ? "" : "un"}"><span class="grip" data-grip="${esc(it.id)}" title="ลากไปวางบนการ์ดรถ" aria-label="ลาก PO ${esc(it.id)}">⠿</span>
     <div><b>${esc(it.id)}</b> <span class="mono">${esc(it.dc)}</span> ${esc(dc.n || "")}<small>${units.length} พาเลท · ${nf(kg)} กก. · นัด ${esc(dc.t || "")}</small></div>
-    ${t ? `<button class="chip c-ok tk" data-gotruck="${t.id}" title="เปิดคันนี้">#${t.id}</button>` : '<span class="chip c-gold">ยังไม่จัด</span>'}</div>`;
+    ${t ? `<button class="chip c-ok tk" data-gotruck="${t.id}" title="เปิดคันนี้">#${t.id}</button>` : '<span class="chip c-gold">⏳ Pending</span>'}</div>`;
 }
 // ปุ่ม "เฉพาะยังไม่จัด" — ซ่อน PO ที่อยู่บนรถแล้ว (ทั้งรายการซ้ายและตาราง PO ของวัน) · จำไว้ในเครื่อง
 var onlyUn = false;   // var: renderPOs อาจถูกเรียกก่อนบรรทัดนี้
@@ -1151,11 +1157,11 @@ try { onlyUn = localStorage.getItem("pk711_onlyun") === "1"; } catch (_) { /* �
 function renderPOs() {
   const items = build.items, un = items.filter((i) => !assign[i.id]), on = items.filter((i) => assign[i.id]);
   document.querySelectorAll("[data-onlyun]").forEach((b) => b.setAttribute("aria-pressed", String(onlyUn)));
-  $("pocount").textContent = "· " + items.length + (un.length ? " · ยังไม่จัด " + un.length : "");
+  $("pocount").textContent = "· " + items.length + (un.length ? " · ⏳ Pending " + un.length : "");
   const done = items.length && !un.length ? '<div class="podone">✓ จัดครบทุก PO แล้ว</div>' : "";
   const hid = onlyUn && on.length ? `<div class="note" style="padding:6px 2px">ซ่อน PO ที่จัดแล้ว ${on.length} รายการ</div>` : "";
   $("poList").innerHTML = !items.length ? '<div class="note" style="padding:8px">ไม่มี PO วันนี้</div>'
-    : (un.length ? `<div class="pogrp">ยังไม่จัด (${un.length})</div>` + un.map(poCard).join("") : done) +
+    : (un.length ? `<div class="pogrp">⏳ Pending · ยังไม่จัดลงรถ (${un.length})</div>` + un.map(poCard).join("") : done) +
       (onlyUn ? hid : on.length ? `<div class="pogrp">จัดแล้ว (${on.length})</div>` + on.sort((a, b) => assign[a.id] - assign[b.id]).map(poCard).join("") : "");
   const rows = onlyUn ? un : items;
   $("poAllCount").textContent = onlyUn ? `· แสดง ${un.length} จาก ${items.length}` : "· " + items.length;
@@ -1223,7 +1229,10 @@ function renderSeq() {
   const seq = loadSeq(evalTruck(t));
   list.innerHTML = seq.map((p, k) => { const L = seqLabel(p); return `<li data-jump="${k + 1}" class="${k + 1 === seqStep ? "now" : k + 1 < seqStep ? "done" : ""}"><span class="sn">${k + 1 < seqStep ? "✓" : k + 1}</span><span><b>${esc(L.where)}</b><span class="ln">${esc(L.what)}</span><span class="ln muted">PO ${esc(L.po)} · ${nf(L.kg)} กก.</span></span></li>`; }).join("");
   list.hidden = false;
-  const cur = list.querySelector("li.now"); if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest" });
+  // เลื่อนเฉพาะในกล่องรายการ (ห้าม scrollIntoView: มันเลื่อนทั้งหน้า + หน้าแม่ที่ฝังอยู่ → จอเด้งขึ้นลงทุกขั้นตอนกดเล่น)
+  const cur = list.querySelector("li.now");
+  if (cur) { const top = cur.offsetTop - list.offsetTop, bot = top + cur.offsetHeight;
+    if (top < list.scrollTop) list.scrollTop = top - 4; else if (bot > list.scrollTop + list.clientHeight) list.scrollTop = bot - list.clientHeight + 4; }
 }
 function seqGo(step, animate) { const n = seqTotal(); seqStep = Math.max(0, Math.min(n, step)); applySeq(animate); renderSeq(); if (seqStep >= n) stopPlay(); }
 function seqCopyText() {
@@ -1836,26 +1845,35 @@ function lpRows() {
       stops: Object.values(byDc).map((d) => ({ ...d, kg: Math.round(d.kg), n: (A.dc[d.dc] || {}).n || "", t: (A.dc[d.dc] || {}).t || "" })) };
   });
 }
-const lpSig = (rows) => JSON.stringify(rows.map((r) => [r.id, r.k, r.stops.map((s) => [s.dc, s.pal, s.cs, s.po.join()])]));
+// PO ที่ยังไม่อยู่คันไหน = ⏳ Pending · ส่งไปพร้อมรถได้ → หน้าแม่โชว์เป็น "PO รอจัดรถ" (ยังไม่เป็นงานห้าง ไม่ถึงคนขับ)
+function lpPend() {
+  return build.items.filter((i) => !assign[i.id]).map((it) => ({ po: it.po, so: it.so || "", dc: it.dc, n: (A.dc[it.dc] || {}).n || "", t: (A.dc[it.dc] || {}).t || "",
+    pal: it.units.length, cs: it.units.reduce((a, u) => a + u.segs.reduce((b, g) => b + g.q, 0), 0), kg: Math.round(it.units.reduce((a, u) => a + u.kg, 0)) }));
+}
+const lpSig = (rows, pend) => JSON.stringify([rows.map((r) => [r.id, r.k, r.stops.map((s) => [s.dc, s.pal, s.cs, s.po.join()])]), (pend || []).map((p) => p.po)]);
 function renderPlanner() {
   if (ROLE !== "planner") return;
-  const rows = lpRows(), un = build.items.filter((i) => !assign[i.id]).length, bad = rows.filter((r) => r.bad.length).length;
-  if (!rows.length) { $("plannerBox").innerHTML = '<div class="note">วันส่งนี้ไม่มี PO</div>'; return; }
-  const s = LPS[date], sent = s && s.sig === lpSig(rows);
+  const rows = lpRows(), pend = lpPend(), un = pend.length, bad = rows.filter((r) => r.bad.length).length;
+  if (!rows.length && !un) { $("plannerBox").innerHTML = '<div class="note">วันส่งนี้ไม่มี PO</div>'; return; }
+  const s = LPS[date], sent = s && s.sig === lpSig(rows, pend);
   const st = s ? (sent ? '<span class="chip c-ok">✓ ส่งเข้าแพลนห้างแล้ว ' + esc(s.at) + "</span>" : '<span class="chip c-gold">แก้หลังส่ง · กดส่งอีกครั้งเพื่ออัปเดตงานห้าง</span>') : '<span class="chip c-gold">ยังไม่ได้ส่งเข้าแพลนห้าง</span>';
   $("plannerBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2>📤 ส่งเข้าแพลนห้าง · ส่ง ${thd(date)}</h2>${st}</div>
     <div class="note">จัด PO ลงรถให้เรียบร้อย แล้วกดส่ง → ได้งานห้างตามขนาดรถ (ยังไม่มีทะเบียน) · พี่ปุ๋ยแจ้งรถ + คนขับมาแล้ว ค่อยใส่ในแท็บ 📋 งานห้าง แล้วกดแจกงาน</div>
-    <div class="tscroll" style="margin-top:8px"><table><thead><tr><th>คัน</th><th>ขนาดรถ</th><th>คลัง</th><th>นัดลง</th><th class="r">พาเลท</th><th class="r">ลัง</th><th class="r">กก.</th><th>ขึ้นของ</th><th>เช็ค</th></tr></thead><tbody>${rows.map((r) => `<tr><td><b>#${r.id}</b></td><td>${esc(r.size)}</td>
+    ${rows.length ? "" : '<div class="note" style="margin-top:8px">ยังไม่มีรถ · PO ทั้งหมดยังเป็น ⏳ Pending</div>'}
+    <div class="tscroll" style="margin-top:8px${rows.length ? "" : ";display:none"}"><table><thead><tr><th>คัน</th><th>ขนาดรถ</th><th>คลัง</th><th>นัดลง</th><th class="r">พาเลท</th><th class="r">ลัง</th><th class="r">กก.</th><th>ขึ้นของ</th><th>เช็ค</th></tr></thead><tbody>${rows.map((r) => `<tr><td><b>#${r.id}</b></td><td>${esc(r.size)}</td>
       <td>${r.stops.map((x) => '<span class="mono">' + esc(x.dc) + "</span> " + esc(x.n)).join("<br>")}</td><td class="mono">${r.stops.map((x) => esc(x.t)).join("<br>")}</td>
       <td class="r num">${r.stops.reduce((a, x) => a + x.pal, 0)}</td><td class="r num">${nf(r.stops.reduce((a, x) => a + x.cs, 0))}</td><td class="r num">${nf(r.kg)}</td><td class="mono">${esc(r.load)}</td>
       <td>${r.bad.length ? '<span class="chip c-bad">⚠️ ' + esc(r.bad.join(" · ")) + "</span>" : '<span class="chip c-ok">ผ่าน</span>'}</td></tr>`).join("")}</tbody></table></div>
-    <div class="row" style="gap:8px;margin-top:8px"><button class="btn" data-lpsend ${bad || un ? "disabled" : ""}>📤 ${s ? "ส่งอีกครั้ง" : "ส่ง"} ${rows.length} คันเข้าแพลนห้าง</button>
-      ${bad ? '<span class="note" style="color:var(--bad)">แก้คันที่น้ำหนัก/พาเลทไม่ผ่านก่อน (' + bad + " คัน)</span>" : ""}${un ? '<span class="note" style="color:var(--warn)">ยังมี ' + un + " PO ไม่อยู่คันไหน</span>" : ""}</div>`;
+    ${un ? `<div class="pendbox"><div class="row" style="gap:6px 12px"><b>⏳ Pending · ยังไม่จัดลงรถ ${un} PO</b><span class="note">กดส่งได้เลย → ขึ้นเป็น "PO รอจัดรถ" ในแท็บ 📋 งานห้าง (ยังไม่เป็นงาน ไม่ถึงคนขับ) · จัดลงรถทีหลังแล้วกดส่งอีกครั้ง</span></div>
+      <div class="tscroll"><table><thead><tr><th>PO</th><th>คลัง</th><th>นัดลง</th><th class="r">พาเลท</th><th class="r">ลัง</th><th class="r">กก.</th><th>สถานะ</th></tr></thead><tbody>${pend.map((p) => `<tr><td class="mono">${esc(p.po)}</td><td><span class="mono">${esc(p.dc)}</span> ${esc(p.n)}</td><td class="mono">${esc(p.t)}</td>
+        <td class="r num">${p.pal}</td><td class="r num">${nf(p.cs)}</td><td class="r num">${nf(p.kg)}</td><td><span class="chip c-gold">⏳ Pending</span></td></tr>`).join("")}</tbody></table></div></div>` : ""}
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn" data-lpsend ${bad ? "disabled" : ""}>📤 ${s ? "ส่งอีกครั้ง" : "ส่ง"} ${rows.length ? rows.length + " คัน" : ""}${rows.length && un ? " + " : ""}${un ? "Pending " + un + " PO" : ""} เข้าแพลนห้าง</button>
+      ${bad ? '<span class="note" style="color:var(--bad)">แก้คันที่น้ำหนัก/พาเลทไม่ผ่านก่อน (' + bad + " คัน)</span>" : ""}</div>`;
 }
 function lpSend() {
-  const rows = lpRows(); if (!rows.length) return;
-  window.parent.postMessage({ type: "lp-send", date, dateTH: thd(date), trucks: rows }, location.origin);
-  LPS[date] = { sig: lpSig(rows), at: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) + " น." };
+  const rows = lpRows(), pend = lpPend(); if (!rows.length && !pend.length) return;
+  window.parent.postMessage({ type: "lp-send", date, dateTH: thd(date), trucks: rows, pending: pend }, location.origin);
+  LPS[date] = { sig: lpSig(rows, pend), at: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) + " น." };
   renderPlanner();
 }
 document.addEventListener("click", (e) => { const b = e.target.closest("[data-lpsend]"); if (b && !b.disabled) lpSend(); });
@@ -2075,6 +2093,13 @@ window.addEventListener("pointerup", (e) => {
   const tg = tTarget(e); if (tg) pinTruck(d.t, tg.dataset.drvdrop);
 });
 build(); renderAll(); renderAsm();
+// กล่อง PO: จอกว้าง (≥1240) อยู่คอลัมน์ขวา · จอแคบ กลับไปอยู่ใต้รายการรถเหมือนเดิม
+(function () {
+  const mq = matchMedia("(min-width:1240px)"), box = $("poBox"), rc = $("rightCol"), lc = document.querySelector(".leftcol"), main = document.querySelector(".main");
+  if (!box || !rc || !lc || !main) return;
+  const place = () => { const w = mq.matches; main.classList.toggle("three", w); const to = w ? rc : lc; if (box.parentNode !== to) to.appendChild(box); };
+  place(); if (mq.addEventListener) mq.addEventListener("change", place); else mq.addListener(place);
+})();
 </script>
 <script>
 /* รับ PO จากหน้าแม่ (origin เดียวกันเท่านั้น) แล้วค่อยเริ่ม · เปิดตรงๆ = บอกทางเข้า */
