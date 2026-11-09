@@ -1204,10 +1204,12 @@ function seqTotal() { const t = trucks[sel]; return t && t.items.length ? loadSe
 function applySeq(animate) {
   if (!R3 || !R3.seq) return;
   const n = R3.seq.length, st = seqMode ? seqStep : n;
-  R3.seq.forEach((s, k) => { s.g.visible = k < st; s.g.position.set(0, 0, 0); });
+  R3.seq.forEach((s, k) => { s.g.position.set(0, 0, 0); s.g.visible = k < st || (seqMode && s.sx != null);
+    if (k >= st && s.sx != null) s.g.position.set((s.sx - s.x) * 0.01, (-100 - s.p.z) * 0.01, (s.sz - s.zc) * 0.01); });   // ยังไม่ขึ้นรถ = วางรออยู่หน้าประตู
   if (R3.hl) { R3.hl.parent && R3.hl.parent.remove(R3.hl); R3.hl = null; }
   if (R3.anim && R3.anim.fk) R3.fkX = R3.anim.x1;   // กดข้ามระหว่างขับ = ถือว่าวางเสร็จ
   R3.anim = null; fkRest();
+  qcGo(seqMode && st > 0 && R3.seq[st - 1].x != null ? R3.seq[st - 1].x : null, !animate);
   if (seqMode && st > 0) {
     const cur = R3.seq[st - 1];
     R3.hl = new THREE.BoxHelper(cur.g, 0xC9A227); R3.grp.add(R3.hl);
@@ -1337,6 +1339,7 @@ function init3D() {
       const t = Math.min(1, (performance.now() - R3.anim.t0) / 500);
       R3.anim.g.position.y = 1.6 * (1 - t) * (1 - t); if (t >= 1) R3.anim = null;
     }
+    if (R3.crew || R3.qc) peopleTick(performance.now());
     if (R3.hl) R3.hl.update();
     if (R3.fly && ctl) {   // เลื่อนกล้องไปมุมสำเร็จรูป 0.5 วิ
       const k = Math.min(1, (performance.now() - R3.fly.s) / 500), e = 1 - Math.pow(1 - k, 3);
@@ -1594,38 +1597,47 @@ function addForklift(grp, x, z, rotY, S) {   // โฟล์คลิฟท์�
   box(8, 7, 8, -5, 226, 0, keepMat("fkL", () => stdMat({ color: 0xff8a00, emissive: 0xff7a00, emissiveIntensity: 0.9 })));
   const pl = new THREE.Mesh(palletGeo(100, 120, 15, S), keepMat("wood", () => stdMat({ map: cvTex("wood", 256, 256, paintWood), roughness: 0.85 })));
   pl.rotation.y = Math.PI / 2; pl.position.set(-150 * S, (y0 + 17) * S, 0); lift.add(pl);
+  const drv = makePerson({ vest: 0xff7a1a, helmet: 0xf2c400 }, S); drv.position.set(-2 * S, (y0 + 84 - 90) * S, 0); drv.rotation.y = -Math.PI / 2; f.add(drv);   // คนขับนั่งหันไปทางงา
+  const DP = drv.userData.p; DP.lL.rotation.x = DP.lR.rotation.x = -1.1; DP.aL.rotation.x = DP.aR.rotation.x = -1.0;
+  box(5, 40, 5, -40, 106, 0, dark);
+  const wh = new THREE.Mesh(kg("fkWheel", () => new THREE.TorusGeometry(13 * S, 2 * S, 8, 20)), dark); wh.position.set(-38 * S, (y0 + 128) * S, 0); wh.rotation.y = Math.PI / 2; wh.rotateX(-0.45); f.add(wh);
   f.position.set(x * S, 0, z * S); f.rotation.y = rotY; grp.add(f);
   f.userData.fk = { lift, mast2, pl, x, z }; return f;
 }
 // ── โฟล์คลิฟท์ตักพาเลทขึ้นรถทีละขั้น (โหมดลำดับขึ้นของ) · ซม. · งาหันไป +z เข้าหารถ · ศูนย์กลางพาเลทบนงา = ตัวรถ +150 ซม.
 //   ขับจากหน้าคลัง → ยกงาขึ้นระดับพื้นกระบะ/ชั้นที่วาง → ยื่นงาเข้าไปวาง → ลดงา ถอยกลับ
-const FK_MS = 2600;
+const FK_MS = 3800;
 function fkPose(x, z, lift, reach, yaw) {
   const fk = R3.fk, u = fk.userData.fk, S = 0.01;
   fk.position.set(x * S, 0, z * S); fk.rotation.y = Math.PI / 2 + (yaw || 0);
-  u.lift.position.set(-reach * S, lift * S, 0); u.mast2.position.y = Math.min(lift * 0.5, 115) * S;
+  u.lift.position.set(-reach * S, lift * S, 0); u.mast2.position.y = Math.min(Math.max(0, lift) * 0.5, 115) * S;
 }
 function fkRest() {
   if (!R3 || !R3.fk) return; const u = R3.fk.userData.fk;
   if (seqMode) fkPose(R3.fkX != null ? R3.fkX : u.x, R3.fkZ0, 0, 0, 0); else fkPose(u.x, u.z, 0, 0, 0);
   u.pl.visible = !seqMode;   // ดูทั้งคัน = ถือพาเลทประดับ · โหมดลำดับ = งาว่าง ไปตักพาเลทจริง
 }
+// ตักจากกองรอขึ้นรถหน้าประตู: เลี้ยวหันเข้าคลัง → สอดงา → ยก → ถอย → เลี้ยวกลับหารถ → ยกระดับที่วาง → ยื่นงาวาง → ลดงา ถอยออก
+//   พาเลทบนงา: ก้นพาเลท = -93 + ระดับงา (ซม.) · วางบนพื้นรอ = -100
 function fkStart(cur) {
-  const u = R3.fk.userData.fk, zT = R3.fkZT;
-  R3.anim = { fk: 1, g: cur.g, t0: performance.now(), x0: R3.fkX != null ? R3.fkX : u.x, x1: cur.x, zS: R3.fkZ0, zT,
-    lh: cur.p.z + 83, rc: Math.max(0, cur.zc - (zT + 150)), pz: cur.p.z, zc: cur.zc };
+  const u = R3.fk.userData.fk, zT = R3.fkZT, zS = R3.fkZ0, sx = cur.sx != null ? cur.sx : cur.x, sz = cur.sz != null ? cur.sz : zS - 170;
+  R3.anim = { fk: 1, g: cur.g, t0: performance.now(), x0: R3.fkX != null ? R3.fkX : u.x, sx, sz, zP: sz + 150, x1: cur.x, zS, zT,
+    lh: cur.p.z + 93, rc: Math.max(0, cur.zc - (zT + 150)), pz: cur.p.z, zc: cur.zc };
   u.pl.visible = false; fkTick(R3.anim, R3.anim.t0);
 }
 function fkTick(a, now) {
   const k = Math.min(1, (now - a.t0) / FK_MS), S = 0.01;
   const seg = (a0, a1) => { const v = Math.max(0, Math.min(1, (k - a0) / (a1 - a0))); return v * v * (3 - 2 * v); };
-  const sx = seg(0, 0.16), x = a.x0 + (a.x1 - a.x0) * sx, yaw = Math.abs(a.x1 - a.x0) > 5 ? Math.sign(a.x1 - a.x0) * 0.3 * Math.sin(Math.PI * sx) : 0;
-  const z = a.zS + (a.zT - a.zS) * (seg(0.14, 0.42) - seg(0.84, 1));
-  const placed = k >= 0.74, lift = placed ? (a.lh - 5 * seg(0.74, 0.8)) * (1 - seg(0.84, 1)) : 6 + (a.lh + 3 - 6) * seg(0.26, 0.56) - 3 * seg(0.68, 0.74);
-  const reach = a.rc * seg(0.5, 0.68) * (1 - seg(0.76, 0.88));
+  const t1 = seg(0, 0.14), t5 = seg(0.4, 0.54);
+  const x = a.x0 + (a.sx - a.x0) * t1 + (a.x1 - a.sx) * t5, yaw = Math.PI * (t1 - t5);
+  const z = a.zS + (a.zP - a.zS) * (seg(0.12, 0.24) - seg(0.3, 0.4)) + (a.zT - a.zS) * (seg(0.54, 0.68) - seg(0.88, 1));
+  const placed = k >= 0.84;
+  const lift = k < 0.24 ? -7 * seg(0, 0.12) : k < 0.3 ? -7 + 15 * seg(0.24, 0.3) : !placed ? 8 + (a.lh - 5) * seg(0.58, 0.72) - 3 * seg(0.8, 0.84) : a.lh * (1 - seg(0.88, 1));
+  const reach = a.rc * seg(0.72, 0.8) * (1 - seg(0.84, 0.92));
   fkPose(x, z, lift, reach, yaw);
   if (placed) a.g.position.set(0, 0, 0);
-  else { const d = 150 + reach; a.g.position.set((x + d * Math.sin(yaw) - a.x1) * S, (-83 + lift - a.pz) * S, (z + d * Math.cos(yaw) - a.zc) * S); }
+  else if (k < 0.24) a.g.position.set((a.sx - a.x1) * S, (-100 - a.pz) * S, (a.sz - a.zc) * S);
+  else { const d = 150 + reach; a.g.position.set((x + d * Math.sin(yaw) - a.x1) * S, (-93 + lift - a.pz) * S, (z + d * Math.cos(yaw) - a.zc) * S); }
   if (k >= 1) { R3.fkX = a.x1; R3.anim = null; fkRest(); }
 }
 // ลานโหลด: พื้นปูน · เส้นช่องจอดเหลือง · ผนังโกดัง + ประตูม้วน · ช่องวางของหน้าประตูตามคลังปลายทางของคันนี้
@@ -1639,20 +1651,27 @@ function addYard(grp, S, x0, x1, W, stops) {
   const bx0 = x0 - 130, bx1 = x1 + 150, bz = W / 2 + 95;
   [-1, 1].forEach((s) => paint(bx1 - bx0, 10, (bx0 + bx1) / 2, s * bz, yel)); paint(10, 2 * bz, bx0, 0, yel);
   for (let x = bx0 + 60; x < bx1 - 40; x += 120) paint(60, 8, x, 0, wht);   // เส้นกึ่งกลางช่องจอดแบบประ
-  // ผนังโกดัง
-  const len = x1 - x0 + 5000, wallH = 540;
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(len * S, wallH * S, 30 * S), keepMat("wall" + Math.round(len / 100), () => stdMat({ map: cvTex("wall", 256, 64, paintWall, len / 200, 1), roughness: 0.85 })));
-  wall.position.set(mid * S, (y + wallH / 2) * S, (zW - 15) * S); grp.add(wall);
+  // ผนังโกดัง: ต่อเป็นท่อน เว้นช่องประตูที่เปิด (ช่องที่มีคลังของคันนี้ = กำลังโหลด) → มองเข้าไปเห็นชั้นวางในโกดัง
+  const len = x1 - x0 + 5000, wallH = 540, xa = mid - len / 2;
+  const n = Math.max(2, Math.min(5, Math.round((x1 - x0) / 420))), DX = [...Array(n)].map((_, i) => mid + (i - (n - 1) / 2) * 420), OPEN = DX.map((_, i) => !!stops[i]);
+  const wallM = (L) => keepMat("wall" + Math.round(L / 50), () => stdMat({ map: cvTex("wall", 256, 64, paintWall, Math.max(0.25, Math.round(L / 50) / 4), 1), roughness: 0.85 }));
+  const wbox = (w, h, cx, cy) => { if (w < 1) return; const o = new THREE.Mesh(new THREE.BoxGeometry(w * S, h * S, 30 * S), wallM(w)); o.position.set(cx * S, (y + cy) * S, (zW - 15) * S); grp.add(o); };
+  let wx = xa; DX.forEach((dx, i) => { if (!OPEN[i]) return; wbox(dx - 160 - wx, wallH, (wx + dx - 160) / 2, wallH / 2); wbox(320, wallH - 380, dx, (wallH + 380) / 2); wx = dx + 160; });
+  wbox(xa + len - wx, wallH, (wx + xa + len) / 2, wallH / 2);
+  addInterior(grp, S, y, zW, xa, len, DX, OPEN, x0, x1);
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(860 * S, 96 * S), keepMat("sign2", () => stdMat({ map: cvTex("sign2", 1376, 154, paintText("SSB SMART SUPPLY  ·  คลังโหลดสินค้า", "#1B4332", "#ffffff", 70)), roughness: 0.5 })));
   sign.position.set(mid * S, (y + 470) * S, (zW + 1) * S); grp.add(sign);
   const gold = keepMat("signG", () => stdMat({ color: 0xC9A227, roughness: 0.4, metalness: 0.3 }));
   const sb = new THREE.Mesh(new THREE.BoxGeometry(860 * S, 8 * S, 4 * S), gold); sb.position.set(mid * S, (y + 418) * S, (zW + 2) * S); grp.add(sb);
-  const n = Math.max(2, Math.min(5, Math.round((x1 - x0) / 420))), COL = ["#2d6a4f", "#C9A227", "#185fa5", "#a32d2d", "#7a5cc9"];
+  const COL = ["#2d6a4f", "#C9A227", "#185fa5", "#a32d2d", "#7a5cc9"];
   const doorM = keepMat("door", () => stdMat({ map: cvTex("door", 128, 256, paintDoor), roughness: 0.55, metalness: 0.25 })), frm = keepMat("frm", () => stdMat({ color: 0x4a524f, roughness: 0.5 })),
     bump = keepMat("bump", () => stdMat({ color: 0x1d1f1e, roughness: 0.9 }));
   for (let i = 0; i < n; i++) {
-    const dx = mid + (i - (n - 1) / 2) * 420, st = stops[i];
-    const d = new THREE.Mesh(new THREE.PlaneGeometry(320 * S, 380 * S), doorM); d.position.set(dx * S, (y + 190) * S, (zW + 1) * S); grp.add(d);
+    const dx = DX[i], st = stops[i];
+    if (OPEN[i]) {   // ประตูช่องที่กำลังโหลด = ม้วนขึ้น (ม้วนเก็บอยู่ด้านใน) · ประตูอื่นปิด
+      const d = new THREE.Mesh(new THREE.PlaneGeometry(320 * S, 44 * S), doorM); d.position.set(dx * S, (y + 358) * S, (zW + 1) * S); grp.add(d);
+      const coil = new THREE.Mesh(new THREE.CylinderGeometry(24 * S, 24 * S, 330 * S, 16), frm); coil.rotation.z = Math.PI / 2; coil.position.set(dx * S, (y + 410) * S, (zW - 58) * S); grp.add(coil);
+    } else { const d = new THREE.Mesh(new THREE.PlaneGeometry(320 * S, 380 * S), doorM); d.position.set(dx * S, (y + 190) * S, (zW + 1) * S); grp.add(d); }
     [[-166, 190, 12, 390], [166, 190, 12, 390], [0, 386, 344, 12]].forEach(([ox, oy, w, h]) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w * S, h * S, 10 * S), frm); o.position.set((dx + ox) * S, (y + oy) * S, (zW + 4) * S); grp.add(o); });
     [-1, 1].forEach((s) => { const o = new THREE.Mesh(new THREE.BoxGeometry(24 * S, 40 * S, 16 * S), bump); o.position.set((dx + s * 150) * S, (y + 24) * S, (zW + 8) * S); grp.add(o); });
     const pl = new THREE.Mesh(new THREE.PlaneGeometry(64 * S, 34 * S), keepMat("dp" + i, () => stdMat({ map: cvTex("dp" + i, 128, 68, paintText("D" + (i + 1), "#ffffff", "#1B4332", 44)), roughness: 0.5 })));
@@ -1664,7 +1683,100 @@ function addYard(grp, S, x0, x1, W, stops) {
     if (st) { const tw = Math.round(260 / 64 * 128);
       paint(260, 64, dx, lz + ld / 2 - 50, keepMat("lt" + st.code, () => stdMat({ map: cvTex("lt" + st.code, tw, 128, paintText(st.code + (st.n ? " · " + st.n : ""), null, COL[i % COL.length], 52)), transparent: true, roughness: 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 }))); }
   }
-  return { zW };
+  const op = DX.filter((_, i) => OPEN[i]);
+  return { zW, stageX: op.length ? op.reduce((a, v) => a + v, 0) / op.length : mid, doorX: op.length ? op[0] : mid };
+}
+// ในโกดังหลังประตูที่เปิด: พื้น · ผนังหลัง · ชั้นวางพาเลทสูง (แลค) สีน้ำเงิน มีสินค้าวาง · ไม่ทอดเงา (ประหยัดเครื่อง)
+function addInterior(grp, S, y, zW, xa, len, DX, OPEN, x0, x1) {
+  if (!OPEN.some(Boolean)) return;
+  const dep = 1500, zi = zW - 30, nc = (o) => { o.userData.noCast = true; grp.add(o); return o; };
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(len * S, dep * S), keepMat("inFloor", () => stdMat({ color: 0xc3c6c1, roughness: 0.92, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 })));
+  fl.rotation.x = -Math.PI / 2; fl.position.set((xa + len / 2) * S, (y + 0.3) * S, (zi - dep / 2) * S); nc(fl);
+  const bw = new THREE.Mesh(new THREE.BoxGeometry(len * S, 760 * S, 30 * S), keepMat("inWall", () => stdMat({ color: 0xd3d7d6, roughness: 0.9 })));
+  bw.position.set((xa + len / 2) * S, (y + 380) * S, (zi - dep - 15) * S); nc(bw);
+  const up = keepMat("rkU", () => stdMat({ color: 0x1f4fae, roughness: 0.45, metalness: 0.3 })), bm = keepMat("rkB", () => stdMat({ color: 0x2f74d6, roughness: 0.4, metalness: 0.3 }));
+  const wood = keepMat("wood", () => stdMat({ map: cvTex("wood", 256, 256, paintWood), roughness: 0.85 }));
+  const geo = (w, h, d) => kg("bx" + w + "_" + h + "_" + d, () => new THREE.BoxGeometry(w * S, h * S, d * S));
+  const put = (g, m, x, yy, z) => { const o = new THREE.Mesh(g, m); o.position.set(x * S, (y + yy) * S, z * S); return nc(o); };
+  const BAY = 280, LV = [0, 150, 300], RD = 110, H = 470;   // เตี้ยกว่าผนัง 540 → ไม่โผล่เหนือหลังคา
+  const lo = Math.min(x0, DX[0]) - 520, nb = Math.ceil((Math.max(x1, DX[DX.length - 1]) + 520 - lo) / BAY);
+  const SKU = [["#e9a23b", "tubtim", "1 ลิตร 12 ขวด"], ["#c94f4f", "chaiyo", "1 ลิตร 12 ขวด"], ["#8bb85c", "oka", "1 ลิตร 12 ขวด"], ["#4f7fc9", "tubtim", "1.9 ลิตร 6 ขวด"]];
+  [zi - 420, zi - 1080].forEach((zc, r) => {
+    for (let b = 0; b <= nb; b++) [-1, 1].forEach((sd) => put(geo(9, H, 9), up, lo + b * BAY, H / 2, zc + sd * (RD / 2 - 5)));
+    for (let b = 0; b < nb; b++) { const xc = lo + b * BAY + BAY / 2;
+      LV.forEach((lv, l) => {
+        if (l) [-1, 1].forEach((sd) => put(geo(BAY - 9, 12, 6), bm, xc, lv - 6, zc + sd * (RD / 2 - 5)));
+        [-1, 1].forEach((sl) => { const h = (b * 7 + l * 5 + r * 3 + (sl > 0 ? 2 : 0)) % 11; if (h > 7) return;
+          const sk = SKU[(b + l + r + (sl > 0 ? 1 : 0)) % SKU.length], px = xc + sl * 68, hh = 96 + (h % 3) * 12;
+          put(palletGeo(115, 100, 14, S), wood, px, lv, zc);
+          put(geo(108, hh, 96), cartonMats(sk[0], 3, 3, 4, false, sk[1], sk[2]), px, lv + 14 + hh / 2, zc); });
+      });
+    }
+  });
+}
+function kg(k, mk) { if (!GC[k]) { GC[k] = mk(); GC[k].userData.keep = true; } return GC[k]; }
+// คน (ซม.) หันหน้า +z · เท้าที่ y=0 · เสื้อกั๊กสะท้อนแสง + หมวกนิรภัย · o.qc = QC (หมวกขาว เสื้อน้ำเงิน ถือแฟ้ม)
+function makePerson(o, S) {
+  const g = new THREE.Group(), M = (k, c, x) => keepMat("pp" + k, () => stdMat(Object.assign({ color: c, roughness: 0.75 }, x || {})));
+  const skin = M("skin", 0xc79670), pants = M("pants", 0x2b3440), shirt = M("sh" + (o.shirt || 0), o.shirt || 0x34495e),
+    vest = M("v" + o.vest, o.vest, { emissive: o.vest, emissiveIntensity: 0.12 }), refl = M("refl", 0xe8eef0, { metalness: 0.4, roughness: 0.3 }),
+    hat = M("h" + o.helmet, o.helmet, { roughness: 0.35 }), shoe = M("shoe", 0x1c1c1c);
+  const B = (w, h, d, x, yy, z, m, par) => { const b = new THREE.Mesh(kg("pb" + w + "_" + h + "_" + d, () => new THREE.BoxGeometry(w * S, h * S, d * S)), m); b.position.set(x * S, yy * S, z * S); (par || g).add(b); return b; };
+  const limb = (x, yy, m, L, w) => { const p = new THREE.Group(); p.position.set(x * S, yy * S, 0); g.add(p); B(w, L, w + 2, 0, -L / 2, 0, m, p); return p; };
+  const lL = limb(-9, 90, pants, 86, 14), lR = limb(9, 90, pants, 86, 14);
+  B(15, 7, 24, 0, -86, 4, shoe, lL); B(15, 7, 24, 0, -86, 4, shoe, lR);
+  B(36, 54, 21, 0, 117, 0, vest); B(37, 4, 22, 0, 108, 0, refl); B(37, 4, 22, 0, 124, 0, refl);
+  const aL = limb(-23, 142, shirt, 58, 10), aR = limb(23, 142, shirt, 58, 10);
+  B(9, 9, 9, 0, -61, 0, skin, aL); B(9, 9, 9, 0, -61, 0, skin, aR); B(12, 8, 12, 0, 148, 0, skin);
+  const head = new THREE.Mesh(kg("phead", () => new THREE.SphereGeometry(11 * S, 16, 12)), skin); head.position.set(0, 162 * S, 0); g.add(head);
+  const hm = new THREE.Mesh(kg("phat", () => new THREE.SphereGeometry(12.5 * S, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2)), hat); hm.position.set(0, 165 * S, 0); g.add(hm);
+  B(26, 2, 30, 0, 165, 3, hat);
+  if (o.qc) {
+    const tagM = keepMat("qcVest", () => stdMat({ map: cvTex("qcVest", 128, 64, paintText("QC", null, "#ffffff", 46)), transparent: true, depthWrite: false, roughness: 0.6 }));
+    const bk = new THREE.Mesh(kg("qcPl", () => new THREE.PlaneGeometry(26 * S, 13 * S)), tagM); bk.position.set(0, 132 * S, -10.8 * S); bk.rotation.y = Math.PI; g.add(bk);
+    const clip = new THREE.Group(); clip.position.set(0, 112 * S, 30 * S); clip.rotation.x = -0.55; g.add(clip);
+    B(24, 31, 1.5, 0, 0, 0, M("clipB", 0x8a5a2b), clip); B(21, 27, 1.6, 0, -1, 0.4, M("clipP", 0xf7f7f2), clip); B(9, 3, 3, 0, 15, 0.6, M("clipM", 0x9aa3a6, { metalness: 0.6 }), clip);
+  }
+  g.userData.p = { lL, lR, aL, aR }; return g;
+}
+function paintQcTag(c, w, h) { rr(c, 4, 4, w - 8, h - 8, 22); c.fillStyle = "#1B4332"; c.fill(); c.lineWidth = 4; c.strokeStyle = "#C9A227"; c.stroke();
+  c.fillStyle = "#fff"; c.font = "700 40px " + FONT; c.textAlign = "center"; c.textBaseline = "middle"; c.fillText("✓ QC ตรวจแล้ว", w / 2, h / 2 + 2); }
+// คนงานเดินในลาน + QC ตรวจพาเลทที่ขึ้นรถ (ยืนข้างรถตรงพาเลทล่าสุด · ตรวจเสร็จขึ้นป้าย ✓)
+function addCrew(grp, S, W, totalL) {
+  const yd = R3.yard, zW = yd.zW, xs = R3.seq.filter((q) => q.sx != null).map((q) => q.sx), xr = (xs.length ? Math.max(...xs) : totalL * 0.6) + 130, zr = zW + 45, far = W / 2 + 170;
+  const walk = (o, path, sp, off) => { const g = makePerson(o, S); g.position.y = -101 * S; grp.add(g); const segs = []; let L = 0;
+    for (let i = 1; i < path.length; i++) { const d = Math.hypot(path[i][0] - path[i - 1][0], path[i][1] - path[i - 1][1]); segs.push(d); L += d; }
+    return { g, path, segs, L, sp, off }; };
+  R3.crew = [
+    walk({ vest: 0xff7a1a, helmet: 0xf2c400 }, [[yd.doorX - 60, zW - 330], [yd.doorX - 60, zr], [xr, zr]], 105, 0),   // เดินออกจากโกดังเลียบหลังกองของ
+    walk({ vest: 0xc6ef1e, helmet: 0xf2c400 }, [[-180, far], [totalL + 120, far]], 95, 0.35),                          // เดินตรวจฝั่งคนขับ
+    walk({ vest: 0xc6ef1e, helmet: 0xffffff, shirt: 0x5a3e2b }, [[totalL + 290, zr], [totalL + 290, far]], 88, 0.7)    // เดินผ่านท้ายรถ
+  ];
+  const q = makePerson({ vest: 0x2f74d6, helmet: 0xffffff, qc: 1 }, S); q.position.y = -101 * S; grp.add(q);
+  const P = q.userData.p; P.aL.rotation.x = P.aR.rotation.x = -0.85;
+  const home = Math.max(60, totalL * 0.45);
+  const tag = new THREE.Sprite(keepMat("qcOk", () => new THREE.SpriteMaterial({ map: cvTex("qcOk", 320, 96, paintQcTag), transparent: true, depthTest: false })));
+  tag.scale.set(1.6, 0.48, 1); tag.position.set(0, 2.4, 0); tag.renderOrder = 9; tag.visible = false; q.add(tag);
+  R3.qc = { g: q, x: home, tx: home, z: -(W / 2 + 70), home, tag, max: totalL + 140 };
+  q.position.x = home * S; q.position.z = R3.qc.z * S;
+}
+function qcGo(x, jump) { const q = R3 && R3.qc; if (!q) return; q.tx = x == null ? q.home : Math.max(-120, Math.min(q.max, x + 150)); if (jump) q.x = q.tx; }
+function peopleTick(now) {
+  const dt = Math.min(0.1, Math.max(0, (now - (R3.pt || now)) / 1000)), S = 0.01, still = matchMedia("(prefers-reduced-motion: reduce)").matches; R3.pt = now;
+  const swing = (P, w, a) => { P.lL.rotation.x = a * Math.sin(w); P.lR.rotation.x = -a * Math.sin(w); };
+  (R3.crew || []).forEach((c) => {
+    let d = still ? c.off * c.L : ((now / 1000) * c.sp + c.off * 2 * c.L) % (2 * c.L); const back = d > c.L; if (back) d = 2 * c.L - d;
+    let i = 0; while (i < c.segs.length - 1 && d > c.segs[i]) { d -= c.segs[i]; i++; }
+    const a = c.path[i], b = c.path[i + 1], f = c.segs[i] ? Math.min(1, d / c.segs[i]) : 0, sg = back ? -1 : 1;
+    c.g.position.x = (a[0] + (b[0] - a[0]) * f) * S; c.g.position.z = (a[1] + (b[1] - a[1]) * f) * S; c.g.rotation.y = Math.atan2((b[0] - a[0]) * sg, (b[1] - a[1]) * sg);
+    if (!still) { const P = c.g.userData.p, w = (now / 1000) * c.sp / 65 * Math.PI; swing(P, w, 0.45); P.aL.rotation.x = -0.35 * Math.sin(w); P.aR.rotation.x = 0.35 * Math.sin(w); }
+  });
+  const q = R3.qc; if (!q) return;
+  const P = q.g.userData.p, gap = q.tx - q.x, mv = Math.abs(gap) > 2 && !still;
+  if (still) q.x = q.tx; else if (mv) q.x += Math.sign(gap) * Math.min(Math.abs(gap), 120 * dt);
+  q.g.position.x = q.x * S; q.g.position.z = q.z * S; q.g.rotation.y = mv ? (gap > 0 ? Math.PI / 2 : -Math.PI / 2) : 0;
+  if (mv) { q.ph = (q.ph || 0) + dt * 120 / 65 * Math.PI; swing(P, q.ph, 0.45); } else { P.lL.rotation.x = P.lR.rotation.x = 0; }
+  q.tag.visible = !mv && seqMode && seqStep > 0 && !(R3.anim && R3.anim.fk && (now - R3.anim.t0) / FK_MS < 0.86);
 }
 function draw3D() {
   const t = trucks[sel];
@@ -1683,7 +1795,7 @@ function draw3D() {
   type.beds.forEach((b) => { bedX.push(x0); x0 += b.L + gap; });
   const totalL = x0 - gap, W = Math.max(...type.beds.map((b) => b.W));
   addCab(grp, W, S, mat, type.r, type.k);
-  addYard(grp, S, -200, totalL, W, (t.dcs || [t.dc]).filter(Boolean).map((c) => ({ code: c, n: (A.dc[c] || {}).n || "" })));
+  R3.yard = addYard(grp, S, -200, totalL, W, (t.dcs || [t.dc]).filter(Boolean).map((c) => ({ code: c, n: (A.dc[c] || {}).n || "" })));
   R3.fk = addForklift(grp, totalL * 0.62, -(W / 2 + 235), Math.PI / 2, S); R3.fkX = null; R3.fkZ0 = -(W / 2 + 520); R3.fkZT = -(W / 2 + 110);
   const deck = keepMat("deck", () => stdMat({ map: cvTex("deck", 256, 256, paintDeck, 3, 2), roughness: 0.75 })), wood = keepMat("wood", () => stdMat({ map: cvTex("wood", 256, 256, paintWood), roughness: 0.85 }));
   type.beds.forEach((b, bi) => {
@@ -1721,6 +1833,11 @@ function draw3D() {
       y += hh;
     });
   });
+  // กองรอขึ้นรถ: หน้าประตูที่เปิด แถวละ 2 (แถวหน้า = ตักก่อน) · โหมดลำดับ = พาเลทที่ยังไม่ขึ้นรถรออยู่ตรงนี้ → โฟล์คลิฟท์มาตักทีละพาเลท
+  { const list = R3.seq.filter((q) => !q.p.hand && q.x != null), C = Math.ceil(list.length / 2), half = (C - 1) / 2 * 140;
+    const cx = 2 * half > totalL + 100 ? (totalL - 100) / 2 : Math.max(-100 + half, Math.min(totalL - half, R3.yard.stageX));   // กองอยู่ช่วงความยาวรถ ไม่ล้นไปหน้าหัวรถ
+    list.forEach((q, k) => { q.sx = cx + (Math.floor(k / 2) - (C - 1) / 2) * 140; q.sz = R3.fkZ0 - 170 - (k % 2) * 140; }); }
+  R3.crew = null; R3.qc = null; addCrew(grp, S, W, totalL);
   applySeq(false);
   addAxleLabels(grp, r, S);
   if (r.over.length) {   // พาเลทที่วางในรถไม่ได้ → กองสีแดงบนพื้นท้ายรถ
@@ -1756,13 +1873,16 @@ function viewPreset(name) {
   const { cam } = R3, tanV = Math.tan((cam.fov * Math.PI / 180) / 2), aspect = cam.aspect || 1.6;
   const fit = (w, h) => Math.max((w / 2) / (tanV * aspect), (h / 2) / tanV) * 1.12;   // ระยะที่เห็นกว้าง w สูง h พอดี
   const m = R3.mid, tgt = m.clone(); let pos;
-  if (name === "top") { tgt.y = 0; pos = new THREE.Vector3(m.x, fit(R3.span, R3.width), 0.001); }
+  if (name === "top") { tgt.y = 0;
+    if (seqMode && R3.yard) { const z0 = R3.yard.zW * 0.01 - 0.4, z1 = R3.width / 2, h = z1 - z0; tgt.z = (z0 + z1) / 2; pos = new THREE.Vector3(m.x, fit(R3.span, h), tgt.z + 0.001); }   // โหมดลำดับ: เห็นกองรอขึ้นรถหน้าประตูด้วย
+    else pos = new THREE.Vector3(m.x, fit(R3.span, R3.width), 0.001); }
   if (name === "side") { tgt.y = 1.0; pos = new THREE.Vector3(m.x, 1.0, fit(R3.span, 3.6)); }
   if (name === "front") { tgt.y = 1.0; pos = new THREE.Vector3(m.x - R3.span / 2 - fit(R3.width, 3.6), 1.4, 0); }
   if (name === "back") { tgt.y = 1.0; pos = new THREE.Vector3(m.x + R3.span / 2 + fit(R3.width, 3.6), 1.6, 0); }
   if (name === "dock") {   // ฝั่งคลัง: เห็นโฟล์คลิฟท์ขับมาตักขึ้นรถ · กล้องอยู่ในโกดังเสมอ (ผนังห่างรถ ~9.8 ม.) → ยกสูงแทนถอยไกล
-    const d = Math.min(fit(R3.span * 0.8, 3.4), R3.width / 2 + 6.8);   // R3.width = กว้างรถ+1.2 ม. → กล้องห่างผนัง ≥ 1 ม.
-    tgt.set(m.x, 0, -1.2); pos = new THREE.Vector3(m.x - R3.span * 0.08, 2.8 + Math.max(0, fit(R3.span * 0.8, 3.4) - d) * 1.1, -1.2 - d); }
+    // มุมเฉียงจากท้ายรถ มองย้อนไปทางหัว: เห็นข้างรถ · ทางวิ่งโฟล์คลิฟท์ · กองรอขึ้นรถ · ประตูที่เปิด
+    const zc = R3.yard ? R3.yard.zW * 0.005 : -4.5;
+    tgt.set(m.x - R3.span * 0.12, 0.1, zc + 0.6); pos = new THREE.Vector3(m.x + Math.max(R3.span * 0.6, 7), 4.4 + R3.span * 0.08, zc - 0.4); }
   flyTo(pos, tgt, name);
 }
 function flyTo(pos, tgt, name) {
