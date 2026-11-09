@@ -169,6 +169,11 @@ main{padding-block:14px 120px}
 .day.today .d{color:var(--ink);font-weight:700}
 .day.today .stk{outline:2px solid var(--gold);outline-offset:1px}
 .leg2{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.otbox{display:flex;flex-direction:column;gap:7px;border-top:1px dashed var(--line);padding-top:10px}.otbox[hidden]{display:none}
+.otwage{font-size:12.5px;background:var(--warnbg);color:var(--warn);border-radius:8px;padding:6px 10px;line-height:1.5}.otwage span{color:var(--muted);font-size:12px}
+.otwage.sm{display:inline-block;padding:1px 8px;font-size:11px;margin-left:6px;vertical-align:1px}
+.otl details{border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin-bottom:6px;background:var(--surface)}.otl summary{cursor:pointer;list-style-position:inside}
+.otl ul{margin:6px 0 2px 18px;padding:0;font-size:12.5px;max-height:190px;overflow:auto}.otl li{margin:2px 0}.otn{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;border-radius:999px;padding:0 7px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);white-space:nowrap;vertical-align:1px}
 /* จุดส่งในแถว: เห็นครบทุกจุด */
 .sl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 8px;align-items:baseline;font-size:13px}
@@ -543,6 +548,34 @@ const TYC={'ห้าง':'#1E6FD9','ยี่ปั๊ว':'#D98E04','อื่
 const TY_OTHER=[60,74,298,102,315,354,111,235,252];
 const TY_MALL=[107,67,152,158,172,187,169,231,233,241,65,293,261,370,188,192,141,217,263,116,121,230,124,203,271];
 function tyOf(s){if(s&&s.ty)return s.ty;const id=s&&s.id;return TY_MALL.includes(id)?'ห้าง':TY_OTHER.includes(id)?'อื่นๆ':id?'ยี่ปั๊ว':'อื่นๆ';}
+/* ประเภทงาน "อื่นๆ" 10 ประเภท (ตาราง pk_other_job_types ← ไฟล์ จัดประเภทงาน_Packing.xlsx 9 พ.ย.) · ใช้นับสถิติ · ค่าแรงรอแอดมินกำหนด ระบบยังไม่คิด */
+let OT_TYPES=__D.otTypes||[]; /* ตาราง pk_other_job_types ผ่าน Edge pk-daily */
+let OT_EX=__D.otEx||[]; /* ตาราง pk_other_job_examples 200 แถว ผ่าน Edge pk-daily (มีชื่อคน ไม่ฝังในไฟล์) */
+const otOf=n=>OT_TYPES.find(t=>t.name===n);
+function otGram(s){s=String(s||'').replace(/[\s0-9\-+.,()*]+/g,'').toLowerCase();const g=new Set();for(let i=0;i<s.length-1;i++)g.add(s.slice(i,i+2));return g;}
+let OT_G=null;
+/* แนะนำประเภทจากงานตัวอย่างที่ใกล้ที่สุด (ทดสอบกับ 200 แถว: เกณฑ์ 0.4 ถูก 159 ผิด 19 ไม่แนะนำ 22) · แนะนำเท่านั้น แอดมินกดเลือกเอง */
+function otGuess(txt){if(!String(txt||'').trim()||!OT_EX.length)return null;if(!OT_G)OT_G=OT_EX.map(e=>[otGram(e[0]),e]);
+  const q=otGram(txt);if(q.size<2)return null;let best=null,bs=0;
+  OT_G.forEach(([g,e])=>{if(!g.size)return;let n=0;q.forEach(x=>{if(g.has(x))n++;});const sc=n/Math.sqrt(q.size*g.size);if(sc>bs){bs=sc;best=e;}});
+  return bs>=0.4&&otOf(best[1])?{name:best[1],ex:best[0]}:null;}
+function otText(p){const nt=$('nt');return [nt?nt.value:p.note,...p.stops.map(s=>s.n)].join(' ');}
+function otEff(p){const s=$('jt');const v=s?s.value:p.jt;return v||(p.stops[0]?tyOf(p.stops[0]):'');}
+function otWage(t){return t.rate!=null?(t.mode==='daily'?'รายวัน ':'')+t.rate+' บาท':'รอแอดมินกำหนดวิธีคิด';}
+function otInfo(name,g){const t=otOf(name);let h='';
+  if(g&&g.name!==name)h+='<div class="note">💡 แนะนำ <b>'+esc(g.name)+'</b> · คล้ายงาน "'+esc(g.ex)+'" <button type="button" class="btn ghost sm" data-otpick="'+esc(g.name)+'" onclick="otPick(this.dataset.otpick)">ใช้ประเภทนี้</button></div>';
+  if(t)h+='<div class="note">'+esc(t.scope)+'</div><div class="otwage">💰 ค่าแรง: <b>'+esc(otWage(t))+'</b>'+(t.note?'<br><span>'+esc(t.note)+'</span>':'')+'</div>';
+  return h+'<button type="button" class="btn ghost sm" onclick="otList()">📋 ประเภทงานอื่นๆ ทั้งหมด ('+OT_TYPES.length+')</button>';}
+function otBox(p){if(!OT_TYPES.length)return '';const cur=p.ot||'';
+  return '<div id="otBox" class="otbox"'+(jtOf(p)==='อื่นๆ'?'':' hidden')+'><label class="lb" style="display:flex;flex-direction:column;gap:4px">งานอื่นๆ ประเภทไหน<select class="in" id="ot" onchange="otSync()"><option value="">— เลือกประเภท —</option>'
+    +OT_TYPES.map(t=>'<option'+(cur===t.name?' selected':'')+'>'+esc(t.name)+'</option>').join('')+'</select></label><div id="otInfo">'+otInfo(cur,otGuess(otText(p)))+'</div></div>';}
+function otSync(){if(!ED)return;const box=$('otBox'),s=$('ot');if(!box||!s)return;box.hidden=otEff(ED.p)!=='อื่นๆ';$('otInfo').innerHTML=otInfo(s.value,otGuess(otText(ED.p)));}
+function otPick(n){const s=$('ot');if(s){s.value=n;otSync();}}
+function otList(){const by={};OT_EX.forEach(e=>{(by[e[1]]=by[e[1]]||[]).push(e);});
+  const h='<div class="note" style="margin-bottom:8px">ที่มา: ไฟล์ จัดประเภทงาน_Packing.xlsx ('+OT_EX.length+' รายการ) · ✓ = ควรให้หัวหน้างานยืนยันก่อนคิดค่าแรง · <b>ค่าแรงกลุ่มนี้ยังไม่คิดในระบบ รอแอดมินกำหนด</b></div><div class="otl">'
+    +OT_TYPES.map(t=>{const L=by[t.name]||[];return '<details><summary><b>'+esc(t.name)+'</b> <span class="m">'+t.n+' รายการ'+(t.n2?' · ประเภทรอง '+t.n2:'')+'</span><span class="otwage sm">'+esc(otWage(t))+'</span></summary><div class="note">'+esc(t.scope)+(t.note?'<br>📝 '+esc(t.note):'')+'</div>'
+      +(L.length?'<ul>'+L.map(e=>'<li>'+esc(e[0])+(e[2]?' <span class="m">+ '+esc(e[2])+'</span>':'')+(e[3]?' <span class="warn">✓ ตรวจ</span>':'')+'</li>').join('')+'</ul>':'')+'</details>';}).join('')+'</div>';
+  askModal({wide:true,icon:'📋',title:'ประเภทงานอื่นๆ (Packing)',html:h,ok:'ปิด'});}
 const tchip=t=>'<span class="tchip"><i style="background:'+TYC[t]+'"></i>'+t+'</span>';
 let HELP=__D.help.map(([id,name,nick,ph,st])=>({id,name,nick,phone:'•••-•••-'+ph,status:st||'ใช้งาน',note:''}));
 
@@ -1444,7 +1477,7 @@ function renderPlan(){
         +'<td class="nt">'+(esc(p.note)||'')+'</td>'
         +'<td class="hp">'+(hl.length?hl.map(x=>'<div class="ln">'+x+'</div>').join(''):'')+'</td>'
         +'<td>'+esc(p.htime||'')+'</td>'
-        +'<td>'+(jt&&S.length?tchip(jt):'')+'</td>'
+        +'<td>'+(jt&&S.length?tchip(jt)+(jt==='อื่นๆ'&&p.ot?'<small class="otn">'+esc(p.ot)+'</small>':''):'')+'</td>'
                 +sc(st&&st.h,'ห้าง')+sc(st&&st.y,'ยี่ปั๊ว')+sc(st&&st.o,'อื่นๆ')
         +'<td class="n stc tt">'+(st?'<b>'+st.t+'</b><span class="mb"><span class="mbi" style="width:'+Math.round(st.t/mxT*100)+'%">'+[[st.h,'ห้าง'],[st.y,'ยี่ปั๊ว'],[st.o,'อื่นๆ']].filter(a=>a[0]).map(a=>'<i title="'+a[1]+' '+a[0]+'" style="flex:'+a[0]+';background:'+TYC[a[1]]+'"></i>').join('')+'</span></span>':'')+'</td></tr>';
     });
@@ -1570,8 +1603,8 @@ function drawEditor(){
      +(p.driver&&mine&&p.driver!==mine.code?'<div class="warn">คนขับประจำคันนี้คือ '+esc(mine.name)+'</div>':'')
      +(p.driver&&dc[p.driver]&&dc[p.driver].some(x=>x!==v.head)?'<div class="warn">⚠ คนนี้มีงานรถ '+esc(dc[p.driver].filter(x=>x!==v.head).join(', '))+' วันเดียวกัน</div>':'')
      +(p.driver?(()=>{const s=drvStat(p.driver);return '<div class="note">สถิติ '+esc(drvOf(p.driver)?.name||'')+' เดือนนี้: ห้าง '+s.h+' · ยี่ปั๊ว '+s.y+' · อื่นๆ '+s.o+' · รวม <b>'+s.t+'</b> เที่ยว (รวมงานวันนี้)</div>';})():'')
-     +'<div class="two"><label class="lb" style="display:flex;flex-direction:column;gap:4px">ประเภทงาน (นับสถิติ)<select class="in" id="jt"><option value="">ตามร้านจุดแรก'+(p.stops[0]?' ('+tyOf(p.stops[0])+')':'')+'</option>'+TYPES.map(t=>'<option'+(p.jt===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'
-     +'<label class="lb" style="display:flex;flex-direction:column;gap:4px">เวลานัดเด็กรถ<input class="in" id="ht" placeholder="เช่น 05:00 หรือ นัดเอง" value="'+esc(p.htime||'')+'"></label></div></div>';
+     +'<div class="two"><label class="lb" style="display:flex;flex-direction:column;gap:4px">ประเภทงาน (นับสถิติ)<select class="in" id="jt" onchange="otSync()"><option value="">ตามร้านจุดแรก'+(p.stops[0]?' ('+tyOf(p.stops[0])+')':'')+'</option>'+TYPES.map(t=>'<option'+(p.jt===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'
+     +'<label class="lb" style="display:flex;flex-direction:column;gap:4px">เวลานัดเด็กรถ<input class="in" id="ht" placeholder="เช่น 05:00 หรือ นัดเอง" value="'+esc(p.htime||'')+'"></label></div>'+otBox(p)+'</div>';
     h+='<div class="box"><span class="lb">จุดส่ง / สถานที่ <span class="note">('+p.stops.length+' จุด · เรียงตามลำดับวิ่ง · ใส่เวลาที่ต้องถึงหน้างานแต่ละจุด)</span></span>';
     const lockS=s=>PM==='mall'?!isMall(s):isMall(s);
     p.stops.forEach((s,i)=>{if(lockS(s)){h+='<div class="stop lock'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+(s.at?' · ถึง '+esc(s.at):'')+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</div>'
@@ -1595,7 +1628,7 @@ function drawEditor(){
      +act.map(x=>{const on=p.helpers.includes(x.id),else_=(hc[x.id]||[]).filter(z=>z!==v.head);return '<label class="'+(else_.length&&!on?'dis':'')+'"><input type="checkbox" data-h="'+x.id+'"'+(on?' checked':'')+'><span>'+esc(x.nick)+' · '+esc(x.name)+(else_.length?'<small>อยู่รถ '+esc(else_.join(', '))+'</small>':'<small>ว่าง</small>')+'</span></label>';}).join('')
      +'</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="lb">เด็กนอก</span><span class="step"><button id="om" aria-label="ลด">−</button><span>'+p.out+'</span><button id="op" aria-label="เพิ่ม">＋</button></span><span class="note">คน</span></div>'
      +'<div class="note">เรทค่าเด็กรถจากหน้าตั้งค่าค่าแรง: เด็กใน '+(is4?'350':'400')+' บ./คน ('+(is4?'4 ล้อ':'รถ 6 ล้อขึ้นไป')+' · จ่ายรอบ 1–15 / 16–สิ้นเดือน) · เด็กนอก 350 บ./เที่ยว (คนขับเบิกไปก่อน)</div></div>';
-    h+='<div class="box"><label for="nt">หมายเหตุถึงคนขับ</label><textarea class="in" id="nt" rows="2" placeholder="เช่น รับเช็ค + เก็บถังเปล่า, นัดเด็กรถหน้าโรงงาน 05:00">'+esc(p.note)+'</textarea></div>';
+    h+='<div class="box"><label for="nt">หมายเหตุถึงคนขับ</label><textarea class="in" id="nt" oninput="otSync()" rows="2" placeholder="เช่น รับเช็ค + เก็บถังเปล่า, นัดเด็กรถหน้าโรงงาน 05:00">'+esc(p.note)+'</textarea></div>';
   } else if(v.tail){h+='<div class="box note">หางสำรองไม่มีคนขับประจำ ใช้สลับกับหางที่ซ่อมได้ ตั้งสถานะพร้อมใช้งาน / ซ่อมได้จากด้านบน</div>';}
   h+='</div><div class="df"><button class="btn ghost" id="dc">ยกเลิก</button><button class="btn pri" id="dsv">บันทึกคันนี้</button></div></aside>';
   const D=$('lp');if(!D)return;
@@ -1633,7 +1666,7 @@ function sync(){if(!ED)return;const p=ED.p;
   document.querySelectorAll('[data-at]').forEach(i=>p.stops[+i.dataset.at].at=i.value);
   document.querySelectorAll('[data-ty]').forEach(i=>p.stops[+i.dataset.ty].ty=i.value);
   document.querySelectorAll('[data-pv]').forEach(i=>p.stops[+i.dataset.pv].pv=i.value);
-  if($('jt'))p.jt=$('jt').value; if($('ht'))p.htime=$('ht').value;
+  if($('jt'))p.jt=$('jt').value; if($('ot'))p.ot=otEff(p)==='อื่นๆ'?$('ot').value:''; if($('ht'))p.htime=$('ht').value;
   document.querySelectorAll('[data-pal]').forEach(i=>p.stops[+i.dataset.pal].pal=i.value);
   document.querySelectorAll('[data-cs]').forEach(i=>p.stops[+i.dataset.cs].cs=i.value);}
 
