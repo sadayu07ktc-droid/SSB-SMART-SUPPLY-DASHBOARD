@@ -604,10 +604,13 @@ function otInfo(name,g){const t=otOf(name);let h='';
   if(g&&g.name!==name)h+='<div class="note">💡 แนะนำ <b>'+esc(g.name)+'</b> · คล้ายงาน "'+esc(g.ex)+'" <button type="button" class="btn ghost sm" data-otpick="'+esc(g.name)+'" onclick="otPick(this.dataset.otpick)">ใช้ประเภทนี้</button></div>';
   if(t)h+='<div class="note">'+esc(t.scope)+'</div><div class="otwage">💰 ค่าแรง: <b>'+esc(otWage(t))+'</b>'+(t.note?'<br><span>'+esc(t.note)+'</span>':'')+'</div>';
   return h+'<button type="button" class="btn ghost sm" onclick="otList()">📋 ประเภทงานอื่นๆ ทั้งหมด ('+OT_TYPES.length+')</button>';}
+/* ตัวอย่างในช่องรายละเอียด = งานจริงจากไฟล์จัดประเภท (2 อันแรกของประเภทนั้น) */
+function otPh(name){const ex=OT_EX.filter(e=>e[1]===name&&e[0]).slice(0,2).map(e=>e[0]);return ex.length?'เช่น '+ex.join(' / '):'เช่น ส่งช่าง 2 คนไปโรงงานบ่อวิน / ไปรับอะไหล่ที่ร้าน…';}
 function otBox(p){if(!OT_TYPES.length)return '';const cur=p.ot||'';
   return '<div id="otBox" class="otbox"'+(jtOf(p)==='อื่นๆ'?'':' hidden')+'><label class="lb" style="display:flex;flex-direction:column;gap:4px">งานอื่นๆ ประเภทไหน<select class="in" id="ot" onchange="otSync()"><option value="">— เลือกประเภท —</option>'
-    +OT_TYPES.map(t=>'<option'+(cur===t.name?' selected':'')+'>'+esc(t.name)+'</option>').join('')+'</select></label><div id="otInfo">'+otInfo(cur,otGuess(otText(p)))+'</div></div>';}
-function otSync(){if(!ED)return;const box=$('otBox'),s=$('ot');if(!box||!s)return;box.hidden=otEff(ED.p)!=='อื่นๆ';$('otInfo').innerHTML=otInfo(s.value,otGuess(otText(ED.p)));}
+    +OT_TYPES.map(t=>'<option'+(cur===t.name?' selected':'')+'>'+esc(t.name)+'</option>').join('')+'</select></label><label class="lb" style="display:flex;flex-direction:column;gap:4px">รายละเอียด · ไปที่ไหน / ทำอะไร<input class="in" id="otd" maxlength="160" placeholder="'+esc(otPh(cur))+'" value="'+esc(p.otd||'')+'" autocomplete="off"></label>'
+    +'<div id="otInfo">'+otInfo(cur,otGuess(otText(p)))+'</div></div>';}
+function otSync(){if(!ED)return;const box=$('otBox'),s=$('ot');if(!box||!s)return;box.hidden=otEff(ED.p)!=='อื่นๆ';$('otInfo').innerHTML=otInfo(s.value,otGuess(otText(ED.p)));const d=$('otd');if(d)d.placeholder=otPh(s.value);}
 function otPick(n){const s=$('ot');if(s){s.value=n;otSync();}}
 function otList(){const by={};OT_EX.forEach(e=>{(by[e[1]]=by[e[1]]||[]).push(e);});
   const h='<div class="note" style="margin-bottom:8px">ที่มา: ไฟล์ จัดประเภทงาน_Packing.xlsx ('+OT_EX.length+' รายการ) · ✓ = ควรให้หัวหน้างานยืนยันก่อนคิดค่าแรง · <b>ค่าแรงกลุ่มนี้ยังไม่คิดในระบบ รอแอดมินกำหนด</b></div><div class="otl">'
@@ -1490,7 +1493,7 @@ const DOW=['อาทิตย์','จันทร์','อังคาร','�
 function dateTH(iso){const d=new Date(iso+'T00:00:00');if(isNaN(d))return '';return DOW[d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1)+'.'+(d.getFullYear()+543);}
 /* งานอื่นๆ ไม่มีจุดส่งในรายชื่อ (ส่งคน รพ. / เข้าศูนย์ ฯลฯ) = เลือกประเภทงาน อื่นๆ + ประเภทย่อยแล้ว · สถานที่อยู่ในหมายเหตุ · ไม่มีระยะ ค่าแรงยังไม่คิด */
 const otOnly=p=>!!(p&&p.status==='ready'&&!p.stops.length&&p.jt==='อื่นๆ'&&p.ot);
-const otLabel=p=>p.ot+(String(p.note||'').trim()?' · '+String(p.note).trim():'');
+const otLabel=p=>p.ot+(String(p.otd||'').trim()?' · '+String(p.otd).trim():'')+(String(p.note||'').trim()?' · '+String(p.note).trim():'');
 function kind(v){const p=PLAN[v.head];
   if(v.tail)return 'tail'; if(p.status==='repair')return 'rep'; if(p.status==='off')return 'off';
   if(!p.driver)return 'nod'; return p.stops.length||otOnly(p)?'job':'wait';}
@@ -1561,7 +1564,7 @@ function renderPlan(){
       if(k==='rep')cust='<span class="rd">'+esc(p.reason||'ซ่อม')+'</span>';
       else if(k==='off')cust='<span class="m">งดวิ่ง '+esc(p.reason||'')+'</span>';
       else if(v.tail)cust='<span class="m">หางสำรอง</span>';
-      else if(!S.length&&otOnly(p))cust=PM==='mall'?'<span class="m">มีงานอื่นๆ · '+esc(p.ot)+' (แพลนรวม)</span>':'<span class="ell" title="'+esc(otLabel(p))+'"><b>'+esc(p.ot)+'</b></span> '+tchip('อื่นๆ')+' <span class="m" title="สถานที่ไม่มีในรายชื่อจุดส่ง (ค่ากลาง) · ไม่มีระยะ · ค่าแรงยังไม่คิด">ไม่มีจุดส่งในระบบ · ดูหมายเหตุ</span>';
+      else if(!S.length&&otOnly(p))cust=PM==='mall'?'<span class="m">มีงานอื่นๆ · '+esc(p.ot)+' (แพลนรวม)</span>':'<span class="ell" title="'+esc(otLabel(p))+'"><b>'+esc(p.ot)+'</b>'+(p.otd?' · '+esc(p.otd):'')+'</span> '+tchip('อื่นๆ')+' <span class="m" title="สถานที่ไม่มีในรายชื่อจุดส่ง (ค่ากลาง) · ไม่มีระยะ · ค่าแรงยังไม่คิด">ไม่มีจุดส่งในระบบ'+(p.otd?'':' · ดูหมายเหตุ')+'</span>';
       else if(!S.length)cust='<span class="m">'+(nOther?'มีงานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)':d?'ว่าง · รอมีงาน':'รถสแปร์')+'</span>';
       else cust=L(S,(s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+stChip(s)+(s.rt?' <span class="rtq">'+esc(rtTxt(s.rt))+'</span>':'')+(PM==='all'&&isMall(s)?' '+mallBadge(v.head):'')+(s.tbd?' <span class="rtq" title="ยังไม่ระบุสถานที่รับ">📍 รอแจ้ง</span>':legOf(S,i).km==null?' <span class="nokm" title="ยังไม่มีค่ากลาง'+(i?' จาก '+esc(S[i-1].n):' จากโรงงาน')+'">⚠</span>':''))
         +(PM==='mall'&&nOther?'<div class="ln"><span class="m">+ งานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)</span></div>':'');
@@ -1583,7 +1586,7 @@ function renderPlan(){
         +'<td class="nt">'+(esc(p.note)||'')+'</td>'
         +'<td class="hp">'+(hl.length?hl.map(x=>'<div class="ln">'+x+'</div>').join(''):'')+'</td>'
         +'<td>'+esc(p.htime||'')+'</td>'
-        +'<td>'+(jt&&(S.length||otOnly(p))?tchip(jt)+(jt==='อื่นๆ'&&p.ot?'<small class="otn">'+esc(p.ot)+'</small>':''):'')+'</td>'
+        +'<td>'+(jt&&(S.length||otOnly(p))?tchip(jt)+(jt==='อื่นๆ'&&p.ot?'<small class="otn" title="'+esc(otLabel(p))+'">'+esc(p.ot)+(p.otd?' · '+esc(p.otd):'')+'</small>':''):'')+'</td>'
                 +sc(st&&st.h,'ห้าง')+sc(st&&st.y,'ยี่ปั๊ว')+sc(st&&st.o,'อื่นๆ')
         +'<td class="n stc tt">'+(st?'<b>'+st.t+'</b><span class="mb"><span class="mbi" style="width:'+Math.round(st.t/mxT*100)+'%">'+[[st.h,'ห้าง'],[st.y,'ยี่ปั๊ว'],[st.o,'อื่นๆ']].filter(a=>a[0]).map(a=>'<i title="'+a[1]+' '+a[0]+'" style="flex:'+a[0]+';background:'+TYC[a[1]]+'"></i>').join('')+'</span></span>':'')+'</td></tr>';
     });
@@ -1806,7 +1809,7 @@ function drawEditor(){
     p.stops[i]=Object.assign(s0,{ty:'อื่นๆ',rt:o.rt,at:o.at});ED.rq=null;drawEditor();toast('📍 ระบุสถานที่รับกลับ: '+s0.n);});
   D.querySelectorAll('[data-gomall],[data-goall]').forEach(b=>b.onclick=()=>{const hd=v.head,toM=b.hasAttribute('data-gomall');setPM(toM?'mall':'all');if(toM){const jj=jobOfHead(hd);if(jj)openJob(jj.id);}else openEditor(hd);});
   $('dsv').onclick=()=>{sync();if(p.status!=='ready'&&!p.reason.trim()&&p.status==='repair'){toast('ใส่สาเหตุการซ่อมก่อน จะได้ขึ้นในรูปสรุป');return;}
-    if(p.status==='ready'&&!p.stops.length&&p.jt==='อื่นๆ'){if(!p.ot){toast('เลือก “งานอื่นๆ ประเภทไหน” ก่อน ถึงจะนับเป็นงาน');return;}if(!String(p.note||'').trim()){toast('ใส่สถานที่/รายละเอียดงานในหมายเหตุก่อน (ไม่มีจุดส่งในระบบ)');return;}}
+    if(p.status==='ready'&&!p.stops.length&&p.jt==='อื่นๆ'){if(!p.ot){toast('เลือก “งานอื่นๆ ประเภทไหน” ก่อน ถึงจะนับเป็นงาน');return;}if(!String(p.otd||'').trim()&&!String(p.note||'').trim()){toast('⚠️ พิมพ์รายละเอียดงานอื่นๆ ก่อน เช่น ส่งใคร ไปที่ไหน (ไม่มีจุดส่งในระบบ)');const n=$('otd');if(n)n.focus();return;}}
     if(p.status!=='ready'&&PLAN[v.head].stops.some(isMall)){toast('รถคันนี้มีงานห้าง ให้แอดมินห้างย้ายงานไปคันอื่นในแพลนห้างก่อน');return;}
     if(p.status!=='ready'){p.stops=[];p.helpers=[];p.out=0;}
     PLAN[v.head]=p;closeEditor();renderAll();toast('บันทึกรถ '+v.head+' ในแพลนแล้ว (เดโม)');};
@@ -1820,7 +1823,7 @@ function sync(){if(!ED)return;const p=ED.p;
   document.querySelectorAll('[data-at]').forEach(i=>p.stops[+i.dataset.at].at=i.value);
   document.querySelectorAll('[data-ty]').forEach(i=>p.stops[+i.dataset.ty].ty=i.value);
   document.querySelectorAll('[data-pv]').forEach(i=>p.stops[+i.dataset.pv].pv=i.value);
-  if($('jt'))p.jt=$('jt').value; if($('ot'))p.ot=otEff(p)==='อื่นๆ'?$('ot').value:''; if($('ht'))p.htime=$('ht').value;
+  if($('jt'))p.jt=$('jt').value; if($('ot'))p.ot=otEff(p)==='อื่นๆ'?$('ot').value:'';if($('otd'))p.otd=otEff(p)==='อื่นๆ'?$('otd').value.trim():''; if($('ht'))p.htime=$('ht').value;
   document.querySelectorAll('[data-pal]').forEach(i=>p.stops[+i.dataset.pal].pal=i.value);
   document.querySelectorAll('[data-cs]').forEach(i=>p.stops[+i.dataset.cs].cs=i.value);}
 
