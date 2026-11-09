@@ -175,6 +175,7 @@ main{padding-block:14px 120px}
 .otwage.sm{display:inline-block;padding:1px 8px;font-size:11px;margin-left:6px;vertical-align:1px}
 .otl details{border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin-bottom:6px;background:var(--surface)}.otl summary{cursor:pointer;list-style-position:inside}
 .otl ul{margin:6px 0 2px 18px;padding:0;font-size:12.5px;max-height:190px;overflow:auto}.otl li{margin:2px 0}.otn{display:block;font-size:11px;color:var(--muted);margin-top:2px}
+.clrl{margin:4px 0 8px 18px;padding:0;line-height:1.7}
 .tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;border-radius:999px;padding:0 7px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);white-space:nowrap;vertical-align:1px}
 /* จุดส่งในแถว: เห็นครบทุกจุด */
 .sl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 8px;align-items:baseline;font-size:13px}
@@ -490,6 +491,7 @@ main{padding-block:14px 120px}
 <div class="bar" id="bar"><div class="wrap">
   <div class="sum" id="barsum"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn ghost" id="bClr" title="ล้างงานในหน้านี้ทั้งหมด เริ่มจากว่าง (เดโม · ไม่ลบในระบบ)">🧹 ล้างงานทั้งหมด</button>
     <button class="btn" id="bSave">บันทึกแพลน</button>
     <button class="btn pri" id="bSend">📲 แจกงานทั้งวัน</button>
   </div>
@@ -655,10 +657,11 @@ window.addEventListener('message',e=>{const f=document.getElementById('lpFrame')
 const LPX={busy:false};
 function lpBar(){const L=LPI.last,n=LP_POS.length,ds=[...new Set(LP_POS.map(p=>p.date))];
   const src=LPI.src==='sample'?'<span class="lpsrc s">🧪 PO ตัวอย่าง (ยังไม่มีแพลนจริง)</span>'
+    :LPI.src==='empty'?'<span class="lpsrc s">📭 ยังไม่มีแพลน PO · กด 📥 นำเข้าแพลน PO</span>'
     :'<span class="lpsrc">📄 แพลน PO '+n+' ใบ · ส่ง '+ds.map(d=>esc(lpTh(d))).join(', ')+(LPI.src==='db-old'?' (ยังไม่มีแพลนใหม่ · แสดง 3 วันล่าสุด)':'')+'</span>';
   const last=L?'<span class="note">อัปเดตล่าสุด '+esc(lpAt(L.at))+(L.by_name?' · '+esc(L.by_name):'')+(L.file?' · '+esc(L.file):'')+'</span>':'';
   return '<div class="lpbar">'+src+last+'<span class="sp"></span>'
-    +(LPI.can?'<button class="btn sm mallb" id="lpImp">📥 นำเข้าแพลน PO (Excel)</button>'+(LPI.src!=='sample'?'<button class="btn sm" id="lpMgr">✂️ ตัดจำนวน / ยกเลิก PO'+(LPI.off.length?' · ยกเลิกไว้ '+LPI.off.length:'')+'</button>':''):'<span class="note">นำเข้า/แก้แพลน PO ได้เฉพาะแอดมินห้าง</span>')
+    +(LPI.can?'<button class="btn sm mallb" id="lpImp">📥 นำเข้าแพลน PO (Excel)</button>'+(LPI.src!=='sample'&&LPI.src!=='empty'?'<button class="btn sm" id="lpMgr">✂️ ตัดจำนวน / ยกเลิก PO'+(LPI.off.length?' · ยกเลิกไว้ '+LPI.off.length:'')+'</button>':''):'<span class="note">นำเข้า/แก้แพลน PO ได้เฉพาะแอดมินห้าง</span>')
     +'<input type="file" id="lpFile" accept=".xlsx,.xls" hidden></div>';}
 function lpWire(){const i=$('lpImp'),f=$('lpFile'),m=$('lpMgr');if(i)i.onclick=()=>f.click();if(f)f.onchange=()=>{const x=f.files[0];f.value='';if(x)lpPick(x);};if(m)m.onclick=lpMgr;}
 function lpAt(s){const d=new Date(s);return isNaN(d)?String(s||''):d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
@@ -1875,9 +1878,23 @@ const VIEWS=['plan','helpers','report'];
 function route(){const t=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'plan';
   VIEWS.forEach(v=>$('v-'+v).hidden=v!==t);document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.t===t));
   $('bar').hidden=t!=='plan';$('pmode').hidden=t!=='plan';lpShow();if(t==='report')renderReport();}
+/* 🧹 ล้างงานทั้งหมด (เดโม): แพลนรวม + งานห้าง + PO รอจัดรถ + ประวัติแจกงาน (+ PO ตัวอย่าง) · ไม่แตะฐานข้อมูล */
+async function clearAll(){
+  const smp=LPI.src==='sample';
+  if(!(await askModal({title:'ล้างงานทั้งหมด?',icon:'🧹',danger:1,ok:'ล้างทั้งหมด',cancel:'ไม่ล้าง',
+    html:'<p>ล้างงานในหน้านี้ เริ่มจากว่าง:</p><ul class="clrl"><li>แพลนรวม · จุดส่ง เด็กรถ หมายเหตุ ประเภทงาน ทุกคัน</li><li>แพลนห้าง · งานห้าง + PO รอจัดรถ + ประวัติแจกงาน/ฉบับแก้ไข</li>'+(smp?'<li>PO ตัวอย่าง 7-11</li>':'')+'</ul>'
+      +'<p class="note">คงไว้: รถ คนขับ สถานะซ่อม/งดวิ่ง'+(smp?'':' · PO ที่แอดมินห้างอัปโหลดแล้ว (ตัด/ยกเลิกได้ที่ ✂️)')+'<br>เดโม · ไม่ลบอะไรในระบบ · รีเฟรชหน้า = ข้อมูลตัวอย่างกลับมา</p>'})))return;
+  if(ED)closeEditor();if(JE)JE=null;
+  VEH.forEach(v=>{const p=PLAN[v.head];if(!p)return;Object.assign(p,{stops:[],helpers:[],out:0,note:'',htime:'',jt:'',ot:''});});
+  MJ=[];MP={};MALL.rev=-1;MALL.snap={};MALL.log=[];MALL.ack.clear();
+  if(smp){LP_POS=[];LPI.src='empty';}
+  const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109t&r='+Date.now());}
+  syncMall();FILTER='all';renderAll();window.scrollTo({top:0});
+  toast('🧹 ล้างงานทั้งหมดแล้ว · '+(PM==='mall'?'กด 📥 นำเข้าแพลน PO ที่ 📦 จัด PO ลงรถ':'ไปที่ 🏬 แพลนห้าง → 📦 จัด PO ลงรถ → 📥 นำเข้าแพลน PO'));}
 function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}
 $('pdate').onchange=()=>{$('pday').textContent=dateTH($('pdate').value);renderAll();};
 $('pday').textContent=dateTH($('pdate').value);
+$('bClr').onclick=clearAll;
 $('bSave').onclick=()=>toast(PM==='mall'?'บันทึกแพลนห้างแล้ว (เดโม) · ยังไม่ถึงใครจนกว่าจะกด'+(MALL.rev<0?'แจกงานห้าง':'ส่งฉบับแก้ไข'):'บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว (เดโม) · ยังไม่ส่งถึงคนขับจนกว่าจะกดแจกงาน');
 document.querySelectorAll('#pmode [data-pm]').forEach(b=>b.onclick=()=>{if(b.dataset.pm!==PM)setPM(b.dataset.pm);});
 $('bSend').onclick=async()=>{if(PM==='mall'){sendMall();return;}
