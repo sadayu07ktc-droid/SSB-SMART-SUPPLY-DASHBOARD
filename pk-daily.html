@@ -203,6 +203,13 @@ main{padding-block:14px 120px}
 .lcb{padding:10px 14px;display:flex;flex-direction:column;gap:5px}.lcw{font-size:16px;font-weight:700;color:#9A4A00}
 .lcr{display:flex;gap:8px}.lcr>span:first-child{flex:none;width:58px;color:#5D6E63}.lcr small{color:#5D6E63}
 .lcf{display:flex;gap:8px;padding:0 14px 12px}.lcf span{flex:1;text-align:center;border:1px solid #C9A227;color:#5B4600;border-radius:10px;padding:6px;font-weight:600}.lcf .ok{background:#1B4332;border-color:#1B4332;color:#fff}
+.mpl{margin-top:8px;padding:9px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--surface2,#f7faf8);display:flex;flex-direction:column;gap:7px}
+.mpt{font-size:13.5px;padding:6px 9px;border-radius:9px;background:var(--surface);border:1px solid var(--line)}.mph{font-weight:700;font-size:13.5px}.mph .note{font-weight:400;margin-left:4px}
+.mpr{display:grid;grid-template-columns:minmax(0,1fr) 78px 34px;gap:6px;align-items:center}.mpr .in{font-size:14px;padding:8px 10px}.mpx{grid-column:1/-1;margin-top:-3px}
+.in.auto{background:var(--chip,#eef3ef);color:var(--ink);font-weight:700;border-style:dashed}
+.mpsum .mpbar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin:6px 0 8px}.mpsum .mpbar i{display:block;height:100%;background:var(--good,#2D6A4F);border-radius:6px}
+.mpsum.w .mpbar i{background:#D97706}.mpsum.bad .mpbar i{background:var(--bad,#B91C1C)}.mpsum.bad{border-color:#F3B4B4}
+.mpk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mpk small{display:block;color:var(--muted);font-size:11.5px}.mpk b{font-size:17px}
 .rtbox{border-color:#F3C98B}.rtloc{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .tl .ti.rt::before{border-color:#E59A3C}
 .lpds{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface)}
@@ -991,7 +998,46 @@ function syncJ(){if(!JE)return;const j=JE.j;
   document.querySelectorAll('[data-jat]').forEach(i=>j.stops[+i.dataset.jat].at=i.value);
   document.querySelectorAll('[data-jpal]').forEach(i=>j.stops[+i.dataset.jpal].pal=i.value);
   document.querySelectorAll('[data-jcs]').forEach(i=>j.stops[+i.dataset.jcs].cs=i.value);
+  document.querySelectorAll('[data-mpk]').forEach(e=>{const [a,b]=e.dataset.mpk.split(':').map(Number);j.stops[a].lines[b].k=e.value;});
+  document.querySelectorAll('[data-mpq]').forEach(e=>{const [a,b]=e.dataset.mpq.split(':').map(Number);j.stops[a].lines[b].q=e.value.replace(/[^\d]/g,'');});
+  j.stops.forEach(mpApply);
   if($('jnt'))j.note=$('jnt').value;if($('jcar'))j.carrier=$('jcar').value.trim();if($('junl'))j.unl=$('junl').value;}
+
+/* ═════════ ใส่สินค้าเองในงานห้าง: เลือกสินค้า + ลัง → พาเลท + น้ำหนัก (เทียบน้ำหนักบรรทุกรถ) ═════════
+ * ข้อมูลชุดเดียวกับ Loading Planner (แม่แบบคลัง 26 ต.ค.) · per = ลัง/ชั้น · lay = ชั้น/พาเลท · kg = กก./ลัง (QC)
+ * พาเลทเต็ม = ลัง ÷ (per×lay) · เศษหลายสินค้าในร้านเดียวกันรวมพาเลทได้ ถ้าสูงรวม ≤ 150 ซม. · ไม้พาเลท 35 กก./ใบ */
+const PSKU=[{"k":"oka","n":"ขวด 1L*12 โอก้า E","kg":11.44,"per":14,"lay":4,"h":29.3},{"k":"soy","n":"ถั่วเหลือง 1L*12 ทับทิม P3","kg":11.53,"per":14,"lay":4,"h":28.9},{"k":"1l","n":"ขวด 1L*12 ทับทิม E","kg":11.44,"per":14,"lay":4,"h":29.3},{"k":"2l","n":"ขวด 2L*6 ทับทิม E","kg":11.52,"per":17,"lay":4,"h":31.4},{"k":"5l","n":"ขวด 5L*4 ทับทิม E","kg":19.2,"per":12,"lay":3,"h":36.4},{"k":"188165","n":"ปี๊บ 18L โบนัส","kg":17.5,"per":20,"lay":3,"h":34.8},{"k":"192214","n":"ถัง 13.75L โบนัส","kg":13.555,"per":20,"lay":3,"h":41.5},{"k":"192217","n":"ถัง 18L โบนัส","kg":17.43,"per":20,"lay":3,"h":41.5},{"k":"220837","n":"ขวด 0.25L*48 โบนัส U","kg":11.75,"per":8,"lay":6,"h":21.1},{"k":"220838","n":"ขวด 0.50L*24 โบนัส U","kg":11.8,"per":10,"lay":6,"h":24.5},{"k":"220839","n":"ขวด 1L*12 โบนัส P3-U","kg":11.53,"per":14,"lay":5,"h":28.9},{"k":"220840","n":"ขวด 1L*12 โบนัส U","kg":11.44,"per":14,"lay":5,"h":29.3},{"k":"808680","n":"ถุง 750cc.*12 โบนัส","kg":8.5,"per":13,"lay":7,"h":16.2},{"k":"808681","n":"ถุง 750cc.*12 โบนัส P3","kg":8.5,"per":13,"lay":7,"h":16.2},{"k":"829493","n":"ถุง18L*1 โบนัส BIB","kg":17.2,"per":9,"lay":5,"h":20.7},{"k":"159224","n":"ขวด 1L*12 ทับทิม U","kg":11.4,"per":14,"lay":7,"h":29.3},{"k":"159225","n":"ขวด 0.50L*24 ทับทิม S","kg":11.8,"per":10,"lay":6,"h":24.3},{"k":"159226","n":"ขวด 0.25L*48 ทับทิม U","kg":11.75,"per":8,"lay":6,"h":21.1},{"k":"159233","n":"ปี๊บ 13.75L ทับทิม","kg":13.555,"per":20,"lay":3,"h":34.8},{"k":"159234","n":"ปี๊บ 18L ทับทิม","kg":17.512,"per":20,"lay":3,"h":34.8},{"k":"159266","n":"ขวด 1L*12 ทับทิม P3-S","kg":11.53,"per":14,"lay":5,"h":28.9},{"k":"808221","n":"ขวด 6L*6 ทับทิม S","kg":33.65,"per":7,"lay":3,"h":36.4},{"k":"808223","n":"ขวด 0.75*12 ตรา ทับทิม U","kg":9.6,"per":17,"lay":5,"h":28.1},{"k":"804305","n":"น้ำมันถั่วเหลืองขวด 1 ลิตร ทับทิม","kg":11.44,"per":14,"lay":7,"h":28.9},{"k":"804306","n":"น้ำมันถั่วเหลืองขวด 1 ลิตร ทับทิมP3","kg":11.58,"per":14,"lay":5,"h":28.9}];
+const PK_PAL={"w":100,"l":120,"h":15,"kg":35,"maxH":150},PK_TYPES=[{"k":"trailer","pay":30000,"slots":26},{"k":"semi","pay":33300,"slots":28},{"k":"10w","pay":15500,"slots":12},{"k":"6w","pay":8000,"slots":10},{"k":"4w","pay":1500,"slots":2}],PK_PAYBUF=5,PK_CUSTMAX=20000;
+const mpSku=k=>PSKU.find(x=>x.k===k);
+function mpCalc(lines){const P=PK_PAL,part=[];let full=0,kg=0,cs=0;
+  (lines||[]).forEach(l=>{const s=mpSku(l.k),q=Math.max(0,Math.floor(n0(l.q)));if(!s||!q)return;cs+=q;kg+=q*s.kg;
+    const per=s.per*s.lay,f=Math.floor(q/per),lo=q-f*per;full+=f;if(lo)part.push(Math.ceil(lo/s.per)*s.h);});
+  part.sort((a,b)=>b-a);const mix=[];part.forEach(h=>{const m=mix.find(u=>u.h+h+P.h<=P.maxH);if(m)m.h+=h;else mix.push({h});});
+  const pl=full+mix.length;return {cs,pal:pl,kg:Math.round(kg+pl*P.kg),mix:mix.length};}
+/* น้ำหนักบรรทุกตามขนาดงาน (เหมือน Loading Planner: เผื่อ 5% · 7-11 ไม่เกิน 20 ตัน/คัน) */
+function mpCap(size){const k=Object.keys(LPSZ).find(x=>LPSZ[x]===size),ty=PK_TYPES.find(x=>x.k===k);
+  return ty?{kg:Math.round(Math.min(ty.pay*(1-PK_PAYBUF/100),PK_CUSTMAX)),slots:ty.slots}:null;}
+function mpLineTxt(l){const s=mpSku(l.k),q=Math.floor(n0(l.q));if(!s||!q)return s?'ลัง/พาเลท '+(s.per*s.lay)+' · '+s.kg+' กก./ลัง':'';
+  const per=s.per*s.lay,f=Math.floor(q/per),lo=q-f*per;
+  return (f?'<b>'+f+'</b> พาเลทเต็ม':'')+(f&&lo?' + ':'')+(lo?'เศษ <b>'+lo+'</b> ลัง ('+Math.ceil(lo/s.per)+' ชั้น)':'')+' · สินค้า '+comma(q*s.kg)+' กก. <span style="opacity:.7">· '+per+' ลัง/พาเลท</span>';}
+function mpBox(x,i){const L=x.lines||[];
+  return '<div class="mpl"><div class="mph">📦 สินค้า <span class="note">เลือกสินค้า + ใส่ลัง ระบบคิดพาเลท/น้ำหนักให้</span></div>'
+   +L.map((l,li)=>'<div class="mpr"><select class="in" data-mpk="'+i+':'+li+'" aria-label="สินค้า"><option value="">— เลือกสินค้า —</option>'+PSKU.map(s=>'<option value="'+s.k+'"'+(l.k===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('')+'</select>'
+     +'<input class="in" data-mpq="'+i+':'+li+'" inputmode="numeric" placeholder="ลัง" value="'+esc(l.q||'')+'" aria-label="จำนวนลัง">'
+     +'<button type="button" class="ib" data-mprm="'+i+':'+li+'" aria-label="ลบสินค้านี้">✕</button><div class="mpx note" data-mpx="'+i+':'+li+'">'+mpLineTxt(l)+'</div></div>').join('')
+   +(()=>{const r=mpCalc(L);return r.cs?'<div class="mpt">รวมจุดนี้ <b>'+r.pal+'</b> พาเลท · <b>'+comma(r.cs)+'</b> ลัง · <b>'+comma(r.kg)+'</b> กก.'+(r.mix?' <span class="note">(เศษรวมกันได้ '+r.mix+' พาเลท · รวมไม้พาเลทแล้ว)</span>':' <span class="note">(รวมไม้พาเลทแล้ว)</span>')+'</div>':'';})()
+   +'<button type="button" class="btn sm" data-mpadd="'+i+'">＋ เพิ่มสินค้า</button></div>';}
+function mpSum(j){const cap=mpCap(j.size);let pl=0,kg=0,nokg=0;j.stops.forEach(s=>{pl+=n0(s.pal);if(n0(s.kg))kg+=n0(s.kg);else if(n0(s.pal)||n0(s.cs))nokg++;});
+  if(!pl&&!kg)return '';const pct=cap&&cap.kg?kg/cap.kg:0,cls=pct>1?'bad':pct>.9?'w':'ok';
+  return '<div class="box mpsum '+cls+'"><span class="lb">⚖️ น้ำหนักเทียบรถ '+esc(SZL[j.size]||j.size)+'</span>'
+   +'<div class="mpbar"><i style="width:'+Math.min(100,Math.round(pct*100))+'%"></i></div>'
+   +'<div class="mpk"><div><small>น้ำหนักรวม</small><b>'+comma(kg)+'</b> กก.</div><div><small>บรรทุกได้</small><b>'+(cap?comma(cap.kg):'-')+'</b> กก.</div><div><small>พาเลท</small><b>'+pl+'</b>'+(cap?' / พื้นรถ ~'+cap.slots:'')+'</div></div>'
+   +(pct>1?'<div class="warn">⚠ เกินน้ำหนักบรรทุก '+comma(kg-cap.kg)+' กก. · แบ่งของไปอีกคัน หรือเปลี่ยนเป็นรถใหญ่ขึ้น</div>':pct>.9?'<div class="note">ใกล้เต็ม ('+Math.round(pct*100)+'%)</div>':'')
+   +(cap&&pl>cap.slots?'<div class="warn">⚠ พาเลทเกินพื้นรถ (ไม่ซ้อน) · ตรวจการวาง/ซ้อนใน Loading Planner</div>':'')
+   +(nokg?'<div class="note">'+nokg+' จุดยังไม่มีน้ำหนัก (ใส่พาเลท/ลังเอง ไม่ได้เลือกสินค้า)</div>':'')
+   +'<div class="note">รวมไม้พาเลท '+PK_PAL.kg+' กก./ใบ · บรรทุกได้ = เผื่อ '+PK_PAYBUF+'% และ 7-11 ไม่เกิน '+(PK_CUSTMAX/1000)+' ตัน/คัน (ค่าเดียวกับ Loading Planner)</div></div>';}
+function mpApply(x){if(!x.lines||!x.lines.some(l=>l.k&&n0(l.q)))return;const r=mpCalc(x.lines);x.cs=String(r.cs);x.pal=String(r.pal);x.kg=r.kg;
+  x.po=x.po||[];x.manual=1;}
 function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   let h='<aside class="drawer" aria-label="งานห้าง '+esc(j.id)+'"><div class="dh"><div><div class="stc">'+(j.isNew?'<span class="rv w">งานใหม่</span>':jstPill(j))+'</div><h3>'+esc(j.id)+' · งานห้าง</h3><div class="m">'+esc(SZL[j.size])+(j.head?' · '+esc(plOf(j.head)):' · ยังไม่มีทะเบียน')+'</div></div><button class="x" id="jx" aria-label="ปิด">✕</button></div><div class="db">';
   h+='<div class="box"><span class="lb">① ขนาดรถ</span><div class="seg">'+SIZES.map(z=>'<button data-sz="'+z+'" class="'+(j.size===z?'on':'')+'">'+SZL[z]+'</button>').join('')+'</div>'
@@ -1009,13 +1055,16 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   h+='<div class="box"><span class="lb">จุดส่ง (ห้าง) <span class="note">('+j.stops.length+' จุด · เวลาที่ต้องถึงหน้างาน)</span></span>';
   j.stops.forEach((x,i)=>{h+='<div class="stop mallsrc"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(x.n)+'</div><div class="note">'+legTxt(j.stops,i)+'</div>'+(x.items&&x.items.length?'<button type="button" class="btn sm pob2" data-pod="j:'+esc(j.id)+':'+i+'">📄 รายละเอียด PO ('+x.items.length+' ใบ)</button>':'')
     +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-jat="'+i+'" value="'+esc(x.at)+'" style="width:118px"></label>'
-    +'<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input class="in" data-jpal="'+i+'" placeholder="0" value="'+esc(x.pal)+'"></label>'
-    +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input class="in" data-jcs="'+i+'" placeholder="0" value="'+esc(x.cs)+'"></label></div></div>'
+    +(()=>{const auto=x.lines&&x.lines.some(l=>l.k&&n0(l.q)),ro=auto?' readonly tabindex="-1" class="in auto" title="คิดจากสินค้า"':' class="in"';
+      return '<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input'+ro+' data-jpal="'+i+'" placeholder="0" value="'+esc(x.pal)+'"></label>'
+       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input'+ro+' data-jcs="'+i+'" placeholder="0" value="'+esc(x.cs)+'"></label>'
+       +(auto?'<label class="note" style="display:flex;flex-direction:column;gap:2px">กก.<input class="in auto" readonly tabindex="-1" value="'+comma(x.kg||0)+'"></label>':'');})()+'</div>'
+    +(x.items&&x.items.length?'':mpBox(x,i))+'</div>'
     +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบจุดนี้">✕</button></div></div>';});
   h+='<input class="in" id="jsq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อห้าง" value="'+esc(JE.q)+'" autocomplete="off">';
   if(JE.q){const nq=JE.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&x.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,7);
     h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
-  h+='</div><div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
+  h+='</div>'+mpSum(j)+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
     +'<label class="note">รถขนส่ง<input class="in" id="jcar" list="carL" value="'+esc(j.carrier||'SSB')+'"></label>'
     +'<label class="note">เบิกค่าลงสินค้า<input class="in" id="junl" placeholder="'+esc(jUnlAuto(j)||'เช่น โอนค่าลงสินค้า 1500 บาท')+'" value="'+esc(j.unl||'')+'"></label></div>'
     +'<datalist id="carL"><option value="SSB"><option value="รถร่วม"></datalist><div class="note">เว้นว่าง = คิดจากค่าลงของร้าน (ถ้ามีในระบบ)</div></div>';
@@ -1031,6 +1080,10 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   const sq=$('jsq');sq.oninput=()=>{syncJ();JE.q=sq.value;drawJob();const n=$('jsq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};
   D.querySelectorAll('[data-jadd]').forEach(b=>b.onclick=()=>{syncJ();const x=ST.find(y=>y.id===+b.dataset.jadd);j.stops.push({id:x.id,n:x.n,km:x.km,pal:'',cs:'',at:''});JE.q='';drawJob();});
   D.querySelectorAll('[data-jrm]').forEach(b=>b.onclick=()=>{syncJ();j.stops.splice(+b.dataset.jrm,1);drawJob();});
+  D.querySelectorAll('[data-mpadd]').forEach(b=>b.onclick=()=>{syncJ();const x=j.stops[+b.dataset.mpadd];(x.lines||(x.lines=[])).push({k:'',q:''});drawJob();const s=D.querySelectorAll('[data-mpk^="'+b.dataset.mpadd+':"]');if(s.length)s[s.length-1].focus();});
+  D.querySelectorAll('[data-mprm]').forEach(b=>b.onclick=()=>{syncJ();const [a,c]=b.dataset.mprm.split(':').map(Number),x=j.stops[a];x.lines.splice(c,1);if(!x.lines.some(l=>l.k&&n0(l.q))){x.kg=0;}drawJob();});
+  D.querySelectorAll('[data-mpk]').forEach(e=>e.onchange=()=>{syncJ();drawJob();const n=D.querySelector('[data-mpq="'+e.dataset.mpk+'"]');if(n)n.focus();});
+  D.querySelectorAll('[data-mpq]').forEach(e=>e.oninput=()=>{const k=e.dataset.mpq,pos=e.selectionStart;syncJ();drawJob();const n=D.querySelector('[data-mpq="'+k+'"]');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(_){}}});
   D.querySelectorAll('[data-jup]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jup;[j.stops[i-1],j.stops[i]]=[j.stops[i],j.stops[i-1]];drawJob();});
   D.querySelectorAll('[data-jdn]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jdn;[j.stops[i+1],j.stops[i]]=[j.stops[i],j.stops[i+1]];drawJob();});
   if($('jdel'))$('jdel').onclick=async()=>{const sent=!!MALL.snap[j.id];
@@ -2148,7 +2201,7 @@ async function drawReport(){
     x.fillStyle='#14261C';x.font=F('700',21,'"Anuphan", "IBM Plex Sans Thai", sans-serif');x.textAlign='left';x.textBaseline='middle';x.fillText(g,PAD+22,y+GH/2);
     const gr=vs.filter(v=>['job','wait'].includes(kind(v))).length,gn=vs.filter(v=>kind(v)==='nod').length,gp=vs.filter(v=>kind(v)==='rep').length;
     x.font=F('500',16);x.fillStyle='#5D6E63';x.textAlign='right';
-    x.fillText(vs.length+' คัน · พร้อม '+gr+(gn?' · ไม่มีคนขับ '+gn:'')+(gp?' · ซ่อม '+gp:''),W-PAD-22,y+GH/2);
+    const gt=vs.filter(v=>kind(v)==='tail').length;x.fillText((vs.length-gt)+' คัน · พร้อม '+gr+(gn?' · ไม่มีคนขับ '+gn:'')+(gp?' · ซ่อม '+gp:'')+(gt?' · หางสำรอง '+gt:''),W-PAD-22,y+GH/2);
     let ry=y+GH;
     vs.forEach((v,i)=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver);
       if(i){x.strokeStyle='#E3EAE5';x.lineWidth=1;x.beginPath();x.moveTo(PAD+20,ry);x.lineTo(W-PAD-20,ry);x.stroke();}
@@ -2231,7 +2284,7 @@ async function rsXlsx(D){await mxLoad('xlsx');const XL=window.XLSX,N=RSC.length;
   RH.push(12);r++;
   const hdr=r;RSC.forEach((h,i)=>put(i,h[0],{fill:{fgColor:{rgb:'1B4332'}},font:{bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:h[2]==='l'?'left':'center',indent:h[2]==='l'?1:0},border:{top:thin('1B4332'),bottom:thin('1B4332'),left:thin('2D6A4F'),right:thin('2D6A4F')}}));RH.push(30);r++;
   D.groups.forEach(G=>{const vs=G.rows,gr=vs.filter(v=>v.k==='job'||v.k==='wait').length,gn=vs.filter(v=>v.k==='nod').length,gp=vs.filter(v=>v.k==='rep').length;
-    band(0,N-1,G.g+'   ·   '+vs.length+' คัน · พร้อม '+gr+(gn?' · ไม่มีคนขับ '+gn:'')+(gp?' · ซ่อม '+gp:''),{fill:{fgColor:{rgb:'E8F1EB'}},font:{bold:true,sz:12,color:{rgb:'1B4332'}},alignment:{horizontal:'left',indent:1},border:{left:{style:'thick',color:{rgb:'2D6A4F'}},top:thin('D5DED8'),bottom:thin('D5DED8')}});RH.push(24);r++;
+    band(0,N-1,G.g+'   ·   '+(vs.length-vs.filter(v=>v.k==='tail').length)+' คัน · พร้อม '+gr+(gn?' · ไม่มีคนขับ '+gn:'')+(gp?' · ซ่อม '+gp:'')+(vs.some(v=>v.k==='tail')?' · หางสำรอง '+vs.filter(v=>v.k==='tail').length:''),{fill:{fgColor:{rgb:'E8F1EB'}},font:{bold:true,sz:12,color:{rgb:'1B4332'}},alignment:{horizontal:'left',indent:1},border:{left:{style:'thick',color:{rgb:'2D6A4F'}},top:thin('D5DED8'),bottom:thin('D5DED8')}});RH.push(24);r++;
     vs.forEach((R,ri)=>{const st=RS_ST[R.k]||['',  '5D6E63','FFFFFF'],z=R.k==='rep'?{fill:{fgColor:{rgb:'FDF0EF'}}}:ri%2?{fill:{fgColor:{rgb:'F5F9F6'}}}:{},L=Object.assign({},z,{alignment:{horizontal:'left',indent:1}});
       put(0,R.no,Object.assign({},z,{font:{bold:true,color:{rgb:'2D6A4F'}}}));
       put(1,R.plate,Object.assign({},z,{font:{bold:true}}));
