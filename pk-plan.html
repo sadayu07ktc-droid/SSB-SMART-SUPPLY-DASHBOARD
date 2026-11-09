@@ -577,7 +577,7 @@ function navDraw(){
     if(n.sec) return '<div class="nsec">'+esc(n.sec)+'</div>';
     const inner='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAV_IC[n.ic]+'</svg><span class="nav-tx"><b>'+esc(n.t)+(n.tag?'<em class="nw'+(n.tag==='gold'?' gold':'')+'">ใหม่</em>':'')+'</b>'+(n.s?'<small>'+esc(n.s)+'</small>':'')+'</span>';
     /* rel=opener: หน้าระบบเดียวกัน · แท็บใหม่ได้สำเนา sessionStorage ที่จำ PIN ไว้ ไม่ต้องใส่ซ้ำ */
-    return n.url?'<a class="nav-i" title="'+esc(n.t)+' (เปิดแท็บใหม่)" href="'+esc(n.url+uidQ)+'" target="_blank" rel="opener">'+inner+'</a>'
+    return n.url?'<a class="nav-i" title="'+esc(n.t)+' (เปิดแท็บใหม่)" href="'+esc(n.url+uidQ+(uidQ?'&':'?')+'v='+Date.now().toString(36))+'" target="_blank" rel="opener">'+inner+'</a>'
       :'<button type="button" class="nav-i'+(n.on?' on':'')+'" title="'+esc(n.t)+'"'+(n.on?' aria-current="page"':'')+' onclick="'+n.act+'">'+inner+'</button>';
   }).join('');
 }
