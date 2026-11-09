@@ -1352,58 +1352,74 @@ function addWheelPair(grp, x, W, S, mat, dual, r) {
   return dual ? 4 : 2;
 }
 const wheelCount = (type) => 2 + type.beds.reduce((a, b) => a + b.axles.length * (b.dual ? 4 : 2), 0);
-// หัวรถบรรทุก: ด้านข้างทำจากรูปโปรไฟล์ (กระจกหน้าเฉียง) แล้วรีดออกเป็นความกว้างรถ · หันหน้าไปทาง -x
-function addCab(grp, W, S, mat, r) {
-  const cw = W + 10, half = cw / 2, body = new THREE.Group();
+// หัวรถบรรทุกหน้าแบน (cab-over แบบ HINO/ISUZU ที่วิ่งในไทย) · ขนาดตามชนิดรถ · หันหน้าไปทาง -x · ซม. (คูณ S ตอนวาง)
+//   4 ล้อ = หัวเล็ก เตี้ย · 6 ล้อ = หัวกลาง · พ่วง 18 ล้อ = หัวใหญ่ สูง มีสปอยเลอร์หลังคา + ท่อไอเสียตั้ง
+//   ล้อหน้าอยู่ที่ FRONT_AXLE_X เสมอ (ใช้คิดน้ำหนักลงเพลา) → ความยาวหัวต้องคลุมล้อหน้า
+const CAB = { "4w": { L: 150, H: 142, fair: 0, stack: 0 }, "6w": { L: 168, H: 176, fair: 0, stack: 1 }, trailer: { L: 182, H: 198, fair: 64, stack: 1 } };
+function addCab(grp, W, S, mat, r, k) {
+  const P = CAB[k] || CAB["6w"], cw = W + 6, half = cw / 2, L = P.L, Hc = P.H, B = -64, bv = 7, body = new THREE.Group();
+  const paint = keepMat("cabP", () => stdMat({ color: 0x2d6a4f, roughness: 0.38, envMapIntensity: 0.9 })), paintD = keepMat("cabPD", () => stdMat({ color: 0x1f4d38, roughness: 0.45 }));
+  const glass = keepMat("cabG", () => stdMat({ color: 0x1b2a31, roughness: 0.06, metalness: 0.35, envMapIntensity: 1.5 }));
+  const chrome = keepMat("cabC", () => stdMat({ color: 0xd9dfdc, roughness: 0.18, metalness: 0.85, envMapIntensity: 1.2 }));
+  const dark = keepMat("cabK", () => stdMat({ color: 0x2b302d, roughness: 0.6 })), blk = keepMat("cabB", () => stdMat({ color: 0x121413, roughness: 0.85 }));
+  const lamp = keepMat("cabL", () => stdMat({ color: 0xfff7dc, emissive: 0xfff0c0, emissiveIntensity: 0.45, roughness: 0.1, metalness: 0.2 }));
+  const amber = keepMat("cabA", () => stdMat({ color: 0xffa31a, emissive: 0xff8a00, emissiveIntensity: 0.5, roughness: 0.2 }));
+  const gold = keepMat("cabAu", () => stdMat({ color: 0xC9A227, roughness: 0.35, metalness: 0.4 }));
+  const bx = (w, h, d, x, y, z, m) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w * S, h * S, d * S), m); o.position.set(x * S, y * S, z * S); body.add(o); return o; };
+  // ① ตัวห้องโดยสาร: โปรไฟล์ข้าง หน้าแบนเอียงหลังเล็กน้อย มุมบนมน · รีดตามความกว้าง + ลบมุม (bevel) ให้ดูเป็นงานปั๊มเหล็ก
+  const fTop = Hc - 40, fBot = 18, lean = 7;   // หน้ารถ: บนถอยหลัง lean ซม.
   const sh = new THREE.Shape();
-  [[0, -62], [0, 238], [-128, 238], [-168, 150], [-178, 95], [-186, -62]].forEach((p, i) => (i ? sh.lineTo(p[0] * S, p[1] * S) : sh.moveTo(p[0] * S, p[1] * S)));
-  const geo = new THREE.ExtrudeGeometry(sh, { depth: cw * S, bevelEnabled: false });
-  geo.translate(0, 0, -half * S);
-  body.add(new THREE.Mesh(geo, mat(0x2d6a4f)));
-  const glass = mat(0x1d2b33), chrome = mat(0xb9c0bd), dark = mat(0x2a2f2c);
-  // กระจกหน้า (ระนาบตามแนวเฉียง)
-  // แนวเฉียงจาก (-168,150) ขึ้นไป (-128,238) → แผ่นบาง หมุนรอบแกน z ให้แนบเส้นนี้
-  const ws = new THREE.Mesh(new THREE.BoxGeometry(2 * S, (Math.hypot(40, 88) - 8) * S, (cw - 24) * S), glass);
-  ws.rotation.z = -Math.atan2(40, 88); ws.position.set(-149.5 * S, 194 * S, 0); body.add(ws);
-  // หน้าต่างข้าง + เส้นประตู
-  [1, -1].forEach((sd) => {
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(95 * S, 70 * S), glass);
-    win.position.set(-82 * S, 182 * S, sd * (half + 0.6) * S); if (sd < 0) win.rotation.y = Math.PI; body.add(win);
-    const door = new THREE.Mesh(new THREE.BoxGeometry(3 * S, 160 * S, 1 * S), dark);
-    door.position.set(-28 * S, 70 * S, sd * (half + 0.6) * S); body.add(door);
-    const step = new THREE.Mesh(new THREE.BoxGeometry(60 * S, 6 * S, 18 * S), chrome);
-    step.position.set(-80 * S, -40 * S, sd * (half + 6) * S); body.add(step);
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(4 * S, 4 * S, 26 * S), dark);
-    arm.position.set(-150 * S, 175 * S, sd * (half + 12) * S); body.add(arm);
-    const mir = new THREE.Mesh(new THREE.BoxGeometry(6 * S, 40 * S, 16 * S), dark);
-    mir.position.set(-150 * S, 165 * S, sd * (half + 26) * S); body.add(mir);
-    const lamp = new THREE.Mesh(new THREE.BoxGeometry(4 * S, 16 * S, 34 * S), mat(0xfff3c4));
-    lamp.position.set(-187 * S, 22 * S, sd * (half - 34) * S); body.add(lamp);
-  });
-  // ป้ายหน้ารถ "SSB Smart Supply" บนแผงเฉียงใต้กระจกหน้า (เส้น (-178,95) → (-168,150))
-  const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 192;
-  const cx2 = cv.getContext("2d"); cx2.textAlign = "center"; cx2.textBaseline = "middle";
-  cx2.font = "700 112px 'IBM Plex Sans Thai', 'Segoe UI', Arial, sans-serif";
+  [[0, B], [0, Hc - 12], [-12, Hc], [-L + 24, Hc], [-L + 5, Hc - 15], [-L, fTop], [-L - lean, fBot], [-L - lean, B]].forEach((p, i) => (i ? sh.lineTo(p[0] * S, p[1] * S) : sh.moveTo(p[0] * S, p[1] * S)));
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: (cw - bv * 2) * S, bevelEnabled: true, bevelThickness: bv * S, bevelSize: bv * 0.6 * S, bevelSegments: 3, curveSegments: 4 });
+  geo.translate(0, 0, -(half - bv) * S); body.add(new THREE.Mesh(geo, paint));
+  const ang = Math.atan2(lean, fTop - fBot), fx = (y) => -L - 4.5 - lean * Math.min(1, Math.max(0, (fTop - y) / (fTop - fBot)));   // ผิวหน้าที่ระดับ y
+  const onFace = (w, h, d, y, z, m, out) => { const o = bx(d, h, w, fx(y) - (out || 0) - d / 2 + 0.6, y, z, m); if (y > fBot) o.rotation.z = -ang; return o; };
+  // ② กระจกบังลมบานใหญ่ + ยางขอบดำ + ใบปัดน้ำฝน
+  const wsT = Hc - 30, wsB = Math.round(Hc * 0.5), wsY = (wsT + wsB) / 2, wsH = wsT - wsB, wsW = cw - 30;
+  onFace(wsW + 8, wsH + 8, 2, wsY, 0, blk); onFace(wsW, wsH, 2.2, wsY, 0, glass, 0.4);
+  [-1, 1].forEach((s) => { const w = onFace(wsW * 0.4, 2.5, 2, wsB + 6, s * wsW * 0.22, blk, 1.6); w.rotation.x = s * 0.12; });
+  // ③ บังแดดหน้ากระจก + ไฟราวหลังคาสีส้ม (รถบรรทุกไทยมีเกือบทุกคัน)
+  bx(16, 6, cw - 14, -L - 2, Hc - 18, 0, paintD);
+  for (let i = 0; i < 5; i++) bx(4, 4, 9, -L - 8, Hc - 13, (i - 2) * (cw - 50) / 4, amber);
+  // ④ แผงหน้าใต้กระจก: ป้าย SSB Smart Supply · กระจังดำซี่โครเมียม · ไฟหน้า + ไฟเลี้ยว · กันชน
+  const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 160;
+  const cx2 = cv.getContext("2d"); cx2.textBaseline = "middle"; cx2.font = "700 104px " + FONT;
   const t1 = "SSB ", t2 = "Smart Supply", w1 = cx2.measureText(t1).width, w2 = cx2.measureText(t2).width, sx = 512 - (w1 + w2) / 2;
-  cx2.textAlign = "left"; cx2.fillStyle = "#C9A227"; cx2.fillText(t1, sx, 100); cx2.fillStyle = "#ffffff"; cx2.fillText(t2, sx + w1, 100);
+  cx2.fillStyle = "#E1BE45"; cx2.fillText(t1, sx, 84); cx2.fillStyle = "#ffffff"; cx2.fillText(t2, sx + w1, 84);
   const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
-  const n = new THREE.Vector3(-55, 10, 0).normalize();
-  const badge = new THREE.Mesh(new THREE.PlaneGeometry((cw - 50) * S, (cw - 50) * S * 192 / 1024), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
-  badge.rotation.order = "YXZ"; badge.rotation.y = -Math.PI / 2; badge.rotation.x = -Math.atan2(10, 55);   // หันหน้าออก -x แล้วเอนตามแผง ไม่หมุนเอียง
-  badge.position.set((-173.1 + n.x * 1.2) * S, (122 + n.y * 1.2) * S, 0); body.add(badge);
-  const grill = new THREE.Mesh(new THREE.BoxGeometry(4 * S, 80 * S, (cw - 110) * S), dark);
-  grill.position.set(-185 * S, 40 * S, 0); body.add(grill);
-  for (let k = 0; k < 5; k++) { const bar = new THREE.Mesh(new THREE.BoxGeometry(5 * S, 4 * S, (cw - 116) * S), chrome); bar.position.set(-186 * S, (10 + k * 15) * S, 0); body.add(bar); }
-  const bump = new THREE.Mesh(new THREE.BoxGeometry(16 * S, 30 * S, (cw + 6) * S), chrome);
-  bump.position.set(-190 * S, -45 * S, 0); body.add(bump);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(90 * S, 26 * S, (cw - 40) * S), mat(0x24573f));
-  roof.position.set(-60 * S, 251 * S, 0); body.add(roof);
-  const exh = new THREE.Mesh(new THREE.CylinderGeometry(7 * S, 7 * S, 230 * S, 12), chrome);
-  exh.position.set(6 * S, 120 * S, (half - 14) * S); body.add(exh);
-  const tank = new THREE.Mesh(new THREE.CylinderGeometry(26 * S, 26 * S, 90 * S, 18), chrome);
-  tank.rotation.z = Math.PI / 2; tank.position.set(60 * S, -40 * S, -(half - 30) * S); body.add(tank);
+  const bw = Math.min(cw - 60, 190), badge = new THREE.Mesh(new THREE.PlaneGeometry(bw * S, bw * S * 160 / 1024), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  const by = wsB - 20; badge.rotation.order = "YXZ"; badge.rotation.y = -Math.PI / 2; badge.rotation.x = -ang; badge.position.set((fx(by) - 0.9) * S, by * S, 0); body.add(badge);
+  const gH = Math.max(26, by - 30 - fBot), gY = fBot + 6 + gH / 2 - 14, gW = cw - 120;
+  onFace(gW, gH, 2, gY, 0, blk); for (let i = 0; i < 4; i++) onFace(gW - 10, 3, 2.4, gY - gH / 2 + 6 + i * (gH - 12) / 3, 0, chrome, 0.5);
+  [-1, 1].forEach((s) => { onFace(44, 20, 3, -4, s * (half - 34), lamp); onFace(14, 20, 3, -4, s * (half - 6), amber); onFace(58, 26, 1.5, -4, s * (half - 30), dark, -0.6); });
+  bx(24, 30, cw + 6, -L - lean - 10, B + 15, 0, dark);   // กันชน
+  bx(25, 4, cw + 6, -L - lean - 10, B + 26, 0, chrome);
+  [-1, 1].forEach((s) => bx(4, 8, 22, -L - lean - 22.5, B + 12, s * (half - 26), lamp));   // ไฟตัดหมอก
+  // ⑤ ด้านข้าง: กระจกประตู · ร่องประตู · มือจับ · บันได · กระจกมองข้างบานใหญ่ · แถบทองแบรนด์ · ซุ้มล้อดำ
+  const doorF = -L + 18, doorR = -24;
+  [1, -1].forEach((sd) => {
+    const z = sd * (half + 0.7), rotY = sd < 0 ? Math.PI : 0;
+    const win = new THREE.Mesh(new THREE.PlaneGeometry((doorR - doorF - 14) * S, (Hc * 0.3) * S), glass); win.position.set(((doorF + doorR) / 2) * S, (wsB + wsH * 0.45) * S, z * S); win.rotation.y = rotY; body.add(win);
+    bx(doorR - doorF, 2, 1.2, (doorF + doorR) / 2, B + 6, z, blk); bx(2, Hc - B - 30, 1.2, doorR, (Hc + B) / 2 - 8, z, blk); bx(2, Hc - B - 30, 1.2, doorF, (Hc + B) / 2 - 8, z, blk);
+    bx(14, 3, 2, doorR - 16, wsB - 14, sd * (half + 1.5), chrome);
+    bx(50, 5, 18, (doorF + doorR) / 2, B - 6, sd * (half + 4), chrome);   // บันไดขึ้นหัว
+    const st = new THREE.Mesh(new THREE.PlaneGeometry((L - 20) * S, 9 * S), gold); st.position.set((-L / 2 - 4) * S, (wsB - 34) * S, (z + sd * 0.2) * S); st.rotation.y = rotY; body.add(st);
+    bx(3, 3, 30, -L - 2, wsT - 6, sd * (half + 14), dark); bx(3, 3, 3, -L - 2, wsT - 30, sd * (half + 28), dark);
+    bx(7, 54, 20, -L - 6, wsY - 6, sd * (half + 32), dark); bx(7.4, 48, 16, -L - 9.8, wsY - 6, sd * (half + 32), glass);   // กระจกมองข้าง
+    const arch = new THREE.Mesh(new THREE.CircleGeometry((r + 9) * S, 20, 0, Math.PI), blk);
+    arch.position.set((FRONT_AXLE_X + 12) * S, -(100 - r) * S, (z + sd * 0.3) * S); arch.rotation.y = rotY; body.add(arch);
+  });
+  // ⑥ หัวใหญ่ (พ่วง): สปอยเลอร์หลังคา + ท่อไอเสียตั้ง · หัวกลางก็มีท่อตั้ง · ถังน้ำมันข้างแชสซี
+  if (P.fair) {
+    const fs = new THREE.Shape(); [[-6, Hc], [-L + 48, Hc], [-L + 62, Hc + 10], [-14, Hc + P.fair], [-6, Hc + P.fair]].forEach((p, i) => (i ? fs.lineTo(p[0] * S, p[1] * S) : fs.moveTo(p[0] * S, p[1] * S)));
+    const fg = new THREE.ExtrudeGeometry(fs, { depth: (cw - 34) * S, bevelEnabled: true, bevelThickness: 4 * S, bevelSize: 3 * S, bevelSegments: 2 }); fg.translate(0, 0, -((cw - 34) / 2) * S); body.add(new THREE.Mesh(fg, paint));
+  }
+  if (P.stack) { const ex = new THREE.Mesh(new THREE.CylinderGeometry(6 * S, 6 * S, (Hc + 40) * S, 14), chrome); ex.position.set(6 * S, ((Hc + 40) / 2 - 30) * S, (half - 16) * S); body.add(ex);
+    bx(6, 30, 12, 6, Hc + 2, half - 16, dark); }
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(24 * S, 24 * S, 80 * S, 20), chrome); tank.rotation.z = Math.PI / 2; tank.position.set(60 * S, -42 * S, -(half - 30) * S); body.add(tank);
+  bx(12, 8, cw - 10, 6, B + 4, 0, dark);
   body.position.set(-12 * S, 0, 0); grp.add(body);
-  addWheelPair(grp, -120 * S, W, S, mat, false, r);   // เพลาหน้า ล้อเดี่ยว
+  addWheelPair(grp, FRONT_AXLE_X * S, W, S, mat, false, r);   // เพลาหน้า ล้อเดี่ยว
 }
 // ป้ายน้ำหนักลงเพลา: ตัวหนังสือ HTML ลอยทับภาพ (คมชัด ขนาดคงที่ทุกระยะซูม) ตามตำแหน่งเหนือเพลา + เส้นชี้ลงล้อใน 3D
 //   เขียว ≤90% · เหลือง ≤100% · แดง เกินพิกัด
@@ -1584,7 +1600,7 @@ function draw3D() {
   let x0 = 0; const bedX = [];
   type.beds.forEach((b) => { bedX.push(x0); x0 += b.L + gap; });
   const totalL = x0 - gap, W = Math.max(...type.beds.map((b) => b.W));
-  addCab(grp, W, S, mat, type.r);
+  addCab(grp, W, S, mat, type.r, type.k);
   addYard(grp, S, -200, totalL, W, (t.dcs || [t.dc]).filter(Boolean).map((c) => ({ code: c, n: (A.dc[c] || {}).n || "" })));
   addForklift(grp, totalL * 0.62, -(W / 2 + 235), Math.PI / 2, S);
   const deck = keepMat("deck", () => stdMat({ map: cvTex("deck", 256, 256, paintDeck, 3, 2), roughness: 0.75 })), wood = keepMat("wood", () => stdMat({ map: cvTex("wood", 256, 256, paintWood), roughness: 0.85 }));

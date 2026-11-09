@@ -987,6 +987,222 @@ async function openMallExport(){if(!MJ.some(j=>j.stops.length)){toast('ยัง
   ov.onclick=e=>{if(e.target===ov){close();return;}const b=e.target.closest('[data-mx]');if(!b)return;if(b.dataset.mx==='close')close();else if(b.dataset.mx==='reset'){ft.value=MFOOT_DEF.join('\n');MX.foot=ft.value;try{localStorage.removeItem('pk_mall_foot');}catch(x){}prev();}else mxGo(b.dataset.mx,b);};
   ov.querySelector('[data-mx="jpg"]').focus();prev();}
 
+/* ---------- ใบแจ้งงานแพลนรวม (รูป JPEG · PDF · Excel) · ธีมเดียวกับใบแจ้งงานห้าง · ข้อมูลตรงกับตัวกรอง/คำค้นบนจอ ---------- */
+const PX={jobs:true};
+/* คอลัมน์: หัว · กว้าง(px ในรูป) · จัดชิด · กว้าง Excel · ระดับ (r = ต่อคัน ผสานแนวตั้ง · s = ต่อจุดส่ง) */
+const PXC=[['ลำดับ',60,'c',6,'r'],['ทะเบียนรถ',178,'c',17,'r'],['คนขับ',190,'l',20,'r'],['ลูกค้า / จุดส่ง',300,'l',32,'s'],['ประเภท',100,'c',9,'s'],['จังหวัด',110,'c',11,'s'],
+  ['เวลาลง',104,'c',10,'s'],['พาเลท',112,'c',11,'s'],['ลัง',100,'c',10,'s'],['ค่าลง (บ.)',116,'c',11,'s'],['เด็กรถ',214,'l',24,'r'],['นัดเด็กรถ',104,'c',10,'r'],['หมายเหตุ',258,'l',28,'r']];
+const PSTAT={rep:'ซ่อม',off:'งดวิ่ง',tail:'หางสำรอง',nod:'รถสแปร์ · ไม่มีคนขับ',wait:'ว่าง · รอมีงาน'};
+const PFL={job:'มีงาน',wait:'รอมีงาน',nod:'ไม่มีคนขับ',rep:'ซ่อม',tail:'หางสำรอง'};
+function planSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=!isNaN(dt);let no=0;const groups=[];
+  ['4 ล้อ','6 ล้อ','10/22 ล้อ'].forEach(g=>{const rows=[];
+    VEH.filter(v=>v.g===g).filter(visible).forEach(v=>{const p=PLAN[v.head],k=kind(v);if(PX.jobs&&k!=='job')return;
+      const dv=drvOf(p.driver),S=p.status==='ready'?p.stops:[];
+      const hl=(p.helpers||[]).map(x=>{const hh=helpOf(x);return hh?{t:hh.nick||hh.name,ph:hh.phone||''}:{t:String(x),ph:''};});
+      if(p.out)hl.push({t:'เด็กนอก '+p.out+' คน',ph:''});
+      const pls=v.plate.split(',').map(s=>s.trim()).filter(Boolean);
+      rows.push({no:++no,plate:pls.join(' / '),pls,shape:[BRAND[v.head],v.shape].filter(Boolean).join(' · '),
+        drv:v.tail?'':dv?dv.name:'',k,status:k==='job'?'':(PSTAT[k]||'')+((k==='rep'||k==='off')&&p.reason?' · '+p.reason:''),
+        stops:S.map(s=>({n:s.n,ty:tyOf(s),pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:feeOf(v,s)||0})),
+        hl,ht:/^[0-9]{1,2}[:.][0-9]{2}$/.test(String(p.htime||'').trim())?tmTH(String(p.htime).trim()):String(p.htime||'').trim(),note:String(p.note||'').trim()});});
+    if(rows.length)groups.push({g,rows});});
+  const rows=groups.flatMap(x=>x.rows),sum=k=>rows.reduce((a,r)=>a+r.stops.reduce((b,s)=>b+s[k],0),0),job=rows.filter(r=>r.k==='job');
+  const dd=ok?String(dt.getDate()).padStart(2,'0')+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+dt.getFullYear():'';
+  const filt=[FILTER!=='all'?'เฉพาะ '+PFL[FILTER]:'',Q?'ค้นหา “'+Q+'”':''].filter(Boolean).join(' · ');
+  return {iso,dd,groups,rows,nJob:job.length,nDrv:new Set(job.map(r=>r.drv).filter(Boolean)).size,pal:sum('pal'),cs:sum('cs'),fee:sum('fee'),
+    filt,foot:mxFoot().split('\n').map(s=>s.trim()).filter(Boolean)};}
+async function drawPlanSheet(D){
+  try{await document.fonts.load('700 22px "IBM Plex Sans Thai"');await document.fonts.load('500 20px "IBM Plex Sans Thai"');await document.fonts.load('700 40px "Anuphan"');await document.fonts.ready;}catch(e){}
+  const C={bg:'#EEF3EF',ink:'#14261C',sub:'#5D6E63',line:'#E1E8E3',g1:'#1B4332',g2:'#2D6A4F',gold:'#C9A227',goldL:'#E9CF6E',zebra:'#F6FAF7',
+    blue:'#1E4FA3',orange:'#B45309',orangeBg:'#FDF1E3',amber:'#8A5A00',amberBg:'#FFF4D6',red:'#B42318',redBg:'#FDECEC',grp:'#E8F1EB'};
+  const PAD=32,GAP=22,TW=PXC.reduce((a,c)=>a+c[1],0),W=TW+PAD*2,LH=48,FL=27,HEAD=132,KH=108,TH=56,GH=46,TOT=58;
+  const F=(w,s,disp)=>w+' '+s+'px '+(disp?'"Anuphan", ':'')+'"IBM Plex Sans Thai", sans-serif';
+  const meas=document.createElement('canvas').getContext('2d');
+  const X=[];PXC.reduce((a,c)=>{X.push(a);return a+c[1];},PAD);
+  const lay=D.rows.map(r=>{meas.font=F('500',18);const nl=mxWrap(meas,r.note,PXC[12][1]-28);meas.font=F('700',19);const dl=mxWrap(meas,r.drv,PXC[2][1]-24);
+    const sl=r.stops.map(s=>mxWrap(meas,s.n,PXC[3][1]-24)),sh=sl.map(a=>Math.max(LH,a.length*FL+20));
+    const base=sh.reduce((a,b)=>a+b,0)||LH,h=Math.max(base,Math.max(nl.length,dl.length,r.hl.length)*FL+26,(r.shape?82:LH)+(r.pls.length-1)*24);
+    if(h>base&&sh.length){const ex=(h-base)/sh.length;sh.forEach((v,i)=>sh[i]=v+ex);}return {r,nl,dl,sl,sh,h};});
+  meas.font=F('600',21);const fl=D.foot.map(t=>({red:/^!!/.test(t),ls:mxWrap(meas,t.replace(/^!!\s*/,''),TW-110)}));
+  const bodyH=lay.reduce((a,l)=>a+l.h,0)+D.groups.length*GH,FOOT=fl.length?fl.reduce((a,f)=>a+f.ls.length*34+(f.red?22:12),0)+40:0;
+  const H=PAD+HEAD+GAP+KH+GAP+TH+bodyH+TOT+(FOOT?GAP+FOOT:0)+56;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+  const RR=(bx,by,bw,bh,r)=>{x.beginPath();x.moveTo(bx+r,by);x.arcTo(bx+bw,by,bx+bw,by+bh,r);x.arcTo(bx+bw,by+bh,bx,by+bh,r);x.arcTo(bx,by+bh,bx,by,r);x.arcTo(bx,by,bx+bw,by,r);x.closePath();};
+  const card=(bx,by,bw,bh,r,fill)=>{x.save();x.shadowColor='rgba(20,38,28,.10)';x.shadowBlur=18;x.shadowOffsetY=4;x.fillStyle=fill;RR(bx,by,bw,bh,r);x.fill();x.restore();};
+  const fit=(s,max)=>{s=String(s==null?'':s);while(x.measureText(s).width>max&&s.length>2)s=s.slice(0,-2)+'…';return s;};
+  const txt=(t,bx,bw,cy,al,col,font,pad)=>{pad=pad==null?12:pad;x.font=font;x.fillStyle=col;x.textAlign=al==='l'?'left':al==='r'?'right':'center';x.textBaseline='middle';
+    x.fillText(fit(t,bw-pad*2),al==='l'?bx+pad:al==='r'?bx+bw-pad:bx+bw/2,cy);};
+  const pill=(t,cx,cy,font,fg,bg,al,maxW,alpha)=>{x.font=font;const s=fit(t,(maxW||400)-24),w=x.measureText(s).width+24,h=32,bx=al==='l'?cx:cx-w/2;
+    x.save();if(alpha)x.globalAlpha=alpha;x.fillStyle=bg;RR(bx,cy-h/2,w,h,h/2);x.fill();x.restore();x.fillStyle=fg;x.textAlign='left';x.textBaseline='middle';x.fillText(s,bx+12,cy+1);return w;};
+  x.fillStyle=C.bg;x.fillRect(0,0,W,H);
+  let y=PAD;
+  /* ① หัว */
+  x.save();RR(PAD,y,TW,HEAD,22);x.clip();const gr=x.createLinearGradient(PAD,0,PAD+TW,0);gr.addColorStop(0,C.g1);gr.addColorStop(1,C.g2);x.fillStyle=gr;x.fillRect(PAD,y,TW,HEAD);
+  x.fillStyle=C.gold;x.fillRect(PAD,y+HEAD-7,TW,7);x.restore();
+  x.textBaseline='alphabetic';x.textAlign='left';x.fillStyle=C.goldL;x.font=F('700',18);x.fillText('SSB SMART SUPPLY  ·  PACKING  ·  แพลนรวม'+(D.filt?'  ·  '+D.filt:''),PAD+34,y+44);
+  x.fillStyle='#FFFFFF';x.font=F('700',48,1);x.fillText('ใบแจ้งงานรถ PK',PAD+32,y+100);
+  const dt=new Date(D.iso+'T00:00:00'),dOK=!isNaN(dt);
+  if(dOK){const dw=430,dx=PAD+TW-dw-28,dy=y+22,dh=HEAD-50;x.fillStyle='rgba(255,255,255,.12)';RR(dx,dy,dw,dh,16);x.fill();x.strokeStyle='rgba(233,207,110,.65)';x.lineWidth=2;x.stroke();
+    x.textAlign='right';x.fillStyle=C.goldL;x.font=F('700',17);x.fillText('วันส่งของ · วัน'+DOW[dt.getDay()],dx+dw-22,dy+30);
+    x.fillStyle='#FFFFFF';x.font=F('700',40,1);x.fillText(D.dd,dx+dw-22,dy+dh-14);
+    x.textAlign='left';x.font=F('700',36);x.fillText('📅',dx+22,dy+dh/2+14);}
+  y+=HEAD+GAP;
+  /* ② การ์ดสรุป */
+  const kp=[['🚚','รถมีงาน',D.nJob+' คัน · คนขับ '+D.nDrv,'#1E6FD9','#E6F0FC'],['🧱','พาเลทรวม',comma(D.pal)+' พาเลท','#B7791F','#FFF4D6'],
+    ['📦','ลังรวม',comma(D.cs)+' ลัง','#7C3AED','#F1EAFE'],['💵','ค่าลงสินค้ารวม',comma(D.fee)+' บาท','#2D6A4F','#E3F1E8']];
+  const kw=(TW-GAP*3)/4;
+  kp.forEach(([ic,l,v,col,bg],i)=>{const bx=PAD+i*(kw+GAP);card(bx,y,kw,KH,18,'#FFFFFF');x.fillStyle=col;RR(bx,y,8,KH,4);x.fill();
+    x.fillStyle=bg;x.beginPath();x.arc(bx+58,y+KH/2,30,0,Math.PI*2);x.fill();x.font=F('500',28);x.textAlign='center';x.textBaseline='middle';x.fillStyle=col;x.fillText(ic,bx+58,y+KH/2+2);
+    x.textAlign='left';x.textBaseline='alphabetic';x.fillStyle=C.sub;x.font=F('600',18);x.fillText(l,bx+104,y+40);
+    x.fillStyle=col;x.font=F('700',i?34:30,1);x.fillText(fit(v,kw-120),bx+104,y+84);});
+  y+=KH+GAP;
+  /* ③ ตาราง: แบ่งกลุ่มตามขนาดรถ */
+  const tabH=TH+bodyH+TOT;card(PAD,y,TW,tabH,18,'#FFFFFF');x.save();RR(PAD,y,TW,tabH,18);x.clip();
+  x.fillStyle=C.g1;x.fillRect(PAD,y,TW,TH);
+  PXC.forEach((c,i)=>txt(c[0],X[i],c[1],y+TH/2+1,c[2]==='l'?'l':'c','#FFFFFF',F('700',18),c[2]==='l'?12:4));
+  y+=TH;const brk=[y];let li=0;
+  D.groups.forEach(G=>{
+    x.fillStyle=C.grp;x.fillRect(PAD,y,TW,GH);x.fillStyle=C.g2;x.fillRect(PAD,y,6,GH);
+    x.textAlign='left';x.textBaseline='middle';x.font=F('700',20);x.fillStyle=C.g1;x.fillText(G.g,PAD+24,y+GH/2+1);
+    const gw=x.measureText(G.g).width;x.font=F('600',17);x.fillStyle=C.sub;x.fillText('·  '+G.rows.length+' คัน',PAD+36+gw,y+GH/2+1);
+    y+=GH;
+    G.rows.forEach((r,ri)=>{const L=lay[li++],cy=y+L.h/2;let sy=y;
+      if(ri%2){x.fillStyle=C.zebra;x.fillRect(PAD,y,TW,L.h);}
+      if(ri){x.fillStyle=C.line;x.fillRect(PAD,y,TW,1.5);}
+      x.fillStyle='#E3F1E8';x.beginPath();x.arc(X[0]+PXC[0][1]/2,cy,18,0,Math.PI*2);x.fill();txt(r.no,X[0],PXC[0][1],cy+1,'c',C.g1,F('700',18),0);
+      {const ex=r.pls.length-1,top=cy-((r.shape?34:0)+ex*24)/2;pill(r.pls[0]||'',X[1]+PXC[1][1]/2,top,F('700',18),C.ink,'#EDF2EF','c',PXC[1][1]);   /* ทะเบียนหัว = ป้าย · หาง = บรรทัดรอง */
+        r.pls.slice(1).forEach((p,i)=>txt('หาง '+p,X[1],PXC[1][1],top+28+i*24,'c',C.ink,F('700',16),6));
+        if(r.shape)txt(r.shape,X[1],PXC[1][1],top+28+ex*24+(ex?6:0),'c',C.sub,F('500',14),6);}
+      if(r.drv)L.dl.forEach((t,i)=>txt(t,X[2],PXC[2][1],cy+(i-(L.dl.length-1)/2)*FL+1,'l',C.ink,F('700',19)));
+      else txt('—',X[2],PXC[2][1],cy,'l',C.sub,F('500',18));
+      if(!r.stops.length){const bad=r.k==='rep';pill(r.status||'—',X[3]+12,cy,F('700',17),bad?C.red:r.k==='wait'?C.g2:C.orange,bad?C.redBg:r.k==='wait'?'#E3F1E8':C.orangeBg,'l',X[10]-X[3]);}
+      r.stops.forEach((s,k)=>{const rh=L.sh[k],scy=sy+rh/2+1;
+        if(k){x.strokeStyle=C.line;x.setLineDash([5,5]);x.lineWidth=1.5;x.beginPath();x.moveTo(X[3]+10,sy);x.lineTo(X[10]-10,sy);x.stroke();x.setLineDash([]);}
+        L.sl[k].forEach((t,i)=>txt(t,X[3],PXC[3][1],scy+(i-(L.sl[k].length-1)/2)*FL,'l',C.ink,F('700',19)));
+        const tc=TYC[s.ty]||C.sub;pill(s.ty,X[4]+PXC[4][1]/2,scy,F('700',15),tc,tc,'c',PXC[4][1],.14);
+        txt(s.pv||'-',X[5],PXC[5][1],scy,'c',C.sub,F('500',18));
+        txt(s.at||'-',X[6],PXC[6][1],scy,'c',s.at?C.blue:C.sub,F('700',19));
+        if(s.pal){x.font=F('700',20);const a=comma(s.pal),wa=x.measureText(a).width;x.font=F('500',15);const wb=x.measureText(' พาเลท').width,sx=X[7]+(PXC[7][1]-wa-wb)/2;
+          x.textAlign='left';x.textBaseline='middle';x.fillStyle=C.ink;x.font=F('700',20);x.fillText(a,sx,scy);x.fillStyle=C.sub;x.font=F('500',15);x.fillText(' พาเลท',sx+wa,scy+1);}
+        else txt('-',X[7],PXC[7][1],scy,'c',C.sub,F('500',18));
+        txt(s.cs?comma(s.cs):'-',X[8],PXC[8][1],scy,'c',s.cs?C.ink:C.sub,F('700',20));
+        if(s.fee)pill(comma(s.fee),X[9]+PXC[9][1]/2,scy,F('700',17),C.amber,C.amberBg,'c',PXC[9][1]);else txt('-',X[9],PXC[9][1],scy,'c',C.sub,F('500',18));
+        sy+=rh;});
+      /* เด็กรถ: ชื่อเล่นตัวหนา + เบอร์สีเทา */
+      r.hl.forEach((h,i)=>{const ly=cy+(i-(r.hl.length-1)/2)*FL+1;x.textAlign='left';x.textBaseline='middle';x.font=F('700',18);x.fillStyle=C.ink;
+        const nm=fit(h.t,PXC[10][1]-24-(h.ph?110:0));x.fillText(nm,X[10]+12,ly);if(h.ph){const w=x.measureText(nm+' ').width;x.font=F('500',15);x.fillStyle=C.sub;x.fillText(fit(h.ph,PXC[10][1]-24-w),X[10]+12+w,ly+1);}});
+      if(!r.hl.length)txt('—',X[10],PXC[10][1],cy,'l',C.sub,F('500',18));
+      txt(r.ht||'-',X[11],PXC[11][1],cy,'c',r.ht?C.blue:C.sub,F('700',18));
+      L.nl.forEach((t,i)=>txt(t,X[12],PXC[12][1],cy+(i-(L.nl.length-1)/2)*FL+1,'l','#3F4F45',F('500',18)));
+      y+=L.h;brk.push(y);});
+  });
+  x.fillStyle='#E3F1E8';x.fillRect(PAD,y,TW,TOT);x.fillStyle=C.g2;x.fillRect(PAD,y,TW,2.5);
+  txt('รวม '+D.rows.length+' คัน'+(D.nJob!==D.rows.length?' (มีงาน '+D.nJob+')':''),X[0],X[7]-X[0],y+TOT/2+1,'r',C.g1,F('700',21),24);
+  txt(comma(D.pal)+' พาเลท',X[7],PXC[7][1],y+TOT/2+1,'c',C.g1,F('700',20),4);
+  txt(comma(D.cs)+' ลัง',X[8],PXC[8][1],y+TOT/2+1,'c',C.g1,F('700',20),4);
+  txt(comma(D.fee)+' บ.',X[9],PXC[9][1],y+TOT/2+1,'c',C.g1,F('700',20),4);
+  x.restore();y+=TOT;brk.push(y);
+  /* ④ ท้ายใบ */
+  if(fl.length){y+=GAP;card(PAD,y,TW,FOOT,18,'#FFFFFF');let fy=y+20;
+    fl.forEach(f=>{const bh=f.ls.length*34+(f.red?10:0);
+      if(f.red){x.fillStyle=C.redBg;RR(PAD+16,fy,TW-32,bh+4,12);x.fill();}
+      f.ls.forEach((s,i)=>{const ly=fy+(f.red?7:0)+i*34+17;let lx=PAD+(f.red?40:36);x.textBaseline='middle';x.textAlign='left';
+        if(i===0){x.font=F('700',20);x.fillStyle=f.red?C.red:C.g2;x.fillText(f.red?'⚠':'☎',lx,ly);}lx+=40;
+        s.split(/(0\d{1,2}-\d{3}-\d{4})/).forEach(part=>{if(!part)return;const ph=/^0\d{1,2}-\d{3}-\d{4}$/.test(part);
+          x.font=F(ph||f.red?'700':'600',21);x.fillStyle=f.red?C.red:ph?C.g1:C.ink;x.fillText(part,lx,ly);lx+=x.measureText(part).width;});});
+      fy+=bh+(f.red?22:12);});
+    y+=FOOT;}
+  const now=new Date();x.font=F('500',15);x.fillStyle='#8A978F';x.textAlign='right';x.textBaseline='alphabetic';
+  x.fillText('SSB Smart Supply · แพลนรวม · สร้าง '+now.getDate()+'/'+(now.getMonth()+1)+'/'+(now.getFullYear()+543)+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+' น.',W-PAD,H-22);
+  cv._brk=brk;return cv;}
+async function pxPdf(D){await mxLoad('jspdf');const cv=await drawPlanSheet(D);const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'landscape',unit:'pt',format:'a4'}),PW=841.89,PH=595.28,M=22,sc=(PW-M*2)/cv.width,maxH=(PH-M*2)/sc;
+  const cuts=[0];let from=0;const b=cv._brk||[];
+  while(cv.height-from>maxH){let c=b.filter(v=>v>from+40&&v-from<=maxH).pop();if(!c)c=from+maxH;cuts.push(c);from=c;}cuts.push(cv.height);
+  for(let i=0;i<cuts.length-1;i++){const h=cuts[i+1]-cuts[i],pc=document.createElement('canvas');pc.width=cv.width;pc.height=h;
+    const px=pc.getContext('2d');px.fillStyle='#fff';px.fillRect(0,0,pc.width,h);px.drawImage(cv,0,cuts[i],cv.width,h,0,0,cv.width,h);
+    if(i)pdf.addPage();pdf.addImage(pc.toDataURL('image/jpeg',.92),'JPEG',M,M,cv.width*sc,h*sc);
+    pdf.setFontSize(9);pdf.setTextColor(140);pdf.text((i+1)+' / '+(cuts.length-1),PW-M,PH-10,{align:'right'});}
+  return new Blob([pdf.output('arraybuffer')],{type:'application/octet-stream'});}
+async function pxXlsx(D){await mxLoad('xlsx');const XL=window.XLSX,N=PXC.length;
+  const thin=c=>({style:'thin',color:{rgb:c}}),grid={top:thin('D5DED8'),bottom:thin('D5DED8'),left:thin('D5DED8'),right:thin('D5DED8')};
+  const SX=o=>{const b={font:{name:'Tahoma',sz:11,color:{rgb:'1F2A24'}},alignment:{vertical:'center',horizontal:'center',wrapText:true},border:grid};
+    o=o||{};return Object.assign(b,o,{font:Object.assign({},b.font,o.font||{}),alignment:Object.assign({},b.alignment,o.alignment||{})});};
+  const ws={},M=[],RH=[];let r=0;
+  const put=(c,v,s,z)=>{const cell={v:v==null?'':v,t:typeof v==='number'?'n':'s',s:SX(s)};if(z)cell.z=z;ws[XL.utils.encode_cell({r,c})]=cell;};
+  const band=(c1,c2,v,s,z)=>{for(let c=c1;c<=c2;c++)put(c,c===c1?v:'',s,c===c1?z:null);if(c2>c1)M.push({s:{r,c:c1},e:{r,c:c2}});};
+  const dt=new Date(D.iso+'T00:00:00'),day=isNaN(dt)?'':'วัน'+DOW[dt.getDay()],now=new Date();
+  band(0,N-1,'ใบแจ้งงานรถ PK (แพลนรวม)   ·   '+day+' ที่ '+D.dd,{fill:{fgColor:{rgb:'1B4332'}},font:{sz:18,bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:'left',indent:1},border:{}});RH.push(38);r++;
+  band(0,N-1,'SSB Smart Supply · Packing   |   แพลนรวม'+(D.filt?' · '+D.filt:'')+'   |   สร้าง '+now.getDate()+'/'+(now.getMonth()+1)+'/'+(now.getFullYear()+543)+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+' น.',
+    {fill:{fgColor:{rgb:'2D6A4F'}},font:{sz:10,bold:true,color:{rgb:'E9CF6E'}},alignment:{horizontal:'left',indent:1},border:{bottom:{style:'medium',color:{rgb:'C9A227'}}}});RH.push(20);r++;
+  RH.push(10);r++;
+  const KB=[[0,2,'รถมีงาน',D.nJob+' คัน · คนขับ '+D.nDrv+' คน',null,'1E6FD9','E6F0FC'],[3,5,'พาเลทรวม',D.pal,'#,##0" พาเลท"','B7791F','FFF4D6'],[6,8,'ลังรวม',D.cs,'#,##0" ลัง"','7C3AED','F1EAFE'],[9,12,'ค่าลงสินค้ารวม',D.fee,'#,##0" บาท"','2D6A4F','E3F1E8']];
+  const kb=(top,bot,col)=>{const o={left:{style:'thick',color:{rgb:col}}};if(top)o.top=thin('FFFFFF');if(bot)o.bottom=thin('FFFFFF');return o;};
+  KB.forEach(([a,b,l,,,col,bg])=>band(a,b,l,{fill:{fgColor:{rgb:bg}},font:{sz:10,bold:true,color:{rgb:'5D6E63'}},alignment:{horizontal:'left',indent:1,vertical:'bottom'},border:kb(1,0,col)}));RH.push(20);r++;
+  KB.forEach(([a,b,,v,z,col,bg])=>band(a,b,v,{fill:{fgColor:{rgb:bg}},font:{sz:16,bold:true,color:{rgb:col}},alignment:{horizontal:'left',indent:1,vertical:'top'},border:kb(0,1,col)},z));RH.push(30);r++;
+  RH.push(12);r++;
+  const hdr=r;PXC.forEach((c,i)=>put(i,c[0],{fill:{fgColor:{rgb:'1B4332'}},font:{bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:c[2]==='l'?'left':'center',indent:c[2]==='l'?1:0},border:{top:thin('1B4332'),bottom:thin('1B4332'),left:thin('2D6A4F'),right:thin('2D6A4F')}}));RH.push(30);r++;
+  const r0=r,lnN=(s,w)=>Math.max(1,Math.ceil(String(s||'').length/(w*1.1))),RC=[0,1,2,10,11,12];
+  D.groups.forEach(G=>{band(0,N-1,G.g+'   ·   '+G.rows.length+' คัน',{fill:{fgColor:{rgb:'E8F1EB'}},font:{bold:true,sz:12,color:{rgb:'1B4332'}},alignment:{horizontal:'left',indent:1},border:{left:{style:'thick',color:{rgb:'2D6A4F'}},top:thin('D5DED8'),bottom:thin('D5DED8')}});RH.push(24);r++;
+    G.rows.forEach((R,ri)=>{const k=Math.max(1,R.stops.length),top=r,z=ri%2?{fill:{fgColor:{rgb:'F5F9F6'}}}:{},L=Object.assign({},z,{alignment:{horizontal:'left',indent:1}});
+      const hs=R.hl.map(h=>h.t+(h.ph?'  '+h.ph:'')).join('\n');
+      const need=Math.max(lnN(R.note,PXC[12][3]),R.hl.length||1,lnN(R.drv,PXC[2][3]),(R.shape?1:0)+R.pls.length)*15+10,per=Math.max(24,Math.ceil(need/k));
+      for(let i=0;i<k;i++){const s=R.stops[i];
+        if(i===0){put(0,R.no,Object.assign({},z,{font:{bold:true,color:{rgb:'2D6A4F'}}}));
+          put(1,R.pls.map((p,i)=>i?'หาง '+p:p).join('\n')+(R.shape?'\n'+R.shape:''),Object.assign({},z,{font:{bold:true}}));
+          put(2,R.drv||'—',Object.assign({},L,{font:{bold:!!R.drv,color:{rgb:R.drv?'14261C':'9AA8A0'}}}));
+          put(10,hs||'—',Object.assign({},L,{font:{color:{rgb:hs?'1F2A24':'9AA8A0'}}}));put(11,R.ht||'',Object.assign({},z,{font:{bold:true,color:{rgb:'1E4FA3'}}}));
+          put(12,R.note,Object.assign({},L,{font:{color:{rgb:'3F4F45'}}}));}
+        else RC.forEach(c=>put(c,'',z));
+        if(!s){band(3,9,R.status||'—',Object.assign({},L,{font:{bold:true,color:{rgb:R.k==='rep'?'B42318':R.k==='wait'?'2D6A4F':'B45309'}}}));RH.push(per);r++;continue;}
+        put(3,s.n,Object.assign({},L,{font:{bold:true}}));
+        put(4,s.ty,Object.assign({},z,{font:{bold:true,color:{rgb:(TYC[s.ty]||'#5D6E63').slice(1).toUpperCase()}}}));
+        put(5,s.pv||'',Object.assign({},z,{font:{color:{rgb:'5D6E63'}}}));put(6,s.at||'',Object.assign({},z,{font:{bold:true,color:{rgb:'1E4FA3'}}}));
+        put(7,s.pal||'',Object.assign({},z,{font:{bold:true}}),'#,##0');put(8,s.cs||'',Object.assign({},z,{font:{bold:true}}),'#,##0');
+        put(9,s.fee||'',Object.assign({},z,{font:{bold:true,color:{rgb:'8A5A00'}}}),'#,##0');
+        RH.push(Math.max(per,lnN(s.n,PXC[3][3])*15+10));r++;}
+      if(k>1)RC.forEach(c=>M.push({s:{r:top,c},e:{r:r-1,c}}));});});
+  const tg={fill:{fgColor:{rgb:'E3F1E8'}},font:{bold:true,sz:12,color:{rgb:'1B4332'}},border:{top:{style:'medium',color:{rgb:'2D6A4F'}},bottom:{style:'medium',color:{rgb:'2D6A4F'}}}};
+  band(0,6,'รวม '+D.rows.length+' คัน'+(D.nJob!==D.rows.length?' (มีงาน '+D.nJob+')':''),Object.assign({},tg,{alignment:{horizontal:'right',indent:1}}));
+  const col=c=>XL.utils.encode_col(c),sumF=(c,v,z)=>{ws[XL.utils.encode_cell({r,c})]={t:'n',v,f:'SUM('+col(c)+(r0+1)+':'+col(c)+r+')',z,s:SX(tg)};};
+  sumF(7,D.pal,'#,##0" พาเลท"');sumF(8,D.cs,'#,##0" ลัง"');sumF(9,D.fee,'#,##0" บ."');band(10,12,'',tg);RH.push(28);r++;
+  if(D.foot.length){RH.push(12);r++;D.foot.forEach(t=>{const red=/^!!/.test(t),s=red?t.replace(/^!!\s*/,'⚠  '):'☎  '+t;
+    band(0,N-1,s,{fill:{fgColor:{rgb:red?'FDECEC':'F5F9F6'}},font:{sz:12,bold:true,color:{rgb:red?'B42318':'1F2A24'}},alignment:{horizontal:'left',indent:1},
+      border:{left:{style:'thick',color:{rgb:red?'B42318':'2D6A4F'}},bottom:thin('FFFFFF')}});RH.push(Math.max(22,lnN(s,150)*17+6));r++;});}
+  ws['!ref']=XL.utils.encode_range({s:{r:0,c:0},e:{r:r-1,c:N-1}});ws['!merges']=M;ws['!cols']=PXC.map(c=>({wch:c[3]}));ws['!rows']=RH.map(h=>({hpt:h}));
+  ws['!margins']={left:.3,right:.3,top:.4,bottom:.4,header:.2,footer:.2};ws['!pageSetup']={orientation:'landscape',fitToWidth:1,fitToHeight:0,paperSize:9};ws['!printHeader']=[hdr+1,hdr+1];
+  const wb=XL.utils.book_new();XL.utils.book_append_sheet(wb,ws,'แพลนรวม');
+  return new Blob([XL.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'});}
+const pxName=(D,ext)=>'แพลนรวม_'+D.iso.replace(/-/g,'')+'.'+ext;
+async function pxGo(kind,btn){const D=planSheet();if(!D.rows.length){toast('ไม่มีรถให้ออกใบแจ้งงาน · ลองเอาติ๊ก “เฉพาะคันที่มีงาน” ออก หรือล้างตัวกรอง');return;}
+  if(btn){if(btn.disabled)return;btn.disabled=true;btn.dataset.t=btn.innerHTML;btn.innerHTML='<b>…</b> กำลังสร้างไฟล์';}
+  try{const blob=kind==='pdf'?await pxPdf(D):kind==='xlsx'?await pxXlsx(D):await mxBlob(await drawPlanSheet(D),'image/jpeg',.93);mxSave(blob,pxName(D,kind));
+    toast('บันทึก '+pxName(D,kind)+' แล้ว'+(kind==='jpg'?' · ถ้าในแอป LINE ไม่ดาวน์โหลด กดค้างที่รูปตัวอย่างแล้วบันทึกรูป':''));}
+  catch(e){toast('❌ สร้างไฟล์ไม่สำเร็จ: '+(e&&e.message||e));}
+  finally{if(btn){btn.disabled=false;btn.innerHTML=btn.dataset.t;}}}
+function openPlanExport(){
+  const ov=document.createElement('div');ov.className='mov';
+  ov.innerHTML='<div class="mbox mxbox" role="dialog" aria-modal="true" aria-labelledby="pxh"><div class="mxhd"><div><h3 id="pxh">🖼 ใบแจ้งงานแพลนรวม</h3><div class="note" id="pxsub"></div></div><button class="mxx" data-px="close" aria-label="ปิด">✕</button></div>'
+   +'<div class="mbody"><div class="mxprev" id="pxprev"><img id="pximg" alt="ตัวอย่างใบแจ้งงานแพลนรวม"></div>'
+   +'<label class="opt"><input type="checkbox" id="pxjob"'+(PX.jobs?' checked':'')+'> เฉพาะคันที่มีงาน <span class="note">(เอาออก = ใส่คันซ่อม / รอมีงาน / ไม่มีคนขับ ด้วย)</span></label>'
+   +'<p class="note" id="pxf"></p>'
+   +'<label class="lb" for="pxft">ข้อความท้ายใบ <span class="note">(ใช้ร่วมกับใบแจ้งงานห้าง · บรรทัดละ 1 ข้อ · ขึ้นต้น !! = ตัวแดง)</span></label>'
+   +'<textarea class="in" id="pxft" rows="4"></textarea><button type="button" class="btn sm" data-px="reset" style="margin-top:6px">↺ ใช้ข้อความจากระบบ</button></div>'
+   +'<div class="mxfmt"><button class="btn" data-px="jpg"><b>JPG</b> รูปภาพ<small>ภาพเดียว ส่ง LINE ได้เลย</small></button>'
+   +'<button class="btn" data-px="pdf"><b>PDF</b> A4 แนวนอน<small>พร้อมพิมพ์</small></button>'
+   +'<button class="btn" data-px="xlsx"><b>XLS</b> Excel<small>แก้ต่อได้ ยอดรวมเป็นสูตร</small></button></div></div>';
+  document.body.appendChild(ov);const ft=ov.querySelector('#pxft');ft.value=mxFoot();
+  let tm=0,seq=0;const prev=async()=>{const my=++seq,D=planSheet();
+    ov.querySelector('#pxsub').textContent=dateTH(D.iso)+' · '+D.rows.length+' คัน · '+comma(D.pal)+' พาเลท · '+comma(D.cs)+' ลัง';
+    ov.querySelector('#pxf').textContent=D.filt?'ตามตัวกรองบนจอ: '+D.filt+' · ล้างตัวกรองถ้าอยากได้ทุกคัน':'';
+    if(!D.rows.length){ov.querySelector('#pximg').removeAttribute('src');ov.querySelector('#pxprev').dataset.empty='ไม่มีรถตามเงื่อนไข · เอาติ๊ก “เฉพาะคันที่มีงาน” ออก หรือล้างตัวกรอง';return;}
+    delete ov.querySelector('#pxprev').dataset.empty;const cv=await drawPlanSheet(D);if(my===seq)ov.querySelector('#pximg').src=cv.toDataURL('image/jpeg',.85);};
+  const close=()=>{ov.remove();document.removeEventListener('keydown',esc0);};const esc0=e=>{if(e.key==='Escape')close();};document.addEventListener('keydown',esc0);
+  ft.oninput=()=>{MX.foot=ft.value;try{localStorage.setItem('pk_mall_foot',ft.value);}catch(e){}clearTimeout(tm);tm=setTimeout(prev,350);};
+  ov.querySelector('#pxjob').onchange=e=>{PX.jobs=e.target.checked;prev();};
+  ov.onclick=e=>{if(e.target===ov){close();return;}const b=e.target.closest('[data-px]');if(!b)return;if(b.dataset.px==='close')close();else if(b.dataset.px==='reset'){ft.value=MFOOT_DEF.join('\n');MX.foot=ft.value;try{localStorage.removeItem('pk_mall_foot');}catch(x){}prev();}else pxGo(b.dataset.px,b);};
+  ov.querySelector('[data-px="jpg"]').focus();prev();}
+
 /* ---------- ลบงานห้างที่ยังไม่แจก (แจกแล้ว = ลบในลิ้นชัก แล้วส่งฉบับแก้ไข) ---------- */
 const unsent=()=>MJ.filter(j=>!MALL.snap[j.id]);
 const jobLine=j=>j.id+' · '+SZL[j.size]+' · '+(j.stops.map(s=>(s.at?s.at+' ':'')+s.n).join(' → ')||'ยังไม่ใส่ร้าน')+(j.head?' · '+plOf(j.head):'');
@@ -1072,7 +1288,7 @@ function renderPlan(){
      +'<span class="note" style="flex-basis:100%">งานห้าง 🔒 แก้ไม่ได้ในหน้านี้ ต้องแก้ที่แพลนห้าง (ต้นทาง) จะเกิดฉบับแก้ไขและแจ้งคนที่เกี่ยวข้องอัตโนมัติ</span></div>'+dateBig()+'</div>';
   h+='<div class="tools"><button class="btn sm" id="tlp">'+(HIDELP?'⇥ แสดงแผงรายการรถ':'⇤ ซ่อนแผงซ้าย ดูใบงานเต็มจอ')+'</button>'
    +'<div class="chips" style="margin:0">'+chips.map(([k,l])=>'<button class="chip'+(FILTER===k?' on':'')+'" data-f="'+k+'">'+l+' <b>'+c[k]+'</b></button>').join('')+'</div>'
-   +'<input class="search" id="q" placeholder="ค้นหาทะเบียน คนขับ เด็กรถ หรือร้าน" value="'+esc(Q)+'"></div>';
+   +'<input class="search" id="q" placeholder="ค้นหาทะเบียน คนขับ เด็กรถ หรือร้าน" value="'+esc(Q)+'"><button class="btn sm" id="pexp" title="บันทึกเป็นรูป / PDF / Excel ตามตัวกรองบนจอ">🖼 ใบแจ้งงาน (รูป · PDF · Excel)</button></div>';
   h+='<div class="msum"><b>สะสม '+mon+' (1–'+today+')</b>'+TYPES.map(t=>tchip(t)+' <b>'+({'ห้าง':tot.h,'ยี่ปั๊ว':tot.y,'อื่นๆ':tot.o})[t]+'</b>').join(' ')
    +' · รวม <b>'+(tot.h+tot.y+tot.o)+'</b> เที่ยว<span class="note">กดแถวเพื่อแก้งาน · คอลัมน์ขวาสุด = สถิติของคนขับคนนั้น ใช้ดูว่าใครวิ่งงานไหนมาน้อย/มาก</span></div>';
   h+='<div class="sheet"><table class="jt"><thead><tr class="g1"><th colspan="12">ใบแจ้งงาน '+esc(dateTH($('pdate').value))+'</th><th colspan="4" class="stg">สถิติคนขับ '+mon+'</th></tr><tr>'
@@ -1119,7 +1335,7 @@ function renderPlan(){
   h+='<p class="note">เดโม: สถิติ 1–'+(today-1)+' '+mon+' เป็นตัวอย่าง (ย่อจากใบงาน 30.9.69) · +1 = งานวันนี้ในแพลน · ประเภทงานนับตามร้านจุดแรก แก้ได้ในแผงซ้าย · จังหวัด/ค่าลงสินค้ามีเฉพาะร้านที่มีข้อมูล</p>';
   $('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="รายการรถ / รายละเอียดคันที่เลือก"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
   if(ED)drawEditor();else renderList();
-  $('tlp').onclick=()=>{HIDELP=!HIDELP;renderPlan();};
+  $('tlp').onclick=()=>{HIDELP=!HIDELP;renderPlan();};$('pexp').onclick=openPlanExport;
   if($('gomall'))$('gomall').onclick=()=>setPM('mall');
   pmChips(mallTodo(dfx));
   $('v-plan').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;renderPlan();});
