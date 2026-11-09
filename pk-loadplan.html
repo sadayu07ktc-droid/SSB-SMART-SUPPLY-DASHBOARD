@@ -309,10 +309,32 @@ const A = {
   sku: [
     // ขนาดลัง/น้ำหนัก = แม่แบบที่คลังกรอกกลับ 26 ต.ค. (ขนาดกรอกเป็น มม. → หาร 10 · น้ำหนัก = คอลัมน์ QC)
     { k: "oka", re: /โอก้า/, name: "ขวด 1L*12 โอก้า E", w: 32, l: 25, h: 29.3, kg: 11.44, per: 14, lay: 4, color: "#e9a23b" },
-    { k: "soy", re: /ถั่วเหลือง/, name: "ถั่วเหลือง 1L*12 ทับทิม P3", w: 32, l: 24.7, h: 28.9, kg: 11.53, per: 14, lay: 4, color: "#8bb85c" },
+    { k: "soy", re: /ถั่วเหลือง.*1L\*12/, name: "ถั่วเหลือง 1L*12 ทับทิม P3", w: 32, l: 24.7, h: 28.9, kg: 11.53, per: 14, lay: 4, color: "#8bb85c" },
     { k: "1l", re: /1L\*12/, name: "ขวด 1L*12 ทับทิม E", w: 32, l: 24, h: 29.3, kg: 11.44, per: 14, lay: 4, color: "#c94f4f" },
     { k: "2l", re: /2L\*6/, name: "ขวด 2L*6 ทับทิม E", w: 27.3, l: 21.9, h: 31.4, kg: 11.52, per: 17, lay: 4, color: "#4f7fc9" },
     { k: "5l", re: /5L\*4/, name: "ขวด 5L*4 ทับทิม E", w: 30.8, l: 28.6, h: 36.4, kg: 19.2, per: 12, lay: 3, color: "#7a5cc9" },
+    // สินค้าอื่นในแม่แบบ (ชีต สินค้า) · จับคู่ชื่อใน PO แบบตรงตัว (ไม่สนช่องว่าง/วงเล็บ) · ยังไม่เคยมีใน PO 7-11
+    { k: "188165", name: "ปี๊บ 18L โบนัส", w: 24, l: 24, h: 34.8, kg: 17.5, per: 20, lay: 3, color: "#b5651d" },
+    { k: "192214", name: "ถัง 13.75L โบนัส", w: 23.5, l: 22.5, h: 41.5, kg: 13.555, per: 20, lay: 3, color: "#c47f3a" },
+    { k: "192217", name: "ถัง 18L โบนัส", w: 23.5, l: 22.5, h: 41.5, kg: 17.43, per: 20, lay: 3, color: "#a0522d" },
+    { k: "220837", name: "ขวด 0.25L*48 โบนัส U", w: 40.3, l: 30.5, h: 21.1, kg: 11.75, per: 8, lay: 6, color: "#3aa6a0" },
+    { k: "220838", name: "ขวด 0.50L*24 โบนัส U", w: 39.3, l: 26.7, h: 24.5, kg: 11.8, per: 10, lay: 6, color: "#2f8f86" },
+    { k: "220839", name: "ขวด 1L*12 โบนัส P3-U", w: 32, l: 24.7, h: 28.9, kg: 11.53, per: 14, lay: 5, color: "#d9883b" },
+    { k: "220840", name: "ขวด 1L*12 โบนัส U", w: 32, l: 25, h: 29.3, kg: 11.44, per: 14, lay: 5, color: "#e0a050" },
+    { k: "808680", name: "ถุง 750cc.*12 โบนัส", w: 39.4, l: 21.6, h: 16.2, kg: 8.5, per: 13, lay: 7, color: "#6b9e3a" },
+    { k: "808681", name: "ถุง 750cc.*12 โบนัส P3", w: 39.4, l: 21.6, h: 16.2, kg: 8.5, per: 13, lay: 7, color: "#5a8a30" },
+    { k: "829493", name: "ถุง18L*1 โบนัส BIB", w: 34.4, l: 29.4, h: 20.7, kg: 17.2, per: 9, lay: 5, color: "#8a6d3b" },
+    { k: "159224", name: "ขวด 1L*12 ทับทิม U", w: 32, l: 25, h: 29.3, kg: 11.4, per: 14, lay: 7, color: "#b84444", note: "แม่แบบกรอก 7 ชั้น (สูง ~2.2 ม.) · รอยืนยัน" },
+    { k: "159225", name: "ขวด 0.50L*24 ทับทิม S", w: 39.3, l: 26.7, h: 24.3, kg: 11.8, per: 10, lay: 6, color: "#d46a6a" },
+    { k: "159226", name: "ขวด 0.25L*48 ทับทิม U", w: 40.3, l: 30.5, h: 21.1, kg: 11.75, per: 8, lay: 6, color: "#e08b8b" },
+    { k: "159233", name: "ปี๊บ 13.75L ทับทิม", w: 24, l: 24, h: 34.8, kg: 13.555, per: 20, lay: 3, color: "#9e3b3b" },
+    { k: "159234", name: "ปี๊บ 18L ทับทิม", w: 24, l: 24, h: 34.8, kg: 17.512, per: 20, lay: 3, color: "#8a2f2f" },
+    { k: "159266", name: "ขวด 1L*12 ทับทิม P3-S", w: 32, l: 24.7, h: 28.9, kg: 11.53, per: 14, lay: 5, color: "#c96060" },
+    { k: "808221", name: "ขวด 6L*6 ทับทิม S", w: 46.4, l: 34, h: 36.4, kg: 33.65, per: 7, lay: 3, color: "#5c4bb0" },
+    { k: "808223", name: "ขวด 0.75*12 ตรา ทับทิม U", w: 29.2, l: 21.6, h: 28.1, kg: 9.6, per: 17, lay: 5, color: "#d97777" },
+    { k: "804305", name: "น้ำมันถั่วเหลืองขวด 1 ลิตร ทับทิม", w: 32, l: 25, h: 28.9, kg: 11.44, per: 14, lay: 7, color: "#7aa84c", note: "แม่แบบกรอก 7 ชั้น (สูง ~2.2 ม.) · รอยืนยัน" },
+    { k: "804306", name: "น้ำมันถั่วเหลืองขวด 1 ลิตร ทับทิมP3", w: 32, l: 24.7, h: 28.9, kg: 11.58, per: 14, lay: 5, color: "#6a9840" },
+    // แม่แบบยังไม่มีขนาด/ชั้น: 181753 (ไม่มีชื่อ) · 833441 ถุง 1L*12 นัมเบอร์วัน U · 833442 ถุง 1L*12 นัมเบอร์วัน P3-U → ถ้ามาใน PO จะเตือนและคิดเป็นลัง 1L*12
   ],
   types: [
     // axles = ตำแหน่งเพลาต่อช่วง (สัดส่วนความยาว) · dual = ล้อคู่ · หัวรถมีเพลาหน้าล้อเดี่ยวเสมอ
@@ -320,14 +342,17 @@ const A = {
     { k: "6w", name: "6 ล้อ", drv: "6 ล้อ", beds: [{ n: "กระบะ", L: 620, W: 230, H: 230, axles: [0.72], dual: true }], pay: 8000, r: 48 },
     { k: "4w", name: "4 ล้อ", drv: "4 ล้อ", beds: [{ n: "กระบะ", L: 250, W: 170, H: 180, axles: [0.7], dual: false }], pay: 1500, r: 34 },
   ],
+  // km ตั้งต้น = ชีต คลังปลายทาง ในแม่แบบ 26.10 (src "file") · ฝังในหน้าแพลนรถ = ทับด้วยค่ากลาง DTC จาก central_distances (src "dtc" · Edge pk-daily lpDc)
+  // t = เวลานัดลง · t2 = เวลานัดอีกรอบ (W901 "00:01 หรือ 15.00") · ทุกคลังรอลง 3 ชม. · รับ 18 ล้อ · ไม่ต้องจองคิว
   dc: {
-    W101: { n: "บางบัวทอง", km: 185.94, real: true, t: "00:01" }, W501: { n: "สุวรรณภูมิ", km: 97.92, real: true, t: "00:01" },
-    W901: { n: "มหาชัย", km: 165, t: "00:01" }, W121: { n: "ชลบุรี", km: 45, t: "21:00" }, W151: { n: "นครสวรรค์", km: 330, t: "15:00" },
-    W131: { n: "บุรีรัมย์", km: 370, t: "19:00" }, W801: { n: "ขอนแก่น", km: 470, t: "19:00" }, W301: { n: "ลำพูน", km: 720, t: "19:00" },
-    W401: { n: "สุราษฎร์", km: 690, t: "19:00" }, W141: { n: "หาดใหญ่", km: 1000, t: "20:00" },
+    W101: { n: "บางบัวทอง", km: 185.94, src: "file", t: "00:01" }, W501: { n: "สุวรรณภูมิ", km: 97.92, src: "file", t: "00:01" },
+    W901: { n: "มหาชัย", km: 187, src: "file", t: "00:01", t2: "15:00" }, W121: { n: "ชลบุรี", km: 78, src: "file", t: "21:00" }, W151: { n: "นครสวรรค์", km: 399, src: "file", t: "15:00" },
+    W131: { n: "บุรีรัมย์", km: 376, src: "file", t: "19:00" }, W801: { n: "ขอนแก่น", km: 460, src: "file", t: "19:00" }, W301: { n: "ลำพูน", km: 780, src: "file", t: "19:00" },
+    W401: { n: "สุราษฎร์", km: 742, src: "file", t: "19:00" }, W141: { n: "หาดใหญ่", km: 1055, src: "file", t: "20:00" },
   },
-  // ข้อ 5 ขึ้นของ 08–17 · ข้อ 6 ชั่วโมงละ 2 คัน · ข้อ 8 ไม่เกิน 80 (ใช้เฉลี่ย 50 คิดเวลา) · ข้อ 9 ถึงก่อนนัด ≥ 30 นาที · ข้อ 10 7-11 ≤ 20 ตัน/คัน
-  speed: 50, bufH: 0.5, loadMin: 60, bays: 2, dayStart: 8, dayEnd: 17, payBuf: 5, unloadH: 2, farKm: 400, custMaxKg: 20000,
+  // ข้อ 5 ขึ้นของ 08–17 · ข้อ 6 ชั่วโมงละ 2 คัน · ข้อ 7 นาทีขึ้นของต่อคัน แม่แบบยังว่าง (ใช้ 60) · ข้อ 8 ไม่เกิน 80 (ใช้เฉลี่ย 50 คิดเวลา) · ข้อ 9 ถึงก่อนนัด ≥ 30 นาที · ข้อ 10 7-11 ≤ 20 ตัน/คัน
+  // unloadH = เวลารอลงของที่คลัง (แม่แบบ: 3 ชม. ทุกคลัง)
+  speed: 50, bufH: 0.5, loadMin: 60, bays: 2, dayStart: 8, dayEnd: 17, payBuf: 5, unloadH: 3, farKm: 400, custMaxKg: 20000,
   // น้ำหนักลงเพลา · tare = น้ำหนักรถเปล่าที่ลงเพลานั้น · lim = พิกัด (กก.) — ⚠️ สมมติ ต้องยืนยันกับประกาศกรมทางหลวง/สมุดทะเบียนรถ
   axle: {
     trailer: { gvw: 50500, groups: [
@@ -364,12 +389,26 @@ function axleLoad(r) {
   return { loads, total, gvw: cfg.gvw, gvwPct, cg, worst: Math.max(gvwPct, ...loads.map((l) => l.pct)) };
 }
 const axTone = (pct) => (pct > 100 ? "bad" : pct > 90 ? "warn" : "ok");
-const skuOf = (name) => A.sku.find((s) => s.re.test(name)) || A.sku[2];
-// ตราสินค้าบนลัง: ดูจากชื่อสินค้าใน PO ก่อน (ไชโย/ทับทิม/โอก้า) · ไม่ระบุ = ตราตามแม่แบบสินค้า
-const brandOf = (name, s) => { const t = String(name || "") + " "; const f = (x) => /ไชโย/.test(x) ? "chaiyo" : /ทับทิม/.test(x) ? "tubtim" : /โอก้า/.test(x) ? "oka" : "";
+// จับคู่สินค้า: ชื่อตรงตัวกับแม่แบบก่อน (ไม่สนช่องว่าง/วงเล็บ/ตัวพิมพ์) → ค่อยใช้คำหลัก 5 ตัวหลักของ 7-11 → ไม่รู้จัก = ลัง 1L*12 + เตือน (UNK_SKU)
+const skuKey = (x) => String(x || "").replace(/\([^)]*\)/g, "").replace(/\s+/g, "").toLowerCase();
+const UNK_SKU = new Set();
+const skuOf = (name) => {
+  const k = skuKey(name);
+  const s = A.sku.find((x) => skuKey(x.name) === k) || A.sku.find((x) => x.re && x.re.test(name));
+  if (s) return s;
+  UNK_SKU.add(String(name || "").replace(/\s+/g, " ").trim());
+  return A.sku.find((x) => x.k === "1l");
+};
+// ค่ากลาง DTC จากหน้าแม่ (central_distances · แก้ได้เฉพาะ DEV) ทับระยะตั้งต้นจากแม่แบบ
+if (window.__LP && window.__LP.dcKm) Object.entries(window.__LP.dcKm).forEach(([c, km]) => { if (A.dc[c] && +km > 0) { A.dc[c].fileKm = A.dc[c].km; A.dc[c].km = +km; A.dc[c].src = "dtc"; } });
+// ตราสินค้าบนลัง: ดูจากชื่อสินค้าใน PO ก่อน (ไชโย/ทับทิม/โอก้า/โบนัส) · ไม่ระบุ = ตราตามแม่แบบสินค้า
+const brandOf = (name, s) => { const t = String(name || "") + " "; const f = (x) => /ไชโย/.test(x) ? "chaiyo" : /ทับทิม/.test(x) ? "tubtim" : /โอก้า/.test(x) ? "oka" : /โบนัส/.test(x) ? "bonus" : "";
   return f(t) || f(s && s.name) || "tubtim"; };
 
-let dates = [...new Set(POS.map((p) => p.date))], date = dates[0], mode = "auto", trucks = [], sel = 0, assign = {}, nextId = 1;
+// วันส่ง dd/mm/yy → เรียงตามปฏิทิน · เปิดมา = วันส่งแรกที่ยังไม่ผ่าน (ไม่มี = วันล่าสุด)
+const dKey = (s) => { const m = String(s || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? (m[3].length === 2 ? "20" + m[3] : m[3]) + m[2].padStart(2, "0") + m[1].padStart(2, "0") : String(s); };
+const TODAY_K = (() => { const d = new Date(Date.now() + 7 * 3600e3); return d.toISOString().slice(0, 10).replace(/-/g, ""); })();
+let dates = [...new Set(POS.map((p) => p.date))].sort((a, b) => dKey(a).localeCompare(dKey(b))), date = dates.find((d) => dKey(d) >= TODAY_K) || dates[dates.length - 1], mode = "auto", trucks = [], sel = 0, assign = {}, nextId = 1;
 // เลขคัน: ระบบจัดใหม่ = เริ่ม #1 ทุกครั้ง · แอดมินเพิ่มรถ = ต่อจากเลขสูงสุดที่มีอยู่
 const newId = () => Math.max(0, ...trucks.map((t) => t.id)) + 1;
 let opt = { onePO: true, stack: false, balance: true, drvMode: "manual" };   // onePO บังคับตามกฎ 7-11 ข้อ 1–2
@@ -745,6 +784,7 @@ function renderKpis() {
   const openN = act.filter((t) => t.open).length;
 
   if (unassigned) w.push(`<div class="warn">⏳ Pending ${unassigned} PO (ยังไม่ได้อยู่คันไหน)</div>`);
+  if (UNK_SKU.size) w.push(`<div class="warn">⚠️ สินค้าไม่มีในแม่แบบ ${UNK_SKU.size} รายการ → คิดขนาดเป็นลัง 1L*12 ไปก่อน: ${[...UNK_SKU].map(esc).join(" · ")}</div>`);
   const sh = act.filter((t) => t.short);
   if (sh.length) w.unshift(`<div class="warn b">⛔ พี่ปุ๋ยให้รถไม่พอ ขาด ${sh.length} คัน (${sh.map((t) => "#" + t.id).join(" ")}) · ${nf(sh.reduce((a, t) => a + t.items.reduce((b, i) => b + i.units.length, 0), 0))} พาเลทยังไม่มีรถ · ดูทางแก้ในกล่องจองรถด้านบน</div>`);
   $("warns").innerHTML = w.join("");
@@ -1477,7 +1517,7 @@ const FONT = "'IBM Plex Sans Thai','Segoe UI',Tahoma,sans-serif";
 // ลังกระดาษ 1 ใบต่อ 1 ช่องพื้นผิว (ทำซ้ำตามจำนวนลังจริง) · ด้านข้างมีป้ายสีตามสินค้า = ตรงกับคำอธิบายสีใต้ภาพ
 // ลังแบบลังจริงของสุขสมบูรณ์น้ำมันพืช (ตามรูปลังไชโย): กระดาษคราฟต์ · "ตรา" + ชื่อตราตัวใหญ่สีแดง · ไอคอนข้อควรระวัง · แถบล่างบอกขนาด
 //   แถบล่าง/มุมสามเหลี่ยม = สีตามสินค้า (ตรงกับคำอธิบายสีใต้ภาพ) · ชื่อตรา = ตามชื่อสินค้าใน PO (brandOf)
-const BRAND = { tubtim: { n: "ทับทิม", t: "#c4161c", gem: 1 }, chaiyo: { n: "ไชโย", t: "#c4161c" }, oka: { n: "โอก้า", t: "#d9661a" } };
+const BRAND = { tubtim: { n: "ทับทิม", t: "#c4161c", gem: 1 }, chaiyo: { n: "ไชโย", t: "#c4161c" }, oka: { n: "โอก้า", t: "#d9661a" }, bonus: { n: "โบนัส", t: "#1d5fa8" } };
 function gemIcon(c, x, y, r) {   // พลอยทับทิมเจียระไน
   c.save(); c.fillStyle = "#d81f3c"; c.beginPath(); c.moveTo(x - r, y - r * 0.25); c.lineTo(x - r * 0.55, y - r * 0.75); c.lineTo(x + r * 0.55, y - r * 0.75); c.lineTo(x + r, y - r * 0.25); c.lineTo(x, y + r); c.closePath(); c.fill();
   c.strokeStyle = "rgba(255,235,238,.9)"; c.lineWidth = Math.max(1.5, r * 0.07); c.lineJoin = "round"; c.stroke();
@@ -1938,7 +1978,7 @@ function renderAsm() {
   <div><h3>พาเลท</h3><table><tr><th>กว้าง</th><th>ยาว</th><th>สูง</th><th>กก.</th><th>สูงสุดรวมของ</th></tr><tr><td>${num("pallet.w", A.pallet.w)}</td><td>${num("pallet.l", A.pallet.l)}</td><td>${num("pallet.h", A.pallet.h)}</td><td>${num("pallet.kg", A.pallet.kg)}</td><td>${num("pallet.maxH", A.pallet.maxH)}</td></tr></table></div>
   <div><h3>สินค้า (ซม. / กก.)</h3><div class="tscroll"><table><tr><th>สินค้า</th><th>สูงลัง</th><th>กก./ลัง</th><th>ลัง/ชั้น</th><th>ชั้น</th></tr>${A.sku.map((s, i) => `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color}"></i> ${esc(s.name)}${s.note ? `<div class="note">${esc(s.note)}</div>` : ""}</td><td>${num("sku." + i + ".h", s.h)}</td><td>${num("sku." + i + ".kg", s.kg, 0.01)}</td><td>${num("sku." + i + ".per", s.per)}</td><td>${num("sku." + i + ".lay", s.lay)}</td></tr>`).join("")}</table></div></div>
   <div><h3>รถ (กระบะใน ซม. · บรรทุกได้ กก.)</h3><div class="tscroll"><table><tr><th>ประเภท</th><th>ช่วง</th><th>ยาว</th><th>กว้าง</th><th>สูง</th><th>บรรทุก</th></tr>${A.types.map((t, i) => t.beds.map((b, j) => `<tr><td>${j ? "" : esc(t.name)}</td><td>${esc(b.n)}</td><td>${num("types." + i + ".beds." + j + ".L", b.L)}</td><td>${num("types." + i + ".beds." + j + ".W", b.W)}</td><td>${num("types." + i + ".beds." + j + ".H", b.H)}</td><td>${j ? "" : num("types." + i + ".pay", t.pay, 100)}</td></tr>`).join("")).join("")}</table></div><p class="note">พาเลทวางพื้นได้ = (กว้าง ÷ 120) × (ยาว ÷ 100) ต่อช่วง</p></div>
-  <div><h3>คลัง (ระยะเที่ยวเดียว กม.)</h3><div class="tscroll"><table><tr><th>คลัง</th><th>นัดลง</th><th>ระยะ</th></tr>${Object.keys(A.dc).map((k) => `<tr><td><span class="mono">${k}</span> ${esc(A.dc[k].n)} ${A.dc[k].real ? '<span class="chip c-ok">ค่ากลางจริง</span>' : '<span class="chip c-warn">สมมติ</span>'}</td><td class="mono">${esc(A.dc[k].t)}</td><td>${num("dc." + k + ".km", A.dc[k].km)}</td></tr>`).join("")}</table></div></div>
+  <div><h3>คลัง (ระยะเที่ยวเดียว กม.)</h3><div class="tscroll"><table><tr><th>คลัง</th><th>นัดลง</th><th>ระยะ</th></tr>${Object.keys(A.dc).map((k) => `<tr><td><span class="mono">${k}</span> ${esc(A.dc[k].n)} ${A.dc[k].src === "dtc" ? `<span class="chip c-ok" title="central_distances · แม่แบบ ${nf(A.dc[k].fileKm || 0)} กม.">ค่ากลาง DTC</span>` : '<span class="chip c-gold">แม่แบบคลัง</span>'}</td><td class="mono">${esc(A.dc[k].t)}${A.dc[k].t2 ? " / " + esc(A.dc[k].t2) : ""}</td><td>${num("dc." + k + ".km", A.dc[k].km)}</td></tr>`).join("")}</table></div></div>
   <div><h3>น้ำหนักลงเพลา (กก.) · ⚠️ สมมติ ต้องยืนยันพิกัดจริง</h3><div class="tscroll"><table><tr><th>รถ / เพลา</th><th>รถเปล่า</th><th>พิกัด</th></tr>${A.types.map((t) => { const c = A.axle[t.k]; return `<tr><td colspan="2"><b>${esc(t.name)}</b></td><td>รวมทั้งคัน ${num("axle." + t.k + ".gvw", c.gvw, 100)}</td></tr>` + c.groups.map((g, i) => `<tr><td>${esc(g.n)}</td><td>${num("axle." + t.k + ".groups." + i + ".tare", g.tare, 100)}</td><td>${num("axle." + t.k + ".groups." + i + ".lim", g.lim, 100)}</td></tr>`).join(""); }).join("")}</table></div></div>
   <div><h3>กฎ</h3><table><tr><td>ความเร็วเฉลี่ย (กม./ชม.)</td><td>${num("speed", A.speed)}</td></tr><tr><td>เผื่อถึงก่อนนัด (ชม.)</td><td>${num("bufH", A.bufH, 0.5)}</td></tr><tr><td>ขึ้นของต่อคัน (นาที)</td><td>${num("loadMin", A.loadMin, 15)}</td></tr><tr><td>ช่องขึ้นของพร้อมกัน</td><td>${num("bays", A.bays)}</td></tr><tr><td>เผื่อน้ำหนัก (%)</td><td>${num("payBuf", A.payBuf)}</td></tr><tr><td>วิ่งไกล = ระยะตั้งแต่ (กม.) · ใช้คิว</td><td>${num("farKm", A.farKm, 10)}</td></tr></table></div>`;
 }
@@ -2226,15 +2266,15 @@ build(); renderAll(); renderAsm();
 (function () {
   const emb = window.parent !== window;
   const msg = (h) => { document.querySelector(".wrap").innerHTML = '<div class="card lpmsg">' + h + "</div>"; };
-  function run(pos) {
+  function run(pos, dcKm) {
     if (window.__LP) return;
     if (!Array.isArray(pos) || !pos.length) { msg("ยังไม่มี PO ให้จัด"); return; }
-    window.__LP = { pos };
+    window.__LP = { pos, dcKm: dcKm && typeof dcKm === "object" ? dcKm : null };
     const s = document.createElement("script"); s.textContent = document.getElementById("lpMain").textContent; document.body.appendChild(s);
   }
   window.addEventListener("message", (e) => {
     if (e.origin !== location.origin || e.source !== window.parent) return;
-    const d = e.data || {}; if (d.type === "lp-init") run(d.pos);
+    const d = e.data || {}; if (d.type === "lp-init") run(d.pos, d.dcKm);
   });
   if (emb) window.parent.postMessage({ type: "lp-ready" }, location.origin);
   else msg('หน้านี้เปิดจาก <b>แพลนรถ Packing</b> → ชิป 🏬 แพลนห้าง → 📦 จัด PO ลงรถ');
