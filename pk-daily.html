@@ -243,7 +243,11 @@ main{padding-block:14px 120px}
 .tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--line)}
 .tl .ti{position:relative}
 .tl .ti::before{content:"";position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px var(--surface)}
-.tl .ti.fac::before{background:var(--head)}
+.tl .ti.fac::before{background:var(--surface)}
+/* จุดไทม์ไลน์ = โครง (วงโปร่ง) ยังไม่บอกสถานะ · ภายหลังผูกกับ GPS/ระบบคนขับ: ถึงแล้ว/กำลังไป/ยังไม่ถึง */
+.tl .ti::before{background:var(--surface);border:2px solid var(--muted);box-sizing:border-box;opacity:.7}
+.tl .ti .m b{display:inline}
+.jt th.n{text-align:right}
 .tl .ti b{display:block}
 .tl .ti .m{color:var(--muted);font-size:12.5px}
 .tl .at{font-variant-numeric:tabular-nums;font-weight:700;color:var(--info)}
@@ -878,7 +882,7 @@ function renderMall(){
   const js=MJ.slice().sort((a,b)=>((a.stops[0]||{}).at||'99')<((b.stops[0]||{}).at||'99')?-1:1);
   const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join(''),dash='<span class="m">—</span>';
   h+=pendHtml()+'<div class="sheet"><table class="jt mj"><thead><tr class="g1"><th colspan="10">งานห้าง '+esc(dateTH($('pdate').value))+'</th></tr><tr>'
-    +['งาน','ขนาดรถ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','รถ (พี่ปุ๋ยแจ้ง)','คนขับ','สถานะ'].map(t=>'<th>'+t+'</th>').join('')+'</tr></thead><tbody>';
+    +['งาน','ขนาดรถ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','รถ (พี่ปุ๋ยแจ้ง)','คนขับ','สถานะ'].map((t,i)=>'<th'+(i>=4&&i<=6?' class="n"':'')+'>'+t+'</th>').join('')+'</tr></thead><tbody>';
   js.forEach(j=>{const S=j.stops,d=drvOf(j.driver),s=jst(j,dfx);
     h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b>'+(j.lp?'<span class="lpb" title="'+esc(j.note)+'">📦 LP</span>':'')+'</td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
       +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(x.n)+'">'+esc(x.n)+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+'</td>'
@@ -1491,7 +1495,7 @@ function renderPlan(){
   h+='<div class="msum"><b>สะสม '+mon+' (1–'+today+')</b>'+TYPES.map(t=>tchip(t)+' <b>'+({'ห้าง':tot.h,'ยี่ปั๊ว':tot.y,'อื่นๆ':tot.o})[t]+'</b>').join(' ')
    +' · รวม <b>'+(tot.h+tot.y+tot.o)+'</b> เที่ยว<span class="note">กดแถวเพื่อแก้งาน · คอลัมน์ขวาสุด = สถิติของคนขับคนนั้น ใช้ดูว่าใครวิ่งงานไหนมาน้อย/มาก</span></div>';
   h+='<div class="sheet"><table class="jt"><thead><tr class="g1"><th colspan="12">ใบแจ้งงาน '+esc(dateTH($('pdate').value))+'</th><th colspan="4" class="stg">สถิติคนขับ '+mon+'</th></tr><tr>'
-   +['รถ','คนขับ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','ค่าลง (บ.)','หมายเหตุ','เด็กรถ','นัดเด็กรถ','ประเภทงาน'].map((t,i)=>'<th'+(i<2?' class="stk'+i+'"':'')+'>'+t+'</th>').join('')
+   +['รถ','คนขับ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','ค่าลง (บ.)','หมายเหตุ','เด็กรถ','นัดเด็กรถ','ประเภทงาน'].map((t,i)=>'<th'+(i<2?' class="stk'+i+'"':i>=4&&i<=7?' class="n"':'')+'>'+t+'</th>').join('')
    +TYPES.map(x=>'<th class="stg n"><i class="tyd" style="background:'+TYC[x]+'"></i>'+x+'</th>').join('')+'<th class="stg n">เที่ยวสะสม</th></tr></thead><tbody>';
   ['4 ล้อ','6 ล้อ','10/22 ล้อ'].forEach(g=>{
     const rows=VEH.filter(v=>v.g===g).filter(visible);if(!rows.length)return;
