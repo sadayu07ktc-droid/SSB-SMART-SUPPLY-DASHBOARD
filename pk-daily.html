@@ -299,6 +299,46 @@ main{padding-block:14px 120px}
   .hrow .hide-sm{display:none}
 }
 @media (prefers-reduced-motion:no-preference){.drawer{animation:slin .22s ease-out}@keyframes slin{from{transform:translateX(30px);opacity:.6}}}
+/* ---------- แพลนรวม | แพลนห้าง ---------- */
+:root{--mall:#1E6FD9;--mallbg:#E7F0FC}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--mall:#7FB0F5;--mallbg:#16263D}}
+:root[data-theme="dark"]{--mall:#7FB0F5;--mallbg:#16263D}
+.pmrow{display:flex;gap:12px;align-items:stretch;margin-top:14px;flex-wrap:wrap}
+.pmrow .demo{margin:0;flex:1 1 320px;display:flex;align-items:center}
+.pmode{display:flex;gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;flex:none}
+.pmode button{display:grid;grid-template-columns:auto auto;column-gap:7px;align-items:center;text-align:left;border:0;background:transparent;border-radius:9px;padding:6px 14px 6px 10px;font:inherit;font-weight:700;font-size:14px;color:var(--ink);cursor:pointer}
+.pmode button .pmi{grid-row:span 2;font-size:18px}
+.pmode button small{font-weight:500;font-size:11px;color:var(--muted)}
+.pmode button:hover{background:var(--surface2)}
+.pmode button:focus-visible{outline:2px solid var(--brand);outline-offset:1px}
+.pmode button.on{background:var(--brand);color:var(--brand-ink)}
+.pmode button.on small{color:inherit;opacity:.8}
+.pmode button[data-pm="mall"].on{background:var(--mall);color:#fff}
+.pmode .cnt{display:inline-block;margin-left:4px;font-size:11px;background:var(--badbg);color:var(--bad);border-radius:999px;padding:0 6px}
+.pstat{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;border:1px solid var(--line);border-left:4px solid var(--brand);background:var(--surface);border-radius:10px;padding:9px 14px;margin-bottom:10px;font-size:13px}
+.pstat.mall{border-left-color:var(--mall)}
+.pstat b.t{font-size:14px}
+.pstat .sp{flex:1}
+.pstat .ok{color:var(--good);font-weight:600}.pstat .pend{color:var(--warn);font-weight:700}
+.rv{display:inline-flex;align-items:center;gap:3px;font-size:10.5px;font-weight:700;border-radius:999px;padding:0 7px;background:var(--mallbg);color:var(--mall);white-space:nowrap;vertical-align:1px}
+.rv.w{background:var(--warnbg);color:var(--warn)}.rv.g{background:var(--goodbg);color:var(--good)}
+.stop.lock{background:transparent;border-style:dashed;opacity:.85}
+.stop.lock .n{background:var(--muted)}
+.stop.mallsrc .n{background:var(--mall)}
+.lockn{font-size:12px;color:var(--muted);margin-top:3px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.lockn button{border:0;background:none;color:var(--mall);font:inherit;font-weight:700;cursor:pointer;padding:0;text-decoration:underline}
+.chl{display:grid;gap:6px;margin:8px 0;max-height:46vh;overflow:auto}
+.chl .ci{border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:13px;background:var(--surface2)}
+.chl .ci .to{font-size:11.5px;color:var(--muted);margin-top:2px}
+.chl .ci.all{border-left:3px solid var(--bad)}.chl .ci.drv{border-left:3px solid var(--mall)}
+.rlog{display:grid;gap:10px;max-height:56vh;overflow:auto}
+.rlog .re{border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+.rlog .re h5{margin:0 0 4px;font-size:13.5px}
+.rlog .re ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
+.btn.pri.mallb{background:var(--mall);border-color:var(--mall);color:#fff}
+.btn:disabled{opacity:.6;cursor:default}
+.pmode[hidden]{display:none}
+@media (max-width:720px){.pmode{width:100%}.pmode button{flex:1}.pmode button small{display:none}}
 </style>
 
 <style>
@@ -334,7 +374,7 @@ main{padding-block:14px 120px}
   </div>
 </header>
 
-<div class="wrap"><div class="demo">เดโม: รถ คนขับ ร้านปลายทาง และค่ากลาง กม. มาจากระบบจริง ส่วนงานในแพลนกับเด็กรถเป็นตัวอย่าง ในหน้านี้ไม่มีการบันทึกหรือส่ง LINE จริง</div></div>
+<div class="wrap"><div class="pmrow"><div class="pmode" id="pmode" role="tablist" aria-label="เลือกแพลน"><button type="button" role="tab" data-pm="all"><span class="pmi">📋</span><span class="pml">แพลนรวม</span><small>ยี่ปั๊ว · อื่นๆ · ทุกงาน</small></button><button type="button" role="tab" data-pm="mall"><span class="pmi">🏬</span><span class="pml">แพลนห้าง</span><small>แจกล่วงหน้า · ต้นทางงานห้าง</small></button></div><div class="demo">เดโม: รถ คนขับ ร้านปลายทาง และค่ากลาง กม. มาจากระบบจริง ส่วนงานในแพลนกับเด็กรถเป็นตัวอย่าง ในหน้านี้ไม่มีการบันทึกหรือส่ง LINE จริง</div></div></div>
 
 <main class="wrap wide">
   <section id="v-plan"></section>
@@ -434,6 +474,63 @@ VEH.forEach(v=>{const d=DRV.find(x=>x.head===v.head),s=SEED[v.head]||{};
   PLAN[v.head]={status:s.status||'ready',reason:s.reason||'',driver:d?d.code:'',helpers:s.helpers||[],out:s.out||0,stops,note:'',htime:(s.helpers||[]).length?'นัดเอง':'',jt:''};});
 PLAN['84-9041'].note='วางบิล + เอกสาร CO/COA';PLAN['86-7722'].htime='04:30';PLAN['86-7079'].note='เบิกพาเลท Loscam วังน้อย';PLAN['86-7395'].note='รับเช็ค';
 
+/* ---------- แพลนรวม | แพลนห้าง ----------
+ * แพลนห้าง = ต้นทางของงานห้าง (แอดมินห้างรู้งานล่วงหน้า → กดแจกงาน → คนขับ / คลัง / บัญชี ได้ทันที)
+ * งานห้างไหลเข้าแพลนรวมพร้อมสถานะ (ล็อก แก้ได้ที่แพลนห้างเท่านั้น) · แพลนรวม = แอดมินยี่ปั๊วส่งก่อน 10:00 ของวันก่อนส่ง
+ * แก้หลังแจกแล้ว = ฉบับแก้ไข (Rev.) ระบุคนแก้ · เปลี่ยนคนขับ/เวลา/เด็กรถ → แจ้งคนขับที่เกี่ยว · เพิ่ม/ลด/เปลี่ยนสถานที่/จำนวน → แจ้งคนขับ + คลัง + บัญชี */
+let PM='all';
+const isMall=s=>tyOf(s)==='ห้าง';
+const skey=s=>s.id!=null?'#'+s.id:'n:'+s.n;
+const ME=()=>(typeof window.MY_NAME==='string'&&window.MY_NAME)||'คุณ (เดโม)';
+function mallSnap(){const o={};VEH.forEach(v=>{const p=PLAN[v.head];if(p.status!=='ready')return;const st=p.stops.filter(isMall);if(!st.length)return;
+  o[v.head]={driver:p.driver,helpers:p.helpers.slice(),out:p.out,stops:st.map(s=>({k:skey(s),n:s.n,at:s.at,pal:s.pal,cs:s.cs}))};});return o;}
+const MALL={rev:-1,snap:{},log:[],ack:new Set()};
+(function(){const d=new Date((document.getElementById('pdate')||{}).value+'T00:00:00');const at=isNaN(d)?new Date():new Date(d.getTime()-2*864e5+15*36e5+10*6e4);
+  MALL.snap=mallSnap();MALL.rev=0;
+  MALL.log.push({rev:0,at,by:'แอดมินห้าง (ตัวอย่าง)',first:true,items:[],to:['คนขับ '+new Set(Object.values(MALL.snap).map(x=>x.driver).filter(Boolean)).size+' คน','คลังสินค้า','บัญชี']});
+  Object.keys(MALL.snap).forEach((h,i)=>{if(i!==2)MALL.ack.add(h);});})();
+const fmtAt=d=>d.getDate()+'.'+(d.getMonth()+1)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+' น.';
+/* เทียบแพลนห้างตอนนี้กับฉบับที่แจกล่าสุด */
+function mallDiff(){const cur=mallSnap(),old=MALL.snap,out=[],dn=c=>drvOf(c)?.name||'ไม่มีคนขับ';
+  const heads=[...new Set([...Object.keys(old),...Object.keys(cur)])];
+  heads.forEach(h=>{const a=old[h],b=cur[h],pl=VEH.find(v=>v.head===h).plate.replace(',',' / ');
+    const add=(lvl,txt,drv)=>out.push({h,pl,lvl,txt,drv:[...new Set(drv.filter(Boolean))]});
+    const A=a?a.stops:[],B=b?b.stops:[],ka=A.map(s=>s.k),kb=B.map(s=>s.k);
+    const gone=A.filter(s=>!kb.includes(s.k)),neu=B.filter(s=>!ka.includes(s.k));
+    const dA=a&&a.driver,dB=b?b.driver:PLAN[h].driver;
+    if(a&&b&&a.driver!==b.driver)add('drv','เปลี่ยนคนขับ '+dn(a.driver)+' → '+dn(b.driver),[a.driver,b.driver]);
+    for(let i=0;i<Math.max(gone.length,neu.length);i++){const g=gone[i],n=neu[i];
+      if(g&&n)add('all','เปลี่ยนสถานที่ '+g.n+' → '+n.n,[dA,dB]);
+      else if(n)add('all','เพิ่มจุดส่ง '+n.n+(n.pal?' · '+n.pal+' พาเลท':'')+(n.cs?' · '+n.cs+' ลัง':''),[dB]);
+      else add('all','ยกเลิกจุดส่ง '+g.n,[dA]);}
+    B.forEach(s=>{const o=A.find(x=>x.k===s.k);if(!o)return;
+      const q=[];if((o.pal||'')!==(s.pal||''))q.push('พาเลท '+(o.pal||'0')+' → '+(s.pal||'0'));if((o.cs||'')!==(s.cs||''))q.push('ลัง '+(o.cs||'0')+' → '+(s.cs||'0'));
+      if(q.length)add('all',s.n+': '+q.join(' · '),[dB]);
+      if((o.at||'')!==(s.at||''))add('drv',s.n+': เวลาถึง '+(o.at||'—')+' → '+(s.at||'—'),[dB]);});
+    if(a&&b&&(a.helpers.join()!==b.helpers.join()||a.out!==b.out))add('drv','เปลี่ยนเด็กรถ',[dB]);});
+  return out;}
+function notifyOf(items){const dr=new Set(),all=items.some(x=>x.lvl==='all');items.forEach(x=>x.drv.forEach(d=>dr.add(d)));
+  const t=[];if(dr.size)t.push('คนขับ '+[...dr].map(c=>first(drvOf(c)?.name||c)).join(', '));if(all)t.push('คลังสินค้า','บัญชี');return t;}
+function mallBadge(h){if(MALL.rev<0)return '<span class="rv w">รอแอดมินห้างแจก</span>';
+  const ch=mallDiff().some(x=>x.h===h);if(ch)return '<span class="rv w">แก้ไข · ยังไม่ส่ง</span>';
+  return '<span class="rv">🔒 Rev.'+MALL.rev+'</span>'+(MALL.ack.has(h)?' <span class="rv g">คนขับรับแล้ว</span>':' <span class="rv w">รอคนขับรับ</span>');}
+function setPM(m){if(ED)closeEditor();PM=m;FILTER='all';renderPlan();window.scrollTo({top:0});}
+function openLog(){const L=MALL.log.slice().reverse();
+  askModal({title:'ประวัติแพลนห้าง · '+L.length+' ฉบับ',ok:'ปิด',cancel:null,
+    html:'<div class="rlog">'+L.map(e=>'<div class="re"><h5>'+(e.rev?'ฉบับแก้ไข Rev.'+e.rev:'แจกงานครั้งแรก Rev.0')+'</h5><div class="m">'+fmtAt(e.at)+' · โดย <b>'+esc(e.by)+'</b></div>'
+      +(e.items.length?'<ul>'+e.items.map(x=>'<li>'+esc(x.pl)+' · '+esc(x.txt)+'</li>').join('')+'</ul>':'')+'<div class="note">แจ้งถึง: '+esc(e.to.join(' · '))+'</div></div>').join('')+'</div>'});}
+async function sendMall(){const items=MALL.rev<0?[]:mallDiff(),cur=mallSnap(),nJob=Object.keys(cur).length;
+  if(MALL.rev>=0&&!items.length){toast('แพลนห้างไม่มีอะไรเปลี่ยนจาก Rev.'+MALL.rev);return;}
+  const first0=MALL.rev<0,to=first0?['คนขับ '+new Set(Object.values(cur).map(x=>x.driver).filter(Boolean)).size+' คน','คลังสินค้า','บัญชี']:notifyOf(items);
+  const ok=await askModal({title:first0?'แจกงานห้าง '+nJob+' คัน':'ส่งฉบับแก้ไข Rev.'+(MALL.rev+1),ok:first0?'แจกงาน':'ส่งฉบับแก้ไข',cancel:'กลับไปแก้',
+    html:(first0?'<p>งานห้างจะเข้าแพลนรวมทันทีพร้อมสถานะ แอดมินยี่ปั๊วเห็นแต่แก้ไม่ได้</p>':'<p>แก้โดย <b>'+esc(ME())+'</b> · เทียบกับ Rev.'+MALL.rev+'</p><div class="chl">'
+      +items.map(x=>'<div class="ci '+x.lvl+'"><b>'+esc(x.pl)+'</b> · '+esc(x.txt)+'<div class="to">แจ้ง: '+esc(x.lvl==='all'?'คนขับ + คลัง + บัญชี':'คนขับที่เกี่ยวข้อง')+'</div></div>').join('')+'</div>')
+      +'<p class="m">ส่งถึง: <b>'+esc(to.join(' · '))+'</b></p>'});
+  if(!ok)return;
+  MALL.rev++;MALL.log.push({rev:MALL.rev,at:new Date(),by:ME(),first:first0,items,to});
+  const hit=new Set(items.flatMap(x=>x.drv));Object.keys(cur).forEach(h=>{if(first0||hit.has(PLAN[h].driver))MALL.ack.delete(h);});
+  MALL.snap=cur;renderPlan();toast((first0?'แจกงานห้าง Rev.0':'ส่งฉบับแก้ไข Rev.'+MALL.rev)+' แล้ว (เดโม) · เว็บจริงส่งการ์ด LINE ถึง '+to.join(' · '));}
+
 /* ---------- ตัวช่วย ---------- */
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -486,7 +583,19 @@ function renderPlan(){
   const d0=new Date($('pdate').value+'T00:00:00'),mon=isNaN(d0)?'':MON[d0.getMonth()],today=isNaN(d0)?'':d0.getDate();
   const chips=[['all','ทั้งหมด'],['job','มีงาน'],['wait','รอมีงาน'],['nod','ไม่มีคนขับ'],['rep','ซ่อม'],['tail','หางสำรอง']];
   const all=DRV.map(d=>drvStat(d.code)),tot=all.reduce((a,s)=>({h:a.h+s.h,y:a.y+s.y,o:a.o+s.o}),{h:0,y:0,o:0}),mxT=Math.max(1,...all.map(s=>s.t));
-  let h='<div class="tools"><button class="btn sm" id="tlp">'+(HIDELP?'⇥ แสดงแผงรายการรถ':'⇤ ซ่อนแผงซ้าย ดูใบงานเต็มจอ')+'</button>'
+  const dfx=MALL.rev>=0?mallDiff():[],nMall=Object.keys(mallSnap()).length,last=MALL.log[MALL.log.length-1];
+  const ackN=Object.keys(MALL.snap).filter(x=>MALL.ack.has(x)).length,snapN=Object.keys(MALL.snap).length;
+  let h='';
+  if(PM==='mall')h+='<div class="pstat mall"><b class="t">🏬 แพลนห้าง</b><span>ส่ง '+esc(dateTH($('pdate').value))+' · งานห้าง <b>'+nMall+'</b> คัน</span>'
+     +(MALL.rev<0?'<span class="pend">ยังไม่แจกงาน</span>':'<span class="ok">✓ แจกแล้ว Rev.'+MALL.rev+'</span><span>'+fmtAt(last.at)+' · โดย '+esc(last.by)+'</span><span>คนขับรับแล้ว <b>'+ackN+'/'+snapN+'</b></span>')
+     +(dfx.length?'<span class="pend">⚠ แก้ไขแล้ว '+dfx.length+' รายการ · ยังไม่ส่ง</span>':'')
+     +'<span class="sp"></span><button class="btn sm" id="rlog">🕘 ประวัติฉบับแก้ไข ('+MALL.log.length+')</button>'
+     +'<span class="note" style="flex-basis:100%">ต้นทางงานห้าง · แจกได้ทันทีที่รู้งาน (ล่วงหน้าได้) → คนขับ / คลัง / บัญชี ได้พร้อมกัน แล้วงานไหลเข้าแพลนรวมพร้อมสถานะ · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
+  else h+='<div class="pstat"><b class="t">📋 แพลนรวม</b><span>ส่ง '+esc(dateTH($('pdate').value))+' · แอดมินยี่ปั๊วส่งก่อน <b>10:00</b> ของวันก่อนส่ง</span>'
+     +'<span>งานห้าง <b>'+nMall+'</b> คัน '+(MALL.rev<0?'<span class="rv w">รอแอดมินห้างแจก</span>':'<span class="rv">🔒 Rev.'+MALL.rev+'</span> <span class="rv g">รับแล้ว '+ackN+'/'+snapN+'</span>')+(dfx.length?' <span class="rv w">ห้างแก้ไข '+dfx.length+' รายการ ยังไม่ส่ง</span>':'')+'</span>'
+     +'<span class="sp"></span><button class="btn sm" id="gomall">🏬 ไปแพลนห้าง</button>'
+     +'<span class="note" style="flex-basis:100%">งานห้าง 🔒 แก้ไม่ได้ในหน้านี้ ต้องแก้ที่แพลนห้าง (ต้นทาง) จะเกิดฉบับแก้ไขและแจ้งคนที่เกี่ยวข้องอัตโนมัติ</span></div>';
+  h+='<div class="tools"><button class="btn sm" id="tlp">'+(HIDELP?'⇥ แสดงแผงรายการรถ':'⇤ ซ่อนแผงซ้าย ดูใบงานเต็มจอ')+'</button>'
    +'<div class="chips" style="margin:0">'+chips.map(([k,l])=>'<button class="chip'+(FILTER===k?' on':'')+'" data-f="'+k+'">'+l+' <b>'+c[k]+'</b></button>').join('')+'</div>'
    +'<input class="search" id="q" placeholder="ค้นหาทะเบียน คนขับ เด็กรถ หรือร้าน" value="'+esc(Q)+'"></div>';
   h+='<div class="msum"><b>สะสม '+mon+' (1–'+today+')</b>'+TYPES.map(t=>tchip(t)+' <b>'+({'ห้าง':tot.h,'ยี่ปั๊ว':tot.y,'อื่นๆ':tot.o})[t]+'</b>').join(' ')
@@ -500,13 +609,14 @@ function renderPlan(){
     h+='<tr class="gr"><td colspan="16"><b>'+g+'</b> <span>'+gall.length+' คัน · มีงาน '+gall.filter(v=>kind(v)==='job').length+'</span></td></tr>';
     rows.forEach(v=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver),st=d&&!v.tail?drvStat(d.code):null;
       const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join('');
-      const S=p.status==='ready'?p.stops:[];
+      const S0=p.status==='ready'?p.stops:[],S=PM==='mall'?S0.filter(isMall):S0,nOther=S0.length-S.length;
       let cust;
       if(k==='rep')cust='<span class="rd">'+esc(p.reason||'ซ่อม')+'</span>';
       else if(k==='off')cust='<span class="m">งดวิ่ง '+esc(p.reason||'')+'</span>';
       else if(v.tail)cust='<span class="m">หางสำรอง</span>';
-      else if(!S.length)cust='<span class="m">'+(d?'รอมีงาน':'รถสแปร์')+'</span>';
-      else cust=L(S,(s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+tchip(tyOf(s))+(legOf(S,i).km==null?' <span class="nokm" title="ยังไม่มีค่ากลาง'+(i?' จาก '+esc(S[i-1].n):' จากโรงงาน')+'">⚠</span>':''));
+      else if(!S.length)cust='<span class="m">'+(nOther?'มีงานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)':d?'ว่าง · รอมีงาน':'รถสแปร์')+'</span>';
+      else cust=L(S,(s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+tchip(tyOf(s))+(PM==='all'&&isMall(s)?' '+mallBadge(v.head):'')+(legOf(S,i).km==null?' <span class="nokm" title="ยังไม่มีค่ากลาง'+(i?' จาก '+esc(S[i-1].n):' จากโรงงาน')+'">⚠</span>':''))
+        +(PM==='mall'&&nOther?'<div class="ln"><span class="m">+ งานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)</span></div>':'');
       const dash='<span class="m">—</span>';
       const hl=p.helpers.map(x=>{const hh=helpOf(x);const dup=hc[x]&&hc[x].length>1;return hh?'<span title="'+esc(hh.name)+'">'+esc(hh.nick)+'</span> <span class="m">'+esc(hh.phone)+'</span>'+(dup?' <span class="warn">⚠ซ้ำ</span>':''):esc(x);});
       if(p.out)hl.push('เด็กนอก '+p.out+' คน');
@@ -535,14 +645,26 @@ function renderPlan(){
   $('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="รายการรถ / รายละเอียดคันที่เลือก"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
   if(ED)drawEditor();else renderList();
   $('tlp').onclick=()=>{HIDELP=!HIDELP;renderPlan();};
+  if($('rlog'))$('rlog').onclick=openLog; if($('gomall'))$('gomall').onclick=()=>setPM('mall');
+  document.querySelectorAll('#pmode [data-pm]').forEach(b=>{const on=b.dataset.pm===PM;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
+    const old=b.querySelector('.cnt');if(old)old.remove();if(b.dataset.pm==='mall'&&dfx.length)b.querySelector('.pml').append(Object.assign(document.createElement('span'),{className:'cnt',textContent:dfx.length+' แก้ไข'}));});
   $('v-plan').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;renderPlan();});
   const q=$('q');q.oninput=()=>{Q=q.value;const pos=q.selectionStart;renderPlan();const n=$('q');n.focus();n.setSelectionRange(pos,pos);};
   $('v-plan').querySelectorAll('.vr2').forEach(r=>{r.onclick=()=>{if(HIDELP){HIDELP=false;}openEditor(r.dataset.v);};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();HIDELP=false;openEditor(r.dataset.v);}};});
   updBar();
 }
 function updBar(){const c=counts();const nd=new Set(VEH.filter(v=>kind(v)==='job').map(v=>PLAN[v.head].driver)).size;
+  const b=$('bSend');b.disabled=false;b.classList.toggle('mallb',PM==='mall');
+  if(PM==='mall'){const cur=mallSnap(),n=Object.keys(cur).length,ns=Object.values(cur).reduce((a,x)=>a+x.stops.length,0),dfx=MALL.rev>=0?mallDiff():[];
+    $('barsum').innerHTML='แพลนห้าง · <b>'+ns+'</b> จุด · รถ <b>'+n+'</b> คัน · คนขับ <b>'+new Set(Object.values(cur).map(x=>x.driver).filter(Boolean)).size+'</b> คน';
+    $('bSave').textContent='บันทึกแพลนห้าง (ยังไม่แจก)';
+    if(MALL.rev<0)b.textContent='📲 แจกงานห้าง ('+n+' คัน)';
+    else if(dfx.length)b.textContent='📤 ส่งฉบับแก้ไข Rev.'+(MALL.rev+1)+' ('+dfx.length+' รายการ)';
+    else{b.textContent='✓ แจกแล้ว Rev.'+MALL.rev+' · ไม่มีแก้ไข';b.disabled=true;}
+    return;}
   $('barsum').innerHTML='มีงาน <b>'+c.job+'</b> คัน · คนขับ <b>'+nd+'</b> คน · รอมีงาน <b>'+c.wait+'</b> · ซ่อม <b>'+c.rep+'</b>';
-  $('bSend').textContent='📲 แจกงานทั้งวัน ('+c.job+' งาน)';}
+  $('bSave').textContent='บันทึกแพลน';
+  b.textContent='📲 ส่งแพลนรวม · แจกงาน ('+c.job+' งาน)';}
 
 /* ---------- ลิ้นชักแก้งานรายคัน ---------- */
 let ED=null;
@@ -616,20 +738,26 @@ function drawEditor(){
      +p.stops.map((s,i)=>'<div class="ti"><b>'+esc(s.n)+' '+tchip(tyOf(s))+'</b><span class="m">'+(s.at?'<span class="at">ต้องถึง '+esc(s.at)+'</span> · ':'<span class="warn">ยังไม่ใส่เวลา</span> · ')+(()=>{const l=legOf(p.stops,i);return l.km==null?'<span class="warn">ไม่มีค่ากลางช่วงนี้</span>':(i?'จากจุดก่อน ':'จากโรงงาน ')+l.km+' กม.';})()+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</span></div>').join('')
      +(()=>{const r=routeKm(p.stops);return '<div class="ti fac"><b>กลับโรงงาน</b><span class="m">'+(r.back==null?'<span class="warn">ไม่มีค่ากลางขากลับ</span>':'ขากลับ '+r.back+' กม.')+' · '+(r.miss?'<span class="warn">ระยะรวมยังไม่ครบ (ขาด '+r.miss+' ช่วง)</span>':'ระยะรวมทั้งเที่ยว <b>'+r.tot+'</b> กม.')+'</span></div>';})()+'</div></div>';}
   h+='<div class="edl">แก้งานคันนี้</div>';
-  h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><div class="seg">'
+  const hasMall=p.stops.some(isMall),drvLock=PM==='all'&&hasMall;
+  if(PM==='mall')h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><b>'+({ready:'พร้อมใช้งาน',repair:'ซ่อม',off:'งดวิ่ง'})[p.status]+'</b>'+(p.reason?' · '+esc(p.reason):'')+'<div class="note">ตั้งซ่อม/งดวิ่งที่แพลนรวม</div></div>';
+  else h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><div class="seg">'
    +[['ready','พร้อมใช้งาน'],['repair','ซ่อม'],['off','งดวิ่ง']].map(([k,l])=>'<button data-s="'+k+'" class="'+(p.status===k?'on':'')+(k==='repair'?' r':'')+'">'+l+'</button>').join('')+'</div>'
    +(p.status!=='ready'?'<input class="in" id="reason" placeholder="สาเหตุ เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 12/11" value="'+esc(p.reason)+'"><div class="note">ข้อความนี้ขึ้นในช่องสถานะของรูปสรุปที่ส่งผู้บริหาร</div>':'')+'</div>';
   if(p.status==='ready'&&!v.tail){
     const mine=DRV.find(d=>d.head===v.head);
-    h+='<div class="box"><label for="drv">คนขับ</label><select class="in" id="drv"><option value="">— ไม่มีคนขับ —</option>'
+    h+='<div class="box"><label for="drv">คนขับ'+(drvLock?' 🔒':'')+'</label><select class="in" id="drv"'+(drvLock?' disabled':'')+'><option value="">— ไม่มีคนขับ —</option>'
      +DRV.map(d=>{const other=d.head!==v.head?' (ประจำ '+d.head+')':' · ประจำคันนี้';return '<option value="'+d.code+'"'+(p.driver===d.code?' selected':'')+'>'+esc(d.name)+other+' · สะสม '+drvStat(d.code).t+' เที่ยว</option>';}).join('')+'</select>'
+     +(drvLock?'<div class="lockn">🔒 คันนี้มีงานห้าง · เปลี่ยนคนขับที่ <button type="button" data-gomall>แพลนห้าง</button> (จะแจ้งคนขับเก่าและใหม่)</div>':'')
      +(p.driver&&mine&&p.driver!==mine.code?'<div class="warn">คนขับประจำคันนี้คือ '+esc(mine.name)+'</div>':'')
      +(p.driver&&dc[p.driver]&&dc[p.driver].some(x=>x!==v.head)?'<div class="warn">⚠ คนนี้มีงานรถ '+esc(dc[p.driver].filter(x=>x!==v.head).join(', '))+' วันเดียวกัน</div>':'')
      +(p.driver?(()=>{const s=drvStat(p.driver);return '<div class="note">สถิติ '+esc(drvOf(p.driver)?.name||'')+' เดือนนี้: ห้าง '+s.h+' · ยี่ปั๊ว '+s.y+' · อื่นๆ '+s.o+' · รวม <b>'+s.t+'</b> เที่ยว (รวมงานวันนี้)</div>';})():'')
      +'<div class="two"><label class="lb" style="display:flex;flex-direction:column;gap:4px">ประเภทงาน (นับสถิติ)<select class="in" id="jt"><option value="">ตามร้านจุดแรก'+(p.stops[0]?' ('+tyOf(p.stops[0])+')':'')+'</option>'+TYPES.map(t=>'<option'+(p.jt===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'
      +'<label class="lb" style="display:flex;flex-direction:column;gap:4px">เวลานัดเด็กรถ<input class="in" id="ht" placeholder="เช่น 05:00 หรือ นัดเอง" value="'+esc(p.htime||'')+'"></label></div></div>';
     h+='<div class="box"><span class="lb">จุดส่ง / สถานที่ <span class="note">('+p.stops.length+' จุด · เรียงตามลำดับวิ่ง · ใส่เวลาที่ต้องถึงหน้างานแต่ละจุด)</span></span>';
-    p.stops.forEach((s,i)=>{h+='<div class="stop"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+'</div>'
+    const lockS=s=>PM==='mall'?!isMall(s):isMall(s);
+    p.stops.forEach((s,i)=>{if(lockS(s)){h+='<div class="stop lock'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+(s.at?' · ถึง '+esc(s.at):'')+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</div>'
+        +'<div class="lockn">'+(isMall(s)?mallBadge(v.head)+' แก้ที่ <button type="button" data-gomall>แพลนห้าง</button>':'🔒 งานแพลนรวม · แก้ที่ <button type="button" data-goall>แพลนรวม</button>')+'</div></div><div class="ac"></div></div>';return;}
+      h+='<div class="stop'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+'</div>'
       +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-at="'+i+'" value="'+esc(s.at)+'" style="width:118px"></label>'
       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input class="in" data-pal="'+i+'" placeholder="0" value="'+esc(s.pal)+'"></label>'
       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input class="in" data-cs="'+i+'" placeholder="0" value="'+esc(s.cs)+'"></label>'
@@ -637,8 +765,8 @@ function drawEditor(){
       +(feeOf(v,s)?'<span class="note" style="align-self:flex-end">ค่าลงสินค้า '+feeOf(v,s).toLocaleString('th-TH')+' บ.</span>':'')
       +(s.id==null?'<label class="note" style="display:flex;flex-direction:column;gap:2px">ประเภทร้าน<select class="in" data-ty="'+i+'" style="width:96px">'+TYPES.map(t=>'<option'+(tyOf(s)===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>':'')+'</div></div>'
       +'<div class="ac"><button class="ib" data-up="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-dn="'+i+'" aria-label="เลื่อนลง"'+(i<p.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-rm="'+i+'" aria-label="ลบจุดนี้">✕</button></div></div>';});
-    h+='<input class="in" id="sq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อร้าน" value="'+esc(ED.q)+'" autocomplete="off">';
-    if(ED.q){const nq=ED.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(s=>s.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,7);
+    h+='<input class="in" id="sq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อร้าน'+(PM==='mall'?' (เฉพาะห้าง)':' (ร้านห้างเพิ่มที่แพลนห้าง)')+'" value="'+esc(ED.q)+'" autocomplete="off">';
+    if(ED.q){const nq=ED.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(s=>s.n.replace(/\s/g,'').toLowerCase().includes(nq)&&((tyOf({id:s.id})==='ห้าง')===(PM==='mall'))).slice(0,7);
       h+='<div class="res">'+r.map(s=>'<button data-add="'+s.id+'"><span>'+esc(s.n)+'</span><span class="km">'+(()=>{const last=p.stops[p.stops.length-1];if(!last)return 'จากโรงงาน '+s.km+' กม.';const k=last.id?PAIR[last.id+'-'+s.id]:undefined;return k?'จากจุด '+p.stops.length+' '+k.km+' กม.':'<span class="warn" style="display:inline">ยังไม่มีค่ากลางจากจุด '+p.stops.length+'</span>';})()+'</span></button>').join('')
        +'<button data-new="1"><span>＋ สถานที่ใหม่ “'+esc(ED.q)+'”</span><span class="km">ปักหมุด</span></button></div>';}
     if(ED.newLoc!=null)h+='<div class="box" style="background:var(--surface2)"><span class="lb">สถานที่ใหม่: '+esc(ED.newLoc)+'</span><input class="in" id="ll" placeholder="วางพิกัดจาก Google Maps เช่น 13.3611, 100.9847"><div class="note">บันทึกชื่อกับพิกัดไว้ แต่ระบบยังไม่มีระยะ กม. จึงยังคิดค่าแรงไม่ได้จนกว่า DEV จะใส่ค่ากลาง</div><div style="display:flex;gap:8px"><button class="btn sm pri" id="llok">เพิ่มจุดนี้</button><button class="btn sm ghost" id="llno">ยกเลิก</button></div></div>';
@@ -666,7 +794,7 @@ function drawEditor(){
       if(!ok)return;}
     p.stops.push({id:s.id,n:s.n,km:s.km,pal:'',cs:'',at:''});ED.q='';drawEditor();});
   D.querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>{sync();ED.newLoc=ED.q;ED.q='';drawEditor();$('ll').focus();});
-  if($('llok'))$('llok').onclick=()=>{sync();p.stops.push({id:null,n:ED.newLoc,km:null,ll:$('ll').value.trim(),pal:'',cs:'',at:'',ty:'ยี่ปั๊ว'});ED.newLoc=null;drawEditor();};
+  if($('llok'))$('llok').onclick=()=>{sync();p.stops.push({id:null,n:ED.newLoc,km:null,ll:$('ll').value.trim(),pal:'',cs:'',at:'',ty:PM==='mall'?'ห้าง':'ยี่ปั๊ว'});ED.newLoc=null;drawEditor();};
   if($('llno'))$('llno').onclick=()=>{ED.newLoc=null;drawEditor();};
   D.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{sync();p.stops.splice(+b.dataset.rm,1);drawEditor();});
   D.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{sync();const i=+b.dataset.up;[p.stops[i-1],p.stops[i]]=[p.stops[i],p.stops[i-1]];drawEditor();});
@@ -674,7 +802,9 @@ function drawEditor(){
   D.querySelectorAll('[data-h]').forEach(b=>b.onchange=()=>{sync();const id=b.dataset.h;p.helpers=b.checked?[...p.helpers,id]:p.helpers.filter(x=>x!==id);drawEditor();});
   if($('om'))$('om').onclick=()=>{sync();p.out=Math.max(0,p.out-1);drawEditor();};
   if($('op'))$('op').onclick=()=>{sync();p.out=Math.min(4,p.out+1);drawEditor();};
+  D.querySelectorAll('[data-gomall],[data-goall]').forEach(b=>b.onclick=()=>{const hd=v.head;setPM(b.hasAttribute('data-gomall')?'mall':'all');openEditor(hd);});
   $('dsv').onclick=()=>{sync();if(p.status!=='ready'&&!p.reason.trim()&&p.status==='repair'){toast('ใส่สาเหตุการซ่อมก่อน จะได้ขึ้นในรูปสรุป');return;}
+    if(p.status!=='ready'&&PLAN[v.head].stops.some(isMall)){toast('รถคันนี้มีงานห้าง ให้แอดมินห้างย้ายงานไปคันอื่นในแพลนห้างก่อน');return;}
     if(p.status!=='ready'){p.stops=[];p.helpers=[];p.out=0;}
     PLAN[v.head]=p;closeEditor();renderAll();toast('บันทึกรถ '+v.head+' ในแพลนแล้ว (เดโม)');};
   document.onkeydown=e=>{if(e.key==='Escape'&&ED)closeEditor();};
@@ -809,19 +939,21 @@ async function renderReport(){
 const VIEWS=['plan','helpers','report'];
 function route(){const t=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'plan';
   VIEWS.forEach(v=>$('v-'+v).hidden=v!==t);document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.t===t));
-  $('bar').hidden=t!=='plan';if(t==='report')renderReport();}
+  $('bar').hidden=t!=='plan';$('pmode').hidden=t!=='plan';if(t==='report')renderReport();}
 function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}
 $('pdate').onchange=()=>{$('pday').textContent=dateTH($('pdate').value);renderAll();};
 $('pday').textContent=dateTH($('pdate').value);
-$('bSave').onclick=()=>toast('บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว (เดโม) · ยังไม่ส่งถึงคนขับจนกว่าจะกดแจกงาน');
-$('bSend').onclick=async()=>{const miss=missingAll();
+$('bSave').onclick=()=>toast(PM==='mall'?'บันทึกแพลนห้างแล้ว (เดโม) · ยังไม่ถึงใครจนกว่าจะกด'+(MALL.rev<0?'แจกงานห้าง':'ส่งฉบับแก้ไข'):'บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว (เดโม) · ยังไม่ส่งถึงคนขับจนกว่าจะกดแจกงาน');
+document.querySelectorAll('#pmode [data-pm]').forEach(b=>b.onclick=()=>{if(b.dataset.pm!==PM)setPM(b.dataset.pm);});
+$('bSend').onclick=async()=>{if(PM==='mall'){sendMall();return;}
+  const miss=missingAll();
   if(miss.length){const by={};miss.forEach(m=>(by[m.plate]=by[m.plate]||[]).push(m));
     const ok=await askModal({title:'มี '+miss.length+' ช่วงที่ยังไม่มีค่ากลาง',ok:'แจกงานต่อ (แจ้ง DEV)',cancel:'กลับไปแก้',
       html:'<p>ช่วงต่อไปนี้ไม่พบระยะใน DTC ค่าแรงของช่วงนี้จะยังคิดไม่ได้จนกว่า DEV ใส่ค่ากลาง</p><div class="mlist">'
         +Object.keys(by).map(pl=>'<div class="mg"><b>'+esc(pl)+'</b>'+by[pl].map(m=>'<div class="mrt sm"><span>'+esc(m.first?'โรงงาน':m.from)+'</span><span>→</span><span>'+esc(m.to)+'</span></div>').join('')+'</div>').join('')+'</div>'});
     if(!ok)return;}
   const c=counts(),{dc,hc}=busy();const dup=Object.values(dc).filter(a=>a.length>1).length+Object.values(hc).filter(a=>a.length>1).length;
-  toast(dup?'มีคนขับหรือเด็กรถซ้ำหลายคัน '+dup+' จุด ตรวจก่อนแจก (เดโม)':'เว็บจริงจะส่งการ์ดงาน '+c.job+' งานถึงคนขับทาง LINE ให้กดรับ เหมือนปุ่มแจกงานเดิม (เดโมไม่ส่ง)');};
+  toast(dup?'มีคนขับหรือเด็กรถซ้ำหลายคัน '+dup+' จุด ตรวจก่อนแจก (เดโม)':'เว็บจริงจะส่งแพลนรวมถึงคนขับ (การ์ดงานให้กดรับ) + คลังสินค้า + บัญชี · งานห้างที่แจกแล้วไม่ส่งซ้ำ (เดโมไม่ส่ง)');};
 addEventListener('hashchange',route);
 renderAll();route();
 </script>
@@ -836,7 +968,7 @@ function gateMsg(h){ const g=document.getElementById('gate'); g.hidden=false; g.
   try{
     await liff.init({liffId:LIFF_ID});
     if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
-    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    const p=await liff.getProfile(); MY_UID=p.userId||''; window.MY_NAME=p.displayName||'';   /* ชื่อคนแก้ในฉบับแก้ไขแพลนห้าง */
     if(!MY_UID){ gateMsg('ไม่พบบัญชี LINE'); return; }
     let info=null; try{ info=await ssbAdminPinInfo(MY_UID); }catch(e){}
     const ok = info&&info.isDev ? await ssbPinGate(MY_UID) : await ssbAdminPin(MY_UID,{info,text:'เข้าหน้าแพลนรถ Packing (เดโม)'});
