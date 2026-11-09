@@ -349,6 +349,13 @@ main{padding-block:14px 120px}
 .lt-dist .eta{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
 .lt-ctx{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lt-ctx.bad{color:var(--bad)}
+.jflow{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12px;color:var(--muted)}
+.jflow span{border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface2)}
+.jflow span.on{border-color:var(--mall);color:var(--mall);background:var(--mallbg);font-weight:600}
+.jflow i{font-style:normal;opacity:.6}
+.szc{display:inline-block;font-size:12px;font-weight:700;border-radius:7px;padding:2px 8px;background:var(--mallbg);color:var(--mall);white-space:nowrap}
+.jt.mj td{vertical-align:top}
+.jt.mj td .btn.sm{padding:3px 9px;font-size:12px}
 .btn.pri.mallb{background:var(--mall);border-color:var(--mall);color:#fff}
 .btn:disabled{opacity:.6;cursor:default}
 .pmode[hidden]{display:none}
@@ -400,6 +407,7 @@ main{padding-block:14px 120px}
   <div class="sum" id="barsum"></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn" id="bSave">บันทึกแพลน</button>
+    <button class="btn" id="bReq" hidden>🚚 ขอรถพี่ปุ๋ย</button>
     <button class="btn pri" id="bSend">📲 แจกงานทั้งวัน</button>
   </div>
 </div></div>
@@ -489,61 +497,184 @@ VEH.forEach(v=>{const d=DRV.find(x=>x.head===v.head),s=SEED[v.head]||{};
 PLAN['84-9041'].note='วางบิล + เอกสาร CO/COA';PLAN['86-7722'].htime='04:30';PLAN['86-7079'].note='เบิกพาเลท Loscam วังน้อย';PLAN['86-7395'].note='รับเช็ค';
 
 /* ---------- แพลนรวม | แพลนห้าง ----------
- * แพลนห้าง = ต้นทางของงานห้าง (แอดมินห้างรู้งานล่วงหน้า → กดแจกงาน → คนขับ / คลัง / บัญชี ได้ทันที)
- * งานห้างไหลเข้าแพลนรวมพร้อมสถานะ (ล็อก แก้ได้ที่แพลนห้างเท่านั้น) · แพลนรวม = แอดมินยี่ปั๊วส่งก่อน 10:00 ของวันก่อนส่ง
- * แก้หลังแจกแล้ว = ฉบับแก้ไข (Rev.) ระบุคนแก้ · เปลี่ยนคนขับ/เวลา/เด็กรถ → แจ้งคนขับที่เกี่ยว · เพิ่ม/ลด/เปลี่ยนสถานที่/จำนวน → แจ้งคนขับ + คลัง + บัญชี */
+ * แพลนห้าง = ต้นทางงานห้าง แบบเดียวกับ Loading Planner: แอดมินห้างจัดงานตาม "ขนาดรถ" (ยังไม่มีทะเบียน)
+ *  ① ร่างงาน (ขนาดรถ + ร้านห้าง + เวลา/พาเลท/ลัง) → ② ขอรถกับพี่ปุ๋ย (แอดมินรถ PK) → ③ พี่ปุ๋ยจัดรถ = ได้ทะเบียน
+ *  → ④ ระบุคนขับ → ⑤ แจกงาน → คนขับ / คลัง / บัญชี · งานที่ได้รถแล้วไหลเข้าแพลนรวม (ล็อก 🔒 แก้ที่แพลนห้างเท่านั้น)
+ * แก้หลังแจก = ฉบับแก้ไข Rev. ระบุคนแก้ · เปลี่ยนคนขับ/เวลา → แจ้งคนขับ · เปลี่ยนรถ/เพิ่ม/ลด/เปลี่ยนที่/จำนวน → คนขับ + คลัง + บัญชี */
 let PM='all';
 const isMall=s=>tyOf(s)==='ห้าง';
 const skey=s=>s.id!=null?'#'+s.id:'n:'+s.n;
 const ME=()=>(typeof window.MY_NAME==='string'&&window.MY_NAME)||'คุณ (เดโม)';
-function mallSnap(){const o={};VEH.forEach(v=>{const p=PLAN[v.head];if(p.status!=='ready')return;const st=p.stops.filter(isMall);if(!st.length)return;
-  o[v.head]={driver:p.driver,helpers:p.helpers.slice(),out:p.out,stops:st.map(s=>({k:skey(s),n:s.n,at:s.at,pal:s.pal,cs:s.cs}))};});return o;}
+const SIZES=['4 ล้อ','6 ล้อ','10/22 ล้อ'];
+const SZL={'4 ล้อ':'4 ล้อ','6 ล้อ':'6 ล้อ','10/22 ล้อ':'พ่วง / หัวลาก'};
+let MJ=[],MJN=0;
+/* งานห้างตั้งต้น: แปลงจากแพลนตัวอย่าง (คันที่มีร้านห้าง = ได้รถแล้ว) + งานที่ยังรอรถ 2 งาน */
+VEH.forEach(v=>{const p=PLAN[v.head],st=p.stops.filter(isMall);if(!st.length||p.status!=='ready')return;
+  MJ.push({id:'H'+(++MJN),size:v.g,stops:st.map(s=>Object.assign({},s)),head:v.head,driver:p.driver,req:'got',note:''});});
+MJ.push({id:'H'+(++MJN),size:'10/22 ล้อ',stops:[Object.assign(S(217),{pal:'26',at:'06:00'})],head:'',driver:'',req:'asked',note:''});
+MJ.push({id:'H'+(++MJN),size:'6 ล้อ',stops:[Object.assign(S(188),{pal:'8',cs:'240',at:'08:00'})],head:'',driver:'',req:'draft',note:''});
+/* งานห้างที่ได้รถแล้ว → ใส่เป็นจุดส่งของรถคันนั้นในแพลนรวม (จุดห้างขึ้นก่อน) · คนขับตามที่แอดมินห้างระบุ */
+function syncMall(){VEH.forEach(v=>{const p=PLAN[v.head];p.stops=p.stops.filter(s=>!isMall(s));});
+  MJ.forEach(j=>{if(!j.head)return;const p=PLAN[j.head];p.stops=j.stops.map(s=>Object.assign({},s,{mj:j.id})).concat(p.stops);if(j.driver)p.driver=j.driver;});}
+syncMall();
+const jReady=j=>!!(j.head&&j.driver&&j.stops.length);
+const jobOfHead=h=>MJ.find(j=>j.head===h);
+const plOf=h=>{const v=VEH.find(x=>x.head===h);return v?v.plate.replace(',',' / '):'';};
+const jLab=(id,size,head)=>id+' · '+SZL[size]+(head?' · '+plOf(head):'');
+function mallSnap(){const o={};MJ.forEach(j=>{if(!jReady(j))return;
+  o[j.id]={head:j.head,size:j.size,driver:j.driver,stops:j.stops.map(s=>({k:skey(s),n:s.n,at:s.at,pal:s.pal,cs:s.cs}))};});return o;}
 const MALL={rev:-1,snap:{},log:[],ack:new Set()};
 (function(){const d=new Date((document.getElementById('pdate')||{}).value+'T00:00:00');const at=isNaN(d)?new Date():new Date(d.getTime()-2*864e5+15*36e5+10*6e4);
   MALL.snap=mallSnap();MALL.rev=0;
-  MALL.log.push({rev:0,at,by:'แอดมินห้าง (ตัวอย่าง)',first:true,items:[],to:['คนขับ '+new Set(Object.values(MALL.snap).map(x=>x.driver).filter(Boolean)).size+' คน','คลังสินค้า','บัญชี']});
-  Object.keys(MALL.snap).forEach((h,i)=>{if(i!==2)MALL.ack.add(h);});})();
+  MALL.log.push({rev:0,at,by:'แอดมินห้าง (ตัวอย่าง)',first:true,items:[],to:['คนขับ '+new Set(Object.values(MALL.snap).map(x=>x.driver)).size+' คน','คลังสินค้า','บัญชี']});
+  Object.keys(MALL.snap).forEach((id,i)=>{if(i!==2)MALL.ack.add(id);});})();
 const fmtAt=d=>d.getDate()+'.'+(d.getMonth()+1)+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')+' น.';
-/* เทียบแพลนห้างตอนนี้กับฉบับที่แจกล่าสุด */
+/* เทียบแพลนห้างตอนนี้กับฉบับที่แจกล่าสุด (รายงาน) */
 function mallDiff(){const cur=mallSnap(),old=MALL.snap,out=[],dn=c=>drvOf(c)?.name||'ไม่มีคนขับ';
-  const heads=[...new Set([...Object.keys(old),...Object.keys(cur)])];
-  heads.forEach(h=>{const a=old[h],b=cur[h],pl=VEH.find(v=>v.head===h).plate.replace(',',' / ');
-    const add=(lvl,txt,drv)=>out.push({h,pl,lvl,txt,drv:[...new Set(drv.filter(Boolean))]});
-    const A=a?a.stops:[],B=b?b.stops:[],ka=A.map(s=>s.k),kb=B.map(s=>s.k);
-    const gone=A.filter(s=>!kb.includes(s.k)),neu=B.filter(s=>!ka.includes(s.k));
-    const dA=a&&a.driver,dB=b?b.driver:PLAN[h].driver;
-    if(a&&b&&a.driver!==b.driver)add('drv','เปลี่ยนคนขับ '+dn(a.driver)+' → '+dn(b.driver),[a.driver,b.driver]);
+  [...new Set([...Object.keys(old),...Object.keys(cur)])].forEach(id=>{const a=old[id],b=cur[id],x=b||a;
+    const add=(lvl,txt,drv)=>out.push({id,pl:jLab(id,x.size,x.head),lvl,txt,drv:[...new Set(drv.filter(Boolean))]});
+    if(!a){add('all','งานใหม่ '+b.stops.map(s=>s.n).join(' → '),[b.driver]);return;}
+    if(!b){add('all','ถอนงานออก (ยกเลิก หรือรอรถใหม่) '+a.stops.map(s=>s.n).join(' → '),[a.driver]);return;}
+    if(a.head!==b.head)add('all','เปลี่ยนรถ '+plOf(a.head)+' → '+plOf(b.head),[a.driver,b.driver]);
+    else if(a.driver!==b.driver)add('drv','เปลี่ยนคนขับ '+dn(a.driver)+' → '+dn(b.driver),[a.driver,b.driver]);
+    const ka=a.stops.map(s=>s.k),kb=b.stops.map(s=>s.k),gone=a.stops.filter(s=>!kb.includes(s.k)),neu=b.stops.filter(s=>!ka.includes(s.k));
     for(let i=0;i<Math.max(gone.length,neu.length);i++){const g=gone[i],n=neu[i];
-      if(g&&n)add('all','เปลี่ยนสถานที่ '+g.n+' → '+n.n,[dA,dB]);
-      else if(n)add('all','เพิ่มจุดส่ง '+n.n+(n.pal?' · '+n.pal+' พาเลท':'')+(n.cs?' · '+n.cs+' ลัง':''),[dB]);
-      else add('all','ยกเลิกจุดส่ง '+g.n,[dA]);}
-    B.forEach(s=>{const o=A.find(x=>x.k===s.k);if(!o)return;
+      if(g&&n)add('all','เปลี่ยนสถานที่ '+g.n+' → '+n.n,[a.driver,b.driver]);
+      else if(n)add('all','เพิ่มจุดส่ง '+n.n+(n.pal?' · '+n.pal+' พาเลท':'')+(n.cs?' · '+n.cs+' ลัง':''),[b.driver]);
+      else add('all','ยกเลิกจุดส่ง '+g.n,[a.driver,b.driver]);}
+    b.stops.forEach(s=>{const o=a.stops.find(y=>y.k===s.k);if(!o)return;
       const q=[];if((o.pal||'')!==(s.pal||''))q.push('พาเลท '+(o.pal||'0')+' → '+(s.pal||'0'));if((o.cs||'')!==(s.cs||''))q.push('ลัง '+(o.cs||'0')+' → '+(s.cs||'0'));
-      if(q.length)add('all',s.n+': '+q.join(' · '),[dB]);
-      if((o.at||'')!==(s.at||''))add('drv',s.n+': เวลาถึง '+(o.at||'—')+' → '+(s.at||'—'),[dB]);});
-    if(a&&b&&(a.helpers.join()!==b.helpers.join()||a.out!==b.out))add('drv','เปลี่ยนเด็กรถ',[dB]);});
+      if(q.length)add('all',s.n+': '+q.join(' · '),[b.driver]);
+      if((o.at||'')!==(s.at||''))add('drv',s.n+': เวลาถึง '+(o.at||'—')+' → '+(s.at||'—'),[b.driver]);});});
   return out;}
 function notifyOf(items){const dr=new Set(),all=items.some(x=>x.lvl==='all');items.forEach(x=>x.drv.forEach(d=>dr.add(d)));
   const t=[];if(dr.size)t.push('คนขับ '+[...dr].map(c=>first(drvOf(c)?.name||c)).join(', '));if(all)t.push('คลังสินค้า','บัญชี');return t;}
-function mallBadge(h){if(MALL.rev<0)return '<span class="rv w">รอแอดมินห้างแจก</span>';
-  const ch=mallDiff().some(x=>x.h===h);if(ch)return '<span class="rv w">แก้ไข · ยังไม่ส่ง</span>';
-  return '<span class="rv">🔒 Rev.'+MALL.rev+'</span>'+(MALL.ack.has(h)?' <span class="rv g">คนขับรับแล้ว</span>':' <span class="rv w">รอคนขับรับ</span>');}
-function setPM(m){if(ED)closeEditor();PM=m;FILTER='all';renderPlan();window.scrollTo({top:0});}
+/* สถานะงานห้าง: ร่าง → รอพี่ปุ๋ยจัดรถ → ได้รถ รอระบุคนขับ → พร้อมแจก → แจกแล้ว (หรือ แก้ไข ยังไม่ส่ง) */
+function jst(j,dfx){if(!j.head)return j.req==='asked'?'asked':'draft';if(!j.driver)return 'nodrv';if(!MALL.snap[j.id])return 'ready';
+  return (dfx||mallDiff()).some(x=>x.id===j.id)?'chg':'sent';}
+const JST={draft:['ร่าง · ยังไม่ขอรถ','rv w'],asked:['🚚 รอพี่ปุ๋ยจัดรถ','rv w'],nodrv:['ได้รถแล้ว · รอระบุคนขับ','rv w'],ready:['พร้อมแจก','rv'],chg:['แก้ไข · ยังไม่ส่ง','rv w'],sent:['แจกแล้ว','rv g']};
+const jstPill=(j,dfx)=>{const s=jst(j,dfx),l=JST[s];return '<span class="'+l[1]+'">'+l[0]+(s==='sent'?' Rev.'+MALL.rev:'')+'</span>'+(s==='sent'?' <span class="rv '+(MALL.ack.has(j.id)?'g">คนขับรับแล้ว':'w">รอคนขับรับ')+'</span>':'');};
+function mallBadge(h){const j=jobOfHead(h);if(!j)return '';if(!MALL.snap[j.id])return '<span class="rv w">รอแอดมินห้างแจก</span>';
+  if(mallDiff().some(x=>x.id===j.id))return '<span class="rv w">แก้ไข · ยังไม่ส่ง</span>';
+  return '<span class="rv">🔒 '+j.id+' Rev.'+MALL.rev+'</span>'+(MALL.ack.has(j.id)?' <span class="rv g">คนขับรับแล้ว</span>':' <span class="rv w">รอคนขับรับ</span>');}
+function setPM(m){if(ED)closeEditor();JE=null;PM=m;FILTER='all';renderPlan();window.scrollTo({top:0});}
 function openLog(){const L=MALL.log.slice().reverse();
-  askModal({title:'ประวัติแพลนห้าง · '+L.length+' ฉบับ',ok:'ปิด',cancel:null,
+  askModal({title:'ประวัติแพลนห้าง · '+L.length+' ฉบับ',ok:'ปิด',cancel:null,icon:'🕘',
     html:'<div class="rlog">'+L.map(e=>'<div class="re"><h5>'+(e.rev?'ฉบับแก้ไข Rev.'+e.rev:'แจกงานครั้งแรก Rev.0')+'</h5><div class="m">'+fmtAt(e.at)+' · โดย <b>'+esc(e.by)+'</b></div>'
       +(e.items.length?'<ul>'+e.items.map(x=>'<li>'+esc(x.pl)+' · '+esc(x.txt)+'</li>').join('')+'</ul>':'')+'<div class="note">แจ้งถึง: '+esc(e.to.join(' · '))+'</div></div>').join('')+'</div>'});}
-async function sendMall(){const items=MALL.rev<0?[]:mallDiff(),cur=mallSnap(),nJob=Object.keys(cur).length;
-  if(MALL.rev>=0&&!items.length){toast('แพลนห้างไม่มีอะไรเปลี่ยนจาก Rev.'+MALL.rev);return;}
-  const first0=MALL.rev<0,to=first0?['คนขับ '+new Set(Object.values(cur).map(x=>x.driver).filter(Boolean)).size+' คน','คลังสินค้า','บัญชี']:notifyOf(items);
-  const ok=await askModal({title:first0?'แจกงานห้าง '+nJob+' คัน':'ส่งฉบับแก้ไข Rev.'+(MALL.rev+1),ok:first0?'แจกงาน':'ส่งฉบับแก้ไข',cancel:'กลับไปแก้',
+/* ② ขอรถกับพี่ปุ๋ย · ③ (เดโม) จำลองพี่ปุ๋ยจัดรถให้ตามขนาด เลือกคันที่ว่างก่อน */
+function askTruck(ids){const js=MJ.filter(j=>ids.includes(j.id)&&!j.head&&j.req!=='asked');if(!js.length){toast('ไม่มีงานที่ต้องขอรถ');return;}
+  js.forEach(j=>j.req='asked');const c={};js.forEach(j=>c[SZL[j.size]]=(c[SZL[j.size]]||0)+1);
+  renderPlan();toast('ส่งคำขอรถถึงพี่ปุ๋ยแล้ว (เดโม): '+Object.entries(c).map(([k,n])=>k+' '+n+' คัน').join(' · ')+' · เว็บจริงแจ้งเข้าแท็บจัดรถ PK');}
+function freeTrucks(size,except){const used=new Set(MJ.filter(j=>j.head&&j.id!==except).map(j=>j.head));
+  return VEH.filter(v=>v.g===size&&!v.tail&&PLAN[v.head].status==='ready'&&!used.has(v.head))
+    .sort((a,b)=>PLAN[a.head].stops.filter(s=>!isMall(s)).length-PLAN[b.head].stops.filter(s=>!isMall(s)).length);}
+function puyAssign(id){const j=MJ.find(x=>x.id===id),v=freeTrucks(j.size,id)[0];if(!v){toast('ไม่มีรถ '+SZL[j.size]+' ว่าง · พี่ปุ๋ยต้องหารถเพิ่ม/ขอรถไร่');return;}
+  j.head=v.head;j.req='got';j.driver='';syncMall();if(JE&&JE.j.id===id){JE.j.head=j.head;JE.j.req='got';JE.j.driver='';}
+  renderPlan();toast('พี่ปุ๋ยจัดรถ '+v.plate.replace(',',' / ')+' ให้ '+id+' แล้ว (เดโม) · ระบุคนขับต่อได้เลย');}
+async function sendMall(){const dfx=mallDiff(),items=MALL.rev<0?dfx.filter(x=>x.lvl):dfx,cur=mallSnap();
+  const wait=MJ.filter(j=>!jReady(j));
+  if(MALL.rev>=0&&!items.length){toast(wait.length?'ยังไม่มีงานพร้อมส่ง · '+wait.length+' งานรอรถหรือรอคนขับ':'แพลนห้างไม่มีอะไรเปลี่ยนจาก Rev.'+MALL.rev);return;}
+  const first0=MALL.rev<0,to=first0?['คนขับ '+new Set(Object.values(cur).map(x=>x.driver)).size+' คน','คลังสินค้า','บัญชี']:notifyOf(items);
+  const ok=await askModal({title:first0?'แจกงานห้าง '+Object.keys(cur).length+' งาน':'ส่งฉบับแก้ไข Rev.'+(MALL.rev+1),ok:first0?'แจกงาน':'ส่งฉบับแก้ไข',cancel:'กลับไปแก้',icon:'📤',
     html:(first0?'<p>งานห้างจะเข้าแพลนรวมทันทีพร้อมสถานะ แอดมินยี่ปั๊วเห็นแต่แก้ไม่ได้</p>':'<p>แก้โดย <b>'+esc(ME())+'</b> · เทียบกับ Rev.'+MALL.rev+'</p><div class="chl">'
       +items.map(x=>'<div class="ci '+x.lvl+'"><b>'+esc(x.pl)+'</b> · '+esc(x.txt)+'<div class="to">แจ้ง: '+esc(x.lvl==='all'?'คนขับ + คลัง + บัญชี':'คนขับที่เกี่ยวข้อง')+'</div></div>').join('')+'</div>')
+      +(wait.length?'<p class="warn">ยังไม่ส่งในรอบนี้ '+wait.length+' งาน: '+wait.map(j=>esc(j.id+' '+SZL[j.size]+' ('+JST[jst(j,dfx)][0]+')')).join(', ')+'</p>':'')
       +'<p class="m">ส่งถึง: <b>'+esc(to.join(' · '))+'</b></p>'});
   if(!ok)return;
   MALL.rev++;MALL.log.push({rev:MALL.rev,at:new Date(),by:ME(),first:first0,items,to});
-  const hit=new Set(items.flatMap(x=>x.drv));Object.keys(cur).forEach(h=>{if(first0||hit.has(PLAN[h].driver))MALL.ack.delete(h);});
+  const hit=new Set(items.map(x=>x.id));Object.keys(cur).forEach(id=>{if(first0||hit.has(id))MALL.ack.delete(id);});
   MALL.snap=cur;renderPlan();toast((first0?'แจกงานห้าง Rev.0':'ส่งฉบับแก้ไข Rev.'+MALL.rev)+' แล้ว (เดโม) · เว็บจริงส่งการ์ด LINE ถึง '+to.join(' · '));}
+
+/* ---------- หน้าแพลนห้าง (ตารางงานตามขนาดรถ) + ลิ้นชักแก้งาน ---------- */
+let JE=null;
+function pmChips(n){document.querySelectorAll('#pmode [data-pm]').forEach(b=>{const on=b.dataset.pm===PM;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
+  const old=b.querySelector('.cnt');if(old)old.remove();if(b.dataset.pm==='mall'&&n)b.querySelector('.pml').append(Object.assign(document.createElement('span'),{className:'cnt',textContent:n+' รอดำเนินการ'}));});}
+function mallTodo(dfx){return MJ.filter(j=>['draft','asked','nodrv','ready','chg'].includes(jst(j,dfx))).length;}
+function renderMall(){
+  const dfx=mallDiff(),last=MALL.log[MALL.log.length-1],snapIds=Object.keys(MALL.snap),ackN=snapIds.filter(x=>MALL.ack.has(x)).length;
+  const cnt={};MJ.forEach(j=>{const s=jst(j,dfx);cnt[s]=(cnt[s]||0)+1;});
+  let h='<div class="pstat mall"><b class="t">🏬 แพลนห้าง</b><span>ส่ง '+esc(dateTH($('pdate').value))+' · <b>'+MJ.length+'</b> งาน</span>'
+    +(MALL.rev<0?'<span class="pend">ยังไม่แจกงาน</span>':'<span class="ok">✓ แจกแล้ว Rev.'+MALL.rev+'</span><span>'+fmtAt(last.at)+' · โดย '+esc(last.by)+'</span><span>คนขับรับแล้ว <b>'+ackN+'/'+snapIds.length+'</b></span>')
+    +(dfx.length?'<span class="pend">⚠ แก้ไข '+dfx.length+' รายการ · ยังไม่ส่ง</span>':'')
+    +'<span class="sp"></span><button class="btn sm" id="rlog">🕘 ประวัติฉบับแก้ไข ('+MALL.log.length+')</button>'
+    +'<div class="jflow">'+[['draft','① ร่างงานตามขนาดรถ'],['asked','② ขอรถพี่ปุ๋ย'],['nodrv','③ ได้รถ → ระบุคนขับ'],['ready','④ พร้อมแจก'],['sent','⑤ แจกแล้ว']]
+      .map(([k,l])=>'<span class="'+((cnt[k]||(k==='ready'&&cnt.chg))?'on':'')+'">'+l+' <b>'+((cnt[k]||0)+(k==='ready'?(cnt.chg||0):0))+'</b></span>').join('<i>›</i>')+'</div></div>';
+  h+='<div class="tools"><button class="btn sm pri mallb" id="jadd">＋ เพิ่มงานห้าง</button><span class="note">เลือกขนาดรถก่อน ยังไม่ต้องรู้ทะเบียน · พี่ปุ๋ยจัดรถให้แล้วค่อยระบุคนขับ แล้วกดแจกงาน · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
+  const js=MJ.slice().sort((a,b)=>((a.stops[0]||{}).at||'99')<((b.stops[0]||{}).at||'99')?-1:1);
+  const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join(''),dash='<span class="m">—</span>';
+  h+='<div class="sheet"><table class="jt mj"><thead><tr class="g1"><th colspan="10">งานห้าง '+esc(dateTH($('pdate').value))+'</th></tr><tr>'
+    +['งาน','ขนาดรถ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','รถ (พี่ปุ๋ยจัด)','คนขับ','สถานะ'].map(t=>'<th>'+t+'</th>').join('')+'</tr></thead><tbody>';
+  js.forEach(j=>{const S=j.stops,d=drvOf(j.driver),s=jst(j,dfx);
+    h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b></td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
+      +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(x.n)+'">'+esc(x.n)+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+'</td>'
+      +'<td>'+L(S,x=>esc(pvOf(x))||dash)+'</td><td class="n">'+L(S,x=>x.at?'<b class="tm">'+esc(x.at)+'</b>':dash)+'</td>'
+      +'<td class="n">'+L(S,x=>esc(x.pal)||dash)+'</td><td class="n">'+L(S,x=>esc(x.cs)||dash)+'</td>'
+      +'<td>'+(j.head?'<b>'+esc(plOf(j.head))+'</b><small class="m" style="display:block">'+esc([BRAND[j.head],VEH.find(v=>v.head===j.head).shape].filter(Boolean).join(' · '))+'</small>'
+        :s==='asked'?'<span class="rv w">รอพี่ปุ๋ย</span> <button class="btn sm" data-puy="'+j.id+'" title="เดโม: กดแทนพี่ปุ๋ย">จำลองจัดรถ</button>':'<button class="btn sm" data-ask="'+j.id+'">🚚 ขอรถ</button>')+'</td>'
+      +'<td>'+(d?esc(d.name):j.head?'<span class="or">ยังไม่ระบุ</span>':dash)+'</td><td>'+jstPill(j,dfx)+'</td></tr>';});
+  if(!js.length)h+='<tr><td colspan="10" class="note" style="padding:18px">ยังไม่มีงานห้าง · กด ＋ เพิ่มงานห้าง</td></tr>';
+  h+='</tbody></table></div><p class="note">เดโม: ปุ่ม "จำลองจัดรถ" = กดแทนพี่ปุ๋ย (ของจริงพี่ปุ๋ยเลือกรถจากแท็บจัดรถ PK) · งานที่ได้รถแล้วจะโผล่ในแพลนรวมทันที แต่คนขับ/คลัง/บัญชี ยังไม่ได้รับจนกว่าจะกดแจกงาน</p>';
+  $('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="งานห้างที่เลือก / รายการรถ"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
+  if(JE)drawJob();else renderList();
+  $('rlog').onclick=openLog;$('jadd').onclick=()=>openJob(null);
+  $('v-plan').querySelectorAll('[data-ask]').forEach(b=>b.onclick=e=>{e.stopPropagation();askTruck([b.dataset.ask]);});
+  $('v-plan').querySelectorAll('[data-puy]').forEach(b=>b.onclick=e=>{e.stopPropagation();puyAssign(b.dataset.puy);});
+  $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=()=>openJob(r.dataset.j);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
+  pmChips(mallTodo(dfx));updBar();}
+function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'10/22 ล้อ',stops:[],head:'',driver:'',req:'draft',note:'',isNew:1};
+  JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
+function closeJob(){JE=null;renderPlan();}
+function syncJ(){if(!JE)return;const j=JE.j;
+  document.querySelectorAll('[data-jat]').forEach(i=>j.stops[+i.dataset.jat].at=i.value);
+  document.querySelectorAll('[data-jpal]').forEach(i=>j.stops[+i.dataset.jpal].pal=i.value);
+  document.querySelectorAll('[data-jcs]').forEach(i=>j.stops[+i.dataset.jcs].cs=i.value);
+  if($('jnt'))j.note=$('jnt').value;}
+function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
+  let h='<aside class="drawer" aria-label="งานห้าง '+esc(j.id)+'"><div class="dh"><div><div class="stc">'+(j.isNew?'<span class="rv w">งานใหม่</span>':jstPill(j))+'</div><h3>'+esc(j.id)+' · งานห้าง</h3><div class="m">'+esc(SZL[j.size])+(j.head?' · '+esc(plOf(j.head)):' · ยังไม่มีทะเบียน')+'</div></div><button class="x" id="jx" aria-label="ปิด">✕</button></div><div class="db">';
+  h+='<div class="box"><span class="lb">① ขนาดรถ</span><div class="seg">'+SIZES.map(z=>'<button data-sz="'+z+'" class="'+(j.size===z?'on':'')+'">'+SZL[z]+'</button>').join('')+'</div>'
+    +(j.head?'<div class="note">เปลี่ยนขนาด = ต้องขอรถใหม่ (คืนรถ '+esc(plOf(j.head))+')</div>':'')+'</div>';
+  h+='<div class="box"><span class="lb">② รถ (พี่ปุ๋ยจัดให้)</span>'
+    +(j.head?'<div><b>'+esc(plOf(j.head))+'</b> <span class="m">'+esc([BRAND[j.head],VEH.find(v=>v.head===j.head).shape].filter(Boolean).join(' · '))+'</span></div><button class="btn sm ghost" id="jret">คืนรถ / ขอคันใหม่</button>'
+      :j.req==='asked'?'<div class="warn">🚚 ขอรถแล้ว รอพี่ปุ๋ยจัดให้</div><button class="btn sm" id="jpuy">จำลอง: พี่ปุ๋ยจัดรถให้ (เดโม)</button>'
+      :'<div class="note">ยังไม่ได้ขอรถ · ใส่ร้านให้ครบแล้วกดขอรถ</div><button class="btn sm pri mallb" id="jask">🚚 ขอรถ '+esc(SZL[j.size])+' กับพี่ปุ๋ย</button>')+'</div>';
+  h+='<div class="box"><label for="jdrv">③ คนขับ</label>'+(j.head?(()=>{const mine=DRV.find(d=>d.head===j.head);
+      return '<select class="in" id="jdrv"><option value="">— เลือกคนขับ —</option>'+(mine?'<option value="'+mine.code+'"'+(j.driver===mine.code?' selected':'')+'>'+esc(mine.name)+' · ประจำคันนี้</option>':'')
+        +DRV.filter(d=>!mine||d.code!==mine.code).map(d=>'<option value="'+d.code+'"'+(j.driver===d.code?' selected':'')+'>'+esc(d.name)+' (ประจำ '+esc(d.head)+')</option>').join('')+'</select>'
+        +(j.driver&&dc[j.driver]&&dc[j.driver].some(x=>x!==j.head)?'<div class="warn">⚠ คนนี้มีงานรถ '+esc(dc[j.driver].filter(x=>x!==j.head).join(', '))+' วันเดียวกัน</div>':'');})()
+    :'<div class="note">ระบุได้หลังพี่ปุ๋ยจัดรถให้แล้ว</div>')+'</div>';
+  h+='<div class="box"><span class="lb">จุดส่ง (ห้าง) <span class="note">('+j.stops.length+' จุด · เวลาที่ต้องถึงหน้างาน)</span></span>';
+  j.stops.forEach((x,i)=>{h+='<div class="stop mallsrc"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(x.n)+'</div><div class="note">'+legTxt(j.stops,i)+'</div>'
+    +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-jat="'+i+'" value="'+esc(x.at)+'" style="width:118px"></label>'
+    +'<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input class="in" data-jpal="'+i+'" placeholder="0" value="'+esc(x.pal)+'"></label>'
+    +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input class="in" data-jcs="'+i+'" placeholder="0" value="'+esc(x.cs)+'"></label></div></div>'
+    +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบจุดนี้">✕</button></div></div>';});
+  h+='<input class="in" id="jsq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อห้าง" value="'+esc(JE.q)+'" autocomplete="off">';
+  if(JE.q){const nq=JE.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&x.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,7);
+    h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
+  h+='</div><div class="box"><label for="jnt">หมายเหตุถึงคนขับ / คลัง</label><textarea class="in" id="jnt" rows="2" placeholder="เช่น วางบิล + เอกสาร CO/COA, นัดลงตามคิว">'+esc(j.note)+'</textarea></div>';
+  h+='</div><div class="df">'+(j.isNew?'':'<button class="btn ghost" id="jdel" style="color:var(--bad)">ลบงาน</button>')+'<button class="btn ghost" id="jc">ยกเลิก</button><button class="btn pri mallb" id="jsv">บันทึกงาน</button></div></aside>';
+  const D=$('lp');if(!D)return;const st=D.querySelector('.db')?D.querySelector('.db').scrollTop:0;
+  D.innerHTML=h;D.classList.add('ed');if(D.querySelector('.db'))D.querySelector('.db').scrollTop=st;
+  const re=()=>{syncJ();drawJob();};
+  $('jx').onclick=$('jc').onclick=closeJob;
+  D.querySelectorAll('[data-sz]').forEach(b=>b.onclick=()=>{syncJ();if(j.size===b.dataset.sz)return;j.size=b.dataset.sz;if(j.head){j.head='';j.driver='';j.req='draft';toast('เปลี่ยนขนาดรถแล้ว ต้องขอรถใหม่กับพี่ปุ๋ย');}drawJob();});
+  if($('jret'))$('jret').onclick=()=>{syncJ();j.head='';j.driver='';j.req='draft';drawJob();};
+  if($('jask'))$('jask').onclick=()=>{syncJ();if(!j.stops.length){toast('ใส่ร้านอย่างน้อย 1 จุดก่อนขอรถ');return;}j.req='asked';saveJob(true);toast('ส่งคำขอรถ '+SZL[j.size]+' ถึงพี่ปุ๋ยแล้ว (เดโม)');};
+  if($('jpuy'))$('jpuy').onclick=()=>{syncJ();saveJob(true);puyAssign(j.id);};
+  const dr=$('jdrv');if(dr)dr.onchange=()=>{syncJ();j.driver=dr.value;drawJob();};
+  const sq=$('jsq');sq.oninput=()=>{syncJ();JE.q=sq.value;drawJob();const n=$('jsq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};
+  D.querySelectorAll('[data-jadd]').forEach(b=>b.onclick=()=>{syncJ();const x=ST.find(y=>y.id===+b.dataset.jadd);j.stops.push({id:x.id,n:x.n,km:x.km,pal:'',cs:'',at:''});JE.q='';drawJob();});
+  D.querySelectorAll('[data-jrm]').forEach(b=>b.onclick=()=>{syncJ();j.stops.splice(+b.dataset.jrm,1);drawJob();});
+  D.querySelectorAll('[data-jup]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jup;[j.stops[i-1],j.stops[i]]=[j.stops[i],j.stops[i-1]];drawJob();});
+  D.querySelectorAll('[data-jdn]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jdn;[j.stops[i+1],j.stops[i]]=[j.stops[i],j.stops[i+1]];drawJob();});
+  if($('jdel'))$('jdel').onclick=async()=>{const sent=!!MALL.snap[j.id];
+    if(!(await askModal({title:'ลบงาน '+j.id+'?',ok:'ลบงาน',cancel:'ไม่ลบ',icon:'🗑️',html:'<p>'+(sent?'งานนี้แจกไปแล้ว ลบแล้วต้องกด "ส่งฉบับแก้ไข" เพื่อแจ้งคนขับ คลัง บัญชี ว่ายกเลิก':'งานนี้ยังไม่ได้แจก ลบได้เลย')+'</p>'})))return;
+    MJ=MJ.filter(x=>x.id!==j.id);syncMall();JE=null;renderAll();toast('ลบงาน '+j.id+' แล้ว (เดโม)');};
+  $('jsv').onclick=()=>{syncJ();if(!j.stops.length){toast('ใส่ร้านอย่างน้อย 1 จุด');return;}saveJob(false);};
+  document.onkeydown=e=>{if(e.key==='Escape'&&JE)closeJob();};}
+function saveJob(keepOpen){const j=JE.j;if(j.isNew){delete j.isNew;MJN++;j.id='H'+MJN;MJ.push(j);}else MJ[MJ.findIndex(x=>x.id===j.id)]=j;
+  syncMall();if(keepOpen){JE={j:JSON.parse(JSON.stringify(j)),q:''};renderAll();}else{JE=null;renderAll();toast('บันทึก '+j.id+' แล้ว (เดโม)'+(jReady(j)?'':' · ยังแจกไม่ได้จนกว่าจะได้รถและคนขับ'));}}
 
 /* ---------- ตัวช่วย ---------- */
 const $=id=>document.getElementById(id);
@@ -592,21 +723,16 @@ const pvOf=s=>(s.pv||(PROV?PROV[s.id]:PV[s.id])||'').replace('พระนคร
 /* ---------- หน้าแพลน: แผงซ้าย + ใบงานเต็ม ---------- */
 let HIDELP=false;
 function renderPlan(){
+  if(PM==='mall'){renderMall();return;}
   if(ED)sync();
   const c=counts(),{dc,hc}=busy();
   const d0=new Date($('pdate').value+'T00:00:00'),mon=isNaN(d0)?'':MON[d0.getMonth()],today=isNaN(d0)?'':d0.getDate();
   const chips=[['all','ทั้งหมด'],['job','มีงาน'],['wait','รอมีงาน'],['nod','ไม่มีคนขับ'],['rep','ซ่อม'],['tail','หางสำรอง']];
   const all=DRV.map(d=>drvStat(d.code)),tot=all.reduce((a,s)=>({h:a.h+s.h,y:a.y+s.y,o:a.o+s.o}),{h:0,y:0,o:0}),mxT=Math.max(1,...all.map(s=>s.t));
-  const dfx=MALL.rev>=0?mallDiff():[],nMall=Object.keys(mallSnap()).length,last=MALL.log[MALL.log.length-1];
+  const dfx=mallDiff(),nMall=MJ.filter(j=>j.head).length,nWait=MJ.length-nMall;
   const ackN=Object.keys(MALL.snap).filter(x=>MALL.ack.has(x)).length,snapN=Object.keys(MALL.snap).length;
-  let h='';
-  if(PM==='mall')h+='<div class="pstat mall"><b class="t">🏬 แพลนห้าง</b><span>ส่ง '+esc(dateTH($('pdate').value))+' · งานห้าง <b>'+nMall+'</b> คัน</span>'
-     +(MALL.rev<0?'<span class="pend">ยังไม่แจกงาน</span>':'<span class="ok">✓ แจกแล้ว Rev.'+MALL.rev+'</span><span>'+fmtAt(last.at)+' · โดย '+esc(last.by)+'</span><span>คนขับรับแล้ว <b>'+ackN+'/'+snapN+'</b></span>')
-     +(dfx.length?'<span class="pend">⚠ แก้ไขแล้ว '+dfx.length+' รายการ · ยังไม่ส่ง</span>':'')
-     +'<span class="sp"></span><button class="btn sm" id="rlog">🕘 ประวัติฉบับแก้ไข ('+MALL.log.length+')</button>'
-     +'<span class="note" style="flex-basis:100%">ต้นทางงานห้าง · แจกได้ทันทีที่รู้งาน (ล่วงหน้าได้) → คนขับ / คลัง / บัญชี ได้พร้อมกัน แล้วงานไหลเข้าแพลนรวมพร้อมสถานะ · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
-  else h+='<div class="pstat"><b class="t">📋 แพลนรวม</b><span>ส่ง '+esc(dateTH($('pdate').value))+' · แอดมินยี่ปั๊วส่งก่อน <b>10:00</b> ของวันก่อนส่ง</span>'
-     +'<span>งานห้าง <b>'+nMall+'</b> คัน '+(MALL.rev<0?'<span class="rv w">รอแอดมินห้างแจก</span>':'<span class="rv">🔒 Rev.'+MALL.rev+'</span> <span class="rv g">รับแล้ว '+ackN+'/'+snapN+'</span>')+(dfx.length?' <span class="rv w">ห้างแก้ไข '+dfx.length+' รายการ ยังไม่ส่ง</span>':'')+'</span>'
+  let h='<div class="pstat"><b class="t">📋 แพลนรวม</b><span>ส่ง '+esc(dateTH($('pdate').value))+' · แอดมินยี่ปั๊วส่งก่อน <b>10:00</b> ของวันก่อนส่ง</span>'
+     +'<span>งานห้างได้รถแล้ว <b>'+nMall+'</b> คัน '+(MALL.rev<0?'<span class="rv w">รอแอดมินห้างแจก</span>':'<span class="rv">🔒 Rev.'+MALL.rev+'</span> <span class="rv g">รับแล้ว '+ackN+'/'+snapN+'</span>')+(dfx.length?' <span class="rv w">ห้างแก้ไข '+dfx.length+' รายการ ยังไม่ส่ง</span>':'')+(nWait?' <span class="rv w">ห้างรอรถ/รอคนขับ '+nWait+' งาน</span>':'')+'</span>'
      +'<span class="sp"></span><button class="btn sm" id="gomall">🏬 ไปแพลนห้าง</button>'
      +'<span class="note" style="flex-basis:100%">งานห้าง 🔒 แก้ไม่ได้ในหน้านี้ ต้องแก้ที่แพลนห้าง (ต้นทาง) จะเกิดฉบับแก้ไขและแจ้งคนที่เกี่ยวข้องอัตโนมัติ</span></div>';
   h+='<div class="tools"><button class="btn sm" id="tlp">'+(HIDELP?'⇥ แสดงแผงรายการรถ':'⇤ ซ่อนแผงซ้าย ดูใบงานเต็มจอ')+'</button>'
@@ -659,9 +785,8 @@ function renderPlan(){
   $('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="รายการรถ / รายละเอียดคันที่เลือก"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
   if(ED)drawEditor();else renderList();
   $('tlp').onclick=()=>{HIDELP=!HIDELP;renderPlan();};
-  if($('rlog'))$('rlog').onclick=openLog; if($('gomall'))$('gomall').onclick=()=>setPM('mall');
-  document.querySelectorAll('#pmode [data-pm]').forEach(b=>{const on=b.dataset.pm===PM;b.classList.toggle('on',on);b.setAttribute('aria-selected',on);
-    const old=b.querySelector('.cnt');if(old)old.remove();if(b.dataset.pm==='mall'&&dfx.length)b.querySelector('.pml').append(Object.assign(document.createElement('span'),{className:'cnt',textContent:dfx.length+' แก้ไข'}));});
+  if($('gomall'))$('gomall').onclick=()=>setPM('mall');
+  pmChips(mallTodo(dfx));
   $('v-plan').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;renderPlan();});
   const q=$('q');q.oninput=()=>{Q=q.value;const pos=q.selectionStart;renderPlan();const n=$('q');n.focus();n.setSelectionRange(pos,pos);};
   $('v-plan').querySelectorAll('.vr2').forEach(r=>{r.onclick=()=>{if(HIDELP){HIDELP=false;}openEditor(r.dataset.v);};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();HIDELP=false;openEditor(r.dataset.v);}};});
@@ -669,10 +794,11 @@ function renderPlan(){
 }
 function updBar(){const c=counts();const nd=new Set(VEH.filter(v=>kind(v)==='job').map(v=>PLAN[v.head].driver)).size;
   const b=$('bSend');b.disabled=false;b.classList.toggle('mallb',PM==='mall');
-  if(PM==='mall'){const cur=mallSnap(),n=Object.keys(cur).length,ns=Object.values(cur).reduce((a,x)=>a+x.stops.length,0),dfx=MALL.rev>=0?mallDiff():[];
-    $('barsum').innerHTML='แพลนห้าง · <b>'+ns+'</b> จุด · รถ <b>'+n+'</b> คัน · คนขับ <b>'+new Set(Object.values(cur).map(x=>x.driver).filter(Boolean)).size+'</b> คน';
-    $('bSave').textContent='บันทึกแพลนห้าง (ยังไม่แจก)';
-    if(MALL.rev<0)b.textContent='📲 แจกงานห้าง ('+n+' คัน)';
+  const rq=$('bReq'),drafts=MJ.filter(j=>!j.head&&j.req!=='asked');rq.hidden=!(PM==='mall'&&drafts.length);rq.textContent='🚚 ขอรถพี่ปุ๋ย ('+drafts.length+' งาน)';
+  if(PM==='mall'){const cur=mallSnap(),n=Object.keys(cur).length,dfx=mallDiff(),got=MJ.filter(j=>j.head).length;
+    $('barsum').innerHTML='แพลนห้าง <b>'+MJ.length+'</b> งาน · ได้รถ <b>'+got+'</b> · รอรถ <b>'+(MJ.length-got)+'</b> · พร้อมแจก <b>'+n+'</b>';
+    $('bSave').textContent='บันทึกแพลนห้าง';
+    if(MALL.rev<0)b.textContent='📲 แจกงานห้าง ('+n+' งาน)';
     else if(dfx.length)b.textContent='📤 ส่งฉบับแก้ไข Rev.'+(MALL.rev+1)+' ('+dfx.length+' รายการ)';
     else{b.textContent='✓ แจกแล้ว Rev.'+MALL.rev+' · ไม่มีแก้ไข';b.disabled=true;}
     return;}
@@ -827,7 +953,7 @@ function drawEditor(){
   D.querySelectorAll('[data-h]').forEach(b=>b.onchange=()=>{sync();const id=b.dataset.h;p.helpers=b.checked?[...p.helpers,id]:p.helpers.filter(x=>x!==id);drawEditor();});
   if($('om'))$('om').onclick=()=>{sync();p.out=Math.max(0,p.out-1);drawEditor();};
   if($('op'))$('op').onclick=()=>{sync();p.out=Math.min(4,p.out+1);drawEditor();};
-  D.querySelectorAll('[data-gomall],[data-goall]').forEach(b=>b.onclick=()=>{const hd=v.head;setPM(b.hasAttribute('data-gomall')?'mall':'all');openEditor(hd);});
+  D.querySelectorAll('[data-gomall],[data-goall]').forEach(b=>b.onclick=()=>{const hd=v.head,toM=b.hasAttribute('data-gomall');setPM(toM?'mall':'all');if(toM){const jj=jobOfHead(hd);if(jj)openJob(jj.id);}else openEditor(hd);});
   $('dsv').onclick=()=>{sync();if(p.status!=='ready'&&!p.reason.trim()&&p.status==='repair'){toast('ใส่สาเหตุการซ่อมก่อน จะได้ขึ้นในรูปสรุป');return;}
     if(p.status!=='ready'&&PLAN[v.head].stops.some(isMall)){toast('รถคันนี้มีงานห้าง ให้แอดมินห้างย้ายงานไปคันอื่นในแพลนห้างก่อน');return;}
     if(p.status!=='ready'){p.stops=[];p.helpers=[];p.out=0;}
@@ -969,6 +1095,7 @@ function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)rende
 $('pdate').onchange=()=>{$('pday').textContent=dateTH($('pdate').value);renderAll();};
 $('pday').textContent=dateTH($('pdate').value);
 $('bSave').onclick=()=>toast(PM==='mall'?'บันทึกแพลนห้างแล้ว (เดโม) · ยังไม่ถึงใครจนกว่าจะกด'+(MALL.rev<0?'แจกงานห้าง':'ส่งฉบับแก้ไข'):'บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว (เดโม) · ยังไม่ส่งถึงคนขับจนกว่าจะกดแจกงาน');
+$('bReq').onclick=()=>askTruck(MJ.filter(j=>!j.head&&j.req!=='asked').map(j=>j.id));
 document.querySelectorAll('#pmode [data-pm]').forEach(b=>b.onclick=()=>{if(b.dataset.pm!==PM)setPM(b.dataset.pm);});
 $('bSend').onclick=async()=>{if(PM==='mall'){sendMall();return;}
   const miss=missingAll();
