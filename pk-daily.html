@@ -178,6 +178,24 @@ main{padding-block:14px 120px}
 .clrl{margin:4px 0 8px 18px;padding:0;line-height:1.7}
 .lphs{width:auto;max-width:240px;padding:5px 10px;font-size:13px}
 .lpsrc.h{color:#8a5a0b}
+.pob{font:inherit;font-weight:700;color:var(--mall);background:none;border:0;border-bottom:1.5px dashed currentColor;padding:0 1px;cursor:pointer;border-radius:0}
+.pob:hover,.pob:focus-visible{background:var(--mallbg);outline:none}
+.pob2{align-self:flex-start;margin-top:4px}
+.drawer.pod{z-index:46}.drawer.pod~.scrim,#drawerHost .scrim{z-index:45}
+.pok{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.pok>div{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-width:0}
+.pok small{display:block;color:var(--muted);font-size:12px}.pok b{font-size:17px;font-variant-numeric:tabular-nums}
+.poc .poh{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.poc .poh b{font-size:15px}
+.pot{display:flex;flex-wrap:wrap;gap:14px;font-size:13.5px}.pot b{font-variant-numeric:tabular-nums}
+.pol{width:100%;border-collapse:collapse;font-size:13px}.pol th,.pol td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left}
+.pol th{color:var(--muted);font-weight:600;font-size:12px}.pol .n{text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:520px){.pok{grid-template-columns:repeat(2,1fr)}}
+.tchip.rtc{color:#B45309;border-color:#F3C98B;background:#FFF6EA}
+:root[data-theme="dark"] .tchip.rtc{color:#F6B66B;border-color:#6B4A1E;background:#2A2013}
+.rtq{color:#B45309;font-weight:600}:root[data-theme="dark"] .rtq{color:#F6B66B}
+.stop.rt{border-left:3px solid #E59A3C}.stop.rt.tbd{border-left-style:dashed}
+.rtbox{border-color:#F3C98B}.rtloc{display:flex;flex-direction:column;gap:6px;margin-top:6px}
+.tl .ti.rt::before{border-color:#E59A3C}
 .lpds{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface)}
 .lpdh{padding:9px 12px;font-weight:700;background:var(--mallbg,var(--surface2));display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .lpdt{width:100%;border-collapse:collapse;font-size:13px}.lpdt th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:left;padding:6px 12px;border-bottom:1px solid var(--line)}
@@ -542,11 +560,12 @@ const PAIRS=__D.pairs; /* ตาราง dtc_pair_km (คิดทุกคื�
 const PAIR={};PAIRS.forEach(([a,b,k,n])=>{PAIR[a+'-'+b]=PAIR[b+'-'+a]={km:k,n};});
 /* ระยะของช่วงที่วิ่งเข้าจุด i: จุดแรก = จากโรงงาน · จุดถัดไป = จากจุดก่อนหน้า */
 function legOf(stops,i){const s=stops[i];if(!i)return {from:'โรงงาน',km:s.km};
-  const pr=stops[i-1],q=(s.id&&pr.id)?PAIR[pr.id+'-'+s.id]:null;return {from:pr.n,to:s.n,km:q?q.km:null,n:q?q.n:0};}
+  const pr=stops[i-1];if(s.tbd||pr.tbd)return {from:pr.n,to:s.n,km:null,n:0,tbd:1};if(s.id!=null&&pr.id===s.id)return {from:pr.n,to:s.n,km:0,n:0,same:1};
+  const q=(s.id&&pr.id)?PAIR[pr.id+'-'+s.id]:null;return {from:pr.n,to:s.n,km:q?q.km:null,n:q?q.n:0};}
 /* ทุกช่วงที่ยังไม่มีค่ากลาง ในแพลนวันนี้ */
 function missingAll(){const out=[];VEH.forEach(v=>{const p=PLAN[v.head];if(!p||p.status!=='ready'||v.tail)return;
-  p.stops.forEach((s,i)=>{const l=legOf(p.stops,i);if(l.km==null)out.push({plate:v.plate.split(',')[0],from:l.from,to:s.n,first:!i});});
-  const last=p.stops[p.stops.length-1];if(last&&last.km==null&&p.stops.length)out.push({plate:v.plate.split(',')[0],from:last.n,to:'โรงงาน',first:false});});return out;}
+  p.stops.forEach((s,i)=>{const l=legOf(p.stops,i);if(l.km==null&&!l.tbd)out.push({plate:v.plate.split(',')[0],from:l.from,to:s.n,first:!i});});
+  const last=p.stops[p.stops.length-1];if(last&&last.km==null&&!last.tbd&&p.stops.length)out.push({plate:v.plate.split(',')[0],from:last.n,to:'โรงงาน',first:false});});return out;}
 /* popup ธีมเดียวกับหน้า (ไม่ใช้ alert/confirm) */
 function askModal(o){return new Promise(res=>{const ov=document.createElement('div');ov.className='mov';
   ov.innerHTML='<div class="mbox'+(o.wide?' wide':'')+'" role="dialog" aria-modal="true"><div class="mic">'+(o.icon||'⚠️')+'</div><h3>'+esc(o.title)+'</h3><div class="mbody">'+o.html+'</div><div class="mact">'
@@ -557,6 +576,8 @@ function routeKm(stops){if(!stops.length)return null;let tot=0,miss=0;
   stops.forEach((s,i)=>{const l=legOf(stops,i);if(l.km==null)miss++;else tot+=l.km;});
   const back=stops[stops.length-1].km;if(back==null)miss++;else tot+=back;return {tot,miss,back};}
 function legTxt(stops,i){const l=legOf(stops,i),s=stops[i];
+  if(s.tbd)return '<span class="rtq">📍 ยังไม่ระบุสถานที่ · แจ้งทีหลังได้</span> <span class="m">(ระยะ/ค่าแรงคิดเมื่อระบุสถานที่แล้ว)</span>';
+  if(l.same)return 'ที่เดิม ต่อจากจุด '+i+' · ไม่มีระยะเพิ่ม';
   if(l.km==null)return '<span class="warn">'+(i?'ยังไม่มีค่ากลาง จาก '+esc(l.from)+' → จุดนี้':'สถานที่ใหม่ · พิกัด '+esc(s.ll||'-')+' · ยังไม่มีค่ากลาง จากโรงงาน')+' (DEV ใส่ก่อนคิดค่าแรง)</span>';
   return 'ค่ากลาง จาก'+(i?'จุด '+i+' ('+esc(l.from)+')':'โรงงาน')+' <b>'+l.km+'</b> กม.'+(i?' <span class="m">· DTC '+l.n+' เที่ยว'+(l.n<3?' (ข้อมูลน้อย)':'')+'</span>':'')+(s.km>=LONG_KM?' · 🛣️ งานไกล':'');}
 /* Type ร้าน (central_distances.pk_type) — ในระบบยังว่างทั้ง 179 ร้าน · เดโมเดาจากชื่อ ของจริง DEV ใส่ในหน้าค่ากลาง */
@@ -594,6 +615,38 @@ function otList(){const by={};OT_EX.forEach(e=>{(by[e[1]]=by[e[1]]||[]).push(e);
       +(L.length?'<ul>'+L.map(e=>'<li>'+esc(e[0])+(e[2]?' <span class="m">+ '+esc(e[2])+'</span>':'')+(e[3]?' <span class="warn">✓ ตรวจ</span>':'')+'</li>').join('')+'</ul>':'')+'</details>';}).join('')+'</div>';
   askModal({wide:true,icon:'📋',title:'ประเภทงานอื่นๆ (Packing)',html:h,ok:'ปิด'});}
 const tchip=t=>'<span class="tchip"><i style="background:'+TYC[t]+'"></i>'+t+'</span>';
+/* งานขากลับ (รับของกลับ) = จุดในแพลนรวม มี s.rt={k,q,u} · s.tbd = ยังไม่รู้สถานที่ (แจ้งทีหลัง) */
+const RTK=[['พาเลทเปล่า','พาเลท'],['ลัง / ตะกร้าเปล่า','ใบ'],['สินค้าคืน / ของเสีย','ลัง'],['เอกสาร / บิล / เช็ค','ชุด'],['อื่นๆ','รายการ']];
+const rtU=k=>(RTK.find(x=>x[0]===k)||RTK[4])[1];
+const rtTxt=r=>'รับ'+r.k+(r.q?' '+r.q+' '+r.u:'');
+const stChip=s=>s.rt?'<span class="tchip rtc">↩ ขากลับ</span>':tchip(tyOf(s));
+const TBD_N='รอแจ้งสถานที่';
+/* ตัวเลขพาเลท/ลัง: งานจาก Loading Planner (มี PO) = ปุ่มเปิดลิ้นชัก PO · key = j:<งาน>:<จุด> หรือ v:<ทะเบียนหัว>:<จุด> */
+function poCell(s,f,key){const D='<span class="m">—</span>';
+  if(s.rt){const u=s.rt.u,show=s.rt.q&&(f==='pal'?u==='พาเลท':u!=='พาเลท');return show?'<span class="rtq" title="'+esc(rtTxt(s.rt))+'">↩ '+esc(s.rt.q)+'</span>':D;}
+  if(!s[f])return D;
+  return s.items&&s.items.length?'<button type="button" class="pob" data-pod="'+esc(key)+'" title="ดูรายละเอียด PO ('+s.items.length+' ใบ)">'+esc(s[f])+'</button>':esc(s[f]);}
+function podStop(key){const a=String(key).split(':'),t0=a[0],id=a.slice(1,-1).join(':'),i=+a[a.length-1];
+  if(t0==='j'){const j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);return j&&j.stops[i]?{s:j.stops[i],ctx:'งาน '+j.id+(j.head?' · รถ '+plOf(j.head):' · ยังไม่มีทะเบียน')}:null;}
+  const p=ED&&ED.v.head===id?ED.p:PLAN[id],s=p&&p.stops[i];return s?{s,ctx:'รถ '+plOf(id)+(s.mj?' · งาน '+s.mj:'')}:null;}
+function openPoDrawer(key){const r=podStop(key);if(!r)return;const s=r.s,its=s.items||[],kg=its.reduce((a,x)=>a+(+x.kg||0),0);
+  let h='<div class="scrim" data-pox></div><aside class="drawer pod" role="dialog" aria-modal="true" aria-label="รายละเอียด PO '+esc(s.n)+'"><div class="dh"><div><div class="stc"><span class="tchip">📄 รายละเอียด PO</span></div><h3>'+esc(s.n)+'</h3><div class="m">'+esc(r.ctx)+(s.at?' · ต้องถึง '+esc(s.at):'')+(pvOf(s)?' · '+esc(pvOf(s)):'')+'</div></div><button class="x" data-pox aria-label="ปิด">✕</button></div><div class="db">';
+  h+='<div class="pok">'+[['PO',its.length+' ใบ'],['พาเลท',pnN(s.pal)],['ลัง',pnN(s.cs)],['น้ำหนัก',pnN(kg)+' กก.']].map(a=>'<div><small>'+a[0]+'</small><b>'+a[1]+'</b></div>').join('')+'</div>';
+  its.forEach(x=>{const on=LP_POS.find(y=>y.po===x.po),P=on||(LPI.off||[]).find(y=>y.po===x.po),tot=P?(P.lines||[]).reduce((a,l)=>a+(+l.q||0),0):0;
+    h+='<div class="box poc"><div class="poh"><b class="mono">PO '+esc(x.po)+'</b>'+(x.so?'<span class="note">SO '+esc(x.so)+'</span>':'')+(P&&P.rev>1?'<span class="rv w">Rev.'+P.rev+' (แก้จำนวนแล้ว)</span>':'')+(P&&!on?'<span class="rv w">🚫 ยกเลิกแล้ว</span>':'')+'</div>'
+      +(P?'<div class="note">'+esc(P.dc)+' · ส่ง '+esc(lpTh(P.date))+'</div>':'')
+      +'<div class="pot"><span>คันนี้ <b>'+pnN(x.pal)+'</b> พาเลท</span><span><b>'+pnN(x.cs)+'</b> ลัง</span><span><b>'+pnN(x.kg)+'</b> กก.</span></div>'
+      +(tot&&tot!==+x.cs?'<div class="warn">PO นี้แบ่งหลายคัน / จำนวนไม่ตรง · คันนี้ '+pnN(x.cs)+' จากทั้ง PO '+pnN(tot)+' ลัง</div>':'')
+      +(P?'<table class="pol"><thead><tr><th>สินค้า (ทั้ง PO)</th><th class="n">ลัง</th></tr></thead><tbody>'+(P.lines||[]).map(l=>'<tr><td>'+esc(l.p)+'</td><td class="n">'+pnN(l.q)+'</td></tr>').join('')+'</tbody></table>'
+        :'<div class="note">ไม่พบรายการสินค้าของ PO นี้ในแพลนที่เปิดอยู่ (อาจเป็นวันส่งอื่น · เลือกดูในประวัติ)</div>')+'</div>';});
+  if(!its.length)h+='<div class="note">จุดนี้ไม่มี PO (ใส่จำนวนเอง ไม่ได้มาจาก Loading Planner)</div>';
+  h+='</div><div class="df"><button class="btn pri" data-pox>ปิด</button></div></aside>';
+  const H=$('drawerHost');H.innerHTML=h;H.querySelectorAll('[data-pox]').forEach(b=>b.onclick=closePoDrawer);H.querySelector('.x').focus();}
+function closePoDrawer(){const H=$('drawerHost');if(H)H.innerHTML='';}
+/* จับคลิกก่อนแถว (capture) — แถวมี onclick เปิดลิ้นชักแก้งาน */
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pod]');if(!b)return;e.stopPropagation();e.preventDefault();openPoDrawer(b.dataset.pod);},true);
+document.addEventListener('keydown',e=>{const b=e.target.closest&&e.target.closest('[data-pod]');if(b&&(e.key==='Enter'||e.key===' ')){e.stopPropagation();return;}
+  if(e.key==='Escape'&&$('drawerHost')&&$('drawerHost').innerHTML){e.stopPropagation();closePoDrawer();}},true);
 let HELP=__D.help.map(([id,name,nick,ph,st])=>({id,name,nick,phone:'•••-•••-'+ph,status:st||'ใช้งาน',note:''}));
 
 /* ---------- แพลนตัวอย่าง ---------- */
@@ -636,7 +689,7 @@ let MSUB='jobs';   /* แท็บย่อยในแพลนห้าง: jo
 const LPSZ={trailer:'พ่วง',semi:'หัวลาก','10w':'10 ล้อ','6w':'6 ล้อ','4w':'4 ล้อ'};
 const DCST={W101:107,W501:67,W901:152,W121:158,W151:172,W131:187,W801:169,W301:231,W401:233,W141:241};   /* รหัสคลัง 7-11 → central_distances.id */
 function lpShow(){const h=document.getElementById('lpHost');if(!h)return;const on=PM==='mall'&&MSUB==='lp'&&!document.getElementById('v-plan').hidden;h.hidden=!on;
-  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109v');}
+  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109w');}
 /* รถที่ Loading Planner ส่งมา → งานห้างตามขนาดรถ (1 คัน = 1 งาน) · ส่งซ้ำ = อัปเดตงานเดิม (จับคู่วันส่ง+เลขคัน) · คันที่หายไป = ถอนงาน */
 /* ⏳ Pending = PO ที่ Loading Planner ยังไม่ได้จัดลงรถ · วันส่ง → {th,list} · ยังไม่เป็นงานห้าง → ไม่เข้าแพลนรวม/ไม่แจกคนขับ จนกว่าจะจัดลงรถแล้วส่งอีกครั้ง */
 let MP={};
@@ -652,7 +705,7 @@ function pendHtml(){const ds=Object.keys(MP).filter(k=>MP[k].list.length).sort()
 function lpImport(d){const keys=new Set(),miss=new Set();let add=0,upd=0,rm=0,lost=0;
   (d.trucks||[]).forEach(t=>{const key=d.date+'#'+t.id;keys.add(key);
     const stops=t.stops.map(s=>{const id=DCST[s.dc];const b=id&&ST.find(x=>x.id===id);if(!b)miss.add(s.dc);
-      return Object.assign(b?S(id):{id:null,n:s.dc+' '+s.n,km:null,pal:'',cs:'',at:''},{pal:String(s.pal),cs:String(s.cs),at:s.t||''});});
+      return Object.assign(b?S(id):{id:null,n:s.dc+' '+s.n,km:null,pal:'',cs:'',at:''},{pal:String(s.pal),cs:String(s.cs),at:s.t||'',po:s.po||[],items:s.items||[],kg:s.kg||0});});
     const size=LPSZ[t.k]||'พ่วง',note='PO '+t.stops.flatMap(s=>s.po).join(', ')+' · ขึ้นของ '+t.load+' · ส่ง '+d.dateTH+' (Loading Planner คัน #'+t.id+')';
     const j=MJ.find(x=>x.lp===key);
     if(j){if(j.size!==size&&j.head){j.head='';j.driver='';lost++;}j.size=size;j.stops=stops;j.note=note;upd++;}
@@ -749,7 +802,7 @@ function lpPreview(r,fname,skip,rows){const ok=r.add.length+r.change.length;
     +(ok?'<p class="note" style="margin-top:10px">ยืนยันแล้ว Loading Planner จะโหลด PO ใหม่ · ที่จัดลงรถไว้แต่ยังไม่กดส่งเข้าแพลนห้างจะเริ่มใหม่</p>':'<p class="note" style="margin-top:10px">ไม่มีรายการที่ต้องบันทึก</p>');
   return askModal({title:'ตรวจแพลน PO ก่อนนำเข้า',icon:'📥',wide:true,html,ok:ok?'ยืนยันนำเข้า '+ok+' PO':'ปิด',cancel:ok?'ยกเลิก':null}).then(v=>!!(v&&ok));}
 function lpReload(r){if(r.lpPos)LP_POS=r.lpPos;LPI.src=r.lpSrc||LPI.src;LPI.last=r.lpLast||LPI.last;LPI.off=r.lpOff||[];if(r.lpHist)LPI.hist=r.lpHist;LPI.view=r.lpView||'';
-  const f=$('lpFrame');if(f){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109v&r='+Date.now());}renderPlan();}
+  const f=$('lpFrame');if(f){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109w&r='+Date.now());}renderPlan();}
 /* ตัดจำนวน / ยกเลิก PO — ทีละใบ · กันแก้ทับด้วย Rev · PO ที่อยู่ในงานห้างแล้ว: แก้เสร็จต้องไปจัดรถใหม่แล้วกดส่งอีกครั้ง งานห้างจึงอัปเดต */
 function lpInJob(po){return MJ.some(j=>String(j.note||'').indexOf(po)>=0);}
 function lpMgr(){const ov=document.createElement('div');ov.className='mov';
@@ -887,7 +940,7 @@ function renderMall(){
     h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b>'+(j.lp?'<span class="lpb" title="'+esc(j.note)+'">📦 LP</span>':'')+'</td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
       +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(x.n)+'">'+esc(x.n)+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+'</td>'
       +'<td>'+L(S,x=>esc(pvOf(x))||dash)+'</td><td class="n">'+L(S,x=>x.at?'<b class="tm">'+esc(x.at)+'</b>':dash)+'</td>'
-      +'<td class="n">'+L(S,x=>esc(x.pal)||dash)+'</td><td class="n">'+L(S,x=>esc(x.cs)||dash)+'</td>'
+      +'<td class="n">'+L(S,(x,i)=>poCell(x,'pal','j:'+j.id+':'+i))+'</td><td class="n">'+L(S,(x,i)=>poCell(x,'cs','j:'+j.id+':'+i))+'</td>'
       +'<td>'+(j.head?'<b>'+esc(plOf(j.head))+'</b><small class="m" style="display:block">'+esc([BRAND[j.head],VEH.find(v=>v.head===j.head).shape].filter(Boolean).join(' · '))+'</small>'
         :'<button class="btn sm" data-jset="'+j.id+'">＋ ใส่รถ / คนขับ</button>')+'</td>'
       +'<td>'+(d?esc(d.name):j.head?'<span class="or">ยังไม่ระบุ</span>':dash)+'</td><td><div class="stw">'+jstPill(j,dfx)+(MALL.snap[j.id]?'':'<button class="ib jdel" data-jdel="'+j.id+'" aria-label="ลบงาน '+j.id+'" title="ลบงานนี้ (ยังไม่แจก)">🗑</button>')+'</div></td></tr>';});
@@ -923,7 +976,7 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
         +(j.driver&&dc[j.driver]&&dc[j.driver].some(x=>x!==j.head)?'<div class="warn">⚠ คนนี้มีงานรถ '+esc(dc[j.driver].filter(x=>x!==j.head).join(', '))+' วันเดียวกัน</div>':'');})()
     :'<div class="note">ใส่รถก่อน แล้วค่อยเลือกคนขับ</div>')+'</div>';
   h+='<div class="box"><span class="lb">จุดส่ง (ห้าง) <span class="note">('+j.stops.length+' จุด · เวลาที่ต้องถึงหน้างาน)</span></span>';
-  j.stops.forEach((x,i)=>{h+='<div class="stop mallsrc"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(x.n)+'</div><div class="note">'+legTxt(j.stops,i)+'</div>'
+  j.stops.forEach((x,i)=>{h+='<div class="stop mallsrc"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(x.n)+'</div><div class="note">'+legTxt(j.stops,i)+'</div>'+(x.items&&x.items.length?'<button type="button" class="btn sm pob2" data-pod="j:'+esc(j.id)+':'+i+'">📄 รายละเอียด PO ('+x.items.length+' ใบ)</button>':'')
     +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-jat="'+i+'" value="'+esc(x.at)+'" style="width:118px"></label>'
     +'<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input class="in" data-jpal="'+i+'" placeholder="0" value="'+esc(x.pal)+'"></label>'
     +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input class="in" data-jcs="'+i+'" placeholder="0" value="'+esc(x.cs)+'"></label></div></div>'
@@ -1203,7 +1256,7 @@ function planSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=
       const pls=v.plate.split(',').map(s=>s.trim()).filter(Boolean);
       rows.push({no:++no,plate:pls.join(' / '),pls,shape:[BRAND[v.head],v.shape].filter(Boolean).join(' · '),
         drv:v.tail?'':dv?dv.name:'',k,status:k==='job'?(otOnly(p)?'งานอื่นๆ · '+otLabel(p):''):(PSTAT[k]||'')+((k==='rep'||k==='off')&&p.reason?' · '+p.reason:''),
-        stops:S.map(s=>({n:s.n,ty:tyOf(s),pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:feeOf(v,s)||0})),
+        stops:S.map(s=>({n:s.rt?'↩ '+rtTxt(s.rt)+' · '+s.n:s.n,ty:tyOf(s),pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:feeOf(v,s)||0})),
         hl,ht:/^[0-9]{1,2}[:.][0-9]{2}$/.test(String(p.htime||'').trim())?tmTH(String(p.htime).trim()):String(p.htime||'').trim(),note:String(p.note||'').trim()});});
     if(rows.length)groups.push({g,rows});});
   const rows=groups.flatMap(x=>x.rows),sum=k=>rows.reduce((a,r)=>a+r.stops.reduce((b,s)=>b+s[k],0),0),job=rows.filter(r=>r.k==='job');
@@ -1466,7 +1519,7 @@ function drvStat(code){const b=(MBASE[code]||[0,0,0]).slice(),r={h:b[0],y:b[1],o
   r.t=r.h+r.y+r.o;return r;}
 /* ค่าลงสินค้า: central_distances pk_unload_* ตามชนิดรถ + pk_pallet_fee × พาเลท (ในระบบกรอกไว้ไม่กี่ร้าน) */
 const UNL={52:{'4 ล้อ':300,'6 ล้อ':1400}},PFEE={217:40,31:76,252:50,203:50};
-function feeOf(v,s){const u=(UNL[s.id]||{})[v.g]||0,pn=parseInt(s.pal,10),pf=PFEE[s.id]&&pn>0?PFEE[s.id]*pn:0;return u+pf;}
+function feeOf(v,s){if(s.rt)return 0;const u=(UNL[s.id]||{})[v.g]||0,pn=parseInt(s.pal,10),pf=PFEE[s.id]&&pn>0?PFEE[s.id]*pn:0;return u+pf;}
 /* จังหวัด: ยังไม่มีในตารางร้าน · เดโมใส่ให้เฉพาะร้านที่ชื่อบอกชัด ของจริงเพิ่มคอลัมน์จังหวัดในหน้าค่ากลาง */
 const PV={65:'กรุงเทพฯ',293:'กรุงเทพฯ',370:'กรุงเทพฯ',74:'กรุงเทพฯ',192:'พระนครศรีอยุธยา',141:'พระนครศรีอยุธยา',102:'พระนครศรีอยุธยา',263:'นครราชสีมา',121:'ขอนแก่น',116:'บุรีรัมย์',
  261:'จันทบุรี',86:'สระแก้ว',39:'ระยอง',258:'ระยอง',31:'ระยอง',56:'ชลบุรี',188:'ปทุมธานี',230:'สุราษฎร์ธานี',124:'ลำพูน',252:'พิษณุโลก',217:'สิงห์บุรี',312:'เพชรบุรี',298:'ปราจีนบุรี',354:'ปทุมธานี',107:'นนทบุรี',67:'กรุงเทพมหานคร',152:'สมุทรสาคร',158:'ชลบุรี',172:'นครสวรรค์',187:'บุรีรัมย์',169:'ขอนแก่น',231:'ลำพูน',233:'สุราษฎร์ธานี',241:'สงขลา'};
@@ -1510,7 +1563,7 @@ function renderPlan(){
       else if(v.tail)cust='<span class="m">หางสำรอง</span>';
       else if(!S.length&&otOnly(p))cust=PM==='mall'?'<span class="m">มีงานอื่นๆ · '+esc(p.ot)+' (แพลนรวม)</span>':'<span class="ell" title="'+esc(otLabel(p))+'"><b>'+esc(p.ot)+'</b></span> '+tchip('อื่นๆ')+' <span class="m" title="สถานที่ไม่มีในรายชื่อจุดส่ง (ค่ากลาง) · ไม่มีระยะ · ค่าแรงยังไม่คิด">ไม่มีจุดส่งในระบบ · ดูหมายเหตุ</span>';
       else if(!S.length)cust='<span class="m">'+(nOther?'มีงานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)':d?'ว่าง · รอมีงาน':'รถสแปร์')+'</span>';
-      else cust=L(S,(s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+tchip(tyOf(s))+(PM==='all'&&isMall(s)?' '+mallBadge(v.head):'')+(legOf(S,i).km==null?' <span class="nokm" title="ยังไม่มีค่ากลาง'+(i?' จาก '+esc(S[i-1].n):' จากโรงงาน')+'">⚠</span>':''))
+      else cust=L(S,(s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+stChip(s)+(s.rt?' <span class="rtq">'+esc(rtTxt(s.rt))+'</span>':'')+(PM==='all'&&isMall(s)?' '+mallBadge(v.head):'')+(s.tbd?' <span class="rtq" title="ยังไม่ระบุสถานที่รับ">📍 รอแจ้ง</span>':legOf(S,i).km==null?' <span class="nokm" title="ยังไม่มีค่ากลาง'+(i?' จาก '+esc(S[i-1].n):' จากโรงงาน')+'">⚠</span>':''))
         +(PM==='mall'&&nOther?'<div class="ln"><span class="m">+ งานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)</span></div>':'');
       const dash='<span class="m">—</span>';
       const hl=p.helpers.map(x=>{const hh=helpOf(x);const dup=hc[x]&&hc[x].length>1;return hh?'<span title="'+esc(hh.name)+'">'+esc(hh.nick)+'</span> <span class="m">'+esc(hh.phone)+'</span>'+(dup?' <span class="warn">⚠ซ้ำ</span>':''):esc(x);});
@@ -1524,8 +1577,8 @@ function renderPlan(){
         +'<td class="cu">'+cust+'</td>'
         +'<td>'+(S.length?L(S,s=>esc(pvOf(s))||'<span class="m">—</span>'):'')+'</td>'
         +'<td class="n">'+(S.length?L(S,s=>s.at?'<b class="tm">'+esc(s.at)+'</b>':'<span class="m">—</span>'):'')+'</td>'
-        +'<td class="n">'+(S.length?L(S,s=>esc(s.pal)||'<span class="m">—</span>'):'')+'</td>'
-        +'<td class="n">'+(S.length?L(S,s=>esc(s.cs)||'<span class="m">—</span>'):'')+'</td>'
+        +'<td class="n">'+(S.length?L(S,s=>poCell(s,'pal','v:'+v.head+':'+p.stops.indexOf(s))):'')+'</td>'
+        +'<td class="n">'+(S.length?L(S,s=>poCell(s,'cs','v:'+v.head+':'+p.stops.indexOf(s))):'')+'</td>'
         +'<td class="n">'+(S.length?L(S,s=>{const f=feeOf(v,s);return f?f.toLocaleString('th-TH'):'<span class="m">—</span>';}):'')+'</td>'
         +'<td class="nt">'+(esc(p.note)||'')+'</td>'
         +'<td class="hp">'+(hl.length?hl.map(x=>'<div class="ln">'+x+'</div>').join(''):'')+'</td>'
@@ -1640,7 +1693,8 @@ function drawEditor(){
    +'<div><small>บรรทุกได้</small><b>'+pay+'</b></div><div><small>เด็กรถ</small><b>'+(p.helpers.map(x=>helpOf(x)?.nick||x).join(', ')||'-')+(p.out?' + นอก '+p.out:'')+'</b></div></div></div>';
   if(p.stops.length&&p.status==='ready'){
     h+='<div class="sec"><h4>ไทม์ไลน์งานวันนี้<span class="tchip">'+p.stops.length+' จุด</span></h4><div class="tl"><div class="ti fac"><b>ออกจากโรงงาน SSB</b><span class="m">โหลดสินค้า'+(p.note?' · '+esc(p.note):'')+'</span></div>'
-     +p.stops.map((s,i)=>'<div class="ti"><b>'+esc(s.n)+' '+tchip(tyOf(s))+'</b><span class="m">'+(s.at?'<span class="at">ต้องถึง '+esc(s.at)+'</span> · ':'<span class="warn">ยังไม่ใส่เวลา</span> · ')+(()=>{const l=legOf(p.stops,i);return l.km==null?'<span class="warn">ไม่มีค่ากลางช่วงนี้</span>':(i?'จากจุดก่อน ':'จากโรงงาน ')+l.km+' กม.';})()+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</span></div>').join('')
+     +p.stops.map((s,i)=>'<div class="ti'+(s.rt?' rt':'')+'"><b>'+esc(s.n)+' '+stChip(s)+'</b><span class="m">'+(s.at?'<span class="at">ต้องถึง '+esc(s.at)+'</span> · ':s.rt?'':'<span class="warn">ยังไม่ใส่เวลา</span> · ')+(()=>{const l=legOf(p.stops,i);return l.tbd?'<span class="rtq">📍 รอแจ้งสถานที่</span>':l.km==null?'<span class="warn">ไม่มีค่ากลางช่วงนี้</span>':l.same?'ที่เดิม ไม่มีระยะเพิ่ม':(i?'จากจุดก่อน ':'จากโรงงาน ')+l.km+' กม.';})()
+       +(s.rt?' · <b class="rtq">↩ '+esc(rtTxt(s.rt))+'</b>':s.items&&s.items.length?' · <button type="button" class="pob" data-pod="v:'+esc(v.head)+':'+i+'">'+(s.pal?esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</button>':(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':''))+'</span></div>').join('')
      +(()=>{const r=routeKm(p.stops);return '<div class="ti fac"><b>กลับโรงงาน</b><span class="m">'+(r.back==null?'<span class="warn">ไม่มีค่ากลางขากลับ</span>':'ขากลับ '+r.back+' กม.')+' · '+(r.miss?'<span class="warn">ระยะรวมยังไม่ครบ (ขาด '+r.miss+' ช่วง)</span>':'ระยะรวมทั้งเที่ยว <b>'+r.tot+'</b> กม.')+'</span></div>';})()+'</div></div>';}
   h+='<div class="edl">แก้งานคันนี้</div>';
   const hasMall=p.stops.some(isMall),drvLock=PM==='all'&&hasMall;
@@ -1660,8 +1714,18 @@ function drawEditor(){
      +'<label class="lb" style="display:flex;flex-direction:column;gap:4px">เวลานัดเด็กรถ<input class="in" id="ht" placeholder="เช่น 05:00 หรือ นัดเอง" value="'+esc(p.htime||'')+'"></label></div>'+otBox(p)+'</div>';
     h+='<div class="box"><span class="lb">จุดส่ง / สถานที่ <span class="note">('+p.stops.length+' จุด · เรียงตามลำดับวิ่ง · ใส่เวลาที่ต้องถึงหน้างานแต่ละจุด)</span></span>';
     const lockS=s=>PM==='mall'?!isMall(s):isMall(s);
-    p.stops.forEach((s,i)=>{if(lockS(s)){h+='<div class="stop lock'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+(s.at?' · ถึง '+esc(s.at):'')+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</div>'
+    p.stops.forEach((s,i)=>{if(lockS(s)){h+='<div class="stop lock'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+stChip(s)+'</div><div class="note">'+legTxt(p.stops,i)+(s.at?' · ถึง '+esc(s.at):'')+(s.rt?' · ↩ '+esc(rtTxt(s.rt)):'')+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</div>'
         +'<div class="lockn">'+(isMall(s)?mallBadge(v.head)+' แก้ที่ <button type="button" data-gomall>แพลนห้าง</button>':'🔒 งานแพลนรวม · แก้ที่ <button type="button" data-goall>แพลนรวม</button>')+'</div></div><div class="ac"></div></div>';return;}
+      const ac='<div class="ac"><button class="ib" data-up="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-dn="'+i+'" aria-label="เลื่อนลง"'+(i<p.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-rm="'+i+'" aria-label="ลบจุดนี้">✕</button></div>';
+      if(s.rt){const fx=ED.rq&&ED.rq.i===i;
+        h+='<div class="stop rt'+(s.tbd?' tbd':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+stChip(s)+'</div><div class="note">'+legTxt(p.stops,i)+'</div>'
+        +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ของที่รับกลับ<select class="in" data-rtk="'+i+'" style="width:150px">'+RTK.map(x=>'<option'+(s.rt.k===x[0]?' selected':'')+'>'+x[0]+'</option>').join('')+'</select></label>'
+        +'<label class="note" style="display:flex;flex-direction:column;gap:2px">จำนวน ('+esc(s.rt.u)+')<input class="in" data-rtn="'+i+'" inputmode="numeric" placeholder="ไม่ทราบ" value="'+esc(s.rt.q)+'" style="width:86px"></label>'
+        +'<label class="note" style="display:flex;flex-direction:column;gap:2px">เวลานัด (ถ้ามี)<input class="in" type="time" data-at="'+i+'" value="'+esc(s.at)+'" style="width:118px"></label></div>'
+        +(s.tbd||fx?'<div class="rtloc"><input class="in" data-rtsq="'+i+'" placeholder="📍 '+(s.tbd?'ระบุสถานที่รับ':'เปลี่ยนสถานที่')+': พิมพ์ชื่อร้าน / สถานที่" value="'+esc(fx?ED.rq.q:'')+'" autocomplete="off">'
+          +(fx&&ED.rq.q?(()=>{const nq=ED.rq.q.replace(/\s/g,'').toLowerCase(),r=ST.filter(x=>x.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,6);
+            return '<div class="res">'+(r.length?r.map(x=>'<button type="button" data-rtset="'+i+':'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||tyOf({id:x.id}))+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบ · ยังไม่มีในรายชื่อค่ากลาง (DEV เพิ่มที่หน้าค่ากลาง)</div>')+'</div>';})():'')
+          +'</div>':'<button type="button" class="btn sm ghost" data-rtfix="'+i+'">📍 เปลี่ยนสถานที่</button>')+'</div>'+ac+'</div>';return;}
       h+='<div class="stop'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+'</div>'
       +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-at="'+i+'" value="'+esc(s.at)+'" style="width:118px"></label>'
       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input class="in" data-pal="'+i+'" placeholder="0" value="'+esc(s.pal)+'"></label>'
@@ -1679,6 +1743,20 @@ function drawEditor(){
        +(r.length||!rx.length?'<button data-new="1"><span>＋ สถานที่ใหม่ “'+esc(ED.q)+'”</span><span class="km">ปักหมุด</span></button>':'')+'</div>';}
     if(ED.newLoc!=null)h+='<div class="box" style="background:var(--surface2)"><span class="lb">สถานที่ใหม่: '+esc(ED.newLoc)+'</span><input class="in" id="ll" placeholder="วางพิกัดจาก Google Maps เช่น 13.3611, 100.9847"><div class="note">บันทึกชื่อกับพิกัดไว้ แต่ระบบยังไม่มีระยะ กม. จึงยังคิดค่าแรงไม่ได้จนกว่า DEV จะใส่ค่ากลาง</div><div style="display:flex;gap:8px"><button class="btn sm pri" id="llok">เพิ่มจุดนี้</button><button class="btn sm ghost" id="llno">ยกเลิก</button></div></div>';
     h+='<div class="note">ค้นได้จากสถานีค่ากลาง Packing ทั้งหมด (เดโมมี 40 จาก 179 ร้าน)</div></div>';
+    if(PM==='all'){const opts=[...new Map(p.stops.filter(s=>!s.rt&&s.id!=null).map(s=>[s.id,s])).values()];
+      ED.rt=ED.rt||{at:'tbd',k:RTK[0][0],n:'',q:'',pick:null};const R=ED.rt;
+      h+='<div class="box rtbox"><span class="lb">↩ งานขากลับ · รับของกลับ <span class="note">(เช่น รับพาเลทเปล่าคืน · ต่อท้ายหลังจุดส่ง · ยังไม่รู้สถานที่ก็แอดไว้ก่อนได้)</span></span><div class="q">'
+       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">รับที่<select class="in" id="rtw" style="width:220px"><option value="tbd"'+(R.at==='tbd'?' selected':'')+'>📍 ยังไม่รู้ · แจ้งสถานที่ทีหลัง</option>'
+         +opts.map(s=>'<option value="'+s.id+'"'+(R.at===String(s.id)?' selected':'')+'>'+esc(s.n)+' (จุดส่งเดิม)</option>').join('')+'<option value="x"'+(R.at==='x'?' selected':'')+'>ร้าน / สถานที่อื่น…</option></select></label>'
+       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ของที่รับกลับ<select class="in" id="rtk" style="width:150px">'+RTK.map(x=>'<option'+(R.k===x[0]?' selected':'')+'>'+x[0]+'</option>').join('')+'</select></label>'
+       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">จำนวน ('+esc(rtU(R.k))+')<input class="in" id="rtn" inputmode="numeric" placeholder="ไม่ทราบ" value="'+esc(R.n)+'" style="width:86px"></label>'
+       +'<button type="button" class="btn sm pri" id="rtadd" style="align-self:flex-end">＋ แทรกงานขากลับ</button></div>';
+      if(R.at==='x'){const pk=R.pick&&ST.find(x=>x.id===R.pick);
+        h+=pk?'<div class="note">สถานที่: <b>'+esc(pk.n)+'</b> <button type="button" class="btn sm ghost" id="rtclr">เปลี่ยน</button></div>'
+          :'<input class="in" id="rtq" placeholder="พิมพ์ชื่อร้าน / สถานที่ที่จะแวะรับ" value="'+esc(R.q)+'" autocomplete="off">'
+           +(R.q?(()=>{const nq=R.q.replace(/\s/g,'').toLowerCase(),r=ST.filter(x=>x.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,6);
+             return '<div class="res">'+(r.length?r.map(x=>'<button type="button" data-rtpick="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||tyOf({id:x.id}))+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบ · เลือก “ยังไม่รู้ · แจ้งสถานที่ทีหลัง” ไว้ก่อนได้</div>')+'</div>';})():'');}
+      h+='<div class="note">จุดส่งเดิม = แทรกต่อจากจุดนั้น ไม่มีระยะเพิ่ม · ร้านอื่น = ต่อท้าย คิดระยะจากค่ากลาง · ยังไม่รู้ = ใส่ “'+TBD_N+'” ไว้ก่อน ระยะ/ค่าแรงคิดเมื่อระบุสถานที่ (กด 📍 ที่จุดนั้น)</div></div>';}
     const act=HELP.filter(x=>x.status==='ใช้งาน');
     h+='<div class="box"><span class="lb">เด็กรถใน <span class="note">(เลือกได้หลายคน)</span></span><div class="hl">'
      +act.map(x=>{const on=p.helpers.includes(x.id),else_=(hc[x.id]||[]).filter(z=>z!==v.head);return '<label class="'+(else_.length&&!on?'dis':'')+'"><input type="checkbox" data-h="'+x.id+'"'+(on?' checked':'')+'><span>'+esc(x.nick)+' · '+esc(x.name)+(else_.length?'<small>อยู่รถ '+esc(else_.join(', '))+'</small>':'<small>ว่าง</small>')+'</span></label>';}).join('')
@@ -1710,6 +1788,22 @@ function drawEditor(){
   D.querySelectorAll('[data-h]').forEach(b=>b.onchange=()=>{sync();const id=b.dataset.h;p.helpers=b.checked?[...p.helpers,id]:p.helpers.filter(x=>x!==id);drawEditor();});
   if($('om'))$('om').onclick=()=>{sync();p.out=Math.max(0,p.out-1);drawEditor();};
   if($('op'))$('op').onclick=()=>{sync();p.out=Math.min(4,p.out+1);drawEditor();};
+  const rtRe=(id)=>{drawEditor();const n=document.getElementById(id)||D.querySelector(id);if(n&&n.focus){n.focus();if(n.setSelectionRange)n.setSelectionRange(n.value.length,n.value.length);}};
+  if($('rtw'))$('rtw').onchange=()=>{sync();ED.rt.at=$('rtw').value;ED.rt.pick=null;drawEditor();};
+  if($('rtk'))$('rtk').onchange=()=>{sync();drawEditor();};
+  if($('rtq'))$('rtq').oninput=()=>{sync();rtRe('rtq');};
+  if($('rtclr'))$('rtclr').onclick=()=>{sync();ED.rt.pick=null;ED.rt.q='';drawEditor();};
+  D.querySelectorAll('[data-rtpick]').forEach(b=>b.onclick=()=>{sync();ED.rt.pick=+b.dataset.rtpick;drawEditor();});
+  if($('rtadd'))$('rtadd').onclick=()=>{sync();const R=ED.rt,rt={k:R.k,q:String(R.n||'').replace(/[^\d]/g,''),u:rtU(R.k)};
+    if(R.at==='x'&&!R.pick){toast('⚠️ เลือกร้าน/สถานที่จากรายการก่อน หรือเลือก “ยังไม่รู้ · แจ้งสถานที่ทีหลัง”');return;}
+    if(R.at==='tbd'){p.stops.push({id:null,n:TBD_N,km:null,pal:'',cs:'',at:'',ty:'อื่นๆ',tbd:1,rt});}
+    else{const id=R.at==='x'?R.pick:+R.at,s0=ST.find(x=>x.id===id);if(!s0)return;const ns=Object.assign(S(id),{ty:'อื่นๆ',rt});
+      if(R.at==='x')p.stops.push(ns);else{let k=-1;p.stops.forEach((s,i)=>{if(s.id===id&&!s.rt)k=i;});while(p.stops[k+1]&&p.stops[k+1].rt&&p.stops[k+1].id===id)k++;p.stops.splice(k+1,0,ns);}}
+    ED.rt={at:R.at==='x'?'tbd':R.at,k:R.k,n:'',q:'',pick:null};drawEditor();toast('↩ แทรกงานขากลับ: '+rtTxt(rt)+(R.at==='tbd'?' · รอแจ้งสถานที่':'')+' (กดบันทึกคันนี้)');};
+  D.querySelectorAll('[data-rtfix]').forEach(b=>b.onclick=()=>{sync();ED.rq={i:+b.dataset.rtfix,q:''};drawEditor();const n=D.querySelector('[data-rtsq="'+b.dataset.rtfix+'"]');if(n)n.focus();});
+  D.querySelectorAll('[data-rtsq]').forEach(n=>n.oninput=()=>{sync();const i=+n.dataset.rtsq;ED.rq={i,q:n.value};rtRe('[data-rtsq="'+i+'"]');});
+  D.querySelectorAll('[data-rtset]').forEach(b=>b.onclick=()=>{sync();const [i,id]=b.dataset.rtset.split(':').map(Number),o=p.stops[i],s0=S(id);
+    p.stops[i]=Object.assign(s0,{ty:'อื่นๆ',rt:o.rt,at:o.at});ED.rq=null;drawEditor();toast('📍 ระบุสถานที่รับกลับ: '+s0.n);});
   D.querySelectorAll('[data-gomall],[data-goall]').forEach(b=>b.onclick=()=>{const hd=v.head,toM=b.hasAttribute('data-gomall');setPM(toM?'mall':'all');if(toM){const jj=jobOfHead(hd);if(jj)openJob(jj.id);}else openEditor(hd);});
   $('dsv').onclick=()=>{sync();if(p.status!=='ready'&&!p.reason.trim()&&p.status==='repair'){toast('ใส่สาเหตุการซ่อมก่อน จะได้ขึ้นในรูปสรุป');return;}
     if(p.status==='ready'&&!p.stops.length&&p.jt==='อื่นๆ'){if(!p.ot){toast('เลือก “งานอื่นๆ ประเภทไหน” ก่อน ถึงจะนับเป็นงาน');return;}if(!String(p.note||'').trim()){toast('ใส่สถานที่/รายละเอียดงานในหมายเหตุก่อน (ไม่มีจุดส่งในระบบ)');return;}}
@@ -1719,6 +1813,9 @@ function drawEditor(){
   document.onkeydown=e=>{if(e.key==='Escape'&&ED)closeEditor();};
 }
 function sync(){if(!ED)return;const p=ED.p;
+  if(ED.rt){if($('rtk'))ED.rt.k=$('rtk').value;if($('rtn'))ED.rt.n=$('rtn').value;if($('rtq'))ED.rt.q=$('rtq').value;}
+  document.querySelectorAll('[data-rtk]').forEach(i=>{const s=p.stops[+i.dataset.rtk];if(s&&s.rt){s.rt.k=i.value;s.rt.u=rtU(i.value);}});
+  document.querySelectorAll('[data-rtn]').forEach(i=>{const s=p.stops[+i.dataset.rtn];if(s&&s.rt)s.rt.q=i.value.replace(/[^\d]/g,'');});
   if($('reason'))p.reason=$('reason').value; if($('nt'))p.note=$('nt').value;
   document.querySelectorAll('[data-at]').forEach(i=>p.stops[+i.dataset.at].at=i.value);
   document.querySelectorAll('[data-ty]').forEach(i=>p.stops[+i.dataset.ty].ty=i.value);
@@ -1936,7 +2033,7 @@ async function clearAll(){
   VEH.forEach(v=>{const p=PLAN[v.head];if(!p)return;Object.assign(p,{stops:[],helpers:[],out:0,note:'',htime:'',jt:'',ot:''});});
   MJ=[];MP={};MALL.rev=-1;MALL.snap={};MALL.log=[];MALL.ack.clear();
   if(smp){LP_POS=[];LPI.src='empty';}
-  const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109v&r='+Date.now());}
+  const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109w&r='+Date.now());}
   syncMall();FILTER='all';renderAll();window.scrollTo({top:0});
   toast('🧹 ล้างงานทั้งหมดแล้ว · '+(PM==='mall'?'กด 📥 นำเข้าแพลน PO ที่ 📦 จัด PO ลงรถ':'ไปที่ 🏬 แพลนห้าง → 📦 จัด PO ลงรถ → 📥 นำเข้าแพลน PO'));}
 function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}

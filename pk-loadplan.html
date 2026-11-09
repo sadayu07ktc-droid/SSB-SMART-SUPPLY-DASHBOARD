@@ -2020,9 +2020,11 @@ function lpRows() {
   return trucks.filter((t) => t.items.length).map((t) => {
     const { r, bad } = truckCheck(t), ty = A.types.find((x) => x.k === t.type), byDc = {};
     t.items.forEach((it) => {
-      const d = byDc[it.dc] || (byDc[it.dc] = { dc: it.dc, pal: 0, cs: 0, kg: 0, po: [] });
-      d.pal += it.units.length; d.cs += it.units.reduce((a, u) => a + u.segs.reduce((b, g) => b + g.q, 0), 0);
-      d.kg += it.units.reduce((a, u) => a + u.kg, 0); if (!d.po.includes(it.po)) d.po.push(it.po);
+      const d = byDc[it.dc] || (byDc[it.dc] = { dc: it.dc, pal: 0, cs: 0, kg: 0, po: [], items: [] });
+      const ip = it.units.length, ic = it.units.reduce((a, u) => a + u.segs.reduce((b, g) => b + g.q, 0), 0), ik = it.units.reduce((a, u) => a + u.kg, 0);
+      d.pal += ip; d.cs += ic; d.kg += ik; if (!d.po.includes(it.po)) d.po.push(it.po);
+      // ราย PO บนคันนี้ (PO เดียวแบ่งหลายคันได้ = ส่วนที่อยู่คันนี้) → หน้าแม่เปิดลิ้นชักรายละเอียด PO
+      const x = d.items.find((y) => y.po === it.po); if (x) { x.pal += ip; x.cs += ic; x.kg += Math.round(ik); } else d.items.push({ po: it.po, so: it.so || "", pal: ip, cs: ic, kg: Math.round(ik) });
     });
     return { id: t.id, k: t.type, size: ty.name, load: hmDay(t.slot), bad, kg: Math.round(r.kg),
       stops: Object.values(byDc).map((d) => ({ ...d, kg: Math.round(d.kg), n: (A.dc[d.dc] || {}).n || "", t: (A.dc[d.dc] || {}).t || "" })) };
