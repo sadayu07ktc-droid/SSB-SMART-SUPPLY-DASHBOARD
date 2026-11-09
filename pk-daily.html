@@ -335,6 +335,20 @@ main{padding-block:14px 120px}
 .rlog .re{border:1px solid var(--line);border-radius:10px;padding:9px 12px}
 .rlog .re h5{margin:0 0 4px;font-size:13.5px}
 .rlog .re ul{margin:4px 0 0;padding-left:18px;font-size:12.5px}
+/* การ์ดรถแผงซ้าย = แบบหน้า Command (ManageDrivers .lt) */
+.vc.lt2{padding:12px 16px}
+.lt-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;min-width:0}
+.lt-dir{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 9px;border-radius:7px;white-space:nowrap;color:#fff;flex:none}
+.ltn-out{background:#B45309}.ltn-back{background:#0F7A43}.ltn-run{background:#5F6B63}.ltn-fac{background:#1B4332}
+.ltn-idle{background:#A16207}.ltn-park{background:#94A3B8}.ltn-off{background:#B91C1C}.ltn-none{background:transparent;color:var(--muted);border:1px dashed var(--muted)}
+.lt-name{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.lt-plate{margin-left:auto;font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11.5px;color:var(--muted);white-space:nowrap}
+.lt-dist{display:flex;align-items:baseline;gap:6px;margin-bottom:3px;min-width:0}
+.lt-dist .km{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:22px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.lt-dist .u{font-size:12.5px;color:var(--muted)}
+.lt-dist .eta{margin-left:auto;font-size:12px;color:var(--muted);white-space:nowrap}
+.lt-ctx{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lt-ctx.bad{color:var(--bad)}
 .btn.pri.mallb{background:var(--mall);border-color:var(--mall);color:#fff}
 .btn:disabled{opacity:.6;cursor:default}
 .pmode[hidden]{display:none}
@@ -711,15 +725,26 @@ function renderList(){
     const grp={job:'มีงาน',wait:'พร้อม · รอมีงาน',nod:'ไม่มีคนขับ',rep:'ซ่อม',off:'งดวิ่ง',tail:'หางสำรอง'}[k];
     if(grp!==lastK){h+='<div class="lgh">'+grp+'</div>';lastK=grp;}
     const name=v.tail?'หางสำรอง':d?d.name:'ยังไม่มีคนขับ';
-    let r2,r3;
-    if(k==='job'){r2='<span class="big">'+esc(s0.at||'--:--')+'</span><span class="to">ถึง '+esc(s0.n)+'</span>';
-      const km=Math.max(0,...p.stops.map(s=>s.km||0));
-      r3=p.stops.length+' จุด'+(p.stops.length>1?' · '+p.stops.slice(1).map(s=>(s.at?s.at+' ':'')+s.n).join(' → '):'')+' · '+km+' กม.'+(p.helpers.length||p.out?' · เด็กรถ '+(p.helpers.length+p.out)+' คน':'');}
-    else if(k==='rep'){r2='<span class="big no">ซ่อม</span>';r3=p.reason||'';}
-    else{r2='<span class="big no">ยังไม่มีงาน</span>';r3=[BRAND[v.head],v.shape].filter(Boolean).join(' · ');}
-    if(d&&!v.tail&&k!=='rep')r3+=' · สะสม '+drvStat(d.code).t+' เที่ยว';
-    h+='<button class="vc" data-v="'+esc(v.head)+'"><div class="r1"><span class="pill '+KLAB[k][1]+'">'+KLAB[k][0]+'</span><span class="nm">'+esc(name)+'</span><span class="pl">'+esc(v.plate.replace(',',' / '))+'</span></div>'
-      +(v.tail?'':gpsRow(G[v.head]))+'<div class="r2">'+r2+'</div><div class="r3'+(k==='rep'?' bad':'')+'">'+esc(r3)+'</div></button>';});
+    /* การ์ดแบบหน้า Command: ป้ายสถานะ GPS · ชื่อ · ทะเบียนหัว / กม.จากโรงงาน ~นาที / งานบรรทัดเดียว */
+    const job=k==='job'?'📦 '+(s0.at||'--:--')+' ถึง '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):k==='rep'?'🔧 '+(p.reason||'ซ่อม'):k==='tail'?'หางสำรอง':k==='off'?'งดวิ่ง':'ยังไม่มีงาน';
+    const g=G[v.head],gd=g&&g.d;let pill,r2,ctx=job;
+    if(LIVE&&!v.tail){
+      const dir=gd?(gd.direction||(gd.distTrend==='out'?'out':gd.distTrend==='in'?'back':'none')):'none';
+      if(!gd)pill=['ltn-none','ไม่พบ GPS'];
+      else if(g.k==='fac')pill=['ltn-fac','🏭 อยู่ที่โรงงาน'];
+      else if(g.k==='run')pill=dir==='out'?['ltn-out','↗ วิ่งออกไป']:dir==='back'?['ltn-back','↙ วิ่งกลับ']:['ltn-run','• วิ่งอยู่'];
+      else if(g.k==='idle')pill=['ltn-idle',g.t];
+      else if(g.k==='off')pill=['ltn-off','ออฟไลน์'];
+      else pill=['ltn-park','จอดดับ'];
+      const km=gd&&gd.distFactory!=null?gd.distFactory:null,sp=gd&&gd.gps==='run'?Math.round(gd.speed||0):0;
+      const eta=km!=null&&sp>0&&!gd.atFactory?Math.round(km/sp*60):null;
+      r2=gd&&gd.atFactory?'<span class="km">0</span><span class="u">กม. · อยู่ในโรงงาน</span>'
+        :km==null?'<span class="u">ยังไม่รู้ตำแหน่ง</span>'
+        :'<span class="km">'+(km<100?Number(km).toFixed(1):Math.round(km))+'</span><span class="u">กม. จากโรงงาน</span>'+(eta!=null?'<span class="eta">~'+eta+' นาที</span>':'');
+      if(sp)ctx+=' · '+sp+' km/h';
+    }else{pill=['pill '+KLAB[k][1],KLAB[k][0]];r2=k==='job'?'<span class="km">'+esc(s0.at||'--:--')+'</span><span class="u">ถึงหน้างานจุดแรก</span>':'<span class="u">'+esc([BRAND[v.head],v.shape].filter(Boolean).join(' · '))+'</span>';}
+    h+='<button class="vc lt2" data-v="'+esc(v.head)+'"><div class="lt-top"><span class="'+(pill[0].startsWith('pill')?pill[0]:'lt-dir '+pill[0])+'">'+esc(pill[1])+'</span><span class="lt-name">'+esc(name)+'</span><span class="lt-plate">'+esc(v.head)+'</span></div>'
+      +'<div class="lt-dist">'+r2+'</div><div class="lt-ctx'+(k==='rep'?' bad':'')+'">'+esc(ctx)+'</div></button>';});
   if(!vs.length)h+='<div class="note" style="padding:18px">ไม่มีรถตามตัวกรอง</div>';
   lp.innerHTML=h+'</div>';
   lp.querySelectorAll('.vc').forEach(b=>b.onclick=()=>openEditor(b.dataset.v));
