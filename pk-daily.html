@@ -360,6 +360,16 @@ main{padding-block:14px 120px}
 .btn:disabled{opacity:.6;cursor:default}
 .pmode[hidden]{display:none}
 @media (max-width:720px){.pmode{width:100%}.pmode button{flex:1}.pmode button small{display:none}}
+/* แพลนห้าง: แท็บย่อย งานห้าง | Loading Planner */
+.msub{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface);flex:none}
+.msub button{border:0;background:none;font:inherit;font-size:13.5px;font-weight:600;padding:7px 13px;cursor:pointer;color:var(--muted)}
+.msub button+button{border-left:1px solid var(--line)}
+.msub button.on{background:var(--mallbg);color:var(--mall)}
+.msub button:focus-visible{outline:2px solid var(--mall);outline-offset:-2px}
+#lpHost{margin-top:10px}
+#lpHost[hidden]{display:none}
+#lpHost iframe{display:block;width:100%;height:calc(100vh - 150px);min-height:640px;border:1px solid var(--line);border-radius:14px;background:#f3f5f2}
+.lpb{display:block;font-size:11px;font-weight:600;color:var(--mall)}
 </style>
 
 <style>
@@ -399,6 +409,7 @@ main{padding-block:14px 120px}
 
 <main class="wrap wide">
   <section id="v-plan"></section>
+  <div id="lpHost" hidden><iframe id="lpFrame" title="Loading Planner · จัด PO 7-11 ลงรถ"></iframe></div>
   <section id="v-helpers" hidden></section>
   <section id="v-report" hidden></section>
 </main>
@@ -435,7 +446,7 @@ const VEH=[
 /* ยี่ห้อยังว่างในระบบ — ในเดโมเติมจากชีต Template ของแอดมิน (ของจริงกรอกครั้งเดียวในหน้าทะเบียนรถ) */
 const BRAND={'ผอ-67':'ISUZU 130','ยก-2438':'HINO 136','ผอ-68':'ISUZU 130','ยค-1054':'HINO 136','ยค 1055':'HINO 136','ยค-9996':'ISUZU 130','84-9041':'ISUZU 175','85-2783':'ISUZU 210','86-7722':'ISUZU 190','86-7723':'ISUZU 190','86-6715':'HINO 210','86-6716':'HINO 210','86-0018':'ISUZU 190','85-2718':'ISUZU 150','86-1317':'ISUZU 175','86-1319':'ISUZU 175','85-5282':'ISUZU 300','85-5280':'ISUZU 300','85-0753':'ISUZU 300','84-9948':'ISUZU 240','85-9293':'VOLVO 370','85-5281':'ISUZU 300','85-7269':'ISUZU 360','87-5214':'ISUZU 240','87-3274':'ISUZU 240','86-8454':'UD 390','86-7079':'UD 390','86-7081':'UD 390','86-7395':'FUSO 340','86-7401':'FUSO 279','86-7398':'FUSO 279','86-7397':'FUSO 279','84-9219':'VOLVO 400','84-8660':'FUSO 279'};
 const DRV=__D.drv.map(([code,name,head])=>({code,name,head}));
-const ST=[[281,'ลิ้มฮะกี่',20],[168,'ร้านนิตยา(หัวกุญแจ)',26],[204,'วิภา',27],[27,'เปี๊ยก',32],[258,'โชคดีปลวกแดง 2 อีซี่',33],[31,'ร้านวรรณมาบยางพร',38],[39,'โชคดีปลวกแดง 1',50],[313,'ร้านตะวันออกหมูหยอง',58],[52,'ร้านวัชราวรรณ',65],[56,'บ.ศรีธิคำมาร์เก็ตติ้ง (เจ๊นงค์ นาเกลือ) สำนักงานใหญ่',72],[60,'บริษัทซิมมี้ (จุรีภรณ์)',79],[65,'Makro บางนา',94],[293,'เซ็นทรัลฟูดส์โฮลเซลล์บางนา DC',97],[235,'เบอร์ลี่ยุคเกอร์',106],[74,'คลังสุขสมบูรณ์ (ประเวศ)',114],[338,'เอกภาพ กรชัย ท่าประชุม',118],[261,'แม็คโคร จันทบุรี',118],[86,'ร้านอมร วังน้ำเย็น',139],[298,'บริษัท ไทยฟู้ดส์กรุ๊ป จำกัด (มหาชน) โรงงานชำแหละไก่ ปราจีนบุรี',146],[203,'ส.ทวีกิจบิ๊กวัน',149],[370,'บิ๊กซี รัชดาภิเษก',153],[188,'แม็คโคร เอฟซี รังสิต',161],[192,'แม็คโคร วังน้อย',165],[366,'ร้านธิดาปังปัง',165],[102,'LOSCAM(THAILAND) LTD. (WANG NOI SUPER DEPOT)',172],[141,'ศูนย์กระจายสินค้า แม็คโคร วังน้อยCDC',174],[315,'เจพีโกเด้นเชฟ',182],[354,'สหกรณ์การเกษตรคลองหลวง จำกัด',241],[111,'ซีพีเอฟ',244],[312,'เฮอริเทจ (เอก) เพชรบุรี',251],[304,'ร้านเต๋าเครื่องเค้ก',256],[217,'ห้างซีเอสพาร์คสิงห์บุรี',258],[263,'แม็คโคร เอฟซี นครราชสีมา',265],[273,'หจก ป เจริญทรัพย์ คอนวีเนียท์สโตร์',292],[116,'ซีเจ บุรีรัมย์',353],[271,'เอส.อาร์ ซุปเปอร์มาร์ท สาขาเมือง',462],[121,'ซีเจ ขอนแก่น',486],[252,'อีคอนพิษณุโลก (บจก.อีคอนแวร์เฮ้าส์)',492],[230,'บิ๊กซี สุราษฎร์ธานี',764],[124,'โลตัสลำพูน',785]].map(([id,n,km])=>({id,n,km}));
+const ST=[[281,'ลิ้มฮะกี่',20],[168,'ร้านนิตยา(หัวกุญแจ)',26],[204,'วิภา',27],[27,'เปี๊ยก',32],[258,'โชคดีปลวกแดง 2 อีซี่',33],[31,'ร้านวรรณมาบยางพร',38],[39,'โชคดีปลวกแดง 1',50],[313,'ร้านตะวันออกหมูหยอง',58],[52,'ร้านวัชราวรรณ',65],[56,'บ.ศรีธิคำมาร์เก็ตติ้ง (เจ๊นงค์ นาเกลือ) สำนักงานใหญ่',72],[60,'บริษัทซิมมี้ (จุรีภรณ์)',79],[65,'Makro บางนา',94],[293,'เซ็นทรัลฟูดส์โฮลเซลล์บางนา DC',97],[235,'เบอร์ลี่ยุคเกอร์',106],[74,'คลังสุขสมบูรณ์ (ประเวศ)',114],[338,'เอกภาพ กรชัย ท่าประชุม',118],[261,'แม็คโคร จันทบุรี',118],[86,'ร้านอมร วังน้ำเย็น',139],[298,'บริษัท ไทยฟู้ดส์กรุ๊ป จำกัด (มหาชน) โรงงานชำแหละไก่ ปราจีนบุรี',146],[203,'ส.ทวีกิจบิ๊กวัน',149],[370,'บิ๊กซี รัชดาภิเษก',153],[188,'แม็คโคร เอฟซี รังสิต',161],[192,'แม็คโคร วังน้อย',165],[366,'ร้านธิดาปังปัง',165],[102,'LOSCAM(THAILAND) LTD. (WANG NOI SUPER DEPOT)',172],[141,'ศูนย์กระจายสินค้า แม็คโคร วังน้อยCDC',174],[315,'เจพีโกเด้นเชฟ',182],[354,'สหกรณ์การเกษตรคลองหลวง จำกัด',241],[111,'ซีพีเอฟ',244],[312,'เฮอริเทจ (เอก) เพชรบุรี',251],[304,'ร้านเต๋าเครื่องเค้ก',256],[217,'ห้างซีเอสพาร์คสิงห์บุรี',258],[263,'แม็คโคร เอฟซี นครราชสีมา',265],[273,'หจก ป เจริญทรัพย์ คอนวีเนียท์สโตร์',292],[116,'ซีเจ บุรีรัมย์',353],[271,'เอส.อาร์ ซุปเปอร์มาร์ท สาขาเมือง',462],[121,'ซีเจ ขอนแก่น',486],[252,'อีคอนพิษณุโลก (บจก.อีคอนแวร์เฮ้าส์)',492],[230,'บิ๊กซี สุราษฎร์ธานี',764],[124,'โลตัสลำพูน',785],[107,'7-11 บางบัวทอง',186],[67,'7-11 สุวรรณภูมิ',98],[152,'7-11 มหาชัย',174],[158,'7-11 ชลบุรี',66],[172,'7-11 นครสวรรค์',383],[187,'7-11 บุรีรัมย์',382],[169,'7-11 ขอนแก่น',457],[231,'7-11 ลำพูน',786],[233,'7-11 สุราษฎร์ธานี',738],[241,'7-11 หาดใหญ่',1049]].map(([id,n,km])=>({id,n,km}));
 const LONG_KM=__D.longKm||300; /* app_config PK_LONG_KM */
 /* ค่ากลาง ร้าน↔ร้าน จาก DTC (dtc_s2s เที่ยววิ่งตรง 20 ก.ย. 68–8 พ.ย. 69 · กติกาเดียวกับ dtc-central: ตัด IQR → มัธยฐานขาไป/กลับ → เฉลี่ย · ต่าง >20% ใช้ขาสั้น) [ร้าน, ร้าน, กม., เที่ยว] */
 const PAIRS=__D.pairs; /* ตาราง dtc_pair_km (คิดทุกคืน 04:00) ผ่าน Edge pk-daily */
@@ -463,7 +474,7 @@ function legTxt(stops,i){const l=legOf(stops,i),s=stops[i];
 const TYPES=['ห้าง','ยี่ปั๊ว','อื่นๆ'];
 const TYC={'ห้าง':'#1E6FD9','ยี่ปั๊ว':'#D98E04','อื่นๆ':'#7A8A80'};
 const TY_OTHER=[60,74,298,102,315,354,111,235,252];
-const TY_MALL=[65,293,261,370,188,192,141,217,263,116,121,230,124,203,271];
+const TY_MALL=[107,67,152,158,172,187,169,231,233,241,65,293,261,370,188,192,141,217,263,116,121,230,124,203,271];
 function tyOf(s){if(s&&s.ty)return s.ty;const id=s&&s.id;return TY_MALL.includes(id)?'ห้าง':TY_OTHER.includes(id)?'อื่นๆ':id?'ยี่ปั๊ว':'อื่นๆ';}
 const tchip=t=>'<span class="tchip"><i style="background:'+TYC[t]+'"></i>'+t+'</span>';
 let HELP=__D.help.map(([id,name,nick,ph,st])=>({id,name,nick,phone:'•••-•••-'+ph,status:st||'ใช้งาน',note:''}));
@@ -501,6 +512,29 @@ PLAN['84-9041'].note='วางบิล + เอกสาร CO/COA';PLAN['86-7
  *  → แอดมินห้างใส่รถ + คนขับเอง (ไม่มีปุ่มขอรถในระบบ) → ③ แจกงาน → คนขับ / คลัง / บัญชี · งานที่ได้รถแล้วไหลเข้าแพลนรวม (ล็อก 🔒 แก้ที่แพลนห้างเท่านั้น)
  * แก้หลังแจก = ฉบับแก้ไข Rev. ระบุคนแก้ · เปลี่ยนคนขับ/เวลา → แจ้งคนขับ · เปลี่ยนรถ/เพิ่ม/ลด/เปลี่ยนที่/จำนวน → คนขับ + คลัง + บัญชี */
 let PM='all';
+/* ตัวอย่าง PO 7-11 (ไฟล์ Plan 7-11 ต.ค. 2569) สำหรับ Loading Planner · เว็บจริงมาจาก Edge pk-daily (ไม่ฝังในไฟล์) */
+const LP_POS=__D.lpPos||[]; /* PO 7-11 ตัวอย่างสำหรับ Loading Planner · Edge pk-daily (ไม่ฝังในไฟล์) */
+let MSUB='jobs';   /* แท็บย่อยในแพลนห้าง: jobs = ตารางงานห้าง · lp = Loading Planner */
+const LPSZ={trailer:'10/22 ล้อ','6w':'6 ล้อ','4w':'4 ล้อ'};
+const DCST={W101:107,W501:67,W901:152,W121:158,W151:172,W131:187,W801:169,W301:231,W401:233,W141:241};   /* รหัสคลัง 7-11 → central_distances.id */
+function lpShow(){const h=document.getElementById('lpHost');if(!h)return;const on=PM==='mall'&&MSUB==='lp'&&!document.getElementById('v-plan').hidden;h.hidden=!on;
+  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109');}
+/* รถที่ Loading Planner ส่งมา → งานห้างตามขนาดรถ (1 คัน = 1 งาน) · ส่งซ้ำ = อัปเดตงานเดิม (จับคู่วันส่ง+เลขคัน) · คันที่หายไป = ถอนงาน */
+function lpImport(d){const keys=new Set(),miss=new Set();let add=0,upd=0,rm=0,lost=0;
+  (d.trucks||[]).forEach(t=>{const key=d.date+'#'+t.id;keys.add(key);
+    const stops=t.stops.map(s=>{const id=DCST[s.dc];const b=id&&ST.find(x=>x.id===id);if(!b)miss.add(s.dc);
+      return Object.assign(b?S(id):{id:null,n:s.dc+' '+s.n,km:null,pal:'',cs:'',at:''},{pal:String(s.pal),cs:String(s.cs),at:s.t||''});});
+    const size=LPSZ[t.k]||'10/22 ล้อ',note='PO '+t.stops.flatMap(s=>s.po).join(', ')+' · ขึ้นของ '+t.load+' · ส่ง '+d.dateTH+' (Loading Planner คัน #'+t.id+')';
+    const j=MJ.find(x=>x.lp===key);
+    if(j){if(j.size!==size&&j.head){j.head='';j.driver='';lost++;}j.size=size;j.stops=stops;j.note=note;upd++;}
+    else{MJ.push({id:'H'+(++MJN),size,stops,head:'',driver:'',note,lp:key});add++;}});
+  MJ=MJ.filter(j=>{if(j.lp&&j.lp.indexOf(d.date+'#')===0&&!keys.has(j.lp)){rm++;return false;}return true;});
+  syncMall();JE=null;MSUB='jobs';renderAll();window.scrollTo({top:0});
+  toast('รับจาก Loading Planner ส่ง '+d.dateTH+': งานใหม่ '+add+(upd?' · อัปเดต '+upd:'')+(rm?' · ถอน '+rm:'')+(lost?' · เปลี่ยนขนาด '+lost+' งาน ต้องใส่รถใหม่':'')+(miss.size?' · ⚠ ไม่พบสถานี '+[...miss].join(', '):'')+' · ใส่รถ+คนขับตามพี่ปุ๋ยแจ้ง แล้วกดแจกงาน');}
+window.addEventListener('message',e=>{const f=document.getElementById('lpFrame');if(!f||e.source!==f.contentWindow||e.origin!==location.origin)return;const d=e.data||{};
+  if(d.type==='lp-ready')f.contentWindow.postMessage({type:'lp-init',pos:LP_POS},location.origin);
+  else if(d.type==='lp-send')lpImport(d);});
+function wireSub(){document.querySelectorAll('[data-msub]').forEach(b=>b.onclick=()=>{if(MSUB===b.dataset.msub)return;MSUB=b.dataset.msub;JE=null;renderPlan();});}
 const isMall=s=>tyOf(s)==='ห้าง';
 const skey=s=>s.id!=null?'#'+s.id:'n:'+s.n;
 const ME=()=>(typeof window.MY_NAME==='string'&&window.MY_NAME)||'คุณ (เดโม)';
@@ -593,13 +627,16 @@ function renderMall(){
     +'<span class="sp"></span><button class="btn sm" id="rlog">🕘 ประวัติฉบับแก้ไข ('+MALL.log.length+')</button>'
     +'<div class="jflow">'+[['draft','① ร่างงานตามขนาดรถ'],['nodrv','② ใส่รถ + คนขับ ตามพี่ปุ๋ยแจ้ง'],['ready','③ พร้อมแจก'],['sent','④ แจกแล้ว']]
       .map(([k,l])=>'<span class="'+((cnt[k]||(k==='ready'&&cnt.chg))?'on':'')+'">'+l+' <b>'+((cnt[k]||0)+(k==='ready'?(cnt.chg||0):0))+'</b></span>').join('<i>›</i>')+'</div></div>';
-  h+='<div class="tools"><button class="btn sm pri mallb" id="jadd">＋ เพิ่มงานห้าง</button><span class="note">เลือกขนาดรถก่อน ยังไม่ต้องรู้ทะเบียน · พี่ปุ๋ยแจ้งรถ + คนขับมาแล้ว ค่อยกดงานใส่ แล้วกดแจกงาน · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
+  const sub='<div class="msub" role="tablist" aria-label="แพลนห้าง">'+[['jobs','📋 งานห้าง <b>'+MJ.length+'</b>'],['lp','📦 จัด PO ลงรถ · Loading Planner']].map(([k,l])=>'<button role="tab" data-msub="'+k+'" aria-selected="'+(MSUB===k)+'" class="'+(MSUB===k?'on':'')+'">'+l+'</button>').join('')+'</div>';
+  if(MSUB==='lp'){$('v-plan').innerHTML=h+'<div class="tools">'+sub+'<span class="note">จัด PO 7-11 ลงรถตามขนาด + ผัง 3D แล้วกด "ส่งเข้าแพลนห้าง" → ได้งานห้างในแท็บ 📋 งานห้าง (ยังไม่มีทะเบียน)</span></div>';
+    $('rlog').onclick=openLog;wireSub();pmChips(mallTodo(dfx));updBar();lpShow();return;}
+  h+='<div class="tools">'+sub+'<button class="btn sm pri mallb" id="jadd">＋ เพิ่มงานห้าง</button><span class="note">เลือกขนาดรถก่อน ยังไม่ต้องรู้ทะเบียน · พี่ปุ๋ยแจ้งรถ + คนขับมาแล้ว ค่อยกดงานใส่ แล้วกดแจกงาน · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
   const js=MJ.slice().sort((a,b)=>((a.stops[0]||{}).at||'99')<((b.stops[0]||{}).at||'99')?-1:1);
   const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join(''),dash='<span class="m">—</span>';
   h+='<div class="sheet"><table class="jt mj"><thead><tr class="g1"><th colspan="10">งานห้าง '+esc(dateTH($('pdate').value))+'</th></tr><tr>'
     +['งาน','ขนาดรถ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','รถ (พี่ปุ๋ยแจ้ง)','คนขับ','สถานะ'].map(t=>'<th>'+t+'</th>').join('')+'</tr></thead><tbody>';
   js.forEach(j=>{const S=j.stops,d=drvOf(j.driver),s=jst(j,dfx);
-    h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b></td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
+    h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b>'+(j.lp?'<span class="lpb" title="'+esc(j.note)+'">📦 LP</span>':'')+'</td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
       +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(x.n)+'">'+esc(x.n)+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+'</td>'
       +'<td>'+L(S,x=>esc(pvOf(x))||dash)+'</td><td class="n">'+L(S,x=>x.at?'<b class="tm">'+esc(x.at)+'</b>':dash)+'</td>'
       +'<td class="n">'+L(S,x=>esc(x.pal)||dash)+'</td><td class="n">'+L(S,x=>esc(x.cs)||dash)+'</td>'
@@ -613,7 +650,7 @@ function renderMall(){
   $('rlog').onclick=openLog;$('jadd').onclick=()=>openJob(null);
   $('v-plan').querySelectorAll('[data-jset]').forEach(b=>b.onclick=e=>{e.stopPropagation();openJob(b.dataset.jset);});
   $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=()=>openJob(r.dataset.j);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
-  pmChips(mallTodo(dfx));updBar();}
+  wireSub();pmChips(mallTodo(dfx));updBar();lpShow();}
 function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'10/22 ล้อ',stops:[],head:'',driver:'',note:'',isNew:1};
   JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
 function closeJob(){JE=null;renderPlan();}
@@ -706,7 +743,7 @@ const UNL={52:{'4 ล้อ':300,'6 ล้อ':1400}},PFEE={217:40,31:76,252:50,
 function feeOf(v,s){const u=(UNL[s.id]||{})[v.g]||0,pn=parseInt(s.pal,10),pf=PFEE[s.id]&&pn>0?PFEE[s.id]*pn:0;return u+pf;}
 /* จังหวัด: ยังไม่มีในตารางร้าน · เดโมใส่ให้เฉพาะร้านที่ชื่อบอกชัด ของจริงเพิ่มคอลัมน์จังหวัดในหน้าค่ากลาง */
 const PV={65:'กรุงเทพฯ',293:'กรุงเทพฯ',370:'กรุงเทพฯ',74:'กรุงเทพฯ',192:'พระนครศรีอยุธยา',141:'พระนครศรีอยุธยา',102:'พระนครศรีอยุธยา',263:'นครราชสีมา',121:'ขอนแก่น',116:'บุรีรัมย์',
- 261:'จันทบุรี',86:'สระแก้ว',39:'ระยอง',258:'ระยอง',31:'ระยอง',56:'ชลบุรี',188:'ปทุมธานี',230:'สุราษฎร์ธานี',124:'ลำพูน',252:'พิษณุโลก',217:'สิงห์บุรี',312:'เพชรบุรี',298:'ปราจีนบุรี',354:'ปทุมธานี'};
+ 261:'จันทบุรี',86:'สระแก้ว',39:'ระยอง',258:'ระยอง',31:'ระยอง',56:'ชลบุรี',188:'ปทุมธานี',230:'สุราษฎร์ธานี',124:'ลำพูน',252:'พิษณุโลก',217:'สิงห์บุรี',312:'เพชรบุรี',298:'ปราจีนบุรี',354:'ปทุมธานี',107:'นนทบุรี',67:'กรุงเทพมหานคร',152:'สมุทรสาคร',158:'ชลบุรี',172:'นครสวรรค์',187:'บุรีรัมย์',169:'ขอนแก่น',231:'ลำพูน',233:'สุราษฎร์ธานี',241:'สงขลา'};
 /* เว็บจริง: จังหวัดมาจาก central_distances.province = คำนวณจากพิกัดหมุด DTC ทุกคืน (Edge pk-daily prov) · PV ข้างบนใช้เฉพาะตอนเปิดนอกเว็บ */
 const PROV=(typeof __D!=='undefined'&&__D.prov)?__D.prov:null;
 const pvOf=s=>(s.pv||(PROV?PROV[s.id]:PV[s.id])||'').replace('พระนครศรีอยุธยา','อยุธยา').replace('กรุงเทพมหานคร','กรุงเทพฯ');
@@ -714,7 +751,7 @@ const pvOf=s=>(s.pv||(PROV?PROV[s.id]:PV[s.id])||'').replace('พระนคร
 /* ---------- หน้าแพลน: แผงซ้าย + ใบงานเต็ม ---------- */
 let HIDELP=false;
 function renderPlan(){
-  if(PM==='mall'){renderMall();return;}
+  lpShow();if(PM==='mall'){renderMall();return;}
   if(ED)sync();
   const c=counts(),{dc,hc}=busy();
   const d0=new Date($('pdate').value+'T00:00:00'),mon=isNaN(d0)?'':MON[d0.getMonth()],today=isNaN(d0)?'':d0.getDate();
@@ -1080,7 +1117,7 @@ async function renderReport(){
 const VIEWS=['plan','helpers','report'];
 function route(){const t=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'plan';
   VIEWS.forEach(v=>$('v-'+v).hidden=v!==t);document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.t===t));
-  $('bar').hidden=t!=='plan';$('pmode').hidden=t!=='plan';if(t==='report')renderReport();}
+  $('bar').hidden=t!=='plan';$('pmode').hidden=t!=='plan';lpShow();if(t==='report')renderReport();}
 function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}
 $('pdate').onchange=()=>{$('pday').textContent=dateTH($('pdate').value);renderAll();};
 $('pday').textContent=dateTH($('pdate').value);

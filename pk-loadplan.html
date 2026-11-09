@@ -1,0 +1,1836 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="robots" content="noindex">
+<title>Loading Planner · Packing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<style>
+/* Layout: แถบวันที่ส่ง + โหมด · ซ้าย = รายการรถ (แถบเต็ม %) · ขวา = 3D คันที่เลือก · ล่าง = PO ต่อคัน + ค่าสมมติแก้ได้ */
+:root{
+  --bg:#f3f5f2; --surface:#ffffff; --surface2:#f8faf7; --line:#dfe5dd; --ink:#17251d; --muted:#5f6f66;
+  --brand:#1B4332; --brand2:#2d6a4f; --gold:#C9A227; --goldtint:#fbf3d6; --onbrand:#ffffff;
+  --ok:#127a2e; --oktint:#e5f4ea; --warn:#9a5b06; --warntint:#fdf0d8; --bad:#a32d2d; --badtint:#fbe9e9; --info:#185fa5; --infotint:#e6f0fa;
+  --scene:#eef2ee; --bar:#e7ece6;
+  --f-body:"IBM Plex Sans Thai",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,monospace;
+  --shadow:0 1px 2px rgba(23,37,29,.06),0 8px 20px -14px rgba(23,37,29,.35);
+  color-scheme:light;   /* คุณน้องสั่ง: ใช้โทนสว่างเสมอ ไม่ตามโหมดมืดของเครื่อง */
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-body);margin:0}
+.wrap{max-width:1280px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:14px}
+h1{font-size:22px;line-height:1.25;margin:0;text-wrap:balance} h2{font-size:16px;margin:0;text-wrap:balance}
+.eyebrow{font-size:12px;letter-spacing:.06em;color:var(--brand2);font-weight:600}
+.note{font-size:13px;color:var(--muted)} .muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums} .num{font-variant-numeric:tabular-nums}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.top{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:flex-end;justify-content:space-between}
+.pchip{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:7px 14px;font:inherit;font-size:14px;cursor:pointer}
+.pchip[aria-pressed="true"]{background:var(--brand);color:var(--onbrand);border-color:var(--brand)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;font:inherit;font-size:14px;padding:7px 12px;cursor:pointer;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--goldtint);color:var(--warn);font-weight:700}
+button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 14px}
+.kpi b{display:block;font-size:21px;line-height:1.2;font-variant-numeric:tabular-nums} .kpi span{font-size:12.5px;color:var(--muted)}
+.main{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:14px;align-items:start}
+@media (max-width:900px){.main{grid-template-columns:1fr}}
+.trucks{display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:2px;min-height:0;flex:1}
+/* คอลัมน์ซ้ายติดจอ: รถ (บน) + PO (ล่าง) เห็นพร้อมกัน → ลาก PO ขึ้นไปวางบนการ์ดรถได้โดยไม่ต้องเลื่อนหน้า */
+.leftcol{position:sticky;top:calc(10px + env(safe-area-inset-top,0px));align-self:start;height:calc(100vh - 20px);display:flex;flex-direction:column;gap:10px;min-height:0}
+.lcard{display:flex;flex-direction:column;min-height:0}
+.leftcol .lcard:first-child{flex:1 1 46%} .leftcol .lcard:last-child{flex:1 1 30%} .leftcol #qBox{flex:1 1 30%}
+body.r-planner .leftcol .lcard:first-child{flex-basis:58%} body.r-planner .leftcol .lcard:last-child{flex-basis:42%}
+body.r-puy .leftcol .lcard:first-child{flex-basis:52%} body.r-puy .leftcol #qBox{flex-basis:48%}
+@media (max-width:900px){.leftcol{position:static;height:auto}.trucks{max-height:60vh}.polist{max-height:50vh}}
+.polist{display:flex;flex-direction:column;gap:5px;overflow:auto;min-height:0;flex:1;padding-right:2px}
+.pogrp{font-size:12px;font-weight:700;color:var(--muted);padding:4px 2px 0;letter-spacing:.02em}
+.poc{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:var(--surface);font-size:13px}
+.poc.un{border-color:var(--gold);background:var(--goldtint)}
+.poc b{font-family:var(--f-mono);font-size:12.5px} .poc small{display:block;color:var(--muted);font-size:12px}
+.poc .tk{cursor:pointer;border:0;font:inherit}
+.pchip.onlyun{padding:4px 11px;font-size:12.5px;font-weight:600}
+.pchip.onlyun::before{content:"○ "}
+.pchip.onlyun[aria-pressed="true"]{background:var(--goldtint);color:var(--warn);border-color:var(--gold)}
+.pchip.onlyun[aria-pressed="true"]::before{content:"● "}
+.pchip:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.book summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:15px;list-style:none}
+.book summary::-webkit-details-marker{display:none}
+.book summary::before{content:"▸";color:var(--muted);transition:transform .15s}
+.book[open] summary::before{transform:rotate(90deg)}
+.bookgrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr) minmax(0,1fr);gap:12px;margin-top:12px}
+@media (max-width:1000px){.bookgrid{grid-template-columns:minmax(0,1fr)}}
+.bstep{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2);display:flex;flex-direction:column;gap:8px;min-width:0}
+.bstep h3{margin:0;font-size:14px;display:flex;align-items:center;gap:8px}
+.bstep h3 i{font-style:normal;display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--brand);color:var(--onbrand);font-size:12px}
+.bstep table{font-size:12.5px}
+.fleet{display:flex;flex-direction:column;gap:4px;max-height:300px;overflow:auto;padding-right:2px}
+.fl{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:5px 8px;background:var(--surface);font-size:12.5px;cursor:pointer}
+.fl.off{opacity:.55;cursor:not-allowed}
+.fl.on{border-color:var(--brand);box-shadow:0 0 0 2px var(--oktint)}
+.fl small{display:block;color:var(--muted);font-size:11.5px}
+.fl input{width:16px;height:16px;accent-color:var(--brand)}
+.givebar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.givebar input[type=number]{width:62px;font:inherit;padding:5px 6px;border:1px solid var(--line);border-radius:8px}
+.btn.sm{padding:5px 10px;font-size:12.5px}
+.shortbox{border:1px solid #e3a3a3;background:var(--badtint);border-radius:10px;padding:8px 10px;font-size:13px;color:var(--bad);display:flex;flex-direction:column;gap:6px}
+.shortbox ul{margin:0;padding-left:18px;color:var(--ink)}
+.okbox{border:1px solid var(--ok);background:var(--oktint);border-radius:10px;padding:8px 10px;font-size:13px;color:var(--ok);font-weight:600}
+.rolebar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:700px){.rolebar{grid-template-columns:minmax(0,1fr)}}
+.rolebar button{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:9px 12px;font:inherit;font-size:14px;font-weight:600;text-align:left;cursor:pointer;color:var(--ink);position:relative}
+.rolebar button small{display:block;font-weight:400;font-size:12px;color:var(--muted);margin-top:2px}
+.rolebar button[aria-selected="true"]{background:var(--brand);color:var(--onbrand);border-color:var(--brand)}
+.rolebar button[aria-selected="true"] small{color:#cfe3d6}
+.rolebar button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.rolebar .rb{position:absolute;top:8px;right:10px}
+body.r-planner .puyonly,body.r-farm .puyonly,body.r-farm .notfarm,body:not(.r-planner) .planneronly,body:not(.r-farm) .farmonly{display:none!important}
+body.r-puy .notpuy,body.r-puy .grip,body.r-puy #addTruck,body.r-puy select[data-move],body.r-puy [data-unfix],body.r-puy [data-splitover]{display:none!important}
+.dtab{min-width:760px} .dtab td,.dtab th{white-space:nowrap;vertical-align:middle}
+.tlink{cursor:pointer;border-radius:6px;padding:1px 3px;margin:0 -3px;display:inline-block} .tlink:hover{background:var(--goldtint);color:var(--ink)} .tlink:focus-visible{outline:2px solid var(--gold)} .tlink::after{content:" ›";opacity:.6}
+.fjob{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px} .fjob .chip{font-size:11.5px}
+.fjob [data-fjob]{cursor:pointer;border:1px solid transparent} .fjob [data-fjob]:hover{border-color:currentColor} .fjob [data-fjob]:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.fjob [data-fjob]::after{content:" ›";opacity:.6}
+.dtab tbody tr{cursor:pointer} .dtab tbody tr:hover td{background:var(--surface2)} .dtab tbody tr:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.dtab .more{color:var(--muted);font-size:16px}
+.drw{position:fixed;inset:0;z-index:28} .drw[hidden]{display:none}
+.drwbg{position:absolute;inset:0;background:rgba(20,30,24,.35)}
+.drwbox{position:absolute;top:0;right:0;bottom:0;width:min(480px,100%);background:var(--surface);box-shadow:var(--shadow);overflow:auto;padding:16px 18px 24px;display:flex;flex-direction:column;gap:12px;animation:drIn .2s ease-out}
+@keyframes drIn{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.drwbox{animation:none}}
+.drhead{position:sticky;top:-16px;background:var(--surface);margin:-16px -18px 0;padding:16px 18px 10px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:flex-start;z-index:1}
+.drkv{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:13px} .drkv span{color:var(--muted)}
+.drpo{border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.drpo h3{margin:0;padding:8px 12px;background:var(--surface2);font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.drpo table{width:100%} .drpo td,.drpo th{padding:6px 12px;font-size:13px}
+.drsum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.drsum div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center} .drsum b{display:block;font-size:18px}
+.drax{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-size:13px} .dtab tr.sel td{background:var(--goldtint)} .dtab .kgc{display:flex;flex-direction:column;gap:3px;min-width:120px}
+.dtab .bar{display:block;height:6px} .dacts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.lcard2{border:1px solid var(--line);border-radius:14px;overflow:hidden;max-width:340px;margin:0 auto;background:#fff;color:#1f2937;font-size:13px}
+.lcard2 .lh{background:#1d4ed8;color:#fff;padding:12px 14px} .lcard2 .lh b{display:block;font-size:16px}
+.lcard2 .lb{padding:12px 14px;display:grid;grid-template-columns:auto 1fr;gap:5px 12px} .lcard2 .lb span{color:#6b7280}
+.lcard2 .lf{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:0 14px 14px} .lcard2 .lf i{font-style:normal;text-align:center;border-radius:8px;padding:8px;font-weight:700}
+.lcard2 .lf i:first-child{background:#1d4ed8;color:#fff} .lcard2 .lf i:last-child{border:1px solid #d1d5db;color:#374151}
+.steps{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 2px}
+.steps span{font-size:12.5px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);background:var(--surface)}
+.steps span.done{background:var(--oktint);color:var(--ok);border-color:var(--ok)}
+.steps span.now{background:var(--goldtint);color:var(--warn);border-color:var(--gold);font-weight:700}
+.pgrid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;margin-top:10px}
+@media (max-width:900px){.pgrid{grid-template-columns:minmax(0,1fr)}}
+.freq{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2);display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.freq h3{margin:0;font-size:14.5px}
+.fl .acts{display:flex;gap:4px}
+.qlist{display:flex;flex-direction:column;gap:4px;overflow:auto;min-height:0;flex:1;padding-right:2px}
+.qr{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:6px;align-items:center;border:1px solid var(--line);border-radius:9px;padding:5px 7px;background:var(--surface);font-size:12.5px;cursor:pointer;text-align:left;font:inherit;width:100%}
+.qr:hover{border-color:var(--gold)} .qr:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.qkeep{border:0;cursor:pointer;font:inherit;font-size:12px;font-weight:600}
+.qbig{border:0;background:none;font:inherit;color:inherit;cursor:pointer;padding:0;text-align:left}
+.qbig .qbigic{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);font-size:13px;color:var(--muted);vertical-align:2px;margin-left:2px}
+.qbig:hover .qbigic{border-color:var(--gold);color:var(--ink)} .qbig:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-radius:6px}
+.mbox.wide{max-width:1020px;max-height:90vh}
+.qnote{cursor:pointer}
+.qtab td{vertical-align:middle} .qtab tr.far td{background:var(--oktint)} .qtab tr.skip td{background:var(--goldtint)}
+.qtab .acts{display:flex;gap:4px;flex-wrap:wrap}
+.qr .qn{font-family:var(--f-mono);font-weight:700;color:var(--muted);text-align:center}
+.qr small{display:block;color:var(--muted);font-size:11.5px}
+.qr.far{border-color:var(--ok);background:var(--oktint)} .qr.skip{border-color:var(--gold);background:var(--goldtint)}
+.qr.head .qn{color:var(--brand)}
+.tgrip{display:inline-block;cursor:grab;touch-action:none;user-select:none;padding:0 6px;margin-right:4px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--muted)}
+.tgrip:hover{color:var(--ink);border-color:var(--gold)}
+.unpin{cursor:pointer;color:var(--bad);margin-left:4px;font-weight:700}
+.modal{position:fixed;inset:0;background:rgba(20,30,24,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:30}
+.modal[hidden]{display:none}
+.mbox{background:var(--surface);border-radius:16px;max-width:440px;width:100%;max-height:85vh;overflow:auto;padding:16px 18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px}
+.mstat{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.mstat div{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:8px;text-align:center}
+.mstat b{display:block;font-size:20px}
+.podone{padding:14px 8px;text-align:center;color:var(--ok);font-weight:600;font-size:13.5px}
+.tc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;text-align:left;font:inherit;color:inherit;width:100%}
+.tc[aria-pressed="true"]{border-color:var(--gold);box-shadow:0 0 0 3px var(--goldtint)}
+.tc.badc{border-color:var(--bad)}
+.tc .hd{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.tc .hd b{font-size:15px}
+.bars{display:grid;grid-template-columns:62px 1fr 44px;gap:4px 8px;align-items:center;font-size:12px;margin-top:6px}
+.bar{height:8px;border-radius:99px;background:var(--bar);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:var(--brand2)}
+.bar i.w{background:var(--gold)} .bar i.x{background:var(--bad)}
+.chip{display:inline-flex;align-items:center;gap:4px;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600;white-space:nowrap}
+.c-ok{background:var(--oktint);color:var(--ok)} .c-warn{background:var(--warntint);color:var(--warn)} .c-bad{background:var(--badtint);color:var(--bad)} .c-info{background:var(--infotint);color:var(--info)} .c-gold{background:var(--goldtint);color:var(--warn)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+.viewer{display:flex;flex-direction:column;gap:10px}
+.stage{position:relative;height:440px;border-radius:12px;overflow:hidden;background:var(--scene);border:1px solid var(--line)}
+@media (max-width:600px){.stage{height:320px}}
+.stage canvas{display:block;width:100%;height:100%}
+.tip{position:absolute;left:10px;top:10px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;box-shadow:var(--shadow);max-width:260px;pointer-events:none;z-index:2}
+.hint{position:absolute;right:10px;bottom:8px;font-size:12px;color:var(--muted);background:var(--surface);padding:2px 8px;border-radius:8px;opacity:.9;pointer-events:none;z-index:2}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.flat{display:grid;gap:6px;padding:10px}
+.tscroll{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:12px;color:var(--muted);font-weight:600;background:var(--surface2)} td.r,th.r{text-align:right}
+tr:last-child td{border-bottom:0}
+select,input{font:inherit;font-size:13.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);max-width:100%}
+input[type=number]{width:74px}
+.btn{border:0;border-radius:10px;padding:8px 14px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;background:var(--brand);color:var(--onbrand)}
+.btn.sec{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+details.card summary{cursor:pointer;font-weight:700}
+.warns{display:flex;flex-direction:column;gap:6px}
+.warn{border-left:4px solid var(--warn);background:var(--warntint);color:var(--warn);border-radius:8px;padding:7px 10px;font-size:13.5px}
+.warn.b{border-left-color:var(--bad);background:var(--badtint);color:var(--bad)}
+.asm{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px;margin-top:12px}
+.asm h3{font-size:14px;margin:0 0 6px}
+.seqlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:4px;max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:6px;background:var(--surface2)}
+.seqlist li{display:grid;grid-template-columns:30px 1fr;gap:8px;align-items:start;padding:6px 8px;border-radius:8px;cursor:pointer;font-size:13.5px}
+.seqlist li:hover{background:var(--surface)}
+.seqlist li .sn{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:12px;background:var(--surface);border:1px solid var(--line)}
+.seqlist li.done{color:var(--muted)} .seqlist li.done .sn{background:var(--brand);border-color:var(--brand);color:var(--onbrand)}
+.seqlist li.now{background:var(--goldtint)} .seqlist li.now .sn{background:var(--gold);border-color:var(--gold);color:#1d1503}
+.ln{display:block}
+.valert{border:2px solid #c0392b;background:#fdecea;color:#8a1f1f;border-radius:12px;padding:10px 14px;display:flex;flex-direction:column;gap:6px}
+.valert .vt{font-size:17px;font-weight:700}
+.valert ul{margin:0;padding-left:20px;font-size:14px;display:flex;flex-direction:column;gap:2px}
+@media (prefers-reduced-motion:no-preference){.valert{animation:vpulse 1.6s ease-in-out 2}}
+@keyframes vpulse{50%{box-shadow:0 0 0 6px rgba(192,57,43,.18)}}
+.views{position:absolute;left:10px;bottom:10px;z-index:2;display:inline-flex;border:1px solid var(--line);background:var(--surface);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
+.views button{border:0;background:none;font:inherit;font-size:12.5px;padding:6px 11px;cursor:pointer;color:var(--ink)}
+.views button+button{border-left:1px solid var(--line)}
+.views button:hover{background:var(--goldtint)}
+.views button[aria-pressed="true"]{background:var(--brand);color:var(--onbrand)}
+.stage canvas{cursor:grab}
+.stage:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+@media (max-width:1180px){.hint{display:none}}
+.axl{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:1}
+.axlab{position:absolute;left:0;top:0;color:#fff;border-radius:10px;padding:5px 10px 6px;text-align:center;line-height:1.25;box-shadow:0 2px 8px rgba(0,0,0,.35);white-space:nowrap;will-change:transform}
+.axlab b{display:block;font-size:16px;font-variant-numeric:tabular-nums}
+.axlab small{display:block;font-size:11.5px;opacity:.92}
+.axlab small.nm{font-size:10.5px;opacity:.75}
+@media (max-width:600px){.axlab{padding:3px 7px}.axlab b{font-size:13px}.axlab small.nm{display:none}}
+.grip{display:inline-block;cursor:grab;touch-action:none;user-select:none;padding:2px 6px;margin-right:2px;border-radius:6px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-family:var(--f-body)}
+.grip:hover{color:var(--ink);border-color:var(--gold)}
+.ghost{position:fixed;z-index:20;pointer-events:none;background:var(--brand);color:var(--onbrand);padding:6px 12px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:var(--shadow);white-space:nowrap}
+.dropok{outline:3px dashed var(--gold)!important;outline-offset:2px}
+.dropno{outline:3px dashed var(--bad)!important;outline-offset:2px}
+.tnew{flex:none;position:sticky;bottom:0;z-index:1;border:1.5px dashed var(--gold);border-radius:12px;background:var(--goldtint);color:var(--warn);padding:10px 12px;text-align:center;font-size:13px;font-weight:600}
+.stage canvas{touch-action:none}
+.axle{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2);display:flex;flex-direction:column;gap:8px}
+.axgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(60px,1fr) auto;gap:6px 10px;align-items:center;font-size:13px}
+.axgrid .num{text-align:right;white-space:nowrap}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;box-shadow:var(--shadow);max-width:calc(100% - 32px);z-index:5}
+</style>
+<style>
+/* ฝังในหน้าแพลนรถ Packing (ชิป 🏬 แพลนห้าง → 📦 จัด PO ลงรถ) */
+#roleBar{display:none!important}
+.wrap{padding-block:12px 40px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.lpmsg{margin:40px auto;max-width:460px;text-align:center;line-height:1.7}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div><div class="eyebrow">Loading Planner · เดโม · ⚠️ ขนาด/น้ำหนักเป็นตัวเลขสมมติ</div>
+      <h1>จัด PO 7-11 ลงรถ + ผัง 3D</h1>
+      <div class="note">ไฟล์ "Plan 7-11 ต.ค. 2569" 39 PO · เลือกวันส่ง → ระบบจัดรถให้ หรือแอดมินจัดเอง · แก้ตัวเลขสมมติได้ที่ท้ายหน้า</div></div>
+    <div class="row" id="dates"></div>
+  </div>
+  <div class="rolebar" role="tablist" aria-label="มุมมองผู้ใช้" id="roleBar">
+    <button role="tab" data-role="planner">① Loading Planner<small>จัด PO ลงรถ · ผัง 3D · ขอรถ</small></button>
+    <button role="tab" data-role="puy">② พี่ปุ๋ย · จัดรถ PK<small>เช็คน้ำหนัก · หารถ · แจ้งคนขับ</small></button>
+    <button role="tab" data-role="farm">③ แอดมินไร่<small>อนุมัติให้ยืมรถไร่</small><span id="farmBadge"></span></button>
+  </div>
+  <div class="card planneronly" id="plannerBox"></div>
+  <div class="card farmonly" id="farmBox"></div>
+  <div class="row planneronly">
+    <span class="note">โหมด</span>
+    <div class="seg" id="modeSeg"><button data-mode="auto" aria-pressed="true">🤖 ระบบจัดให้</button><button data-mode="manual" aria-pressed="false">✋ แอดมินจัดเอง</button></div>
+    <label class="note" title="กฎ 7-11 ข้อ 1–2: 1 คัน = 1 PO รวม PO ไม่ได้"><input type="checkbox" id="optOnePO" checked disabled> 1 คัน = 1 PO (กฎ 7-11)</label>
+    <label class="note"><input type="checkbox" id="optStack"> คลังยอมให้ซ้อนพาเลท 2 ชั้น</label>
+    <label class="note"><input type="checkbox" id="optBal" checked> ⚖️ วางของหนักใกล้เพลาท้าย</label>
+    <span class="note" id="modeNote"></span>
+  </div>
+  <div class="strip notfarm" id="kpis"></div>
+  <details class="card book puyonly" id="bookBox" open><summary><b>🚚 จองรถกับพี่ปุ๋ย</b> <span class="note">แอดมินรถ PK · ให้รถตามรอบที่กลับมา</span> <span id="bookPill"></span></summary><div class="bookgrid" id="book"></div></details>
+  <div class="warns notfarm" id="warns"></div>
+  <div class="main notfarm">
+    <div class="leftcol">
+      <div class="card lcard" style="padding:10px"><div class="row" style="justify-content:space-between;margin:2px 4px 8px"><h2>รถ <span id="tcount" class="muted"></span></h2><span id="addTruck"></span></div><div class="trucks" id="trucks"></div></div>
+      <div class="card lcard puyonly" style="padding:10px" id="qBox"></div>
+      <div class="card lcard notpuy" style="padding:10px" id="poBox"><div class="row" style="justify-content:space-between;margin:2px 4px 4px"><h2>PO <span id="pocount" class="muted"></span></h2><button class="pchip onlyun" data-onlyun aria-pressed="false" title="ซ่อน PO ที่อยู่บนรถแล้ว">เฉพาะยังไม่จัด</button></div><div class="note" style="margin:0 4px 8px">จับ ⠿ ลากไปวางบนการ์ดรถ · ลากกลับมาที่กล่องนี้ = เอาออกจากรถ</div><div class="polist" id="poList"></div></div>
+    </div>
+    <div class="card puyonly" id="dispBox"></div>
+    <div class="card viewer notpuy">
+      <div class="row" style="justify-content:space-between"><h2 id="vTitle">—</h2><div class="row" id="vChips"></div></div>
+      <div id="vAlert"></div>
+      <div class="stage" id="stage" tabindex="0" aria-label="ภาพ 3D รถ · ปุ่มลูกศรบนคีย์บอร์ด = เลื่อนภาพ"><div class="axl" id="axLabels"></div><div class="tip" id="tip" hidden></div>
+        <div class="views" role="group" aria-label="มุมมองสำเร็จรูป"><button data-view="home" title="มุมเริ่มต้น">3D</button><button data-view="top" title="มองจากด้านบน (เห็นผังพาเลท)">บน</button><button data-view="side" title="มองด้านข้าง (เห็นความสูง)">ข้าง</button><button data-view="front" title="มองจากหน้ารถ">หน้า</button><button data-view="back" title="มองจากท้ายรถ">หลัง</button></div>
+        <div class="hint" id="hint">ลากที่ว่าง = เลื่อน · ลากขวา = หมุน · ล้อเมาส์ = ซูม · ลากพาเลท = ย้าย</div></div>
+      <div class="row" id="seqBar"></div>
+      <div class="legend" id="legend"></div>
+      <ol class="seqlist" id="seqList" hidden></ol>
+      <div id="axlePanel"></div>
+      <div class="tscroll"><table><thead><tr><th>PO</th><th>คลัง</th><th>สินค้า</th><th class="r">ลัง</th><th class="r">พาเลท</th><th class="r">กก.</th><th>ย้ายไปคัน</th></tr></thead><tbody id="vPOs"></tbody></table></div>
+    </div>
+  </div>
+  <div class="card notfarm notpuy"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>PO ของวันส่งนี้ <span id="poAllCount" class="muted"></span></h2><button class="pchip onlyun" data-onlyun aria-pressed="false" title="ซ่อน PO ที่อยู่บนรถแล้ว">เฉพาะยังไม่จัด</button></div><div class="tscroll"><table><thead><tr><th>PO / SO</th><th>คลัง</th><th>นัดลง</th><th>สินค้า</th><th class="r">ลัง</th><th class="r">พาเลท</th><th class="r">กก.</th><th>อยู่คัน</th></tr></thead><tbody id="poAll"></tbody></table></div></div>
+  <div class="toast" id="toast" hidden></div>
+  <div class="drw" id="drw" hidden><div class="drwbg" data-dclose></div><aside class="drwbox" role="dialog" aria-modal="true" aria-labelledby="drT" id="drBox"></aside></div>
+  <div class="modal" id="qModal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="qmT" id="qmBox"></div></div>
+  <details class="card notfarm" id="asmBox"><summary>⚙️ ตัวเลขสมมติ (แก้แล้วจัดใหม่ทันที) · ของจริงจะมาจากไฟล์แม่แบบที่แอดมินกรอก</summary><div class="asm" id="asm"></div></details>
+</div>
+
+<script type="text/plain" id="lpMain">
+const POS=window.__LP.pos;   /* PO จากหน้าแม่ (Edge pk-daily lpPos) */
+const DRIVERS=[];   /* ฝังในแพลนห้าง: planner ไม่เลือกคนขับ · พี่ปุ๋ยแจ้งรถ+คนขับ แล้วแอดมินใส่ในแพลนห้าง */
+const ACTUAL={"09/10/26":15,"10/10/26":4};
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const nf = (n, d) => Number(n || 0).toLocaleString("en-US", { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const TH_M = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const thd = (s) => { const m = String(s || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? (+m[1]) + " " + TH_M[+m[2]] : s; };
+
+// ── ค่าสมมติ (แก้ได้ในหน้า) ──
+const A = {
+  pallet: { w: 100, l: 120, h: 15, kg: 35, maxH: 150 },   // แม่แบบ 26 ต.ค.: ไม้ LOSCAM 35 กก.
+  sku: [
+    // ขนาดลัง/น้ำหนัก = แม่แบบที่คลังกรอกกลับ 26 ต.ค. (ขนาดกรอกเป็น มม. → หาร 10 · น้ำหนัก = คอลัมน์ QC)
+    { k: "oka", re: /โอก้า/, name: "ขวด 1L*12 โอก้า E", w: 32, l: 25, h: 29.3, kg: 11.44, per: 14, lay: 4, color: "#e9a23b" },
+    { k: "soy", re: /ถั่วเหลือง/, name: "ถั่วเหลือง 1L*12 ทับทิม P3", w: 32, l: 24.7, h: 28.9, kg: 11.53, per: 14, lay: 4, color: "#8bb85c" },
+    { k: "1l", re: /1L\*12/, name: "ขวด 1L*12 ทับทิม E", w: 32, l: 24, h: 29.3, kg: 11.44, per: 14, lay: 4, color: "#c94f4f" },
+    { k: "2l", re: /2L\*6/, name: "ขวด 2L*6 ทับทิม E", w: 27.3, l: 21.9, h: 31.4, kg: 11.52, per: 17, lay: 4, color: "#4f7fc9" },
+    { k: "5l", re: /5L\*4/, name: "ขวด 5L*4 ทับทิม E", w: 30.8, l: 28.6, h: 36.4, kg: 19.2, per: 12, lay: 3, color: "#7a5cc9" },
+  ],
+  types: [
+    // axles = ตำแหน่งเพลาต่อช่วง (สัดส่วนความยาว) · dual = ล้อคู่ · หัวรถมีเพลาหน้าล้อเดี่ยวเสมอ
+    { k: "trailer", name: "พ่วง 18 ล้อ", drv: "พ่วง", beds: [{ n: "หัว", L: 620, W: 240, H: 250, axles: [0.6, 0.8], dual: true }, { n: "หาง", L: 720, W: 240, H: 250, axles: [0.14, 0.86], dual: true }], pay: 30000, r: 50 },
+    { k: "6w", name: "6 ล้อ", drv: "6 ล้อ", beds: [{ n: "กระบะ", L: 620, W: 230, H: 230, axles: [0.72], dual: true }], pay: 8000, r: 48 },
+    { k: "4w", name: "4 ล้อ", drv: "4 ล้อ", beds: [{ n: "กระบะ", L: 250, W: 170, H: 180, axles: [0.7], dual: false }], pay: 1500, r: 34 },
+  ],
+  dc: {
+    W101: { n: "บางบัวทอง", km: 185.94, real: true, t: "00:01" }, W501: { n: "สุวรรณภูมิ", km: 97.92, real: true, t: "00:01" },
+    W901: { n: "มหาชัย", km: 165, t: "00:01" }, W121: { n: "ชลบุรี", km: 45, t: "21:00" }, W151: { n: "นครสวรรค์", km: 330, t: "15:00" },
+    W131: { n: "บุรีรัมย์", km: 370, t: "19:00" }, W801: { n: "ขอนแก่น", km: 470, t: "19:00" }, W301: { n: "ลำพูน", km: 720, t: "19:00" },
+    W401: { n: "สุราษฎร์", km: 690, t: "19:00" }, W141: { n: "หาดใหญ่", km: 1000, t: "20:00" },
+  },
+  // ข้อ 5 ขึ้นของ 08–17 · ข้อ 6 ชั่วโมงละ 2 คัน · ข้อ 8 ไม่เกิน 80 (ใช้เฉลี่ย 50 คิดเวลา) · ข้อ 9 ถึงก่อนนัด ≥ 30 นาที · ข้อ 10 7-11 ≤ 20 ตัน/คัน
+  speed: 50, bufH: 0.5, loadMin: 60, bays: 2, dayStart: 8, dayEnd: 17, payBuf: 5, unloadH: 2, farKm: 400, custMaxKg: 20000,
+  // น้ำหนักลงเพลา · tare = น้ำหนักรถเปล่าที่ลงเพลานั้น · lim = พิกัด (กก.) — ⚠️ สมมติ ต้องยืนยันกับประกาศกรมทางหลวง/สมุดทะเบียนรถ
+  axle: {
+    trailer: { gvw: 50500, groups: [
+      { n: "เพลาหน้า (ล้อเดี่ยว)", at: "front", tare: 4000, lim: 7000 },
+      { n: "หัว เพลาคู่ท้าย (ล้อคู่ 2 เพลา)", at: "bed0", tare: 5500, lim: 20000 },
+      { n: "หาง เพลาหน้า (ล้อคู่)", at: "bed1a", tare: 3000, lim: 11000 },
+      { n: "หาง เพลาท้าย (ล้อคู่)", at: "bed1b", tare: 3000, lim: 11000 }] },
+    "6w": { gvw: 15000, groups: [
+      { n: "เพลาหน้า (ล้อเดี่ยว)", at: "front", tare: 2500, lim: 6000 },
+      { n: "เพลาท้าย (ล้อคู่)", at: "bed0", tare: 2500, lim: 11000 }] },
+    "4w": { gvw: 3500, groups: [
+      { n: "เพลาหน้า", at: "front", tare: 900, lim: 1800 },
+      { n: "เพลาท้าย", at: "bed0", tare: 800, lim: 2200 }] },
+  },
+};
+const FRONT_AXLE_X = -120, BED_GAP = 90;   // ซม. · ตรงกับภาพ 3D (ล้อหน้าใต้หัวรถ / ช่องว่างหัว-หาง)
+function bedOffsets(type) { let x = 0; return type.beds.map((b) => { const o = x; x += b.L + BED_GAP; return o; }); }
+// คานรับน้ำหนักแบบง่าย: สินค้าแต่ละช่วงแบ่งลงเพลาตามระยะจากจุดศูนย์ถ่วง (หัว = เพลาหน้า+เพลาท้ายหัว · หางพ่วงเต็ม = เพลาหน้า+ท้ายของหาง)
+function axleLoad(r) {
+  const type = r.type, off = bedOffsets(type), cfg = A.axle[type.k];
+  const cargo = type.beds.map(() => ({ w: 0, m: 0 }));
+  r.placed.forEach((p) => { const sp = p.sp, x = off[sp.bi] + sp.i * sp.g.along + sp.g.along / 2; cargo[sp.bi].w += p.u.kg; cargo[sp.bi].m += p.u.kg * x; });
+  const pos = { front: FRONT_AXLE_X };
+  type.beds.forEach((b, bi) => { const xs = b.axles.map((f) => off[bi] + b.L * f); if (bi === 0) pos.bed0 = xs.reduce((a, v) => a + v, 0) / xs.length; else { pos.bed1a = xs[0]; pos.bed1b = xs[xs.length - 1]; } });
+  const loads = cfg.groups.map((g) => ({ n: g.n, at: g.at, lim: g.lim, tare: g.tare, kg: g.tare, x: pos[g.at] }));
+  const add = (at, kg) => { const l = loads.find((q) => q.at === at); if (l) l.kg += kg; };
+  const c0 = cargo[0];
+  if (c0.w) { const xc = c0.m / c0.w, rr = c0.w * (xc - pos.front) / (pos.bed0 - pos.front); add("bed0", rr); add("front", c0.w - rr); }
+  const c1 = cargo[1];
+  if (c1 && c1.w) { const xc = c1.m / c1.w, rb = c1.w * (xc - pos.bed1a) / (pos.bed1b - pos.bed1a); add("bed1b", rb); add("bed1a", c1.w - rb); }
+  loads.forEach((l) => (l.pct = l.lim > 0 ? l.kg / l.lim * 100 : 0));
+  const total = loads.reduce((a, l) => a + l.kg, 0), gvwPct = total / cfg.gvw * 100;
+  const cg = cargo.map((c, bi) => (c.w ? (c.m / c.w - off[bi]) : null));
+  return { loads, total, gvw: cfg.gvw, gvwPct, cg, worst: Math.max(gvwPct, ...loads.map((l) => l.pct)) };
+}
+const axTone = (pct) => (pct > 100 ? "bad" : pct > 90 ? "warn" : "ok");
+const skuOf = (name) => A.sku.find((s) => s.re.test(name)) || A.sku[2];
+
+let dates = [...new Set(POS.map((p) => p.date))], date = dates[0], mode = "auto", trucks = [], sel = 0, assign = {}, nextId = 1;
+// เลขคัน: ระบบจัดใหม่ = เริ่ม #1 ทุกครั้ง · แอดมินเพิ่มรถ = ต่อจากเลขสูงสุดที่มีอยู่
+const newId = () => Math.max(0, ...trucks.map((t) => t.id)) + 1;
+let opt = { onePO: true, stack: false, balance: true, drvMode: "manual" };   // onePO บังคับตามกฎ 7-11 ข้อ 1–2
+
+// ── PO → พาเลท ──
+const ONE_L = new Set(["1l", "oka", "soy"]);   // สินค้า 1 ลิตร ที่ยอมเรียงสูงเกินมาตรฐานได้ (ข้อ 13)
+function palletize(po, lay1L) {
+  const P = A.pallet, units = [], partial = [];
+  po.lines.forEach((ln) => {
+    const s = skuOf(ln.p), lay = lay1L && ONE_L.has(s.k) ? lay1L : s.lay, per = s.per * lay;
+    const full = Math.floor(ln.q / per), loose = ln.q - full * per;
+    for (let i = 0; i < full; i++) units.push({ segs: [{ s, q: per, lay }], tall: lay > s.lay });
+    if (loose > 0) partial.push({ s, q: loose, lay: Math.ceil(loose / s.per) });
+  });
+  // เศษ: รวมเป็นพาเลทเดียวถ้าความสูงรวมไม่เกิน maxH (ชั้นสินค้าวางทับกัน)
+  partial.sort((a, b) => b.lay * b.s.h - a.lay * a.s.h);
+  const mixed = [];
+  partial.forEach((pt) => {
+    const hh = pt.lay * pt.s.h;
+    const m = mixed.find((u) => u.hh + hh + P.h <= P.maxH);
+    if (m) { m.segs.push({ s: pt.s, q: pt.q, lay: pt.lay }); m.hh += hh; }
+    else mixed.push({ segs: [{ s: pt.s, q: pt.q, lay: pt.lay }], hh, mix: true });
+  });
+  return units.concat(mixed).map((u, i) => {
+    const h = P.h + u.segs.reduce((a, g) => a + g.lay * g.s.h, 0);
+    const kg = P.kg + u.segs.reduce((a, g) => a + g.q * g.s.kg, 0);
+    return { key: po.po + ":" + i, po: po.po, so: po.so, dc: po.dcCode, segs: u.segs, h, kg, mix: !!u.mix, tall: !!u.tall, idx: i };
+  });
+}
+function poInfo(po) {
+  if (!po._u) {
+    po.dcCode = (po.dc.match(/^W\d{3}/) || [""])[0]; po._u = palletize(po); po._lay = 0;
+    // ข้อ 13: PO ไม่พอ 1 คัน → เรียง 1L สูงขึ้นทีละชั้น (ต้องมี 1L ใน PO · พาเลทสูงไม่เกินกระบะ · น้ำหนักไม่เกินเพดาน)
+    const big = A.types[0], bedH = Math.min(...big.beds.map((b) => b.H)), base = (A.sku.find((x) => x.k === "1l") || {}).lay || 4;
+    const fits = (u) => !place(big, u, opt.stack).over.length;
+    if (!fits(po._u) && po.lines.some((ln) => ONE_L.has(skuOf(ln.p).k))) {
+      for (let L = base + 1; L <= base + 2; L++) {
+        const u = palletize(po, L);
+        if (u.some((x) => x.h > bedH)) break;
+        if (fits(u) && u.reduce((a, x) => a + x.kg, 0) <= payCap(big)) { po._u = u; po._lay = L; break; }
+      }
+    }
+  }
+  return po;
+}
+
+// ── วางพาเลทในกระบะ ──
+function bedGrid(bed) {
+  const P = A.pallet;
+  let across = P.l, along = P.w;   // พาเลทด้าน 120 ขวางกระบะ
+  let na = Math.floor(bed.W / across);
+  if (na < 2 && Math.floor(bed.W / P.w) >= 2) { across = P.w; along = P.l; na = 2; }
+  if (na < 1) { across = P.w; along = P.l; na = Math.floor(bed.W / across); }
+  const nl = Math.floor(bed.L / along);
+  return { na, nl, across, along };
+}
+const spotKey = (s) => s.bi + "-" + s.i + "-" + s.j;
+// fix = { unitKey: spotKey } ตำแหน่งที่แอดมินลากวางเอง → วางก่อน ที่เหลือระบบจัด
+function place(type, units, stack, fix) {
+  const spots = [];
+  type.beds.forEach((b, bi) => { const g = bedGrid(b); for (let i = 0; i < g.nl; i++) for (let j = 0; j < g.na; j++) spots.push({ bi, i, j, g, b }); });
+  if (opt.balance) {   // ของหนักวางใกล้จุดรับน้ำหนัก: ช่วงหัว = เพลาท้าย · หาง = กลางหาง → เพลาหน้าไม่เกิน
+    const sweet = (s) => (s.bi === 0 ? s.b.axles.reduce((a, v) => a + v, 0) / s.b.axles.length : 0.5) * s.b.L;
+    const d = (s) => Math.abs(s.i * s.g.along + s.g.along / 2 - sweet(s));
+    spots.sort((a, b) => d(a) - d(b) || a.bi - b.bi || a.j - b.j);
+  }
+  const order = units.slice().sort((a, b) => b.kg - a.kg);
+  const placed = [], over = [];
+  const pinned = new Set();
+  if (fix) order.forEach((u) => { const k = fix[u.key]; if (!k) return; const sp = spots.find((s) => !s.u && spotKey(s) === k); if (sp) { sp.u = u; placed.push({ u, sp, z: 0, pin: true }); pinned.add(u); } });
+  order.forEach((u) => { if (pinned.has(u)) return; const sp = spots.find((s) => !s.u); if (sp) { sp.u = u; placed.push({ u, sp, z: 0 }); } else over.push(u); });
+  if (stack && over.length) {
+    const rest = over.splice(0);
+    rest.sort((a, b) => a.kg - b.kg).forEach((u) => {
+      const sp = spots.find((s) => s.u && !s.top && s.u.h + u.h <= s.b.H && !s.u.mix && u.kg <= s.u.kg);
+      if (sp) { sp.top = u; placed.push({ u, sp, z: sp.u.h }); } else over.push(u);
+    });
+  }
+  // เศษเรียงมือ (แบบที่แอดมินทำจริง): ลังเศษวางบนพาเลทเต็ม ไม่ใช้พาเลท ไม่กินที่พื้น
+  if (over.some((u) => u.mix)) {
+    const P = A.pallet, rest = over.splice(0);
+    rest.forEach((u) => {
+      const sp = u.mix && spots.find((s) => s.u && !s.top && !s.hand && s.u.h + (u.h - P.h) <= s.b.H);
+      if (sp) { sp.hand = u; placed.push({ u, sp, z: sp.u.h, hand: true }); } else over.push(u);
+    });
+  }
+  const floor = spots.length, kg = units.reduce((a, u) => a + u.kg, 0);
+  const maxH = Math.max(0, ...placed.map((p) => p.z + p.u.h - (p.hand ? A.pallet.h : 0)));
+  const hand = placed.filter((p) => p.hand).length;
+  return { placed, over, floor, kg, maxH, pos: placed.length - hand, hand };
+}
+const payCap = (type) => Math.min(type.pay * (1 - A.payBuf / 100), A.custMaxKg || Infinity);
+function evalTruck(t) {
+  const type = A.types.find((x) => x.k === t.type);
+  const units = t.items.flatMap((it) => it.units);
+  const stack = opt.stack;
+  const r = place(type, units, stack, t.fix);
+  r.type = type; r.payMax = payCap(type); r.overKg = r.kg > r.payMax; r.bedH = Math.max(...type.beds.map((b) => b.H));
+  r.capPos = r.floor * (stack ? 2 : 1);
+  r.ax = axleLoad(r);
+  return r;
+}
+
+// ── จัดรถอัตโนมัติ ──
+function itemsOf(dPOs) {
+  // งาน = PO (ถ้าใหญ่เกินรถพ่วง 1 คัน ตัดเป็นหลายก้อน)
+  const big = A.types[0]; const items = [];
+  dPOs.forEach((po) => {
+    let units = po._u.slice();
+    while (units.length) {
+      let take = units.length;
+      while (take > 1 && (place(big, units.slice(0, take), opt.stack).over.length || units.slice(0, take).reduce((a, u) => a + u.kg, 0) > payCap(big))) take--;
+      items.push({ id: po.po + (items.filter((x) => x.po === po.po).length ? "-" + (items.filter((x) => x.po === po.po).length + 1) : ""), po: po.po, so: po.so, dc: po.dcCode, units: units.slice(0, take), poRef: po });
+      units = units.slice(take);
+    }
+  });
+  return items;
+}
+function fitsType(type, units) { const r = place(type, units, opt.stack); return !r.over.length && r.kg <= payCap(type); }
+function autoPlan(items) {
+  const byDc = {}; items.forEach((it) => (byDc[it.dc] = byDc[it.dc] || []).push(it));
+  const dcs = Object.keys(byDc).sort((a, b) => (A.dc[b] ? A.dc[b].km : 0) - (A.dc[a] ? A.dc[a].km : 0));
+  const out = [];
+  dcs.forEach((dc) => {
+    const list = byDc[dc].slice().sort((a, b) => b.units.length - a.units.length);
+    const open = [];
+    list.forEach((it) => {
+      let t = opt.onePO ? null : open.find((x) => fitsType(A.types[0], x.items.flatMap((i) => i.units).concat(it.units)));
+      if (!t) { t = { id: nextId++, type: "trailer", items: [], dc }; open.push(t); }
+      t.items.push(it);
+    });
+    // คันที่ของน้อย ลดเป็นรถเล็กสุดที่พอ
+    open.forEach((t) => { const u = t.items.flatMap((i) => i.units); for (let k = A.types.length - 1; k >= 0; k--) if (fitsType(A.types[k], u)) { t.type = A.types[k].k; break; } });
+    out.push(...open);
+  });
+  return out;
+}
+// ── คนขับ + รอบขึ้นของ ──
+const hm = (h) => { const x = ((h % 24) + 24) % 24; return ("0" + Math.floor(x)).slice(-2) + ":" + ("0" + Math.round((x % 1) * 60)).slice(-2); };
+const hmDay = (h) => (h >= 24 ? "วันส่ง " : "") + hm(h);   // ชม. นับจาก 00:00 วันขึ้นของ · เกิน 24 = เช้าวันส่ง
+// ── จองรถกับพี่ปุ๋ย (แอดมินรถ PK) ──
+//   ขั้นตอนจริง: planner ทำแพลนตาม PO (ไม่ดูรถ) → ห้างคอนเฟิร์มวันรับ → จองรถกับพี่ปุ๋ย → พี่ปุ๋ยให้ตามรอบรถที่กลับมา (อาจได้น้อยกว่าที่ขอ)
+//   สถานะรถในเดโม = จำลอง · ของจริงอ่านจาก DTC (ตำแหน่ง + งานที่วิ่งอยู่ → เวลากลับถึงโรงงาน)
+const OUTS = ["74-6228", "73-8493", "73-5255"].map((p, i) => ({ code: "OUT-" + (i + 1), name: "รถร่วม", plate: p, type: "พ่วง", outs: true }));   // ข้อ 11: ไม่จำกัดว่าเจ้าไหน (ตัวอย่าง 3 คัน)
+const BOOK = {};   // วันส่ง → { given: Set(รหัสคนขับ) | null = ยังไม่จอง, outs: ใช้รถร่วม }
+const bk = () => BOOK[date] || (BOOK[date] = { given: null, r2: false, outs: false, sentAt: 0, farm: null });
+// รถไร่ (ยืมข้ามกลุ่ม) — รายชื่อจากตารางคนขับกลุ่มไร่ · แอดมินไร่อนุมัติทีละคัน · รถยังอยู่กลุ่มไร่ วิ่งงานนี้ในนาม Packing
+const FARM = [{"code":"DV-0001","name":"วทัญญู ศีรัมรัมย์","plate":"87-5215,87-6185","type":"พ่วง","farmDrv":true},{"code":"DV-0002","name":"ยงยศ คงประเวศ","plate":"87-3276,84-8284","type":"พ่วง","farmDrv":true},{"code":"DV-0003","name":"สมพงษ์ มะโนศรี","plate":"87-3273,87-3634","type":"พ่วง","farmDrv":true},{"code":"DV-0004","name":"ประสิทธิ์ เปรมประเสริฐ","plate":"86-6064,87-1974","type":"พ่วง","farmDrv":true},{"code":"DV-0005","name":"นวชาติ แสงจันทร์","plate":"87-1973,87-2025","type":"พ่วง","farmDrv":true},{"code":"DV-0006","name":"พงศ์ธร เย้ยรัมย์","plate":"87-4649,87-5331","type":"พ่วง","farmDrv":true},{"code":"DV-0007","name":"ธนทัต พุทธบุรี","plate":"87-5212,87-6186","type":"พ่วง","farmDrv":true},{"code":"DV-0008","name":"ณัฐพร หาญกล้า","plate":"87-3275,87-3632","type":"พ่วง","farmDrv":true},{"code":"DV-0009","name":"อนุวัฒน์ เผ่าสกุลทอง","plate":"87-5213,87-3631","type":"พ่วง","farmDrv":true},{"code":"DV-0010","name":"สมชาย จันดาสุข","plate":"87-2024,86-6315","type":"พ่วง","farmDrv":true},{"code":"DV-0011","name":"นครินทร์ สง่างาม","plate":"87-3272,87-3630","type":"พ่วง","farmDrv":true},{"code":"DV-0012","name":"ธนกร เริงไทสงค์","plate":"86-1685,87-3639","type":"พ่วง","farmDrv":true},{"code":"DV-0013","name":"พิชชากร บาคาน","plate":"82-0510,82-0511","type":"พ่วง","farmDrv":true},{"code":"DV-0014","name":"จุมพล ยาทองทิพย์","plate":"87-1972,86-7369","type":"พ่วง","farmDrv":true},{"code":"DV-0015","name":"สนิท วรสุข","plate":"81-5904,89-9999","type":"พ่วง","farmDrv":true},{"code":"DV-0016","name":"มนตรี บุตล้อม","plate":"87-4649,87-5331","type":"พ่วง","farmDrv":true},{"code":"DV-0018","name":"อุกฤษ์ หงษ์ษา","plate":"86-6064,87-1974","type":"พ่วง","farmDrv":true},{"code":"DV-0019","name":"พรชัย วิบูลย์อรรถ","plate":"86-7368,87-2165","type":"พ่วง","farmDrv":true},{"code":"DV-0020","name":"ธีรพงษ์ ทวีทรัพย์","plate":"87-3277,87-5329","type":"พ่วง","farmDrv":true}];
+// แอดมินลากการ์ดรถไปวางบนคนขับ = เลือกคนขับเอง (ปักหมุดกับ PO แรกของคัน · ใช้ได้ทั้งโหมดระบบจัด/จัดเอง)
+const PINS = {};
+const pinsOf = () => PINS[date] || (PINS[date] = {});
+const tkey = (t) => (t.items && t.items[0] ? t.items[0].id : "T" + t.id);
+const isFar = (t) => ((A.dc[t.dc] || {}).km || 0) >= A.farKm;
+// 🧭 คิววิ่งไกล (พ่วง PK · ≥ A.farKm กม.) — ได้งานไกลแล้วไปต่อท้ายคิว · ถึงคิวแต่ไม่ว่าง = ข้าม แต่คงที่เดิม → ได้ก่อนรอบหน้า
+//   กติกาพี่ปุ๋ย (23 ต.ค.): ข้ามโดยมีเหตุจำเป็น (รถเสีย/กลับมาไม่ทัน) = คืนคิว · สละคิวเอง/ไม่มีเหตุจำเป็น = เสียคิว ไปต่อท้าย
+//   ประวัติ 1–8 ต.ค. = จำลอง (ของจริงอ่านจากออเดอร์ย้อนหลัง) · คิวขยับเมื่อพี่ปุ๋ยกด "ยืนยันแผน"
+const QUEUE = (() => {
+  const farDc = Object.keys(A.dc).filter((k) => A.dc[k].km >= 400), hist = {}, skips = {}, owed = {};
+  const drv = DRIVERS.filter((d) => d.type === "พ่วง");
+  drv.forEach((d) => {
+    hist[d.code] = []; skips[d.code] = 0;
+    const n = Math.floor(seeded("h" + d.code) * 3);
+    for (let i = 0; i < n; i++) { const day = 1 + Math.floor(seeded(d.code + "d" + i) * 8); hist[d.code].push({ date: ("0" + day).slice(-2) + "/10/26", dc: farDc[Math.floor(seeded(d.code + "c" + i) * farDc.length)], seed: true }); }
+    hist[d.code].sort((a, b) => a.date.localeCompare(b.date));
+    if (seeded("s" + d.code) < 0.2) { skips[d.code] = 1; owed[d.code] = true; }
+  });
+  const last = (c) => (hist[c].length ? hist[c][hist[c].length - 1].date : "");
+  const order = drv.map((d) => d.code).sort((a, b) => (owed[b] ? 1 : 0) - (owed[a] ? 1 : 0) || last(a).localeCompare(last(b)) || a.localeCompare(b));
+  return { order, hist, skips, owed, lost: {}, decl: {}, keep: {}, confirmed: {} };
+})();
+const qOrder = () => (QUEUE.confirmed[date] ? QUEUE.confirmed[date].before.order : QUEUE.order);
+let ROLE = "planner";
+
+function seeded(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return ((h >>> 0) % 10000) / 10000; }
+// ready = ชม. นับจาก 00:00 วันขึ้นของ ที่รถพร้อมขึ้นของ · null = ใช้ไม่ได้วันนี้
+function fleetStatus(d, day) {
+  day = day || date;
+  if (d.outs) return { ready: A.dayStart, txt: "รถร่วม · ต้องยืนยันเวลาเข้ากับบริษัทรถร่วม", tone: "info" };
+  const r = seeded(day + d.code), r2 = seeded(d.code + "|" + day);
+  if (r < 0.55) return { ready: 0, txt: "จอดที่โรงงาน", tone: "ok" };
+  if (r < 0.86) {
+    const keys = Object.keys(A.dc), from = A.dc[keys[Math.floor(r2 * keys.length)]], ready = 5 + Math.round(r2 * 30) / 2;
+    return { ready, txt: "กำลังกลับจาก" + from.n + " · ถึงโรงงานประมาณ " + hm(ready), tone: ready <= A.dayEnd ? "warn" : "bad" };
+  }
+  return r < 0.94 ? { ready: null, txt: "เข้าศูนย์ซ่อม", tone: "bad" } : { ready: null, txt: "คนขับลา", tone: "bad" };
+}
+// ค่าแรงสะสมในรอบเงินเดือนนี้ (เดโม = จำลอง · ของจริงรวม log_weight.calc_trip_fee ของคนขับในรอบเงินเดือน)
+//   รอบเงินเดือน = ครึ่งเดือน 1–15 / 16–สิ้นเดือน (จ่าย 2 ครั้ง/เดือน) · นับถึงวันขึ้นของ (วันก่อนวันส่ง)
+const TH_MON = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+function payRound(d) {
+  const [dd, mm, yy] = (d || date).split("/").map(Number), load = new Date(2000 + yy, mm - 1, dd - 1);   // วันขึ้นของ
+  const day = load.getDate(), m = load.getMonth(), y = load.getFullYear(), last = new Date(y, m + 1, 0).getDate();
+  const first = day <= 15, from = first ? 1 : 16, to = first ? 15 : last;
+  return { key: y + "-" + (m + 1) + (first ? "a" : "b"), label: from + "–" + to + " " + TH_MON[m], days: day - from + 1, len: to - from + 1 };
+}
+const WAGE = {};
+function wageOf(code) {
+  const pr = payRound(), k = code + "|" + pr.key;
+  if (WAGE[k] == null) {   // จำลอง: ค่าแรงต่อวันของแต่ละคน × วันที่ผ่านไปในรอบ (ของจริง = รวม calc_trip_fee ในรอบ)
+    const d = DRIVERS.find((x) => x.code === code) || {}, perDay = d.type === "พ่วง" ? 1300 : d.type === "6 ล้อ" ? 850 : 550;
+    WAGE[k] = Math.round(perDay * (0.6 + seeded("w" + k) * 0.8) * pr.days / 10) * 10;
+  }
+  return WAGE[k];
+}
+// ค่าแรงเทียบกับรถรุ่นเดียวกัน: อันดับ (1 = น้อยสุด) จากคนขับรุ่นเดียวกันทั้งหมด
+function wageRank(code) {
+  const d = DRIVERS.find((x) => x.code === code); if (!d) return null;
+  const same = DRIVERS.filter((x) => x.type === d.type).map((x) => ({ c: x.code, w: wageOf(x.code) })).sort((a, b) => a.w - b.w);
+  return { rank: same.findIndex((x) => x.c === code) + 1, of: same.length, avg: Math.round(same.reduce((a, x) => a + x.w, 0) / same.length) };
+}
+function schedule(list) {
+  const b = bk(), booked = !!b.given;
+  let pool = booked ? DRIVERS.filter((d) => b.given.has(d.code)) : DRIVERS.slice();
+  pool = pool.map((d) => ({ d, ready: booked ? fleetStatus(d).ready : 0 })).filter((x) => x.ready != null);
+  list.forEach((t) => {
+    const dc = A.dc[t.dc] || { km: 0, t: "00:01" };
+    const [hh, mm] = dc.t.split(":").map(Number); const unload = 24 + hh + mm / 60;   // ชม. นับจาก 00:00 วันขึ้นของ
+    t.travel = dc.km / A.speed; t.latestLoad = unload - t.travel - A.bufH - A.loadMin / 60;
+  });
+  // คันที่ต้องออกก่อน (คลังไกล/นัดเช้า) ได้รถที่พร้อมเร็วสุดก่อน · ช่องขึ้นของชั่วโมงละ A.bays คัน
+  const order = list.slice().sort((a, b) => a.latestLoad - b.latestLoad), bay = {}, used = new Set();
+  const pins = pinsOf(), reserved = new Set(list.map((t) => pins[tkey(t)]).filter(Boolean)), qo = qOrder();
+  const qi = (code) => { const i = qo.indexOf(code); return i < 0 ? 999 : i; };
+  const take = (t, c) => { used.add(c.d.code); t.driver = c.d; t.ready = c.ready; };
+  const free = (t) => { const drv = A.types.find((x) => x.k === t.type).drv; return pool.filter((x) => x.d.type === drv && !used.has(x.d.code) && !reserved.has(x.d.code)); };
+  order.forEach((t) => { t.driver = null; t.ready = null; t.pinned = false; t.farm = false; t.qFar = isFar(t); t.pickWhy = ""; t.open = false; });
+  order.forEach((t) => { const pc = pins[tkey(t)]; const c = pc && pool.find((x) => x.d.code === pc && !used.has(pc)); if (c) { take(t, c); t.pinned = true; t.pickWhy = "พี่ปุ๋ยเลือกเอง"; } });
+  const manual = opt.drvMode === "manual";   // ✋ พี่ปุ๋ยเลือกเอง: ระบบไม่ใส่คนขับให้ (เหลือคันที่ลากใส่แล้ว)
+  if (!manual) order.filter((t) => !t.driver && t.qFar).forEach((t) => {   // วิ่งไกล: คนที่ทันเวลาก่อน แล้วเรียงตามคิว
+    const ok = (x) => Math.max(A.dayStart, Math.ceil(x.ready)) <= t.latestLoad;
+    const dec = QUEUE.decl[date] || {};
+    const c = free(t).filter((x) => !dec[x.d.code]).sort((a, b) => (ok(b) ? 1 : 0) - (ok(a) ? 1 : 0) || qi(a.d.code) - qi(b.d.code) || a.ready - b.ready)[0];
+    if (c) { take(t, c); t.pickWhy = "ตามคิววิ่งไกล #" + (qi(c.d.code) + 1); }
+  });
+  // งานใกล้: ในกลุ่มที่ว่างพร้อมกัน (ขึ้นของได้ชั่วโมงเดียวกันเร็วสุด) ให้คนที่ค่าแรงรอบนี้น้อยสุดในรถรุ่นเดียวกันก่อน
+  const startAt = (x) => Math.max(A.dayStart, Math.ceil(x.ready));
+  if (!manual) order.filter((t) => !t.driver && !t.qFar).forEach((t) => {
+    const cs = free(t); if (!cs.length) return;
+    const first = Math.min(...cs.map(startAt)), same = cs.filter((x) => startAt(x) === first);
+    const c = same.sort((a, b) => wageOf(a.d.code) - wageOf(b.d.code) || a.ready - b.ready)[0];
+    take(t, c);
+    t.pickWhy = same.length > 1 ? `ค่าแรงรอบนี้น้อยสุดใน ${same.length} คนที่ว่าง ${hm(first)} (${c.d.type})` : `คนเดียวที่ว่าง ${hm(first)} (${c.d.type})`;
+  });
+  order.forEach((t) => {
+    t.open = manual && !t.driver;   // รอพี่ปุ๋ยลากรถใส่คนขับ
+    t.short = booked && !t.driver && !t.open;
+    if (t.short) { t.slot = 99; t.late = false; t.afterHours = false; return; }
+    let h = Math.max(A.dayStart, Math.ceil(t.ready || 0));
+    while ((bay[h] || 0) >= A.bays) h++;
+    bay[h] = (bay[h] || 0) + 1;
+    t.slot = h; t.late = h > t.latestLoad; t.afterHours = h > A.dayEnd; t.round = 1;
+    const dc = A.dc[t.dc] || { km: 0, t: "00:01" }, [uh, um] = dc.t.split(":").map(Number);
+    t.backAt = Math.max(h + A.loadMin / 60 + t.travel, 24 + uh + um / 60) + A.unloadH + t.travel;   // ลงของตามนัด แล้ววิ่งกลับโรงงาน
+  });
+  // รถไม่พอ ทางแก้ ① (หน้างานเคาะ 21 ต.ค.): ให้รถบริษัทวิ่งรอบ 2 — คันที่กลับถึงโรงงานทันขึ้นของในเวลาทำการ ก่อนเวลาที่คันขาดต้องออก
+  if (booked && b.r2) {
+    const firsts = order.filter((t) => t.driver && !t.driver.outs && t.round === 1), r2used = new Set();
+    order.filter((t) => t.short).forEach((t) => {
+      const type = A.types.find((x) => x.k === t.type);
+      const opts = firsts.filter((f) => !r2used.has(f.driver.code) && f.driver.type === type.drv).map((f) => {
+        let h = Math.ceil(f.backAt);
+        while (h % 24 < A.dayStart || h % 24 > A.dayEnd || (bay[h] || 0) >= A.bays) h++;   // ขึ้นของได้เฉพาะเวลาทำการ
+        return { f, h };
+      }).filter((o) => o.h <= t.latestLoad).sort((a, c) => a.h - c.h);
+      if (!opts.length) return;
+      const { f, h } = opts[0];
+      r2used.add(f.driver.code); bay[h] = (bay[h] || 0) + 1;
+      Object.assign(t, { driver: f.driver, ready: f.backAt, short: false, round: 2, afterT: f, slot: h, late: false, afterHours: false });
+    });
+  }
+  // ทางแก้ ②: รถไร่ที่แอดมินไร่อนุมัติให้ยืม (เฉพาะพ่วง)
+  if (booked && b.farm && b.farm.ok.size) {
+    const free = FARM.filter((d) => b.farm.ok.has(d.code)).map((d) => ({ d, ready: fleetStatus(d).ready })).filter((x) => x.ready != null).sort((a, c) => a.ready - c.ready);
+    order.filter((t) => t.short && t.type === "trailer").forEach((t) => {
+      const c = free.shift(); if (!c) return;
+      let h = Math.max(A.dayStart, Math.ceil(c.ready)); while ((bay[h] || 0) >= A.bays) h++;
+      bay[h] = (bay[h] || 0) + 1;
+      Object.assign(t, { driver: c.d, ready: c.ready, short: false, round: 1, farm: true, slot: h, late: h > t.latestLoad, afterHours: h > A.dayEnd });
+    });
+  }
+  // ทางแก้ ③: เรียกรถนอก (รถร่วม) ให้คันที่ยังขาด
+  if (booked && b.outs) {
+    const free = OUTS.filter((o) => o.type === "พ่วง");
+    order.filter((t) => t.short).forEach((t) => {
+      const type = A.types.find((x) => x.k === t.type), o = free.find((x) => x.type === type.drv);
+      if (!o) return;
+      free.splice(free.indexOf(o), 1);
+      let h = A.dayStart; while ((bay[h] || 0) >= A.bays) h++;
+      bay[h] = (bay[h] || 0) + 1;
+      Object.assign(t, { driver: o, ready: A.dayStart, short: false, round: 1, slot: h, late: h > t.latestLoad, afterHours: h > A.dayEnd });
+    });
+  }
+}
+
+// ── สร้างแผนของวันที่เลือก ──
+function build() {
+  const dPOs = POS.filter((p) => p.date === date).map(poInfo);
+  const items = itemsOf(dPOs);
+  if (mode === "auto") { nextId = 1; trucks = autoPlan(items); }
+  else {
+    const keep = trucks.filter((t) => t.manual);
+    trucks = keep.map((t) => ({ ...t, items: [] }));
+    items.forEach((it) => { const t = trucks.find((x) => x.id === assign[it.id]); if (t) t.items.push(it); });
+  }
+  trucks.forEach((t) => { t.dc = (t.items[0] && t.items[0].dc) || t.dc || ""; t.dcs = [...new Set(t.items.map((i) => i.dc))]; });
+  schedule(trucks.filter((t) => t.items.length));
+  if (mode === "auto") {   // เรียงเลขคันตามรอบขึ้นของ: #1 = ขึ้นของก่อน
+    trucks.sort((a, b) => a.slot - b.slot || a.id - b.id); trucks.forEach((t, i) => (t.id = i + 1));
+    assign = {}; trucks.forEach((t) => t.items.forEach((it) => (assign[it.id] = t.id)));
+  }
+  build.items = items;
+  if (sel >= trucks.length) sel = 0;
+}
+// ย้าย PO ท้ายๆ ของคันที่เกิน ไปรถคันใหม่ประเภทเดียวกัน จนคันเดิมใส่พอ
+function splitOverflow() {
+  const t = trucks[sel]; if (!t) return;
+  const items = t.items.slice(), moved = [], test = { ...t };
+  while (items.length > 1) { test.items = items; const r = evalTruck(test); if (!r.over.length && !r.overKg) break; moved.unshift(items.pop()); }
+  if (!moved.length) { toastMsg("PO เดียวก็เกินคันนี้แล้ว · ต้องเปลี่ยนเป็นรถคันใหญ่ขึ้น"); return; }
+  if (mode === "auto") { mode = "manual"; trucks.forEach((x) => (x.manual = true)); }
+  // ใช้รถว่างประเภทเดียวกันที่มีอยู่ก่อน (เช่นคันที่เพิ่งย้าย PO ออกมา) ไม่มีค่อยเพิ่มคันใหม่
+  let nt = trucks.find((x) => x !== t && !x.items.length && x.type === t.type);
+  if (!nt) { nt = { id: newId(), type: t.type, items: [], manual: true }; trucks.push(nt); }
+  moved.forEach((it) => (assign[it.id] = nt.id));
+  build(); renderAll();
+  toastMsg("แยก " + moved.length + " PO ไปคัน #" + nt.id + " แล้ว");
+}
+function retarget(itemId, truckId) {
+  const moving = build.items.find((x) => x.id === itemId), dest = trucks.find((x) => x.id === +truckId);
+  if (moving && dest && hasOtherPO(dest, moving)) { toastMsg("คัน #" + dest.id + " มี PO อื่นอยู่แล้ว · กฎ 7-11: 1 คัน = 1 PO"); renderPOs(); return false; }
+  // ย้าย PO → เปลี่ยนเป็นโหมดแอดมินจัดเอง (เก็บรถที่ระบบจัดไว้เป็นจุดเริ่ม)
+  if (mode === "auto") { mode = "manual"; trucks.forEach((t) => (t.manual = true)); }
+  if (truckId === "new-trailer" || truckId === "new-6w" || truckId === "new-4w") { const t = { id: newId(), type: truckId.slice(4), items: [], manual: true }; trucks.push(t); truckId = t.id; }
+  if (truckId === "") delete assign[itemId]; else assign[itemId] = +truckId;
+  build(); renderAll();
+  return true;
+}
+// ก้อนที่ตัดจาก PO เดียวกันอยู่คันเดียวกันได้ · คนละ PO ไม่ได้
+function hasOtherPO(t, it) { return opt.onePO && t.items.some((x) => x.po !== it.po); }
+
+// ── วาดหน้า ──
+function renderTop() {
+  $("dates").innerHTML = dates.map((d) => `<button class="pchip" aria-pressed="${d === date}" data-date="${d}">ส่ง ${thd(d)}</button>`).join("");
+  document.querySelectorAll("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
+  $("modeNote").textContent = mode === "auto" ? "ระบบรวม PO คลังเดียวกัน เลือกรถให้พอดีน้ำหนัก/พาเลท แล้วเรียงรอบขึ้นของ" : "ลาก ⠿ ที่ PO ไปวางบนการ์ดรถ หรือวางช่องประ = รถคันใหม่ · เลือกคันจากตารางด้านล่างก็ได้";
+  $("optOnePO").checked = opt.onePO; $("optStack").checked = opt.stack; $("optBal").checked = opt.balance;
+}
+function renderKpis() {
+  const items = build.items, act = trucks.filter((t) => t.items.length);
+  const pal = items.reduce((a, i) => a + i.units.length, 0), kg = items.reduce((a, i) => a + i.units.reduce((b, u) => b + u.kg, 0), 0);
+  const ev = act.map(evalTruck), fillAvg = ev.length ? ev.reduce((a, r) => a + Math.min(1, r.pos / r.capPos), 0) / ev.length : 0;
+  const unassigned = items.filter((i) => !assign[i.id]).length, real = ACTUAL[date];
+  $("kpis").innerHTML = `
+    <div class="kpi"><b>${new Set(items.map((i) => i.po)).size} PO</b><span>${new Set(items.map((i) => i.dc)).size} คลัง</span></div>
+    <div class="kpi"><b>${nf(items.reduce((a, i) => a + i.units.reduce((b, u) => b + u.segs.reduce((c, g) => c + g.q, 0), 0), 0))}</b><span>ลัง</span></div>
+    <div class="kpi"><b>${nf(pal)}</b><span>พาเลท (รวมเศษ)</span></div>
+    <div class="kpi"><b>${nf(kg / 1000, 1)} ตัน</b><span>รวมน้ำหนักพาเลท</span></div>
+    <div class="kpi"><b>${act.length} คัน</b><span>${real ? "แอดมินจัดจริง " + real + " คัน" : "ไม่มีแพลนจริงเทียบ"}${unassigned ? " · ยังไม่จัด " + unassigned + " PO" : ""}</span></div>
+    <div class="kpi"><b>${nf(fillAvg * 100)}%</b><span>เฉลี่ยพื้นที่พาเลทที่ใช้</span></div>`;
+  const w = [];
+  ev.forEach((r, i) => { const t = act[i];
+    if (r.over.length) w.push(`<div class="warn b">คัน #${t.id}: ล้น ${r.over.length} พาเลท (${r.type.name} วางได้ ${r.capPos})</div>`);
+    r.ax.loads.filter((l) => l.pct > 100).forEach((l) => w.push(`<div class="warn b">คัน #${t.id}: ${esc(l.n)} รับ ${nf(l.kg)} กก. เกินพิกัด ${nf(l.lim)} · ลองย้ายพาเลทหนักไปช่วงอื่น</div>`));
+    if (r.ax.gvwPct > 100) w.push(`<div class="warn b">คัน #${t.id}: น้ำหนักรวมทั้งคัน ${nf(r.ax.total)} กก. เกิน ${nf(r.ax.gvw)}</div>`);
+    if (r.overKg) w.push(`<div class="warn b">คัน #${t.id}: น้ำหนัก ${nf(r.kg)} กก. เกิน ${nf(r.payMax)} (เผื่อ ${A.payBuf}%)</div>`);
+    if (!t.driver && !t.short && !t.open) w.push(`<div class="warn">คัน #${t.id}: ไม่มีคนขับ ${r.type.drv} ว่าง → ต้องใช้รถร่วม</div>`);
+    if (t.afterHours) w.push(`<div class="warn">คัน #${t.id}: รอบขึ้นของ ${hm(t.slot)} เลยเวลาขึ้นของปกติ (${hm(A.dayEnd)}) · เพิ่มช่องขึ้นของ หรือย้ายไปขึ้นของวันก่อน</div>`);
+    if (t.late) w.push(`<div class="warn">คัน #${t.id} → ${esc(A.dc[t.dc] ? A.dc[t.dc].n : t.dc)}: ขึ้นของ ${hm(t.slot)} ช้ากว่าที่ควร (${hm(t.latestLoad)})</div>`);
+  });
+  [...new Set(items.filter((i) => i.poRef && i.poRef._lay).map((i) => i.poRef))].forEach((p) => {
+    const s1 = A.sku.find((x) => x.k === "1l"); w.push(`<div class="warn">PO ${esc(p.po)}: สินค้าอื่นเยอะ (เช่น 5L) → เรียง 1L <b>${s1.per}×${p._lay} ชั้น</b> สูงเกินมาตรฐาน 7-11 (${s1.per}×${s1.lay}) ให้พอ 1 คัน · พาเลทสูง ${nf(A.pallet.h + p._lay * s1.h)} ซม.</div>`);
+  });
+  const openN = act.filter((t) => t.open).length;
+
+  if (unassigned) w.push(`<div class="warn">ยังมี ${unassigned} PO ไม่ได้อยู่คันไหน</div>`);
+  const sh = act.filter((t) => t.short);
+  if (sh.length) w.unshift(`<div class="warn b">⛔ พี่ปุ๋ยให้รถไม่พอ ขาด ${sh.length} คัน (${sh.map((t) => "#" + t.id).join(" ")}) · ${nf(sh.reduce((a, t) => a + t.items.reduce((b, i) => b + i.units.length, 0), 0))} พาเลทยังไม่มีรถ · ดูทางแก้ในกล่องจองรถด้านบน</div>`);
+  $("warns").innerHTML = w.join("");
+}
+// กล่องจองรถ: ① คำขอ (คิดจากแพลน) → ② พี่ปุ๋ยเลือกรถที่ว่าง (สถานะจาก DTC) → ③ ผล + ทางแก้ถ้ารถไม่พอ
+function needOf() {
+  const act = trucks.filter((t) => t.items.length), need = {}, byDc = {};
+  act.forEach((t) => {
+    const ty = A.types.find((x) => x.k === t.type); need[ty.drv] = (need[ty.drv] || 0) + 1;
+    const d = byDc[t.dc] || (byDc[t.dc] = { n: 0, p: 0, latest: 99, types: {} });
+    d.n++; d.p += t.items.reduce((a, i) => a + i.units.length, 0); d.latest = Math.min(d.latest, t.latestLoad); d.types[ty.drv] = (d.types[ty.drv] || 0) + 1;
+  });
+  return { act, need, byDc, total: act.length };
+}
+function bookRequestText() {
+  const { need, byDc, total } = needOf();
+  return `🚚 ขอจองรถ Packing 7-11 · ส่ง ${thd(date)}\nรวม ${total} คัน (${Object.entries(need).map(([k, v]) => k + " " + v).join(" · ")})\n` +
+    Object.entries(byDc).sort((a, b) => a[1].latest - b[1].latest).map(([dc, d]) => `- ${dc} ${(A.dc[dc] || {}).n || ""}: ${d.n} คัน · ${d.p} พาเลท · ขึ้นของไม่เกิน ${hmDay(d.latest)} · นัดลง ${(A.dc[dc] || {}).t || ""}`).join("\n");
+}
+function shortText(kind) {
+  const sh = trucks.filter((t) => t.items.length && t.short);
+  const lines = sh.map((t) => `- คัน #${t.id} ${A.types.find((x) => x.k === t.type).name} → ${t.dc} ${(A.dc[t.dc] || {}).n || ""} · ${t.items.reduce((a, i) => a + i.units.length, 0)} พาเลท · PO ${t.items.map((i) => i.id).join(", ")}`).join("\n");
+  if (kind === "r2") {
+    const r2 = trucks.filter((t) => t.items.length && t.round === 2);
+    return `🔁 วิ่งรอบ 2 · ส่ง 7-11 ${thd(date)}\n` + r2.map((t) => `- ${t.driver.name} ${t.driver.plate.split(",")[0]}: กลับจากรอบแรก (คัน #${t.afterT.id}) ถึงโรงงานประมาณ ${hmDay(t.ready)} → ขึ้นของรอบ 2 ${hmDay(t.slot)} ส่ง ${t.dc} ${(A.dc[t.dc] || {}).n || ""} นัดลง ${(A.dc[t.dc] || {}).t || ""}`).join("\n") + "\nรบกวนยืนยันว่าวิ่งไหวไหมครับ";
+  }
+  return `🚚 ขอรถเพิ่ม ${sh.length} คัน · ส่ง 7-11 ${thd(date)}\n${lines}\nขึ้นของได้ถึง ${hmDay(Math.min(...sh.map((t) => t.latestLoad)))} ครับ`;
+}
+function renderBook() {
+  const b = bk(), { need, byDc, total } = needOf(), types = Object.keys(need);
+  const fleet = DRIVERS.filter((d) => types.includes(d.type)).map((d) => ({ d, st: fleetStatus(d) }))
+    .sort((a, c) => (a.st.ready == null) - (c.st.ready == null) || (a.st.ready ?? 99) - (c.st.ready ?? 99));
+  const ready = fleet.filter((f) => f.st.ready != null).length, given = b.given ? b.given.size + (b.outs ? OUTS.length : 0) : 0;
+  const sh = trucks.filter((t) => t.items.length && t.short);
+  $("bookPill").innerHTML = !total ? "" : !b.given ? '<span class="chip c-gold">ยังไม่ได้จองรถ</span>'
+    : sh.length ? `<span class="chip c-bad">ได้ ${total - sh.length} จาก ${total} คัน · ขาด ${sh.length}</span>` : `<span class="chip c-ok">ได้รถครบ ${total} คัน</span>`;
+  if (!total) { $("book").innerHTML = '<div class="note">วันนี้ไม่มี PO</div>'; return; }
+  const inbox = dates.filter((d) => d !== date && BOOK[d] && BOOK[d].sentAt).map((d) => `<button class="chip c-gold" style="border:0;cursor:pointer" data-date="${d}">📥 ส่ง ${thd(d)}</button>`).join(" ");
+  const s1 = `<div class="bstep"><h3><i>1</i>คำขอจาก Loading Planner ${b.sentAt ? `<span class="chip c-ok">รับแล้ว ${new Date(b.sentAt).toTimeString().slice(0, 5)}</span>` : '<span class="chip c-gold">planner ยังไม่ส่ง</span>'}</h3>
+    ${inbox ? `<div class="note">คำขอวันอื่นที่รอจัด: ${inbox}</div>` : ""}
+    <div><b style="font-size:20px">${total} คัน</b> <span class="muted">${Object.entries(need).map(([k, v]) => k + " " + v).join(" · ")}</span></div>
+    <div class="tscroll"><table><thead><tr><th>คลัง</th><th class="r">คัน</th><th class="r">พาเลท</th><th>ขึ้นของไม่เกิน</th></tr></thead><tbody>${Object.entries(byDc).sort((a, c) => a[1].latest - c[1].latest).map(([dc, d]) => `<tr><td><span class="mono">${esc(dc)}</span> ${esc((A.dc[dc] || {}).n || "")}</td><td class="r num">${d.n}</td><td class="r num">${d.p}</td><td class="mono">${hmDay(d.latest)}</td></tr>`).join("")}</tbody></table></div>
+    ${b.sentAt ? "" : '<div class="note">ปกติรอ planner กดส่งคำขอก่อน · เดโมให้จัดล่วงหน้าได้</div>'}</div>`;
+  const s2 = `<div class="bstep"><h3><i>2</i>พี่ปุ๋ยเลือกรถที่ให้ <span class="note">${ready} คันพร้อมวันนี้ · เลือกแล้ว ${b.given ? b.given.size : 0}</span></h3>
+    <div class="givebar">สมมติพี่ปุ๋ยให้ <input type="number" id="giveN" min="0" max="${ready}" value="${b.given ? b.given.size : Math.min(total, ready)}" aria-label="จำนวนรถที่ได้"> คัน <button class="btn sm" data-give="n">ใช้</button><button class="btn sec sm" data-give="all">ให้ทุกคันที่พร้อม</button>${b.given ? '<button class="btn sec sm" data-give="clear">ยกเลิกการจอง</button>' : ""}</div>
+    <div class="fleet">${fleet.map(({ d, st }) => { const on = b.given && b.given.has(d.code), off = st.ready == null;
+      // ติ๊กแล้วระบบให้ไปคลังไหน กี่โมง
+      const jobs = trucks.filter((t) => t.items.length && t.driver && t.driver.code === d.code).sort((x, y) => x.slot - y.slot);
+      const job = !b.given || !on ? "" : jobs.length ? `<span class="fjob">${jobs.map((t) => `<span class="chip ${t.round === 2 ? "c-info" : t.qFar ? "c-ok" : "c-gold"}" data-fjob="${trucks.indexOf(t)}" role="button" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้">${t.pinned ? "📌 " : t.qFar && t.round !== 2 ? "🧭 " : ""}→ #${t.id} ${esc(t.dcs.map((x) => (A.dc[x] || {}).n || x).join("+"))} ${hmDay(t.slot)}${t.round === 2 ? " · รอบ 2" : ""}</span>`).join("")}</span>`
+        : '<span class="fjob"><span class="chip">ว่าง · ไม่ได้งาน</span></span>';
+      return `<label class="fl ${on ? "on" : ""} ${off ? "off" : ""}" data-drvdrop="${esc(d.code)}"><input type="checkbox" data-givecode="${esc(d.code)}" ${on ? "checked" : ""} ${off ? "disabled" : ""}><div><b>${esc(d.plate.split(",")[0])}</b> ${esc(d.name)}<small>${esc(d.type)} · ${esc(st.txt)} · ค่าแรงรอบนี้ ฿${nf(wageOf(d.code))}</small>${job}</div><span class="chip c-${st.tone}">${st.ready == null ? "ไม่ว่าง" : st.ready <= A.dayStart ? "พร้อม" : hm(st.ready)}</span></label>`; }).join("")}</div>
+    <div class="note">📡 สถานะรถในเดโมเป็นค่าจำลอง · ของจริงดึงจาก DTC (ตำแหน่งรถ + งานที่วิ่งอยู่ → เวลากลับถึงโรงงาน)</div></div>`;
+  let s3;
+  if (!b.given) s3 = `<div class="note">ยังไม่ได้จอง · ตารางน้ำหนักด้านล่างสมมติว่ามีรถพอทุกคัน</div><div class="note">เลือกรถในข้อ 2 หรือใส่จำนวนที่พี่ปุ๋ยให้ ระบบจะจัด PO ลงรถที่ได้จริง โดยคันที่ต้องออกก่อน (คลังไกล/นัดเช้า) ได้รถที่พร้อมก่อน</div>`;
+  else {
+    const pal = sh.reduce((a, t) => a + t.items.reduce((c, i) => c + i.units.length, 0), 0);
+    const r2 = trucks.filter((t) => t.items.length && t.round === 2), outs = trucks.filter((t) => t.items.length && t.driver && t.driver.outs);
+    const fixes = sh.length || b.r2 || b.outs || b.farm;
+    const fm = b.farm, farmT = trucks.filter((t) => t.items.length && t.farm);
+    const farmBtn = !fm ? (sh.length ? `<button class="btn sm" data-give="farm">🌴 ② ขอยืมรถไร่ (${sh.filter((t) => t.type === "trailer").length || sh.length} คัน)</button>` : "")
+      : `<button class="btn sec sm" data-give="farm">${fm.ok.size >= fm.n ? "✓ ② รถไร่ได้ครบ " + fm.ok.size + " คัน" : fm.ok.size || fm.no.size ? "⏳ ② รถไร่ได้ " + fm.ok.size + "/" + fm.n + " คัน" : "⏳ ② รอแอดมินไร่ตอบ (" + fm.n + " คัน)"} · กดเพื่อยกเลิกคำขอ</button>`;
+    s3 = (sh.length ? `<div class="shortbox"><b>⛔ ขาดรถ ${sh.length} คัน · ${pal} พาเลทยังไม่มีรถ</b><ul>${sh.map((t) => `<li><span class="tlink" data-fjob="${trucks.indexOf(t)}" role="button" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้">#${t.id} → ${esc(t.dc)} ${esc((A.dc[t.dc] || {}).n || "")} · ${t.items.reduce((a, i) => a + i.units.length, 0)} พาเลท · ต้องขึ้นของไม่เกิน ${hmDay(t.latestLoad)}</span></li>`).join("")}</ul></div>`
+        : `<div class="okbox">✓ ได้รถครบ ${total} คัน${r2.length ? " · วิ่งรอบ 2 " + r2.length + " คัน" : ""}${farmT.length ? " · รถไร่ " + farmT.length + " คัน" : ""}${outs.length ? " · รถนอก " + outs.length + " คัน" : ""}</div>`) +
+      (r2.length ? `<div class="note"><b>🔁 รอบ 2</b> (ต้องคุยกับคนขับล่วงหน้า)<br>${r2.map((t) => `<span class="tlink" data-fjob="${trucks.indexOf(t)}" role="button" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้">#${t.id} ${esc(t.driver.name)} ${esc(t.driver.plate.split(",")[0])} · รอบแรกคัน #${t.afterT.id} กลับถึง ${hmDay(t.ready)} → ขึ้นของ ${hmDay(t.slot)} ${esc(t.dc)} ${esc((A.dc[t.dc] || {}).n || "")}</span>`).join("<br>")}</div>` : "") +
+      (fixes ? `<div class="note"><b>ทางแก้ตามลำดับ</b> · 7-11 เลื่อนส่งไม่ได้ ต้องส่งตรงวัน (เลื่อนได้เฉพาะกรณีฝ่ายผลิตผลิตไม่ทัน)</div>
+      <div class="row" style="gap:6px"><button class="btn ${b.r2 ? "sec " : ""}sm" data-give="r2" aria-pressed="${!!b.r2}">${b.r2 ? "✓ ① รอบ 2 (กดเพื่อเลิก)" : "🔁 ① ให้รถบริษัทวิ่งรอบ 2"}</button>
+      ${farmBtn}
+      <button class="btn ${b.outs ? "sec " : ""}sm" data-give="outs" aria-pressed="${!!b.outs}">${b.outs ? "✓ ③ รถร่วม (กดเพื่อเลิก)" : "🚛 ③ เรียกรถร่วม (" + OUTS.length + " คัน)"}</button>
+      ${r2.length ? '<button class="btn sec sm" data-bcopy="r2">📋 ข้อความแจ้งคนขับรอบ 2</button>' : ""}${sh.length ? '<button class="btn sec sm" data-bcopy="more">📋 ข้อความขอรถเพิ่ม → พี่ปุ๋ย</button>' : ""}</div>` : "") +
+      (outs.length ? `<div class="note"><b>🚛 รถนอก</b><br>${outs.map((t) => `<span class="tlink" data-fjob="${trucks.indexOf(t)}" role="button" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้">#${t.id} ${esc(t.driver.name || "")} ${esc((t.driver.plate || "").split(",")[0])} → ขึ้นของ ${hmDay(t.slot)} ${esc(t.dc)} ${esc((A.dc[t.dc] || {}).n || "")}</span>`).join("<br>")}</div>` : "") +
+      (farmT.length ? `<div class="note"><b>🌴 รถไร่ที่ยืม</b><br>${farmT.map((t) => `<span class="tlink" data-fjob="${trucks.indexOf(t)}" role="button" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้">#${t.id} ${esc(t.driver.name)} ${esc(t.driver.plate.split(",")[0])} → ขึ้นของ ${hmDay(t.slot)} ${esc(t.dc)} ${esc((A.dc[t.dc] || {}).n || "")}</span>`).join("<br>")}</div>` : "") +
+      (sh.length && b.r2 ? `<div class="note">ที่ยังขาด = ไม่มีรถคันไหนกลับถึงโรงงานทันขึ้นของในเวลาทำการ (${hm(A.dayStart)}–${hm(A.dayEnd)})</div>` : "") +
+      (!sh.length ? '<div class="note">เวลาขึ้นของปรับตามเวลาที่รถกลับถึงโรงงานแล้ว · ดูในการ์ดรถแต่ละคัน</div>' : "");
+  }
+  $("book").innerHTML = s1 + s2 + `<div class="bstep"><h3><i>3</i>ผลการจัดรถ</h3>${s3}</div>`;
+}
+// ── มุมมองตามผู้ใช้ (เดโม = แท็บ · ของจริง = แยกหน้า ใช้ "คำขอรถ" ใบเดียวกัน) ──
+function renderRole() {
+  document.body.classList.remove("r-planner", "r-puy", "r-farm"); document.body.classList.add("r-" + ROLE);
+  document.querySelectorAll("#roleBar [data-role]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.role === ROLE)));
+  const pend = dates.filter((d) => BOOK[d] && BOOK[d].farm && BOOK[d].farm.ok.size < BOOK[d].farm.n && BOOK[d].farm.ok.size + BOOK[d].farm.no.size < FARM.length).length;
+  $("farmBadge").innerHTML = pend ? `<span class="chip c-bad rb">${pend} คำขอ</span>` : "";
+}
+function renderPlannerOld() {
+  if (ROLE !== "planner") return;
+  const b = bk(), { need, byDc, total } = needOf(), act = trucks.filter((t) => t.items.length), sh = act.filter((t) => t.short);
+  if (!total) { $("plannerBox").innerHTML = '<div class="note">วันส่งนี้ไม่มี PO</div>'; return; }
+  const st = [["ร่างคำขอ", true], ["ส่งพี่ปุ๋ยแล้ว", !!b.sentAt], ["พี่ปุ๋ยให้รถ", !!b.given]]
+    .concat(b.farm ? [["ยืมรถไร่", b.farm.ok.size > 0]] : [])
+    .concat([["ได้รถครบ", !!b.given && !sh.length], ["แจ้งคนขับแล้ว", !!act.length && act.every((t) => notifState(t) === "sent")]]);
+  const now = st.findIndex((x) => !x[1]);
+  const steps = st.map((x, i) => `<span class="${x[1] ? "done" : i === now ? "now" : ""}">${x[1] ? "✓ " : ""}${x[0]}</span>`).join("");
+  const rows = Object.entries(byDc).sort((a, c) => a[1].latest - c[1].latest).map(([dc, d]) => {
+    const got = act.filter((t) => t.dc === dc && !t.short).length;
+    const cell = !b.given ? '<span class="muted">—</span>' : `<span class="chip ${got === d.n ? "c-ok" : "c-bad"}">${got}/${d.n}</span>`;
+    return `<tr><td><span class="mono">${esc(dc)}</span> ${esc((A.dc[dc] || {}).n || "")}</td><td class="r num">${d.n}</td><td class="r num">${d.p}</td><td class="mono">${hmDay(d.latest)}</td><td class="r">${cell}</td></tr>`;
+  }).join("");
+  const r2 = act.filter((t) => t.round === 2).length, fr = act.filter((t) => t.farm).length, ou = act.filter((t) => t.driver && t.driver.outs).length;
+  const res = !b.sentAt ? '<div class="note">ยังไม่ได้ส่ง · ตรวจตัวเลขแล้วกด "ส่งคำขอให้พี่ปุ๋ย"</div>'
+    : !b.given ? '<div class="okbox" style="color:var(--warn);border-color:var(--gold);background:var(--goldtint)">⏳ รอพี่ปุ๋ยจัดรถ</div>'
+    : sh.length ? `<div class="shortbox"><b>⛔ ได้รถ ${total - sh.length} จาก ${total} คัน · ขาด ${sh.length}</b><div style="color:var(--ink)">พี่ปุ๋ยกำลังหาเพิ่ม (รอบ 2 → รถไร่ → รถนอก)</div></div>`
+    : `<div class="okbox">✓ ได้รถครบ ${total} คัน${r2 ? " · รอบ 2 " + r2 : ""}${fr ? " · รถไร่ " + fr : ""}${ou ? " · รถนอก " + ou : ""}</div>`;
+  const btns = (!b.sentAt ? `<button class="btn" data-psend>📤 ส่งคำขอ ${total} คันให้พี่ปุ๋ย</button>` : !b.given ? '<button class="btn sec sm" data-punsend>↩ ดึงคำขอกลับมาแก้</button>' : "") +
+    '<button class="btn sec sm" data-bcopy="req">📋 คัดลอกเป็นข้อความ LINE</button>';
+  $("plannerBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2>📤 คำขอรถ · ส่ง ${thd(date)}</h2><span class="note">Loading Planner · ยังไม่ได้ลงทะเบียนในระบบ (เดโม)</span></div>
+    <div class="steps">${steps}</div>
+    <div class="pgrid"><div><div class="tscroll"><table><thead><tr><th>คลัง</th><th class="r">คัน</th><th class="r">พาเลท</th><th>ขึ้นของไม่เกิน</th><th class="r">ได้รถ</th></tr></thead><tbody>${rows}</tbody></table></div>
+      <div class="row" style="gap:6px;margin-top:8px">${btns}</div></div>
+      <div style="display:flex;flex-direction:column;gap:8px"><b>ผลจากพี่ปุ๋ย</b>${res}<div class="note">รวม ${Object.entries(need).map(([k, v]) => k + " " + v).join(" · ")} · จัด PO ลงรถ + ผัง 3D ด้านล่าง = งานของ planner · พี่ปุ๋ยดูแค่น้ำหนักต่อคัน หาคนขับ แล้วแจ้งงาน</div></div></div>`;
+}
+// ── พี่ปุ๋ย: เช็คน้ำหนัก → คนขับ → แจ้งงาน (การ์ดมอบหมายสีน้ำเงินเดิม) ──
+const notifOf = () => bk().notified || (bk().notified = {});
+function notifState(t) {
+  const n = notifOf()[tkey(t)];
+  if (!t.driver) return "nodrv";
+  if (!n) return "todo";
+  return n.code === t.driver.code && n.slot === t.slot ? "sent" : "changed";
+}
+function truckCheck(t) {
+  const r = evalTruck(t), bad = [];
+  if (r.over.length) bad.push("ล้น " + r.over.length + " พาเลท");
+  if (r.overKg) bad.push("เกินน้ำหนัก");
+  if (r.ax.gvwPct > 100) bad.push("เกินพิกัดทั้งคัน");
+  if (r.ax.loads.some((l) => l.pct > 100)) bad.push("เพลาเกิน");
+  return { r, bad };
+}
+function renderDisp() {
+  if (ROLE !== "puy") { $("dispBox").innerHTML = ""; return; }
+  const act = trucks.filter((t) => t.items.length);
+  if (!act.length) { $("dispBox").innerHTML = '<h2>📋 น้ำหนัก · คนขับ · แจ้งงาน</h2><div class="note">วันส่งนี้ไม่มี PO</div>'; return; }
+  const ck = act.map(truckCheck), nOk = ck.filter((c) => !c.bad.length).length;
+  const st = act.map(notifState), ready = act.filter((t, i) => !ck[i].bad.length && (st[i] === "todo" || st[i] === "changed"));
+  const sent = st.filter((x) => x === "sent").length, nodrv = st.filter((x) => x === "nodrv").length, chg = st.filter((x) => x === "changed").length;
+  const rows = act.map((t, i) => {
+    const { r, bad } = ck[i], ti = trucks.indexOf(t), dc = A.dc[t.dc] || {};
+    const sc = st[i] === "sent" ? '<span class="chip c-ok">✓ แจ้งแล้ว</span>' : st[i] === "changed" ? '<span class="chip c-bad">เปลี่ยนคนขับ/เวลา · แจ้งใหม่</span>' : st[i] === "nodrv" ? '<span class="chip c-bad">ยังไม่มีคนขับ</span>' : '<span class="chip c-gold">ยังไม่แจ้ง</span>';
+    const btn = st[i] === "nodrv" ? "" : bad.length ? '<span class="note">แก้น้ำหนักก่อน</span>' : `<button class="btn ${st[i] === "sent" ? "sec " : ""}sm" data-dnotify="${ti}">${st[i] === "sent" ? "ดูการ์ด" : "📲 แจ้ง"}</button>`;
+    return `<tr class="${ti === sel ? "sel" : ""}" data-drow="${ti}" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้"><td class="num"><b>#${t.id}</b><div class="note">${esc(r.type.name)}</div></td>
+      <td><span class="mono">${esc(t.dcs.join("+"))}</span> ${esc(t.dcs.map((d) => (A.dc[d] || {}).n || "").join(" + "))}<div class="note">นัดลง ${esc(dc.t || "")} · ${nf(dc.km || 0)} กม.${t.qFar ? " · 🧭 ไกล" : ""}</div></td>
+      <td class="r num">${r.pos + r.over.length}/${r.capPos}</td>
+      <td><div class="kgc"><span class="num">${nf(r.kg)} / ${nf(r.payMax)} กก.</span><span class="bar"><i class="${r.overKg ? "x" : r.kg / r.payMax > 0.92 ? "w" : ""}" style="width:${Math.min(100, r.kg / r.payMax * 100)}%"></i></span></div></td>
+      <td>${bad.length ? '<span class="chip c-bad">⚠️ ' + esc(bad.join(" · ")) + "</span>" : '<span class="chip c-ok">ผ่าน</span>'}</td>
+      <td class="mono">${t.short ? "—" : hmDay(t.slot)}${t.round === 2 ? ' <span class="chip c-info">รอบ 2</span>' : ""}</td>
+      <td>${t.driver ? (t.pinned ? "📌 " : "") + esc(t.driver.name) + '<div class="note">' + esc(t.driver.plate.split(",")[0]) + (t.farm ? " · 🌴 รถไร่" : t.driver.outs ? " · รถร่วม" : " · ฿" + nf(wageOf(t.driver.code))) + "</div>" : t.short ? '<span style="color:var(--bad)">⛔ ขาดรถ</span>' : t.open ? '<span style="color:var(--warn)">✋ รอพี่ปุ๋ยเลือก</span>' : '<span style="color:var(--warn)">ยังไม่มีคนขับ</span>'}</td>
+      <td><div class="dacts">${sc}${btn}</div></td><td class="more" aria-hidden="true">›</td></tr>`;
+  }).join("");
+  $("dispBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2>📋 น้ำหนัก · คนขับ · แจ้งงาน <span class="muted">ส่ง ${thd(date)}</span></h2>
+      <div class="row" style="gap:6px"><span class="chip ${nOk === act.length ? "c-ok" : "c-bad"}">น้ำหนักผ่าน ${nOk}/${act.length}</span><span class="chip ${sent === act.length ? "c-ok" : "c-gold"}">แจ้งแล้ว ${sent}/${act.length}</span>${nodrv ? `<span class="chip c-bad">ไม่มีคนขับ ${nodrv}</span>` : ""}${chg ? `<span class="chip c-bad">ต้องแจ้งใหม่ ${chg}</span>` : ""}</div></div>
+    <div class="row" style="gap:8px;align-items:center"><span class="note">เลือกคนขับ</span><div class="seg" role="group" aria-label="วิธีเลือกคนขับ"><button data-drvmode="auto" aria-pressed="${opt.drvMode !== "manual"}">🤖 ระบบเลือกให้</button><button data-drvmode="manual" aria-pressed="${opt.drvMode === "manual"}">✋ พี่ปุ๋ยเลือกเอง</button></div>
+      <span class="note">${opt.drvMode === "manual" ? "ลาก ⠿ การ์ดรถไปวางบนคนขับ หรือจิ้มแถวแล้วกด \"ให้คนนี้\" · ระบบแนะนำคนที่ค่าแรงน้อยสุดให้" : "งานใกล้ = คนที่ว่างพร้อมกัน ค่าแรงรอบ " + payRound().label + " (ถึงวันขึ้นของ " + payRound().days + " วัน) น้อยสุดได้ก่อน (เทียบรถรุ่นเดียวกัน) · งานไกล ≥ " + A.farKm + " กม. = ตามคิว"}</span></div>
+    <div class="note">① ดูน้ำหนักแต่ละคัน (planner จัดของลงรถมาแล้ว) → ② คนขับ (ระบบเลือก หรือลาก ⠿ การ์ดรถไปวางบนคนขับ) → ③ กดแจ้ง = ส่งการ์ดงานเข้า LINE คนขับ · จิ้มแถว = ดูรายการสินค้าในคัน</div>
+    <div class="tscroll"><table class="dtab"><thead><tr><th>คัน</th><th>คลัง</th><th class="r">พาเลท</th><th>น้ำหนักสินค้า</th><th>เช็คน้ำหนัก</th><th>ขึ้นของ</th><th>คนขับ</th><th>แจ้งงาน</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="row" style="gap:6px">${ready.length ? `<button class="btn" data-dnotify="all">📲 แจ้งคนขับ ${ready.length} คัน</button>` : sent === act.length ? '<div class="okbox">✓ แจ้งคนขับครบทุกคันแล้ว</div>' : ""}${sent ? '<button class="btn sec sm" data-dnotify="undo">↺ ล้างสถานะแจ้ง (เดโม)</button>' : ""}<span class="note">เดโม: ไม่ได้ส่ง LINE จริง · คันที่น้ำหนักไม่ผ่านต้องให้ planner แก้ก่อนแจ้ง</span></div>`;
+}
+// ✋ พี่ปุ๋ยเลือกเอง: แนะนำคนขับรุ่นเดียวกันที่ยังไม่มีงาน เรียง ว่างเร็ว → ค่าแรงรอบนี้น้อย
+function suggestFor(t) {
+  const drv = A.types.find((x) => x.k === t.type).drv, b = bk();
+  const busy = new Set(trucks.filter((x) => x.items.length && x.driver).map((x) => x.driver.code));
+  return DRIVERS.filter((d) => d.type === drv && !busy.has(d.code) && (!b.given || b.given.has(d.code)))
+    .map((d) => ({ d, st: fleetStatus(d) })).filter((x) => x.st.ready != null)
+    .map((x) => ({ ...x, at: Math.max(A.dayStart, Math.ceil(x.st.ready)) }))
+    .sort((a, c) => a.at - c.at || wageOf(a.d.code) - wageOf(c.d.code));
+}
+function suggestBox(t, ti) {
+  const list = suggestFor(t).slice(0, 3);
+  if (!list.length) return '<div class="note">ไม่มีคนขับ' + esc(A.types.find((x) => x.k === t.type).drv) + 'ที่ว่าง</div>';
+  return `<div><b>แนะนำคนขับ</b> <span class="note">ว่างเร็ว แล้วค่าแรงรอบ ${payRound().label} น้อยก่อน${t.qFar ? " · งานไกล ปกติใช้ตามคิว" : ""}</span></div><div style="display:flex;flex-direction:column;gap:6px">${list.map((x) => `<div class="row" style="justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:10px;padding:6px 10px"><div><b>${esc(x.d.name)}</b> <span class="note">${esc(x.d.plate.split(",")[0])} · ว่าง ${hm(x.at)} · ค่าแรงรอบนี้ ฿${nf(wageOf(x.d.code))}</span></div><button class="btn sm" data-dpick="${ti}|${esc(x.d.code)}">ให้คนนี้</button></div>`).join("")}</div>`;
+}
+let DRW = -1;   // คันที่เปิด drawer อยู่ (index ใน trucks)
+function showTruckDrawer(ti) {
+  const t = trucks[ti]; if (!t || !t.items.length) { closeDrawer(); return; }
+  if ($("drw").hidden) DRW_FROM = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+  DRW = ti;
+  const { r, bad } = truckCheck(t), stN = notifState(t);
+  const lines = (it) => {   // รวมลังต่อสินค้าใน PO นี้
+    const m = new Map();
+    it.units.forEach((u) => u.segs.forEach((g) => { const k = g.s.name, x = m.get(k) || { q: 0, kg: 0, pal: new Set() }; x.q += g.q; x.kg += g.q * g.s.kg; x.pal.add(u); m.set(k, x); }));
+    return [...m.entries()];
+  };
+  const pos = t.items.map((it) => {
+    const dc = A.dc[it.dc] || {}, kg = it.units.reduce((a, u) => a + u.segs.reduce((b, g) => b + g.q * g.s.kg, 0), 0), q = it.units.reduce((a, u) => a + u.segs.reduce((b, g) => b + g.q, 0), 0);
+    return `<div class="drpo"><h3><span><span class="mono">${esc(it.id)}</span> · ${esc(it.dc)} ${esc(dc.n || "")}${it.poRef && it.poRef._lay ? " <span class=\"chip c-warn\">1L เรียง " + it.poRef._lay + " ชั้น (เกินมาตรฐาน)</span>" : ""}</span><span class="muted">${esc(it.so || "")}</span></h3>
+      <table><thead><tr><th>สินค้า</th><th class="r">ลัง</th><th class="r">พาเลท</th><th class="r">กก.</th></tr></thead><tbody>${lines(it).map(([n, x]) => `<tr><td>${esc(n)}</td><td class="r num">${nf(x.q)}</td><td class="r num">${x.pal.size}</td><td class="r num">${nf(x.kg)}</td></tr>`).join("")}
+      <tr><td><b>รวม PO</b>${it.units.some((u) => u.mix) ? ' <span class="chip c-info">มีเศษเรียงมือ</span>' : ""}</td><td class="r num"><b>${nf(q)}</b></td><td class="r num"><b>${it.units.length}</b></td><td class="r num"><b>${nf(kg)}</b></td></tr></tbody></table></div>`;
+  }).join("");
+  const q = t.items.reduce((a, it) => a + it.units.reduce((b, u) => b + u.segs.reduce((c, g) => c + g.q, 0), 0), 0);
+  const dc = A.dc[t.dc] || {};
+  $("drBox").innerHTML = `<div class="drhead"><div><h2 id="drT">คัน #${t.id} · ${esc(r.type.name)}</h2><div class="note">${esc(t.dcs.map((d) => d + " " + ((A.dc[d] || {}).n || "")).join(" + "))} · นัดลง ${esc(dc.t || "")} · ${nf(dc.km || 0)} กม.</div></div>
+      <div class="row" style="gap:6px;flex-wrap:nowrap"><button class="btn sec sm" data-dnav="-1" aria-label="คันก่อนหน้า">‹</button><button class="btn sec sm" data-dnav="1" aria-label="คันถัดไป">›</button><button class="btn sec sm" data-dclose aria-label="ปิด">✕</button></div></div>
+    <div class="drsum"><div><b>${r.pos + r.over.length}/${r.capPos}</b><span class="note">พาเลท</span></div><div><b>${nf(q)}</b><span class="note">ลัง</span></div><div><b>${nf(r.kg / 1000, 2)}</b><span class="note">ตัน รวมพาเลทไม้ (ได้ ${nf(r.payMax / 1000, 1)})</span></div></div>
+    <div class="drkv"><span>คนขับ</span><b>${t.driver ? esc(t.driver.name) + " · " + esc(t.driver.plate.split(",")[0]) + (t.farm ? " · 🌴 รถไร่" : t.driver.outs ? " · รถนอก" : "") : t.short ? "⛔ ขาดรถ" : "ยังไม่มีคนขับ"}</b>
+      ${t.driver && !t.driver.outs && !t.farm ? (() => { const w = wageRank(t.driver.code); return `<span>ค่าแรงรอบ ${payRound().label}</span><b>฿${nf(wageOf(t.driver.code))} <span class="note">อันดับ ${w.rank}/${w.of} ใน${esc(t.driver.type)} · เฉลี่ย ฿${nf(w.avg)}</span></b>`; })() : ""}
+      ${t.pickWhy ? `<span>ทำไมได้คนนี้</span><b>${esc(t.pickWhy)}</b>` : ""}
+      <span>ขึ้นของ</span><b>${t.short ? "—" : hmDay(t.slot)}${t.round === 2 ? " (รอบ 2)" : ""}</b>
+      <span>เช็คน้ำหนัก</span><b>${bad.length ? '<span class="chip c-bad">⚠️ ' + esc(bad.join(" · ")) + "</span>" : '<span class="chip c-ok">ผ่าน</span>'}</b>
+      <span>แจ้งงาน</span><b>${stN === "sent" ? '<span class="chip c-ok">✓ แจ้งแล้ว</span>' : stN === "changed" ? '<span class="chip c-bad">ต้องแจ้งใหม่</span>' : stN === "nodrv" ? "—" : '<span class="chip c-gold">ยังไม่แจ้ง</span>'}</b></div>
+    ${!t.driver && !t.short ? suggestBox(t, ti) : ""}
+    <div><b>น้ำหนักลงเพลา</b> <span class="note">ทั้งคัน ${nf(r.ax.total)} / ${nf(r.ax.gvw)} กก. (รถเปล่า + สินค้า)</span></div>
+    <div class="drax">${r.ax.loads.map((l) => `<span>${esc(l.n)}</span><span class="bar"><i class="${l.pct > 100 ? "x" : l.pct > 92 ? "w" : ""}" style="width:${Math.min(100, l.pct)}%"></i></span><span class="num">${nf(l.pct)}%</span>`).join("")}</div>
+    <div><b>รายการสินค้า</b> <span class="note">${t.items.length} PO · กก. = น้ำหนักสินค้า ไม่รวมพาเลทไม้</span></div>
+    ${pos}
+    <div class="row" style="gap:6px">${t.driver && !bad.length ? `<button class="btn ${stN === "sent" ? "sec " : ""}" data-dnotify="${ti}">${stN === "sent" ? "ดูการ์ดที่แจ้ง" : "📲 แจ้งคนขับคันนี้"}</button>` : ""}<span class="note">${bad.length ? "น้ำหนักไม่ผ่าน → ให้ planner ย้าย PO ก่อนแจ้ง" : "น้ำหนักพาเลทเป็นค่าสมมติ"}</span></div>`;
+  $("drw").hidden = false;
+  const c = $("drBox").querySelector("[data-dclose]"); if (c) c.focus();
+}
+let DRW_FROM = null;
+function closeDrawer() { $("drw").hidden = true; DRW = -1; const f = DRW_FROM; DRW_FROM = null; if (f && f.isConnected) f.focus(); }
+function showDrvCard(t) {
+  const r = evalTruck(t), dc = A.dc[t.dc] || {};
+  $("qmBox").classList.remove("wide"); QBIG = false;
+  $("qmBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2 id="qmT">📲 การ์ดที่คนขับได้รับ</h2><button class="btn sec sm" data-qclose aria-label="ปิด">✕</button></div>
+    <div class="lcard2"><div class="lh"><small>มอบหมายงาน Packing</small><b>ส่ง 7-11 · ${esc(t.dcs.map((d) => (A.dc[d] || {}).n || d).join(" + "))}</b></div>
+      <div class="lb"><span>คนขับ</span><b>${esc(t.driver.name)}</b><span>ทะเบียน</span><b>${esc(t.driver.plate.split(",")[0])}</b><span>ขึ้นของ</span><b>${hmDay(t.slot)}${t.round === 2 ? " (รอบ 2)" : ""}</b>
+        <span>คลัง</span><b>${esc(t.dcs.join(" + "))} · นัดลง ${esc(dc.t || "")}</b><span>ระยะ</span><b>${nf(dc.km || 0)} กม.</b><span>สินค้า</span><b>${r.pos + r.over.length} พาเลท · ${nf(r.kg)} กก.</b><span>PO</span><b>${esc(t.items.map((i) => i.id).join(", "))}</b></div>
+      <div class="lf"><i>รับงาน</i><i>ปฏิเสธ</i></div></div>
+    <div class="note">สีน้ำเงิน = การ์ดมอบหมายงานเดิมของระบบ · ปฏิเสธ = กลับมาที่พี่ปุ๋ยให้หาคนใหม่</div>`;
+  $("qModal").hidden = false;
+  const c = $("qmBox").querySelector("[data-qclose]"); if (c) c.focus();
+}
+function renderFarm() {
+  if (ROLE !== "farm") return;
+  const reqs = dates.filter((d) => BOOK[d] && BOOK[d].farm);
+  if (!reqs.length) { $("farmBox").innerHTML = '<h2>🌴 คำขอยืมรถไร่</h2><div class="note" style="margin-top:6px">ยังไม่มีคำขอ · พี่ปุ๋ยขอได้จากกล่องจองรถ (ทางแก้ ②) เมื่อรถ PK ไม่พอ</div>'; return; }
+  $("farmBox").innerHTML = '<div class="row" style="justify-content:space-between"><h2>🌴 คำขอยืมรถไร่</h2><span class="note">อนุมัติทีละคัน · รถยังอยู่กลุ่มไร่ วิ่งงานนี้ในนาม Packing · ช่วงที่ให้ยืมจะรับงานไร่ไม่ได้</span></div>' +
+    reqs.map((d) => {
+      const f = BOOK[d].farm, full = f.ok.size >= f.n;
+      const list = FARM.map((x) => ({ x, st: fleetStatus(x, d) }))
+        .sort((a, c) => (a.st.ready == null) - (c.st.ready == null) || (a.st.ready ?? 99) - (c.st.ready ?? 99))
+        .map(({ x, st }) => {
+          const k = d + "|" + x.code, ok = f.ok.has(x.code), no = f.no.has(x.code), off = st.ready == null;
+          const acts = ok ? `<span class="chip c-ok">✓ ให้ยืม</span><button class="btn sec sm" data-fundo="${k}" aria-label="ยกเลิก">↺</button>`
+            : no ? `<span class="chip c-bad">ไม่ให้</span><button class="btn sec sm" data-fundo="${k}" aria-label="ยกเลิก">↺</button>`
+            : off ? '<span class="chip c-bad">ไม่ว่าง</span>'
+            : `<button class="btn sm" data-fok="${k}" ${full ? 'style="opacity:.45"' : ""}>ให้ยืม</button><button class="btn sec sm" data-fno="${k}">ไม่ให้</button>`;
+          return `<div class="fl ${ok ? "on" : ""} ${off ? "off" : ""}" style="cursor:default"><span>🚛</span><div><b>${esc(x.plate.split(",")[0])}</b> ${esc(x.name)}<small>${esc(x.code)} · ${esc(x.type)} · ${esc(st.txt)}</small></div><div class="acts">${acts}</div></div>`;
+        }).join("");
+      const chip = full ? `<span class="chip c-ok">ให้ครบ ${f.ok.size}/${f.n}</span>` : `<span class="chip c-gold">ให้แล้ว ${f.ok.size}/${f.n}</span>`;
+      return `<div class="freq"><h3>ส่ง ${thd(d)} · ขอพ่วง ${f.n} คัน ${chip} <span class="note">ขอเมื่อ ${new Date(f.at).toTimeString().slice(0, 5)} โดยพี่ปุ๋ย</span></h3>
+        <div class="note">ใช้กับ: ${f.dcs.map((c) => esc(c.dc) + " " + esc((A.dc[c.dc] || {}).n || "") + " (" + c.pal + " พาเลท · ขึ้นของไม่เกิน " + hmDay(c.latest) + ")").join(" · ")}</div>
+        <div class="fleet" style="max-height:340px">${list}</div></div>`;
+    }).join("");
+}
+
+// ── 🧭 คิววิ่งไกล ──
+// สถานะของแต่ละคนในคิว (วันส่งนี้): far = ได้งานไกลรอบนี้ · skip = ถึงคิวแต่ไม่ได้ (คงที่เดิม → ได้ก่อนรอบหน้า) · near = ได้งานใกล้ · wait = ยังไม่ถึงคิว
+function queueView() {
+  const qo = qOrder(), b = bk(), act = trucks.filter((t) => t.items.length);
+  const farT = act.filter((t) => t.qFar && t.driver && !t.driver.outs && !t.driver.farmDrv && t.round !== 2);
+  // แอดมินปักหมุดคนขับเอง = ไม่นับว่าคนก่อนหน้าถูกข้าม (ไม่ให้ทั้งคิวค้าง)
+  const maxPos = Math.max(-1, ...farT.filter((t) => !t.pinned).map((t) => qo.indexOf(t.driver.code)));
+  return qo.map((code, i) => {
+    const d = DRIVERS.find((x) => x.code === code) || { code, name: code, plate: "", type: "พ่วง" };
+    const tr = act.find((t) => t.driver && t.driver.code === code && t.round !== 2);
+    let st = "wait", why = "", need = true;
+    const dec = !!(QUEUE.decl[date] || {})[code];
+    if (tr && farT.indexOf(tr) >= 0) st = "far";
+    else if (i < maxPos || (dec && maxPos >= 0)) {
+      st = "skip";
+      const fs = fleetStatus(d);
+      if (dec) { why = "คนขับสละคิว"; need = false; }
+      else if (fs.ready == null) { why = fs.txt; need = /ซ่อม|เสีย/.test(fs.txt); }   // รถเสีย = คืนคิว · ลา = ไม่ใช่เหตุจำเป็นเรื่องรถ
+      else if (b.given && !b.given.has(code)) why = "พี่ปุ๋ยไม่ได้ให้";
+      else if (tr && tr.pinned) why = "แอดมินให้งานใกล้";
+      else why = "รถกลับไม่ทันเวลา";
+    } else if (tr) st = "near";
+    const ov = (QUEUE.keep[date] || {})[code];
+    return { code, d, i, st, why, tr, need, keep: st === "skip" ? (ov == null ? need : ov) : false, dec };
+  });
+}
+const farHist = (code) => (QUEUE.hist[code] || []).filter((x) => !x.lost);
+function lastFar(code) { const h = farHist(code); return h.length ? h[h.length - 1] : null; }
+function renderQueue() {
+  if (ROLE !== "puy") { $("qBox").innerHTML = ""; return; }
+  const v = queueView(), conf = QUEUE.confirmed[date];
+  const farN = v.filter((x) => x.st === "far").length, skipN = v.filter((x) => x.st === "skip").length;
+  let latest = null; Object.keys(QUEUE.hist).forEach((c) => { const l = lastFar(c); if (l && (!latest || l.date.split("/").reverse().join() > latest.l.date.split("/").reverse().join())) latest = { c, l }; });
+  const nm = (c) => { const d = DRIVERS.find((x) => x.code === c); return d ? d.name.split(" ")[0] : c; };
+  const head = v.find((x) => x.st === "wait" || x.st === "skip");
+  const rows = v.map((x) => {
+    const l = lastFar(x.code), n = farHist(x.code).length, ow = QUEUE.owed[x.code];
+    const chip = x.st === "far" ? `<span class="chip c-ok">🛣️ ${esc(x.tr.dc)} ${esc((A.dc[x.tr.dc] || {}).n || "")}</span>`
+      : x.st === "skip" ? (conf ? `<span class="chip ${x.keep ? "c-gold" : "c-bad"}">${x.keep ? "คืนคิว" : "เสียคิว"}</span>`
+        : `<button class="chip ${x.keep ? "c-gold" : "c-bad"} qkeep" data-qkeep="${esc(x.code)}" title="กดสลับ · ค่าเริ่มต้นตามเหตุผล: ${x.need ? "เหตุจำเป็น → คืนคิว" : "ไม่ใช่เหตุจำเป็น → เสียคิว"}">${x.keep ? "↩ คืนคิว" : "⏭ เสียคิว"}</button>`)
+      : x.st === "near" ? `<span class="chip c-info">ใกล้ → ${esc(x.tr.dc)}</span>` : '<span class="chip">รอคิว</span>';
+    return `<div class="qr ${x.st} ${head && head.code === x.code ? "head" : ""}" role="button" tabindex="0" data-qstat="${esc(x.code)}" data-drvdrop="${esc(x.code)}" title="คลิกดูสถิติ · ลากการ์ดรถมาวาง = ให้คนนี้ขับ">
+      <span class="qn">${x.i + 1}</span><div><b>${esc(x.d.name)}</b>${ow ? ' <span class="chip c-gold">ค้างคิว</span>' : ""}<small>${esc(x.d.plate.split(",")[0])} · ${l ? "ไกลล่าสุด " + thd(l.date) + " " + esc((A.dc[l.dc] || {}).n || l.dc) : "ยังไม่เคยวิ่งไกล"} · ${n} เที่ยว${x.st === "skip" ? " · " + esc(x.why) : ""}</small></div>${chip}</div>`;
+  }).join("");
+  $("qBox").innerHTML = `<div class="row" style="justify-content:space-between;margin:2px 4px 4px"><h2><button class="qbig" data-qbig title="เปิดหน้าต่างใหญ่">🧭 คิววิ่งไกล <span class="muted">≥ ${A.farKm} กม.</span> <span class="qbigic">⤢</span></button></h2>${conf ? '<span class="chip c-ok">ยืนยันแล้ว</span>' : '<span class="chip c-gold">ยังไม่ยืนยัน</span>'}</div>
+    <div class="note qnote" data-qbignote style="margin:0 4px 6px" title="จิ้มเพื่อเปิดหน้าต่างใหญ่">รอบนี้ได้ไกล ${farN} คน${skipN ? " · ข้าม " + skipN : ""}${latest ? " · ได้คิวล่าสุด: <b>" + esc(nm(latest.c)) + "</b> (" + thd(latest.l.date) + ")" : ""}${head ? " · ถัดไป: <b>" + esc(nm(head.code)) + "</b>" : ""}</div>
+    <div class="qlist" id="qList">${rows}</div>
+    <div class="row" style="gap:6px;margin-top:6px">${conf ? '<button class="btn sec sm" data-qundo>↺ ยกเลิกยืนยัน</button>' : `<button class="btn sm" data-qconfirm>✅ ยืนยันแผน · เลื่อนคิว</button>`}<span class="note">คลิกชื่อ = สถิติ/สละคิว · ลาก ⠿ การ์ดรถมาวาง = เลือกคนขับเอง · ข้ามมีเหตุจำเป็น (รถเสีย/กลับไม่ทัน) = คืนคิว · สละเอง = เสียคิว</span></div>`;
+}
+// หน้าต่างใหญ่: ตารางคิวทั้งหมด + ปรับคืน/เสียคิว + สละคิว + ยืนยัน (คุณน้องขอ 23 ต.ค.)
+let QBIG = false;
+function showQueueBig() {
+  QBIG = true;
+  const v = queueView(), conf = QUEUE.confirmed[date];
+  const cnt = (st) => v.filter((x) => x.st === st).length;
+  const rows = v.map((x) => {
+    const l = lastFar(x.code), n = farHist(x.code).length;
+    const st = x.st === "far" ? `<span class="chip c-ok">🛣️ ${esc(x.tr.dc)} ${esc((A.dc[x.tr.dc] || {}).n || "")}</span>`
+      : x.st === "skip" ? '<span class="chip c-gold">ถึงคิวแต่ไม่ได้วิ่ง</span>'
+      : x.st === "near" ? `<span class="chip c-info">งานใกล้ → ${esc(x.tr.dc)}</span>` : '<span class="chip">รอคิว</span>';
+    const res = x.st !== "skip" ? "—" : conf ? `<span class="chip ${x.keep ? "c-gold" : "c-bad"}">${x.keep ? "คืนคิว" : "เสียคิว"}</span>`
+      : `<button class="chip ${x.keep ? "c-gold" : "c-bad"} qkeep" data-qkeep="${esc(x.code)}" title="กดสลับ">${x.keep ? "↩ คืนคิว" : "⏭ เสียคิว"}</button>`;
+    const decl = conf || x.st === "far" ? "" : `<button class="btn ${x.dec ? "" : "sec "}sm" data-qdecl="${esc(x.code)}">${x.dec ? "↺ ยกเลิกสละ" : "🙋 สละคิว"}</button>`;
+    return `<tr class="${x.st}"><td class="num" style="font-weight:700">${x.i + 1}</td><td><b>${esc(x.d.name)}</b>${QUEUE.owed[x.code] ? ' <span class="chip c-gold">ค้างคิว</span>' : ""}<div class="note">${esc(x.d.code)} · ${esc(x.d.plate)}</div></td>
+      <td>${st}${x.why ? `<div class="note">${esc(x.why)}</div>` : ""}</td><td>${res}</td>
+      <td>${l ? thd(l.date) + " · " + esc((A.dc[l.dc] || {}).n || l.dc) : '<span class="muted">ยังไม่เคย</span>'}</td><td class="r num">${n}</td>
+      <td class="r num">${QUEUE.skips[x.code] || 0} / ${QUEUE.lost[x.code] || 0}</td>
+      <td><div class="acts">${decl}<button class="btn sec sm" data-qstat="${esc(x.code)}">สถิติ</button></div></td></tr>`;
+  }).join("");
+  $("qmBox").classList.add("wide");
+  $("qmBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2 id="qmT">🧭 คิววิ่งไกล ≥ ${A.farKm} กม. · ส่ง ${thd(date)}</h2><button class="btn sec sm" data-qclose aria-label="ปิด">✕</button></div>
+    <div class="row" style="gap:6px">${conf ? '<span class="chip c-ok">ยืนยันแล้ว</span>' : '<span class="chip c-gold">ยังไม่ยืนยัน</span>'}<span class="chip c-ok">ได้งานไกล ${cnt("far")}</span><span class="chip c-gold">ถึงคิวแต่ไม่ได้วิ่ง ${cnt("skip")}</span><span class="chip c-info">งานใกล้ ${cnt("near")}</span><span class="chip">รอคิว ${cnt("wait")}</span></div>
+    <div class="note">ได้งานไกล → ต่อท้ายคิวเมื่อยืนยัน · ถึงคิวแต่ไม่ได้วิ่ง: มีเหตุจำเป็น (รถเสีย/กลับไม่ทัน) = ↩ คืนคิว (คงที่เดิม ได้ก่อนรอบหน้า) · สละเอง/ไม่มีเหตุจำเป็น = ⏭ เสียคิว (ไปต่อท้าย) · กดป้ายเพื่อสลับได้ก่อนยืนยัน</div>
+    <div class="tscroll"><table class="qtab"><thead><tr><th>คิว</th><th>คนขับ</th><th>รอบนี้</th><th>ผลกับคิว</th><th>ไกลล่าสุด</th><th class="r">เที่ยวไกล</th><th class="r">คืน/เสียคิว</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>
+    <div class="row" style="gap:6px">${conf ? '<button class="btn sec" data-qundo>↺ ยกเลิกยืนยัน</button>' : '<button class="btn" data-qconfirm>✅ ยืนยันแผน · เลื่อนคิว</button>'}<span class="note">ประวัติก่อน 9 ต.ค. เป็นค่าจำลอง · ของจริงนับจากออเดอร์ย้อนหลัง</span></div>`;
+  $("qModal").hidden = false;
+  const c = $("qmBox").querySelector("[data-qclose]"); if (c) c.focus();
+}
+function confirmQueue() {
+  if (QUEUE.confirmed[date]) return;
+  const before = JSON.parse(JSON.stringify({ order: QUEUE.order, hist: QUEUE.hist, skips: QUEUE.skips, owed: QUEUE.owed, lost: QUEUE.lost }));
+  const v = queueView(), far = v.filter((x) => x.st === "far"), sk = v.filter((x) => x.st === "skip");
+  far.forEach((x) => { QUEUE.hist[x.code].push({ date, dc: x.tr.dc }); QUEUE.owed[x.code] = false; });
+  sk.forEach((x) => {
+    if (x.keep) { QUEUE.skips[x.code] = (QUEUE.skips[x.code] || 0) + 1; QUEUE.owed[x.code] = true; }   // คืนคิว = คงที่เดิม ได้ก่อนรอบหน้า
+    else { QUEUE.lost[x.code] = (QUEUE.lost[x.code] || 0) + 1; QUEUE.owed[x.code] = false; QUEUE.hist[x.code].push({ date, lost: true, why: x.why }); }   // เสียคิว = ถือว่าได้คิวไปแล้ว
+  });
+  const moved = far.concat(sk.filter((x) => !x.keep)).sort((a, b) => a.i - b.i), ms = new Set(moved.map((x) => x.code));
+  QUEUE.order = QUEUE.order.filter((c) => !ms.has(c)).concat(moved.map((x) => x.code));
+  QUEUE.confirmed[date] = { before, at: Date.now() };
+  build(); renderAll();
+  toastMsg(far.length ? "ยืนยันแล้ว · " + far.length + " คนที่ได้งานไกลไปต่อท้ายคิว" + (sk.some((x) => x.keep) ? " · คืนคิว " + sk.filter((x) => x.keep).length + " คน" : "") + (sk.some((x) => !x.keep) ? " · เสียคิว " + sk.filter((x) => !x.keep).length + " คน" : "") : "ยืนยันแล้ว · วันนี้ไม่มีงานไกล คิวไม่ขยับ");
+}
+function showQStat(code) {
+  const d = DRIVERS.find((x) => x.code === code); if (!d) return;
+  const hAll = (QUEUE.hist[code] || []).slice().reverse(), h = hAll.filter((x) => !x.lost), pos = QUEUE.order.indexOf(code) + 1, l = h[0];
+  const days = l ? Math.round((new Date("20" + date.split("/")[2] + "-" + date.split("/")[1] + "-" + date.split("/")[0]) - new Date("20" + l.date.split("/")[2] + "-" + l.date.split("/")[1] + "-" + l.date.split("/")[0])) / 86400000) : null;
+  const v = queueView().find((x) => x.code === code), st = !v ? "" : v.st === "far" ? "🛣️ รอบนี้ได้งานไกล → " + v.tr.dc + " " + ((A.dc[v.tr.dc] || {}).n || "") : v.st === "skip" ? "⏭️ รอบนี้ถูกข้าม (" + v.why + ") · " + (v.keep ? "คืนคิว ได้ก่อนรอบหน้า" : "เสียคิว ไปต่อท้าย") : v.st === "near" ? "รอบนี้ได้งานใกล้ → " + v.tr.dc : "รอคิว";
+  $("qmBox").classList.remove("wide");
+  $("qmBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2 id="qmT">${QBIG ? '<button class="btn sec sm" data-qbig aria-label="กลับไปตารางคิว">‹ คิวทั้งหมด</button> ' : ""}🧭 ${esc(d.name)}</h2><button class="btn sec sm" data-qclose aria-label="ปิด">✕</button></div>
+    <div class="note">${esc(d.code)} · ${esc(d.plate)} · ${esc(d.type)}</div>
+    <div class="mstat"><div><b>#${pos}</b><span class="note">คิวตอนนี้ / ${QUEUE.order.length}</span></div><div><b>${h.length}</b><span class="note">เที่ยวไกล เดือนนี้</span></div><div><b>${QUEUE.skips[code] || 0} / ${QUEUE.lost[code] || 0}</b><span class="note">คืนคิว / เสียคิว</span></div></div>
+    <div class="note"><b>${esc(st)}</b>${QUEUE.owed[code] ? ' · <span class="chip c-gold">ค้างคิว ได้ก่อนรอบหน้า</span>' : ""}</div>
+    <div class="note">${l ? "วิ่งไกลล่าสุด " + thd(l.date) + " → " + esc((A.dc[l.dc] || {}).n || l.dc) + (days != null && days >= 0 ? " (" + days + " วันก่อน)" : "") : "ยังไม่เคยวิ่งไกลเดือนนี้"}</div>
+    ${!QUEUE.confirmed[date] && v && v.st !== "far" ? `<div class="row" style="gap:6px"><button class="btn ${v.dec ? "" : "sec "}sm" data-qdecl="${esc(code)}">${v.dec ? "↺ ยกเลิกการสละคิว" : "🙋 คนขับขอสละคิววันนี้"}</button><span class="note">สละเองโดยไม่มีเหตุจำเป็น = เสียคิว ไปต่อท้าย</span></div>` : ""}
+    <div class="tscroll"><table><thead><tr><th>วันส่ง</th><th>คลัง</th><th class="r">กม.</th></tr></thead><tbody>${hAll.map((x) => x.lost ? `<tr><td>${thd(x.date)}</td><td colspan="2"><span class="chip c-bad">เสียคิว</span> ${esc(x.why || "")}</td></tr>` : `<tr><td>${thd(x.date)}${x.seed ? ' <span class="chip c-warn">จำลอง</span>' : ""}</td><td><span class="mono">${esc(x.dc)}</span> ${esc((A.dc[x.dc] || {}).n || "")}</td><td class="r num">${nf((A.dc[x.dc] || {}).km || 0)}</td></tr>`).join("") || '<tr><td colspan="3" class="note">—</td></tr>'}</tbody></table></div>
+    <div class="note">ประวัติก่อน 9 ต.ค. เป็นค่าจำลอง · ของจริงนับจากออเดอร์ย้อนหลัง</div>`;
+  $("qModal").hidden = false;
+  const c = $("qmBox").querySelector("[data-qclose]"); if (c) c.focus();
+}
+// ── ลากการ์ดรถ → วางบนคนขับ (คิว / รายชื่อในกล่องจองรถ) ──
+let tDrag = null;
+function pinTruck(t, code) {
+  const d = DRIVERS.find((x) => x.code === code), ty = A.types.find((x) => x.k === t.type), b = bk();
+  if (!d) return;
+  if (d.type !== ty.drv) { toastMsg(ty.name + " ต้องใช้คนขับ" + ty.drv + " · " + d.name + " ขับ " + d.type); return; }
+  if (b.given && fleetStatus(d).ready == null) { toastMsg(d.name + " ไม่ว่างวันนี้ (" + fleetStatus(d).txt + ")"); return; }
+  const p = pinsOf(); Object.keys(p).forEach((k) => { if (p[k] === code) delete p[k]; });
+  p[tkey(t)] = code;
+  if (b.given) b.given.add(code);
+  const id = t.id; build(); renderAll();
+  toastMsg("📌 คัน #" + id + " → " + d.name + (isFar(t) ? " (ข้ามลำดับคิว · กด ✕ ที่การ์ดรถเพื่อให้ระบบเลือกตามคิว)" : ""));
+}
+function tTarget(e) { const el = document.elementFromPoint(e.clientX, e.clientY); return el ? el.closest("[data-drvdrop]") : null; }
+
+function setGiven(codes) { const b = bk(); b.given = codes ? new Set(codes) : null; if (!codes) { b.outs = false; b.r2 = false; b.farm = null; } build(); renderAll(); }
+function readyFleet() {
+  const types = Object.keys(needOf().need);
+  return DRIVERS.filter((d) => types.includes(d.type)).map((d) => ({ d, r: fleetStatus(d).ready })).filter((x) => x.r != null).sort((a, c) => a.r - c.r).map((x) => x.d.code);
+}
+function barRow(label, v, max, txt) { const p = max > 0 ? Math.min(100, v / max * 100) : 0; const c = v > max ? "x" : p > 92 ? "w" : ""; return `<span class="muted">${label}</span><span class="bar"><i class="${c}" style="width:${p}%"></i></span><span class="num" style="text-align:right">${txt || nf(v / max * 100) + "%"}</span>`; }
+function renderTrucks() {
+  const nEmpty = trucks.filter((t) => !t.items.length).length;
+  $("tcount").textContent = "· " + trucks.length + " คัน" + (nEmpty ? " · ว่าง " + nEmpty : "");
+  $("addTruck").innerHTML = `<select id="addSel" aria-label="เพิ่มรถ"><option value="">+ เพิ่มรถ</option>${A.types.map((t) => `<option value="new-${t.k}">${t.name}</option>`).join("")}</select>`;
+  $("trucks").innerHTML = trucks.map((t, i) => {
+    const r = evalTruck(t), dc = A.dc[t.dc], bad = r.over.length || r.overKg;
+    return `<button class="tc ${bad ? "badc" : ""}" aria-pressed="${i === sel}" data-sel="${i}">
+      <div class="hd"><b>${t.items.length && ROLE === "puy" ? `<span class="tgrip" data-tgrip="${i}" title="ลากไปวางบนคนขับ (คิวด้านล่าง หรือรายชื่อในกล่องจองรถ)" aria-label="ลากคัน #${t.id} ไปวางบนคนขับ">⠿</span>` : ""}#${t.id} · ${esc(r.type.name)}</b>${t.short ? '<span class="chip c-bad">⛔ ขาดรถ</span>' : `<span class="mono">${t.items.length ? hmDay(t.slot) : "—"}</span>${t.round === 2 ? "<span class=\"chip c-info\">รอบ 2</span>" : ""}${t.farm ? "<span class=\"chip c-ok\">🌴 รถไร่</span>" : ""}`}</div>
+      <div class="note">${t.items.length ? esc(t.dcs.map((d) => d + " " + (A.dc[d] ? A.dc[d].n : "")).join(" + ")) + " · นัดลง " + (dc ? dc.t : "") : "ยังว่าง"} · ${t.driver ? (t.pinned ? "📌 " : t.qFar && !t.farm && !t.driver.outs && t.round !== 2 ? "🧭 " : "") + esc(t.driver.name) + " " + esc(t.driver.plate.split(",")[0]) + (t.ready ? " · รถถึง " + hmDay(t.ready) : "") + (t.pinned && ROLE === "puy" ? `<span class="unpin" data-unpin="${esc(tkey(t))}" title="ให้ระบบเลือกคนขับเอง" aria-label="เลิกปักหมุดคนขับ">✕</span>` : "") : '<span class="muted">ทะเบียน/คนขับ ใส่ในแพลนห้าง</span>'}</div>
+      <div class="bars">${barRow("พาเลท", r.pos + r.over.length, r.capPos, (r.pos + r.over.length) + "/" + r.capPos)}${barRow("สินค้า", r.kg, r.payMax)}${barRow("สูงสุด", r.maxH, r.bedH, nf(r.maxH) + " ซม.")}${barRow("เพลา", r.ax.worst, 100, nf(r.ax.worst) + "%")}</div>
+    </button>`;
+  }).join("") + (ROLE === "planner" ? '<div class="tnew" id="tNew">＋ ลาก PO มาวางตรงนี้ = รถคันใหม่ (เลือกขนาดที่พอให้เอง)</div>' : trucks.length ? "" : '<div class="note" style="padding:10px">ยังไม่มีรถ</div>');
+}
+function truckOptions(cur) {
+  return `<option value="">— ยังไม่จัด —</option>` + trucks.map((t) => `<option value="${t.id}" ${t.id === cur ? "selected" : ""}>#${t.id} ${esc(A.types.find((x) => x.k === t.type).name)}</option>`).join("") +
+    A.types.map((x) => `<option value="new-${x.k}">+ คันใหม่ ${x.name}</option>`).join("");
+}
+function itemRow(it, withTime) {
+  const units = it.units, q = units.reduce((a, u) => a + u.segs.reduce((b, g) => b + g.q, 0), 0), kg = units.reduce((a, u) => a + u.kg, 0);
+  const prods = [...new Set(units.flatMap((u) => u.segs.map((g) => g.s.name)))];
+  const dc = A.dc[it.dc] || {};
+  return `<tr><td class="mono"><span class="grip" data-grip="${esc(it.id)}" title="ลากไปวางบนการ์ดรถ" aria-label="ลาก PO ${esc(it.id)} ไปรถคันอื่น">⠿</span> ${esc(it.id)}<div class="note">${esc(it.so)}</div></td><td><span class="mono">${esc(it.dc)}</span> ${esc(dc.n || "")}</td>${withTime ? `<td class="mono">${esc(dc.t || "")}</td>` : ""}
+    <td>${prods.map((p) => `<div>${esc(p)}</div>`).join("")}</td><td class="r num">${nf(q)}</td><td class="r num">${units.length}${units.some((u) => u.mix) ? ' <span class="chip c-info">มีเศษ</span>' : ""}</td><td class="r num">${nf(kg)}</td>
+    <td><select data-move="${esc(it.id)}">${truckOptions(assign[it.id])}</select></td></tr>`;
+}
+function poCard(it) {
+  const units = it.units, kg = units.reduce((a, u) => a + u.kg, 0), dc = A.dc[it.dc] || {}, tid = assign[it.id];
+  const t = tid && trucks.find((x) => x.id === tid);
+  return `<div class="poc ${t ? "" : "un"}"><span class="grip" data-grip="${esc(it.id)}" title="ลากไปวางบนการ์ดรถ" aria-label="ลาก PO ${esc(it.id)}">⠿</span>
+    <div><b>${esc(it.id)}</b> <span class="mono">${esc(it.dc)}</span> ${esc(dc.n || "")}<small>${units.length} พาเลท · ${nf(kg)} กก. · นัด ${esc(dc.t || "")}</small></div>
+    ${t ? `<button class="chip c-ok tk" data-gotruck="${t.id}" title="เปิดคันนี้">#${t.id}</button>` : '<span class="chip c-gold">ยังไม่จัด</span>'}</div>`;
+}
+// ปุ่ม "เฉพาะยังไม่จัด" — ซ่อน PO ที่อยู่บนรถแล้ว (ทั้งรายการซ้ายและตาราง PO ของวัน) · จำไว้ในเครื่อง
+var onlyUn = false;   // var: renderPOs อาจถูกเรียกก่อนบรรทัดนี้
+try { onlyUn = localStorage.getItem("pk711_onlyun") === "1"; } catch (_) { /* ใช้ค่าเริ่มต้น */ }
+function renderPOs() {
+  const items = build.items, un = items.filter((i) => !assign[i.id]), on = items.filter((i) => assign[i.id]);
+  document.querySelectorAll("[data-onlyun]").forEach((b) => b.setAttribute("aria-pressed", String(onlyUn)));
+  $("pocount").textContent = "· " + items.length + (un.length ? " · ยังไม่จัด " + un.length : "");
+  const done = items.length && !un.length ? '<div class="podone">✓ จัดครบทุก PO แล้ว</div>' : "";
+  const hid = onlyUn && on.length ? `<div class="note" style="padding:6px 2px">ซ่อน PO ที่จัดแล้ว ${on.length} รายการ</div>` : "";
+  $("poList").innerHTML = !items.length ? '<div class="note" style="padding:8px">ไม่มี PO วันนี้</div>'
+    : (un.length ? `<div class="pogrp">ยังไม่จัด (${un.length})</div>` + un.map(poCard).join("") : done) +
+      (onlyUn ? hid : on.length ? `<div class="pogrp">จัดแล้ว (${on.length})</div>` + on.sort((a, b) => assign[a.id] - assign[b.id]).map(poCard).join("") : "");
+  const rows = onlyUn ? un : items;
+  $("poAllCount").textContent = onlyUn ? `· แสดง ${un.length} จาก ${items.length}` : "· " + items.length;
+  $("poAll").innerHTML = rows.length ? rows.map((it) => itemRow(it, true)).join("")
+    : `<tr><td colspan="8" class="podone">${items.length ? "✓ จัดครบทุก PO แล้ว" : "ไม่มี PO วันนี้"}</td></tr>`;
+  const t = trucks[sel];
+  $("vPOs").innerHTML = t && t.items.length ? t.items.map((it) => itemRow(it, false)).join("") : '<tr><td colspan="7" class="note">ยังไม่มี PO ในคันนี้</td></tr>';
+}
+
+// ── ลำดับขึ้นของ ──
+//   พาเลทวางพื้น: ช่วงหัวก่อน → หาง · ในแต่ละช่วง แถว 1 (ชิดหัวรถ) ไปท้าย · ฝั่งขวา (ฝั่งคนขับ) ก่อนซ้าย
+//   แล้วค่อยพาเลทชั้นบน (ถ้าซ้อน) และเศษเรียงมือเป็นลำดับสุดท้าย
+let seqMode = false, seqStep = 0, seqTimer = null, toastT = null;
+function toastMsg(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => (t.hidden = true), 3000); }
+function loadSeq(r) {
+  const k = (a, b) => a.sp.bi - b.sp.bi || a.sp.i - b.sp.i || a.sp.j - b.sp.j;
+  return r.placed.filter((p) => !p.z && !p.hand).sort(k)
+    .concat(r.placed.filter((p) => p.z && !p.hand).sort(k), r.placed.filter((p) => p.hand).sort(k));
+}
+function seqLabel(p) {
+  const sp = p.sp, side = sp.g.na === 1 ? "กลาง" : sp.j === 0 ? "ขวา (ฝั่งคนขับ)" : sp.j === sp.g.na - 1 ? "ซ้าย" : "กลาง";
+  const what = p.u.segs.map((g) => g.s.name.replace(/\s*ทับทิม|\s*E$/g, "") + " " + nf(g.q) + " ลัง").join(" + ");
+  const where = `${sp.b.n} แถว ${sp.i + 1}/${sp.g.nl} ${side}${p.hand ? " · เรียงมือบนพาเลท" : p.z ? " · ชั้นบน" : ""}`;
+  return { what, where, po: p.u.po, kg: p.u.kg, hand: p.hand };
+}
+// ลากพาเลทไปช่องใหม่: ครั้งแรกตรึงตำแหน่งพาเลทชั้นล่างทั้งคันไว้ก่อน แล้วสลับ 2 ช่อง (ช่องว่าง = ย้ายไปเฉยๆ)
+function movePallet(p, targetKey) {
+  const t = trucks[sel]; if (!t) return;
+  const from = spotKey(p.sp); if (from === targetKey) return;
+  const r = evalTruck(t);
+  if (!t.fix) { t.fix = {}; r.placed.forEach((q) => { if (!q.z && !q.hand) t.fix[q.u.key] = spotKey(q.sp); }); }
+  const other = r.placed.find((q) => !q.z && !q.hand && spotKey(q.sp) === targetKey);
+  t.fix[p.u.key] = targetKey; if (other) t.fix[other.u.key] = from;
+  const before = r.ax.worst, after = evalTruck(t).ax.worst;
+  renderKpis(); renderTrucks(); renderViewer();
+  toastMsg((other ? "สลับพาเลทแล้ว" : "ย้ายพาเลทแล้ว") + " · เพลาสูงสุด " + nf(before) + "% → " + nf(after) + "%");
+}
+function stopPlay() { if (seqTimer) { clearInterval(seqTimer); seqTimer = null; } }
+function seqTotal() { const t = trucks[sel]; return t && t.items.length ? loadSeq(evalTruck(t)).length : 0; }
+function applySeq(animate) {
+  if (!R3 || !R3.seq) return;
+  const n = R3.seq.length, st = seqMode ? seqStep : n;
+  R3.seq.forEach((s, k) => { s.g.visible = k < st; s.g.position.y = 0; });
+  if (R3.hl) { R3.hl.parent && R3.hl.parent.remove(R3.hl); R3.hl = null; }
+  R3.anim = null;
+  if (seqMode && st > 0) {
+    const cur = R3.seq[st - 1];
+    R3.hl = new THREE.BoxHelper(cur.g, 0xC9A227); R3.grp.add(R3.hl);
+    if (animate && !matchMedia("(prefers-reduced-motion: reduce)").matches) { cur.g.position.y = 1.6; R3.anim = { g: cur.g, t0: performance.now() }; }
+  }
+}
+function renderSeq() {
+  const t = trucks[sel], n = seqTotal(), bar = $("seqBar"), list = $("seqList");
+  if (!n) { bar.innerHTML = ""; list.hidden = true; return; }
+  if (!seqMode) {
+    bar.innerHTML = `<button class="btn" data-seq="open">▶ ลำดับขึ้นของ (${n} พาเลท)</button><span class="note">ดูทีละพาเลทว่าวางตรงไหน · ส่งรายการให้คลังทาง LINE ได้</span>`;
+    list.hidden = true; return;
+  }
+  bar.innerHTML = `<div class="seg"><button data-seq="first" aria-label="กลับไปเริ่ม">⏮</button><button data-seq="prev" aria-label="ย้อน 1 ขั้น">◀</button><button data-seq="play" aria-pressed="${!!seqTimer}">${seqTimer ? "⏸ หยุด" : "▶ เล่น"}</button><button data-seq="next" aria-label="ถัดไป 1 ขั้น">▶</button><button data-seq="last" aria-label="ไปขั้นสุดท้าย">⏭</button></div>
+    <b class="num">ขั้น ${seqStep}/${n}</b><button class="btn sec" data-seq="copy">📋 คัดลอกส่ง LINE</button><button class="btn sec" data-seq="close">✕ ดูทั้งคัน</button>`;
+  const seq = loadSeq(evalTruck(t));
+  list.innerHTML = seq.map((p, k) => { const L = seqLabel(p); return `<li data-jump="${k + 1}" class="${k + 1 === seqStep ? "now" : k + 1 < seqStep ? "done" : ""}"><span class="sn">${k + 1 < seqStep ? "✓" : k + 1}</span><span><b>${esc(L.where)}</b><span class="ln">${esc(L.what)}</span><span class="ln muted">PO ${esc(L.po)} · ${nf(L.kg)} กก.</span></span></li>`; }).join("");
+  list.hidden = false;
+  const cur = list.querySelector("li.now"); if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest" });
+}
+function seqGo(step, animate) { const n = seqTotal(); seqStep = Math.max(0, Math.min(n, step)); applySeq(animate); renderSeq(); if (seqStep >= n) stopPlay(); }
+function seqCopyText() {
+  const t = trucks[sel], r = evalTruck(t), seq = loadSeq(r), dc = A.dc[t.dc] || {};
+  const head = `📦 ลำดับขึ้นของ คัน #${t.id} ${r.type.name}${t.driver ? " · " + t.driver.name + " " + t.driver.plate.split(",")[0] : ""}\nส่ง ${t.dc} ${dc.n || ""} · ขึ้นของ ${t.short ? "(ยังไม่มีรถ)" : hmDay(t.slot)} · ${seq.length} พาเลท ${nf(r.kg)} กก.\n(แถว 1 = ชิดหัวรถ · ขวา = ฝั่งคนขับ)\n`;
+  return head + seq.map((p, k) => { const L = seqLabel(p); return `${k + 1}. ${L.where} — ${L.what}`; }).join("\n");
+}
+
+// ── 3D ──
+let R3 = null;
+function css(v) { return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function init3D() {
+  if (R3 || typeof THREE === "undefined") return;
+  const stage = $("stage");
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+  stage.insertBefore(renderer.domElement, stage.firstChild);
+  const scene = new THREE.Scene(), cam = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+  const ctl = THREE.OrbitControls ? new THREE.OrbitControls(cam, renderer.domElement) : null;
+  if (ctl) {
+    ctl.enableDamping = true; ctl.maxPolarAngle = Math.PI * 0.49; ctl.screenSpacePanning = true;
+    // คุณน้องขอ: ลากซ้าย = เลื่อนภาพ · ลากขวา = หมุน · ล้อ = ซูม · มือถือ นิ้วเดียว = เลื่อน สองนิ้ว = ซูม/หมุน
+    ctl.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+    ctl.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
+  }
+  renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());   // คลิกขวาใช้หมุน ไม่เปิดเมนู
+  scene.add(new THREE.AmbientLight(0xffffff, 0.75));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.6); dl.position.set(5, 10, 6); scene.add(dl);
+  const grp = new THREE.Group(); scene.add(grp);
+  const drop = new THREE.Mesh(new THREE.BoxGeometry(1, 0.08, 1), new THREE.MeshBasicMaterial({ color: 0xC9A227, transparent: true, opacity: 0.55 }));
+  drop.visible = false; scene.add(drop);
+  R3 = { renderer, scene, cam, ctl, grp, picks: [], drop };
+  if (ctl) ctl.addEventListener("start", () => { R3.fly = null; if (R3.view) { R3.view = null; markView(); } });   // ลาก/ซูมเอง = เลิกไฮไลต์ปุ่มมุมมอง
+  const size = () => { const w = stage.clientWidth, h = stage.clientHeight; renderer.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); };
+  new ResizeObserver(size).observe(stage); size();
+  const ray = new THREE.Raycaster(), m = new THREE.Vector2(), floorPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hitPt = new THREE.Vector3();
+  const aim = (e) => { const b = renderer.domElement.getBoundingClientRect(); m.x = ((e.clientX - b.left) / b.width) * 2 - 1; m.y = -((e.clientY - b.top) / b.height) * 2 + 1; ray.setFromCamera(m, cam); };
+  const pickPallet = () => ray.intersectObjects(R3.picks).find((h) => h.object.parent && h.object.parent.visible);
+  const spotUnder = () => { if (!ray.ray.intersectPlane(floorPlane, hitPt)) return null; const x = hitPt.x / 0.01, z = hitPt.z / 0.01;
+    return (R3.spots || []).find((s) => Math.abs(x - s.x) <= s.along / 2 && Math.abs(z - s.z) <= s.across / 2) || null; };
+  const showTip = (u) => { const tip = $("tip"); if (!u) { tip.hidden = true; return; }
+    tip.innerHTML = `<b>PO ${esc(u.po)}</b> · ${esc(u.dc)}${u.mix ? ' <span class="chip c-info">พาเลทเศษ</span>' : ""}<br>${u.segs.map((g) => esc(g.s.name) + " · " + nf(g.q) + " ลัง (" + g.lay + " ชั้น)").join("<br>")}<br><span class="muted">สูง ${nf(u.h)} ซม. · ${nf(u.kg)} กก.</span>`;
+    tip.hidden = false; };
+  let drag = null;
+  // capture บนกล่องแม่ → ทำงานก่อน OrbitControls (ถ้าจับโดนพาเลท จะไม่หมุนกล้อง)
+  stage.addEventListener("pointerdown", (e) => {
+    if (ROLE !== "planner") return;   // จัดพาเลทเป็นงานของ planner
+    if (e.button > 0 || e.target !== renderer.domElement || e.shiftKey || e.ctrlKey || e.metaKey) return;   // ปุ่มบนภาพ / Shift+ลาก = ให้ OrbitControls จัดการ
+    aim(e); const hit = pickPallet();
+    if (!hit) { drag = { none: true, x: e.clientX, y: e.clientY }; return; }
+    const ent = (R3.seq || []).find((s) => s.p.u === hit.object.userData.u);
+    drag = { u: hit.object.userData.u, ent, x: e.clientX, y: e.clientY, moved: false, ok: ent && !ent.p.z && !ent.p.hand && !seqMode };
+    if (drag.ok) { e.stopPropagation(); if (ctl) ctl.enabled = false; }
+  }, true);
+  // ชี้เมาส์: พาเลทชั้นล่าง = มือจับ (ลากได้) · ชั้นบน/เศษ = ❔ ดูรายละเอียดอย่างเดียว · ที่ว่าง = ลูกศรหมุน
+  let hoverRaf = 0;
+  renderer.domElement.addEventListener("pointermove", (e) => {
+    if (drag || e.pointerType === "touch" || hoverRaf) return;
+    hoverRaf = requestAnimationFrame(() => {
+      hoverRaf = 0; aim(e); const hit = pickPallet();
+      const ent = hit && (R3.seq || []).find((s) => s.p.u === hit.object.userData.u);
+      renderer.domElement.style.cursor = !hit ? "" : ent && !ent.p.z && !ent.p.hand && !seqMode ? "move" : "help";   // ที่ว่าง = มือ (เลื่อนภาพ) · พาเลท = ลูกศร 4 ทาง (ย้าย)
+    });
+  });
+  window.addEventListener("pointermove", (e) => {
+    if (drag && drag.ok && drag.moved) renderer.domElement.style.cursor = "grabbing";
+    if (!drag || drag.none || !drag.ok) return;
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) > 5) drag.moved = true;
+    if (!drag.moved) return;
+    aim(e); const sp = spotUnder(); drag.target = sp;
+    drag.ent.g.position.y = 0.35;   // ยกพาเลทขึ้นระหว่างลาก
+    if (R3.drop) { R3.drop.visible = !!sp; if (sp) { R3.drop.position.set(sp.x * 0.01, 0.05, sp.z * 0.01); R3.drop.scale.set((sp.along - 6) * 0.01, 1, (sp.across - 6) * 0.01); } }
+  });
+  window.addEventListener("pointerup", (e) => {
+    if (!drag) return; const d = drag; drag = null; if (ctl) ctl.enabled = true; renderer.domElement.style.cursor = "";
+    if (R3.drop) R3.drop.visible = false;
+    if (d.none) { if (Math.hypot(e.clientX - d.x, e.clientY - d.y) < 5 && e.target === renderer.domElement) showTip(null); return; }
+    if (d.ent) d.ent.g.position.y = 0;
+    if (!d.moved) { showTip(d.u); if (!d.ok && d.ent && (d.ent.p.z || d.ent.p.hand) && !seqMode) toastMsg("ลากได้เฉพาะพาเลทชั้นล่าง · ชั้นบน/เศษจะย้ายตามพาเลทที่รองอยู่"); return; }
+    if (d.target) movePallet(d.ent.p, d.target.key);
+  });
+  (function loop() {
+    requestAnimationFrame(loop);
+    if (R3.anim) {   // พาเลทที่กำลังขึ้น ค่อยๆ ลงจากด้านบน
+      const t = Math.min(1, (performance.now() - R3.anim.t0) / 500);
+      R3.anim.g.position.y = 1.6 * (1 - t) * (1 - t); if (t >= 1) R3.anim = null;
+    }
+    if (R3.hl) R3.hl.update();
+    if (R3.fly && ctl) {   // เลื่อนกล้องไปมุมสำเร็จรูป 0.5 วิ
+      const k = Math.min(1, (performance.now() - R3.fly.s) / 500), e = 1 - Math.pow(1 - k, 3);
+      cam.position.lerpVectors(R3.fly.p0, R3.fly.p1, e); ctl.target.lerpVectors(R3.fly.t0, R3.fly.t1, e);
+      if (k >= 1) R3.fly = null;
+    }
+    if (ctl) ctl.update(); renderer.render(scene, cam);
+    if (R3.labels && R3.labels.length) {   // ย้ายป้ายเพลาตามมุมกล้อง · ป้ายที่ทับกันดันขึ้นด้านบน
+      const w = stage.clientWidth, h = stage.clientHeight, v = new THREE.Vector3(), shown = [];
+      R3.labels.forEach((L) => { v.copy(L.pos).project(cam); const off = v.z > 1 || Math.abs(v.x) > 1.2 || Math.abs(v.y) > 1.2;
+        L.el.style.display = off ? "none" : ""; if (!off) shown.push({ L, x: (v.x + 1) / 2 * w, y: (1 - v.y) / 2 * h }); });
+      shown.sort((a, c) => a.x - c.x);
+      shown.forEach((s, n) => { const L = s.L; L.w = L.w || L.el.offsetWidth; L.h = L.h || L.el.offsetHeight;
+        for (let i = 0; i < n; i++) { const q = shown[i]; if (Math.abs(s.x - q.x) < (L.w + q.L.w) / 2 + 4 && s.y > q.y - q.L.h - 4 && s.y - L.h - 4 < q.y) { s.y = q.y - q.L.h - 4; i = -1; } }
+        L.el.style.transform = `translate(${s.x.toFixed(1)}px,${s.y.toFixed(1)}px) translate(-50%,-100%)`; });
+    }
+  })();
+}
+// 1 เพลา: ซ้าย-ขวา · dual = ล้อคู่ (2 เส้นต่อข้าง) · ล้อแตะพื้นที่ y = -100
+function addWheelPair(grp, x, W, S, mat, dual, r) {
+  r = r || 50; const tw = 30;
+  [1, -1].forEach((sd) => {
+    (dual ? [0, 1] : [0]).forEach((k) => {
+      const z = sd * (W / 2 - tw / 2 - 4 - k * (tw + 4));
+      const tire = new THREE.Mesh(new THREE.CylinderGeometry(r * S, r * S, tw * S, 24), mat(0x1c1c1c));
+      tire.rotation.x = Math.PI / 2; tire.position.set(x, -(100 - r) * S, z * S); grp.add(tire);
+      if (k === 0) { const hub = new THREE.Mesh(new THREE.CylinderGeometry(r * 0.48 * S, r * 0.48 * S, (tw + 1) * S, 16), mat(0x9aa3a0)); hub.rotation.x = Math.PI / 2; hub.position.copy(tire.position); grp.add(hub); }
+    });
+  });
+  return dual ? 4 : 2;
+}
+const wheelCount = (type) => 2 + type.beds.reduce((a, b) => a + b.axles.length * (b.dual ? 4 : 2), 0);
+// หัวรถบรรทุก: ด้านข้างทำจากรูปโปรไฟล์ (กระจกหน้าเฉียง) แล้วรีดออกเป็นความกว้างรถ · หันหน้าไปทาง -x
+function addCab(grp, W, S, mat, r) {
+  const cw = W + 10, half = cw / 2, body = new THREE.Group();
+  const sh = new THREE.Shape();
+  [[0, -62], [0, 238], [-128, 238], [-168, 150], [-178, 95], [-186, -62]].forEach((p, i) => (i ? sh.lineTo(p[0] * S, p[1] * S) : sh.moveTo(p[0] * S, p[1] * S)));
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: cw * S, bevelEnabled: false });
+  geo.translate(0, 0, -half * S);
+  body.add(new THREE.Mesh(geo, mat(0x2d6a4f)));
+  const glass = mat(0x1d2b33), chrome = mat(0xb9c0bd), dark = mat(0x2a2f2c);
+  // กระจกหน้า (ระนาบตามแนวเฉียง)
+  // แนวเฉียงจาก (-168,150) ขึ้นไป (-128,238) → แผ่นบาง หมุนรอบแกน z ให้แนบเส้นนี้
+  const ws = new THREE.Mesh(new THREE.BoxGeometry(2 * S, (Math.hypot(40, 88) - 8) * S, (cw - 24) * S), glass);
+  ws.rotation.z = -Math.atan2(40, 88); ws.position.set(-149.5 * S, 194 * S, 0); body.add(ws);
+  // หน้าต่างข้าง + เส้นประตู
+  [1, -1].forEach((sd) => {
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(95 * S, 70 * S), glass);
+    win.position.set(-82 * S, 182 * S, sd * (half + 0.6) * S); if (sd < 0) win.rotation.y = Math.PI; body.add(win);
+    const door = new THREE.Mesh(new THREE.BoxGeometry(3 * S, 160 * S, 1 * S), dark);
+    door.position.set(-28 * S, 70 * S, sd * (half + 0.6) * S); body.add(door);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(60 * S, 6 * S, 18 * S), chrome);
+    step.position.set(-80 * S, -40 * S, sd * (half + 6) * S); body.add(step);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(4 * S, 4 * S, 26 * S), dark);
+    arm.position.set(-150 * S, 175 * S, sd * (half + 12) * S); body.add(arm);
+    const mir = new THREE.Mesh(new THREE.BoxGeometry(6 * S, 40 * S, 16 * S), dark);
+    mir.position.set(-150 * S, 165 * S, sd * (half + 26) * S); body.add(mir);
+    const lamp = new THREE.Mesh(new THREE.BoxGeometry(4 * S, 16 * S, 34 * S), mat(0xfff3c4));
+    lamp.position.set(-187 * S, 22 * S, sd * (half - 34) * S); body.add(lamp);
+  });
+  // ป้ายหน้ารถ "SSB Smart Supply" บนแผงเฉียงใต้กระจกหน้า (เส้น (-178,95) → (-168,150))
+  const cv = document.createElement("canvas"); cv.width = 1024; cv.height = 192;
+  const cx2 = cv.getContext("2d"); cx2.textAlign = "center"; cx2.textBaseline = "middle";
+  cx2.font = "700 112px 'IBM Plex Sans Thai', 'Segoe UI', Arial, sans-serif";
+  const t1 = "SSB ", t2 = "Smart Supply", w1 = cx2.measureText(t1).width, w2 = cx2.measureText(t2).width, sx = 512 - (w1 + w2) / 2;
+  cx2.textAlign = "left"; cx2.fillStyle = "#C9A227"; cx2.fillText(t1, sx, 100); cx2.fillStyle = "#ffffff"; cx2.fillText(t2, sx + w1, 100);
+  const tex = new THREE.CanvasTexture(cv); tex.anisotropy = 4;
+  const n = new THREE.Vector3(-55, 10, 0).normalize();
+  const badge = new THREE.Mesh(new THREE.PlaneGeometry((cw - 50) * S, (cw - 50) * S * 192 / 1024), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+  badge.rotation.order = "YXZ"; badge.rotation.y = -Math.PI / 2; badge.rotation.x = -Math.atan2(10, 55);   // หันหน้าออก -x แล้วเอนตามแผง ไม่หมุนเอียง
+  badge.position.set((-173.1 + n.x * 1.2) * S, (122 + n.y * 1.2) * S, 0); body.add(badge);
+  const grill = new THREE.Mesh(new THREE.BoxGeometry(4 * S, 80 * S, (cw - 110) * S), dark);
+  grill.position.set(-185 * S, 40 * S, 0); body.add(grill);
+  for (let k = 0; k < 5; k++) { const bar = new THREE.Mesh(new THREE.BoxGeometry(5 * S, 4 * S, (cw - 116) * S), chrome); bar.position.set(-186 * S, (10 + k * 15) * S, 0); body.add(bar); }
+  const bump = new THREE.Mesh(new THREE.BoxGeometry(16 * S, 30 * S, (cw + 6) * S), chrome);
+  bump.position.set(-190 * S, -45 * S, 0); body.add(bump);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(90 * S, 26 * S, (cw - 40) * S), mat(0x24573f));
+  roof.position.set(-60 * S, 251 * S, 0); body.add(roof);
+  const exh = new THREE.Mesh(new THREE.CylinderGeometry(7 * S, 7 * S, 230 * S, 12), chrome);
+  exh.position.set(6 * S, 120 * S, (half - 14) * S); body.add(exh);
+  const tank = new THREE.Mesh(new THREE.CylinderGeometry(26 * S, 26 * S, 90 * S, 18), chrome);
+  tank.rotation.z = Math.PI / 2; tank.position.set(60 * S, -40 * S, -(half - 30) * S); body.add(tank);
+  body.position.set(-12 * S, 0, 0); grp.add(body);
+  addWheelPair(grp, -120 * S, W, S, mat, false, r);   // เพลาหน้า ล้อเดี่ยว
+}
+// ป้ายน้ำหนักลงเพลา: ตัวหนังสือ HTML ลอยทับภาพ (คมชัด ขนาดคงที่ทุกระยะซูม) ตามตำแหน่งเหนือเพลา + เส้นชี้ลงล้อใน 3D
+//   เขียว ≤90% · เหลือง ≤100% · แดง เกินพิกัด
+function addAxleLabels(grp, r, S) {
+  const topY = Math.max(...r.type.beds.map((b) => b.H)) + 80, box = $("axLabels");
+  box.innerHTML = ""; R3.labels = [];
+  r.ax.loads.forEach((l) => {
+    const tone = axTone(l.pct), bg = tone === "bad" ? "#c0392b" : tone === "warn" ? "#b7791f" : "#1B4332";
+    const el = document.createElement("div"); el.className = "axlab"; el.style.background = bg;
+    el.innerHTML = `<b>${nf(l.kg / 1000, 1)} ตัน</b><small>${nf(l.pct)}% ของพิกัด</small><small class="nm">${esc(l.n.replace(/\s*\(.*\)/, ""))}</small>`;
+    box.appendChild(el); R3.labels.push({ el, pos: new THREE.Vector3(l.x * S, topY * S, 0) });
+    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(l.x * S, (topY - 22) * S, 0), new THREE.Vector3(l.x * S, -50 * S, 0)]);
+    grp.add(new THREE.Line(geo, new THREE.LineBasicMaterial({ color: bg, transparent: true, opacity: 0.7 })));
+  });
+}
+function draw3D() {
+  const t = trucks[sel];
+  if (typeof THREE === "undefined") { drawFlat(t); return; }
+  init3D();
+  const { grp, scene, cam, ctl } = R3; R3.picks = [];
+  while (grp.children.length) grp.remove(grp.children[0]);
+  scene.background = new THREE.Color(css("--scene") || "#eef2ee");
+  $("tip").hidden = true; R3.labels = []; $("axLabels").innerHTML = "";
+  if (!t) return;
+  const r = evalTruck(t), S = 0.01, type = r.type, gap = 90;
+  const mat = (c, o) => new THREE.MeshLambertMaterial({ color: c, transparent: o != null, opacity: o == null ? 1 : o });
+  const lineC = new THREE.Color(css("--muted") || "#5f6f66");
+  // วางกระบะเรียงตามความยาว (แกน x) · หัวรถอยู่หน้า
+  let x0 = 0; const bedX = [];
+  type.beds.forEach((b) => { bedX.push(x0); x0 += b.L + gap; });
+  const totalL = x0 - gap, W = Math.max(...type.beds.map((b) => b.W));
+  addCab(grp, W, S, mat, type.r);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry((totalL + 900) * S, (W + 500) * S), mat(new THREE.Color(css("--bar") || "#e7ece6")));
+  ground.rotation.x = -Math.PI / 2; ground.position.set((totalL / 2 - 120) * S, -101 * S, 0); grp.add(ground);
+  type.beds.forEach((b, bi) => {
+    const fl = new THREE.Mesh(new THREE.BoxGeometry(b.L * S, 6 * S, b.W * S), mat(0x8a8f8a));
+    fl.position.set((bedX[bi] + b.L / 2) * S, -3 * S, 0); grp.add(fl);
+    const chassis = new THREE.Mesh(new THREE.BoxGeometry(b.L * S, 22 * S, (b.W - 60) * S), mat(0x2a2f2c));
+    chassis.position.set((bedX[bi] + b.L / 2) * S, -17 * S, 0); grp.add(chassis);
+    const box = new THREE.BoxGeometry(b.L * S, b.H * S, b.W * S);
+    const ed = new THREE.LineSegments(new THREE.EdgesGeometry(box), new THREE.LineBasicMaterial({ color: lineC }));
+    ed.position.set((bedX[bi] + b.L / 2) * S, (b.H / 2) * S, 0); grp.add(ed);
+    // ล้อ: หัว = เพลาคู่ท้าย · หาง/กระบะเดียว = เพลาหน้า + เพลาท้าย
+    b.axles.forEach((f) => addWheelPair(grp, (bedX[bi] + b.L * f) * S, b.W, S, mat, b.dual, type.r));
+    if (bi > 0) {   // คานลากหาง
+      const bar = new THREE.Mesh(new THREE.BoxGeometry((gap + 40) * S, 12 * S, 14 * S), mat(0x2a2f2c));
+      bar.position.set((bedX[bi] - gap / 2) * S, -30 * S, 0); grp.add(bar);
+    }
+  });
+  R3.spots = [];   // ช่องวางพาเลทบนพื้น (ซม.) ไว้หาว่าลากไปวางช่องไหน
+  type.beds.forEach((b, bi) => { const g = bedGrid(b); for (let i = 0; i < g.nl; i++) for (let j = 0; j < g.na; j++)
+    R3.spots.push({ key: bi + "-" + i + "-" + j, x: bedX[bi] + i * g.along + g.along / 2, z: -b.W / 2 + j * g.across + g.across / 2 + (b.W - g.na * g.across) / 2, along: g.along, across: g.across }); });
+  R3.seq = []; if (R3.hl) { R3.hl.parent && R3.hl.parent.remove(R3.hl); R3.hl = null; } R3.anim = null;
+  loadSeq(r).forEach((p) => {
+    const pg = new THREE.Group(); grp.add(pg); R3.seq.push({ g: pg, p });
+    const sp = p.sp, g = sp.g, b = sp.b, x = bedX[sp.bi] + sp.i * g.along + g.along / 2, z = -b.W / 2 + sp.j * g.across + g.across / 2 + (b.W - g.na * g.across) / 2;
+    const P = A.pallet, inset = 4;
+    if (!p.hand) {   // เศษเรียงมือ = ไม่มีพาเลทรอง
+      const base = new THREE.Mesh(new THREE.BoxGeometry((g.along - inset) * S, P.h * S, (g.across - inset) * S), mat(0xb08455));
+      base.position.set(x * S, (p.z + P.h / 2) * S, z * S); base.userData.u = p.u; pg.add(base); R3.picks.push(base);
+    }
+    let y = p.z + (p.hand ? 0 : P.h);
+    p.u.segs.forEach((sg) => {
+      const hh = sg.lay * sg.s.h, bad = p.z + p.u.h - (p.hand ? P.h : 0) > b.H;
+      const m = new THREE.Mesh(new THREE.BoxGeometry((g.along - inset - 4) * S, (hh - 1) * S, (g.across - inset - 4) * S), mat(bad ? 0xd04040 : sg.s.color));
+      m.position.set(x * S, (y + hh / 2) * S, z * S); m.userData.u = p.u; pg.add(m); R3.picks.push(m);
+      const ed = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 }));
+      ed.position.copy(m.position); pg.add(ed);
+      y += hh;
+    });
+  });
+  applySeq(false);
+  addAxleLabels(grp, r, S);
+  if (r.over.length) {   // พาเลทที่วางในรถไม่ได้ → กองสีแดงบนพื้นท้ายรถ
+    const P = A.pallet, along = P.w, across = P.l, x0 = totalL + 160, og = new THREE.Group(); grp.add(og);
+    r.over.forEach((u, k) => {
+      const i = Math.floor(k / 2), j = k % 2, x = x0 + i * (along + 12) + along / 2, z = (j ? 1 : -1) * (across / 2 + 6);
+      const m = new THREE.Mesh(new THREE.BoxGeometry((along - 6) * S, u.h * S, (across - 6) * S), new THREE.MeshLambertMaterial({ color: 0xd04040, transparent: true, opacity: 0.6 }));
+      m.position.set(x * S, (-100 + u.h / 2) * S, z * S); m.userData.u = u; og.add(m); R3.picks.push(m);
+      const ed = new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry), new THREE.LineBasicMaterial({ color: 0x8a1f1f })); ed.position.copy(m.position); og.add(ed);
+    });
+    const rows = Math.ceil(r.over.length / 2), kgOver = r.over.reduce((a, u) => a + u.kg, 0);
+    const el = document.createElement("div"); el.className = "axlab"; el.style.background = "#c0392b";
+    el.innerHTML = `<b>⛔ ล้น ${r.over.length} พาเลท</b><small>${nf(kgOver)} กก. · วางในรถไม่ได้</small>`;
+    $("axLabels").appendChild(el); R3.labels.push({ el, pos: new THREE.Vector3((x0 + rows * (along + 12) / 2) * S, 120 * S, 0) });
+  }
+  const cx = (totalL / 2 - 60) * S;
+  // ตั้งกล้องเฉพาะตอนเปลี่ยนแบบรถ · วาดใหม่ (ลากพาเลท/สลับคันแบบเดียวกัน) ไม่ดึงกล้องกลับ → ซูม/เลื่อนค้างไว้ได้
+  R3.span = (totalL + 260) * S; R3.width = (W + 120) * S; R3.mid = new THREE.Vector3(cx, 0.9, 0);   // ใช้จัดมุมมองสำเร็จรูป
+  if (!R3.fitFor || R3.fitFor !== type.k + totalL) {
+    R3.home = { pos: new THREE.Vector3(cx - totalL * 0.55 * S, 5.2, 7.5 + totalL * 0.25 * S), target: new THREE.Vector3(cx, 0.9, 0) };
+    viewHome(); R3.fitFor = type.k + totalL;
+  }
+}
+// มุมมองสำเร็จรูป: จัดระยะกล้องให้เห็นรถทั้งคันพอดีกรอบ แล้วเลื่อนกล้องไปแบบนุ่มๆ
+function viewPreset(name) {
+  if (!R3 || !R3.mid) return;
+  if (name === "home") return flyTo(R3.home.pos.clone(), R3.home.target.clone(), name);
+  const { cam } = R3, tanV = Math.tan((cam.fov * Math.PI / 180) / 2), aspect = cam.aspect || 1.6;
+  const fit = (w, h) => Math.max((w / 2) / (tanV * aspect), (h / 2) / tanV) * 1.12;   // ระยะที่เห็นกว้าง w สูง h พอดี
+  const m = R3.mid, tgt = m.clone(); let pos;
+  if (name === "top") { tgt.y = 0; pos = new THREE.Vector3(m.x, fit(R3.span, R3.width), 0.001); }
+  if (name === "side") { tgt.y = 1.0; pos = new THREE.Vector3(m.x, 1.0, fit(R3.span, 3.6)); }
+  if (name === "front") { tgt.y = 1.0; pos = new THREE.Vector3(m.x - R3.span / 2 - fit(R3.width, 3.6), 1.4, 0); }
+  if (name === "back") { tgt.y = 1.0; pos = new THREE.Vector3(m.x + R3.span / 2 + fit(R3.width, 3.6), 1.6, 0); }
+  flyTo(pos, tgt, name);
+}
+function flyTo(pos, tgt, name) {
+  const { cam, ctl } = R3; R3.view = name; markView();
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches || !ctl) { cam.position.copy(pos); if (ctl) { ctl.target.copy(tgt); ctl.update(); } else cam.lookAt(tgt); return; }
+  R3.fly = { p0: cam.position.clone(), t0: ctl.target.clone(), p1: pos, t1: tgt, s: performance.now() };
+}
+function markView() { document.querySelectorAll(".views button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.view === R3.view))); }
+function viewHome() { if (!R3 || !R3.home) return; R3.cam.position.copy(R3.home.pos); if (R3.ctl) { R3.ctl.target.copy(R3.home.target); R3.ctl.update(); } else R3.cam.lookAt(R3.home.target); }
+// เลื่อนภาพ (pan) ตามแกนจอ: dx +1 = ขวา, dy +1 = บน · ระยะเลื่อนตามระยะกล้อง (ซูมใกล้ = เลื่อนทีละน้อย)
+function panView(dx, dy) {
+  if (!R3 || !R3.ctl) return;
+  const { cam, ctl } = R3, step = cam.position.distanceTo(ctl.target) * 0.12;
+  const right = new THREE.Vector3().setFromMatrixColumn(cam.matrix, 0), up = new THREE.Vector3().setFromMatrixColumn(cam.matrix, 1);
+  const off = right.multiplyScalar(dx * step).add(up.multiplyScalar(dy * step));
+  cam.position.add(off); ctl.target.add(off); ctl.update();
+}
+function drawFlat(t) {   // โหลด 3D ไม่ได้ → ผังมองจากด้านบน
+  const st = $("stage"); if (!t) { st.innerHTML = ""; return; }
+  const r = evalTruck(t);
+  st.innerHTML = `<div class="flat">${r.type.beds.map((b, bi) => { const g = bedGrid(b); const cells = []; for (let j = 0; j < g.na; j++) for (let i = 0; i < g.nl; i++) { const p = r.placed.find((q) => q.sp.bi === bi && q.sp.i === i && q.sp.j === j && q.z === 0); cells.push(`<div style="grid-row:${j + 1};grid-column:${i + 1};height:44px;border-radius:6px;background:${p ? p.u.segs[0].s.color : "var(--bar)"}" title="${p ? esc(p.u.po) : ""}"></div>`); } return `<div class="note">${esc(b.n)}</div><div style="display:grid;gap:4px;grid-template-columns:repeat(${g.nl},1fr)">${cells.join("")}</div>`; }).join("")}<div class="note">โหลดภาพ 3D ไม่ได้ · แสดงผังด้านบนแทน</div></div>`;
+}
+function renderViewer() {
+  stopPlay(); seqMode = false; seqStep = 0;   // เปลี่ยนคัน/จัดใหม่ = กลับไปดูทั้งคัน
+  const t = trucks[sel];
+  if (!t) { $("vTitle").textContent = "—"; $("vChips").innerHTML = ""; $("vAlert").innerHTML = ""; draw3D(); $("legend").innerHTML = ""; $("axlePanel").innerHTML = ""; renderSeq(); return; }
+  const r = evalTruck(t);
+  $("vTitle").textContent = `#${t.id} · ${r.type.name}${t.driver ? " · " + t.driver.name : ""}`;
+  $("vChips").innerHTML = `<span class="chip c-gold">🛞 ${wheelCount(r.type)} ล้อ</span><span class="chip ${r.over.length ? "c-bad" : "c-ok"}">พาเลท ${r.pos + r.over.length}/${r.capPos}</span>${r.hand ? `<span class="chip c-info">+ เศษเรียงมือ ${r.hand}</span>` : ""}<span class="chip ${r.overKg ? "c-bad" : "c-ok"}" title="สินค้า + พาเลทไม้ ไม่รวมตัวรถ · บรรทุกได้หักเผื่อ ${A.payBuf}%">สินค้า ${nf(r.kg)} / บรรทุกได้ ${nf(r.payMax)} กก.</span>${t.short ? '<span class="chip c-bad">⛔ ยังไม่มีรถ · ภาพนี้คือแผนถ้าได้รถ</span>' : t.items.length ? `<span class="chip c-info">${t.round === 2 ? "รอบ 2 · " : ""}ขึ้นของ ${hmDay(t.slot)} · ถึงคลังนัด ${esc((A.dc[t.dc] || {}).t || "")}</span>` : ""}${opt.stack ? '<span class="chip c-gold">ซ้อน 2 ชั้น</span>' : ""}`;
+  const skus = [...new Set(r.placed.flatMap((p) => p.u.segs.map((g) => g.s)))];
+  $("legend").innerHTML = skus.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join("") + '<span><i style="background:#b08455"></i>พาเลทไม้</span><span><i style="background:#d04040"></i>สูงเกินกระบะ</span>';
+  // แถบเตือนใหญ่เหนือภาพ: ล้น / เกินน้ำหนัก / เพลาเกินพิกัด
+  const kgOver = r.over.reduce((a, u) => a + u.kg, 0), axOver = r.ax.loads.filter((l) => l.pct > 100);
+  const probs = [];
+  if (r.over.length) probs.push(`ล้น <b>${r.over.length} พาเลท</b> (${nf(kgOver)} กก.) วางในรถไม่ได้ · รถวางได้ ${r.capPos} พาเลท`);
+  if (r.overKg) probs.push(`สินค้า <b>${nf(r.kg)} กก.</b> เกินที่บรรทุกได้ ${nf(r.payMax)} อยู่ <b>${nf(r.kg - r.payMax)} กก.</b>`);
+  axOver.forEach((l) => probs.push(`${esc(l.n)} รับ <b>${nf(l.kg)} กก.</b> เกินพิกัด ${nf(l.lim)}`));
+  $("vAlert").innerHTML = probs.length ? `<div class="valert"><div class="vt">⛔ คันนี้บรรทุกเกิน</div><ul>${probs.map((p) => `<li>${p}</li>`).join("")}</ul>
+    <div class="row">${r.over.length || r.overKg ? `<button class="btn" data-splitover="1" style="background:#c0392b;color:#fff">แยกส่วนที่เกินไปรถคันใหม่</button>` : ""}<span class="note" style="color:inherit">${r.over.length || r.overKg ? "หรือลาก ⠿ ที่ PO ไปวางบนการ์ดรถคันอื่น" : "ลองติ๊ก ⚖️ วางของหนักใกล้เพลาท้าย หรือลากพาเลทหนักไปกลางรถ"}</span></div></div>` : "";
+  if (t.fix) $("vChips").insertAdjacentHTML("beforeend", `<span class="chip c-gold">✋ ตำแหน่งที่แอดมินวางเอง</span><button class="chip c-info" data-unfix="1" style="border:0;cursor:pointer">↺ ให้ระบบจัดตำแหน่งใหม่</button>`);
+  const ax = r.ax, tone = axTone(ax.worst);
+  $("vChips").insertAdjacentHTML("beforeend", `<span class="chip c-${tone === "bad" ? "bad" : tone === "warn" ? "warn" : "ok"}">⚖️ เพลา ${tone === "bad" ? "เกินพิกัด" : tone === "warn" ? "ใกล้เต็ม" : "ปกติ"}</span>`);
+  const cgTxt = r.type.beds.map((b, bi) => ax.cg[bi] == null ? "" : `${b.n} ${nf(ax.cg[bi] / 100, 1)} ม. จากหน้ากระบะ (กึ่งกลาง ${nf(b.L / 200, 1)} ม.)`).filter(Boolean).join(" · ");
+  $("axlePanel").innerHTML = `<div class="axle"><div class="row" style="justify-content:space-between"><b>⚖️ น้ำหนักลงเพลา</b><span class="note">รถเปล่า + สินค้า · พิกัดเป็นค่าสมมติ</span></div>
+    <div class="axgrid">${ax.loads.map((l) => `<span>${esc(l.n)}</span><span class="bar"><i class="${axTone(l.pct) === "bad" ? "x" : axTone(l.pct) === "warn" ? "w" : ""}" style="width:${Math.min(100, l.pct)}%"></i></span><span class="num">${nf(l.kg)} / ${nf(l.lim)}</span>`).join("")}
+    <span><b>รวมทั้งคัน</b></span><span class="bar"><i class="${axTone(ax.gvwPct) === "bad" ? "x" : axTone(ax.gvwPct) === "warn" ? "w" : ""}" style="width:${Math.min(100, ax.gvwPct)}%"></i></span><span class="num"><b>${nf(ax.total)} / ${nf(ax.gvw)}</b></span></div>
+    <div class="note">จุดศูนย์ถ่วงสินค้า: ${esc(cgTxt || "—")}</div>${r.over.length ? `<div class="note" style="color:var(--bad);font-weight:600">⚠️ ยังไม่นับพาเลทที่ล้น ${r.over.length} พาเลท (${nf(r.over.reduce((a, u) => a + u.kg, 0))} กก.) เพราะวางในรถไม่ได้</div>` : ""}</div>`;
+  draw3D(); renderSeq();
+}
+function renderAsm() {
+  const num = (path, v, step) => `<input type="number" step="${step || 1}" value="${v}" data-asm="${path}">`;
+  $("asm").innerHTML = `
+  <div><h3>พาเลท</h3><table><tr><th>กว้าง</th><th>ยาว</th><th>สูง</th><th>กก.</th><th>สูงสุดรวมของ</th></tr><tr><td>${num("pallet.w", A.pallet.w)}</td><td>${num("pallet.l", A.pallet.l)}</td><td>${num("pallet.h", A.pallet.h)}</td><td>${num("pallet.kg", A.pallet.kg)}</td><td>${num("pallet.maxH", A.pallet.maxH)}</td></tr></table></div>
+  <div><h3>สินค้า (ซม. / กก.)</h3><div class="tscroll"><table><tr><th>สินค้า</th><th>สูงลัง</th><th>กก./ลัง</th><th>ลัง/ชั้น</th><th>ชั้น</th></tr>${A.sku.map((s, i) => `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color}"></i> ${esc(s.name)}${s.note ? `<div class="note">${esc(s.note)}</div>` : ""}</td><td>${num("sku." + i + ".h", s.h)}</td><td>${num("sku." + i + ".kg", s.kg, 0.01)}</td><td>${num("sku." + i + ".per", s.per)}</td><td>${num("sku." + i + ".lay", s.lay)}</td></tr>`).join("")}</table></div></div>
+  <div><h3>รถ (กระบะใน ซม. · บรรทุกได้ กก.)</h3><div class="tscroll"><table><tr><th>ประเภท</th><th>ช่วง</th><th>ยาว</th><th>กว้าง</th><th>สูง</th><th>บรรทุก</th></tr>${A.types.map((t, i) => t.beds.map((b, j) => `<tr><td>${j ? "" : esc(t.name)}</td><td>${esc(b.n)}</td><td>${num("types." + i + ".beds." + j + ".L", b.L)}</td><td>${num("types." + i + ".beds." + j + ".W", b.W)}</td><td>${num("types." + i + ".beds." + j + ".H", b.H)}</td><td>${j ? "" : num("types." + i + ".pay", t.pay, 100)}</td></tr>`).join("")).join("")}</table></div><p class="note">พาเลทวางพื้นได้ = (กว้าง ÷ 120) × (ยาว ÷ 100) ต่อช่วง</p></div>
+  <div><h3>คลัง (ระยะเที่ยวเดียว กม.)</h3><div class="tscroll"><table><tr><th>คลัง</th><th>นัดลง</th><th>ระยะ</th></tr>${Object.keys(A.dc).map((k) => `<tr><td><span class="mono">${k}</span> ${esc(A.dc[k].n)} ${A.dc[k].real ? '<span class="chip c-ok">ค่ากลางจริง</span>' : '<span class="chip c-warn">สมมติ</span>'}</td><td class="mono">${esc(A.dc[k].t)}</td><td>${num("dc." + k + ".km", A.dc[k].km)}</td></tr>`).join("")}</table></div></div>
+  <div><h3>น้ำหนักลงเพลา (กก.) · ⚠️ สมมติ ต้องยืนยันพิกัดจริง</h3><div class="tscroll"><table><tr><th>รถ / เพลา</th><th>รถเปล่า</th><th>พิกัด</th></tr>${A.types.map((t) => { const c = A.axle[t.k]; return `<tr><td colspan="2"><b>${esc(t.name)}</b></td><td>รวมทั้งคัน ${num("axle." + t.k + ".gvw", c.gvw, 100)}</td></tr>` + c.groups.map((g, i) => `<tr><td>${esc(g.n)}</td><td>${num("axle." + t.k + ".groups." + i + ".tare", g.tare, 100)}</td><td>${num("axle." + t.k + ".groups." + i + ".lim", g.lim, 100)}</td></tr>`).join(""); }).join("")}</table></div></div>
+  <div><h3>กฎ</h3><table><tr><td>ความเร็วเฉลี่ย (กม./ชม.)</td><td>${num("speed", A.speed)}</td></tr><tr><td>เผื่อถึงก่อนนัด (ชม.)</td><td>${num("bufH", A.bufH, 0.5)}</td></tr><tr><td>ขึ้นของต่อคัน (นาที)</td><td>${num("loadMin", A.loadMin, 15)}</td></tr><tr><td>ช่องขึ้นของพร้อมกัน</td><td>${num("bays", A.bays)}</td></tr><tr><td>เผื่อน้ำหนัก (%)</td><td>${num("payBuf", A.payBuf)}</td></tr><tr><td>วิ่งไกล = ระยะตั้งแต่ (กม.) · ใช้คิว</td><td>${num("farKm", A.farKm, 10)}</td></tr></table></div>`;
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !$("qModal").hidden) { $("qModal").hidden = true; QBIG = false; }
+  else if (e.key === "Escape" && !$("drw").hidden) closeDrawer();
+  const dk = e.target.closest && e.target.closest("tr[data-drow],[data-fjob]");
+  if (dk && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showTruckDrawer(+(dk.dataset.drow != null ? dk.dataset.drow : dk.dataset.fjob)); }
+  const qd = e.target.closest && e.target.closest("div[data-qstat]");
+  if (qd && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showQStat(qd.dataset.qstat); }
+});
+
+// ── ส่งเข้าแพลนห้าง (หน้าแม่ pk-daily) ──
+const LPS = {};   // วันส่ง → { sig, at } ที่ส่งล่าสุด
+function lpRows() {
+  return trucks.filter((t) => t.items.length).map((t) => {
+    const { r, bad } = truckCheck(t), ty = A.types.find((x) => x.k === t.type), byDc = {};
+    t.items.forEach((it) => {
+      const d = byDc[it.dc] || (byDc[it.dc] = { dc: it.dc, pal: 0, cs: 0, kg: 0, po: [] });
+      d.pal += it.units.length; d.cs += it.units.reduce((a, u) => a + u.segs.reduce((b, g) => b + g.q, 0), 0);
+      d.kg += it.units.reduce((a, u) => a + u.kg, 0); if (!d.po.includes(it.po)) d.po.push(it.po);
+    });
+    return { id: t.id, k: t.type, size: ty.name, load: hmDay(t.slot), bad, kg: Math.round(r.kg),
+      stops: Object.values(byDc).map((d) => ({ ...d, kg: Math.round(d.kg), n: (A.dc[d.dc] || {}).n || "", t: (A.dc[d.dc] || {}).t || "" })) };
+  });
+}
+const lpSig = (rows) => JSON.stringify(rows.map((r) => [r.id, r.k, r.stops.map((s) => [s.dc, s.pal, s.cs, s.po.join()])]));
+function renderPlanner() {
+  if (ROLE !== "planner") return;
+  const rows = lpRows(), un = build.items.filter((i) => !assign[i.id]).length, bad = rows.filter((r) => r.bad.length).length;
+  if (!rows.length) { $("plannerBox").innerHTML = '<div class="note">วันส่งนี้ไม่มี PO</div>'; return; }
+  const s = LPS[date], sent = s && s.sig === lpSig(rows);
+  const st = s ? (sent ? '<span class="chip c-ok">✓ ส่งเข้าแพลนห้างแล้ว ' + esc(s.at) + "</span>" : '<span class="chip c-gold">แก้หลังส่ง · กดส่งอีกครั้งเพื่ออัปเดตงานห้าง</span>') : '<span class="chip c-gold">ยังไม่ได้ส่งเข้าแพลนห้าง</span>';
+  $("plannerBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2>📤 ส่งเข้าแพลนห้าง · ส่ง ${thd(date)}</h2>${st}</div>
+    <div class="note">จัด PO ลงรถให้เรียบร้อย แล้วกดส่ง → ได้งานห้างตามขนาดรถ (ยังไม่มีทะเบียน) · พี่ปุ๋ยแจ้งรถ + คนขับมาแล้ว ค่อยใส่ในแท็บ 📋 งานห้าง แล้วกดแจกงาน</div>
+    <div class="tscroll" style="margin-top:8px"><table><thead><tr><th>คัน</th><th>ขนาดรถ</th><th>คลัง</th><th>นัดลง</th><th class="r">พาเลท</th><th class="r">ลัง</th><th class="r">กก.</th><th>ขึ้นของ</th><th>เช็ค</th></tr></thead><tbody>${rows.map((r) => `<tr><td><b>#${r.id}</b></td><td>${esc(r.size)}</td>
+      <td>${r.stops.map((x) => '<span class="mono">' + esc(x.dc) + "</span> " + esc(x.n)).join("<br>")}</td><td class="mono">${r.stops.map((x) => esc(x.t)).join("<br>")}</td>
+      <td class="r num">${r.stops.reduce((a, x) => a + x.pal, 0)}</td><td class="r num">${nf(r.stops.reduce((a, x) => a + x.cs, 0))}</td><td class="r num">${nf(r.kg)}</td><td class="mono">${esc(r.load)}</td>
+      <td>${r.bad.length ? '<span class="chip c-bad">⚠️ ' + esc(r.bad.join(" · ")) + "</span>" : '<span class="chip c-ok">ผ่าน</span>'}</td></tr>`).join("")}</tbody></table></div>
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn" data-lpsend ${bad || un ? "disabled" : ""}>📤 ${s ? "ส่งอีกครั้ง" : "ส่ง"} ${rows.length} คันเข้าแพลนห้าง</button>
+      ${bad ? '<span class="note" style="color:var(--bad)">แก้คันที่น้ำหนัก/พาเลทไม่ผ่านก่อน (' + bad + " คัน)</span>" : ""}${un ? '<span class="note" style="color:var(--warn)">ยังมี ' + un + " PO ไม่อยู่คันไหน</span>" : ""}</div>`;
+}
+function lpSend() {
+  const rows = lpRows(); if (!rows.length) return;
+  window.parent.postMessage({ type: "lp-send", date, dateTH: thd(date), trucks: rows }, location.origin);
+  LPS[date] = { sig: lpSig(rows), at: new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" }) + " น." };
+  renderPlanner();
+}
+document.addEventListener("click", (e) => { const b = e.target.closest("[data-lpsend]"); if (b && !b.disabled) lpSend(); });
+function renderAll() { if (DRW >= 0 && !(trucks[DRW] && trucks[DRW].items.length)) closeDrawer(); renderRole(); renderTop(); renderPlanner(); renderFarm(); renderBook(); renderKpis(); renderTrucks(); renderQueue(); renderDisp(); renderPOs(); renderViewer(); }
+
+document.addEventListener("click", (e) => {
+  const li = e.target.closest("#seqList li[data-jump]");
+  if (li) { stopPlay(); seqGo(+li.dataset.jump, true); return; }
+  const up = e.target.closest("[data-unpin]");
+  if (up) { e.preventDefault(); delete pinsOf()[up.dataset.unpin]; build(); renderAll(); toastMsg("ให้ระบบเลือกคนขับคันนี้เองแล้ว"); return; }
+  if (e.target.closest("#qModal") && (e.target.id === "qModal" || e.target.closest("[data-qclose]"))) { $("qModal").hidden = true; QBIG = false; return; }
+  if (e.target.closest("[data-qbignote]")) { showQueueBig(); return; }
+  if (e.target.closest("#drw [data-dclose]")) { closeDrawer(); return; }
+  const fj = e.target.closest("[data-fjob]");
+  if (fj) { e.preventDefault(); showTruckDrawer(+fj.dataset.fjob); return; }
+  const dn = e.target.closest("[data-dnav]");
+  if (dn) { const act = trucks.map((t, i) => (t.items.length ? i : -1)).filter((i) => i >= 0), k = act.indexOf(DRW); if (act.length) showTruckDrawer(act[(k + +dn.dataset.dnav + act.length) % act.length]); return; }
+  const dr = e.target.closest("tr[data-drow]");
+  if (dr && !e.target.closest("button")) { showTruckDrawer(+dr.dataset.drow); return; }
+  const qd = e.target.closest("div[data-qstat]");
+  if (qd && !e.target.closest("button")) { showQStat(qd.dataset.qstat); return; }
+  const b = e.target.closest("button"); if (!b) return;
+  if (b.hasAttribute("data-qbig")) { showQueueBig(); return; }
+  if (b.dataset.qstat) { showQStat(b.dataset.qstat); return; }
+  if (b.dataset.drvmode) { opt.drvMode = b.dataset.drvmode; build(); renderAll(); toastMsg(opt.drvMode === "manual" ? "✋ พี่ปุ๋ยเลือกคนขับเอง · ลากการ์ดรถไปวางบนคนขับ หรือจิ้มแถวดูคำแนะนำ" : "🤖 ระบบเลือกคนขับให้ · ใกล้ = ค่าแรงน้อยก่อน · ไกล = ตามคิว"); return; }
+  if (b.dataset.dpick) { const [ti, code] = b.dataset.dpick.split("|"), t = trucks[+ti]; if (t) { pinTruck(t, code); if (!$("drw").hidden) showTruckDrawer(trucks.indexOf(trucks.find((x) => x.id === t.id))); } return; }
+  if (b.dataset.dnotify) {
+    const k = b.dataset.dnotify, nt = notifOf();
+    if (k === "undo") { bk().notified = {}; renderAll(); toastMsg("ล้างสถานะแจ้งแล้ว"); return; }
+    const list = k === "all" ? trucks.filter((t) => t.items.length && t.driver && !truckCheck(t).bad.length && notifState(t) !== "sent") : [trucks[+k]];
+    const fresh = list.filter((t) => notifState(t) !== "sent");
+    fresh.forEach((t) => { nt[tkey(t)] = { code: t.driver.code, slot: t.slot, at: Date.now() }; });
+    renderAll();
+    if (!$("drw").hidden && DRW >= 0) showTruckDrawer(DRW);
+    if (k !== "all") showDrvCard(list[0]);
+    if (fresh.length) toastMsg("ส่งการ์ดงานให้คนขับ " + fresh.length + " คนแล้ว (เดโม)");
+    return;
+  }
+  if (b.dataset.qkeep) { const c = b.dataset.qkeep, x = queueView().find((y) => y.code === c); if (!x) return; (QUEUE.keep[date] = QUEUE.keep[date] || {})[c] = !x.keep; renderAll(); if (QBIG) showQueueBig(); toastMsg(x.d.name + (x.keep ? " → เสียคิว (ไปต่อท้ายเมื่อยืนยัน)" : " → คืนคิว (ได้ก่อนรอบหน้า)")); return; }
+  if (b.dataset.qdecl) { const c = b.dataset.qdecl, dd = (QUEUE.decl[date] = QUEUE.decl[date] || {}); if (dd[c]) delete dd[c]; else dd[c] = true; build(); renderAll(); if ($("qmBox").classList.contains("wide") && !$("qModal").hidden) showQueueBig(); else showQStat(c); toastMsg(dd[c] ? "บันทึกว่าสละคิว · ระบบให้งานไกลคนถัดไป" : "ยกเลิกการสละคิวแล้ว"); return; }
+  if (b.hasAttribute("data-qconfirm")) { confirmQueue(); if (QBIG) showQueueBig(); return; }
+  if (b.hasAttribute("data-qundo")) { const c = QUEUE.confirmed[date]; if (!c) return; Object.assign(QUEUE, JSON.parse(JSON.stringify(c.before))); delete QUEUE.confirmed[date]; build(); renderAll(); if (QBIG) showQueueBig(); toastMsg("ยกเลิกการยืนยัน · คิวกลับเป็นเหมือนเดิม"); return; }
+  if (b.dataset.pan) { const [dx, dy] = b.dataset.pan.split(",").map(Number); panView(dx, dy); return; }
+  if (b.dataset.home) { viewHome(); return; }
+  if (b.dataset.view) { viewPreset(b.dataset.view); return; }
+  if (b.dataset.zoom && R3 && R3.ctl) { const { cam, ctl } = R3, k = +b.dataset.zoom > 0 ? 0.8 : 1.25; cam.position.sub(ctl.target).multiplyScalar(k).add(ctl.target); ctl.update(); return; }
+  if (b.dataset.splitover) { splitOverflow(); return; }
+  if (b.dataset.role) { ROLE = b.dataset.role; try { localStorage.setItem("pk711_role", ROLE); } catch (_) { /* */ } renderAll(); return; }
+  if (b.hasAttribute("data-psend")) { bk().sentAt = Date.now(); renderAll(); toastMsg("ส่งคำขอรถ " + needOf().total + " คันให้พี่ปุ๋ยแล้ว"); return; }
+  if (b.hasAttribute("data-punsend")) { bk().sentAt = 0; renderAll(); toastMsg("ดึงคำขอกลับมาแก้แล้ว"); return; }
+  if (b.dataset.fok || b.dataset.fno || b.dataset.fundo) {
+    const [d, code] = (b.dataset.fok || b.dataset.fno || b.dataset.fundo).split("|"), f = BOOK[d] && BOOK[d].farm; if (!f) return;
+    if (b.dataset.fok && !f.ok.has(code) && f.ok.size >= f.n) { toastMsg("ให้ครบ " + f.n + " คันตามที่ขอแล้ว"); return; }
+    f.ok.delete(code); f.no.delete(code);
+    if (b.dataset.fok) f.ok.add(code);
+    if (b.dataset.fno) f.no.add(code);
+    if (d === date) build();
+    renderAll(); return;
+  }
+  if (b.dataset.give) {
+    const g = b.dataset.give, all = readyFleet();
+    if (g === "clear") { setGiven(null); toastMsg("ยกเลิกการจองรถแล้ว · กลับไปสมมติว่ามีรถพอ"); return; }
+    if (g === "farm") {   // ขอยืมรถไร่ ↔ ยกเลิกคำขอ
+      const k = bk();
+      if (k.farm) { k.farm = null; build(); renderAll(); toastMsg("ยกเลิกคำขอยืมรถไร่แล้ว"); return; }
+      const sh = trucks.filter((t) => t.items.length && t.short && t.type === "trailer");
+      if (!sh.length) { toastMsg("ไม่มีคันพ่วงที่ขาด · รถไร่มีแต่พ่วง"); return; }
+      k.farm = { n: sh.length, at: Date.now(), ok: new Set(), no: new Set(), dcs: sh.map((t) => ({ dc: t.dc, latest: t.latestLoad, pal: t.items.reduce((a, i) => a + i.units.length, 0) })) };
+      if (!k.given) k.given = new Set();
+      build(); renderAll(); toastMsg("ส่งคำขอยืมรถไร่ " + sh.length + " คัน → แอดมินไร่ (ดูแท็บ ③)"); return;
+    }
+    if (g === "outs" || g === "r2") { const k = bk(); k[g] = !k[g]; if (!k.given) k.given = new Set(); build(); renderAll();
+      toastMsg(g === "r2" ? (k.r2 ? "ให้รถบริษัทที่กลับทันวิ่งรอบ 2 · อย่าลืมคุยกับคนขับล่วงหน้า" : "เลิกวิ่งรอบ 2 แล้ว") : (k.outs ? "เรียกรถร่วม " + OUTS.length + " คัน (ใช้หลังรอบ 2 และรถไร่)" : "เลิกใช้รถร่วมแล้ว")); return; }
+    const n = g === "all" ? all.length : Math.max(0, Math.min(all.length, Math.floor(+$("giveN").value || 0)));
+    setGiven(all.slice(0, n)); toastMsg("พี่ปุ๋ยให้ " + n + " คัน · เลือกคันที่พร้อมเร็วสุดก่อน (ติ๊กเปลี่ยนเองได้)"); return;
+  }
+  if (b.dataset.bcopy) {
+    const txt = b.dataset.bcopy === "req" ? bookRequestText() : shortText(b.dataset.bcopy);
+    const fail = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.style.cssText = "width:100%;height:140px"; b.after(ta); ta.select(); toastMsg("คัดลอกอัตโนมัติไม่ได้ · กดค้างที่ข้อความแล้วคัดลอกเอง"); };
+    try { navigator.clipboard.writeText(txt).then(() => toastMsg("คัดลอกแล้ว · วางในแชท LINE ได้เลย"), fail); } catch (err) { fail(); }
+    return;
+  }
+  if (b.hasAttribute("data-onlyun")) { onlyUn = !onlyUn; try { localStorage.setItem("pk711_onlyun", onlyUn ? "1" : "0"); } catch (_) { /* */ } renderPOs(); return; }
+  if (b.dataset.gotruck) { const i = trucks.findIndex((x) => x.id === +b.dataset.gotruck); if (i >= 0) { sel = i; renderTrucks(); renderPOs(); renderViewer(); } return; }
+  if (b.dataset.unfix) { const t = trucks[sel]; if (t) delete t.fix; renderKpis(); renderTrucks(); renderViewer(); toastMsg("ให้ระบบจัดตำแหน่งพาเลทใหม่แล้ว"); return; }
+  if (b.dataset.seq) {
+    const a = b.dataset.seq, n = seqTotal();
+    if (a === "open") { seqMode = true; seqGo(0, false); return; }
+    if (a === "close") { stopPlay(); seqMode = false; applySeq(false); renderSeq(); return; }
+    if (a === "first") { stopPlay(); seqGo(0, false); return; }
+    if (a === "last") { stopPlay(); seqGo(n, false); return; }
+    if (a === "prev") { stopPlay(); seqGo(seqStep - 1, false); return; }
+    if (a === "next") { stopPlay(); seqGo(seqStep + 1, true); return; }
+    if (a === "play") {
+      if (seqTimer) { stopPlay(); renderSeq(); return; }
+      if (seqStep >= n) seqStep = 0;
+      seqTimer = setInterval(() => seqGo(seqStep + 1, true), 1100); seqGo(seqStep + 1, true); return;
+    }
+    if (a === "copy") {
+      const txt = seqCopyText();
+      const done = () => toastMsg("คัดลอกแล้ว · วางในแชท LINE ของคลังได้เลย"), fail = () => { const ta = document.createElement("textarea"); ta.value = txt; ta.style.cssText = "width:100%;height:160px;margin-top:6px"; $("seqBar").appendChild(ta); ta.select(); toastMsg("คัดลอกอัตโนมัติไม่ได้ · กดค้างที่ข้อความแล้วคัดลอกเอง"); };
+      try { navigator.clipboard.writeText(txt).then(done, fail); } catch (err) { fail(); }
+      return;
+    }
+  }
+  if (b.dataset.date) { date = b.dataset.date; mode = "auto"; trucks = []; assign = {}; sel = 0; build(); renderAll(); return; }
+  if (b.dataset.mode) { mode = b.dataset.mode; if (mode === "manual") { trucks = []; assign = {}; } sel = 0; build(); renderAll(); return; }
+  if (b.dataset.sel != null) { sel = +b.dataset.sel; renderTrucks(); renderDisp(); renderPOs(); renderViewer(); return; }
+});
+document.addEventListener("change", (e) => {
+  const el = e.target;
+  if (el.dataset.move != null) { retarget(el.dataset.move, el.value); return; }
+  if (el.dataset.givecode) { const k = bk(), s = new Set(k.given || []); el.checked ? s.add(el.dataset.givecode) : s.delete(el.dataset.givecode); k.given = s; build(); renderAll(); return; }
+  if (el.id === "addSel" && el.value) { if (mode === "auto") { mode = "manual"; trucks.forEach((t) => (t.manual = true)); } const t = { id: newId(), type: el.value.slice(4), items: [], manual: true }; trucks.push(t); sel = trucks.length - 1; build(); renderAll(); return; }
+  if (el.id === "optOnePO" || el.id === "optStack" || el.id === "optBal") { opt.onePO = true; opt.stack = $("optStack").checked; opt.balance = $("optBal").checked; POS.forEach((p) => delete p._u); build(); renderAll(); return; }
+  if (el.dataset.asm) {
+    const path = el.dataset.asm.split("."), v = parseFloat(el.value); if (!(v >= 0)) return;
+    let o = A; for (let i = 0; i < path.length - 1; i++) o = o[path[i]]; o[path[path.length - 1]] = v;
+    POS.forEach((p) => delete p._u); R3 && (R3.fitFor = null); build(); renderAll();
+  }
+});
+// ปุ่มลูกศรบนคีย์บอร์ด (คลิกที่ภาพก่อน) = เลื่อนภาพ · +/- = ซูม
+$("stage").addEventListener("keydown", (e) => {
+  const map = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, 1], ArrowDown: [0, -1] };
+  if (map[e.key]) { e.preventDefault(); panView(...map[e.key]); }
+  else if ((e.key === "+" || e.key === "=" || e.key === "-") && R3 && R3.ctl) { e.preventDefault(); const { cam, ctl } = R3, k = e.key === "-" ? 1.25 : 0.8; cam.position.sub(ctl.target).multiplyScalar(k).add(ctl.target); ctl.update(); }
+  else if (e.key === "0") viewHome();
+});
+// ── ลาก PO (จับ ⠿) ไปวางบนการ์ดรถ หรือบนภาพ 3D (= คันที่เปิดดูอยู่) · ใช้ได้ทั้งเมาส์และนิ้ว ──
+let poDrag = null;
+document.addEventListener("pointerdown", (e) => {
+  const g = e.target.closest("[data-grip]"); if (!g || ROLE !== "planner") return;
+  e.preventDefault();
+  const ghost = document.createElement("div"); ghost.className = "ghost"; ghost.textContent = "📦 PO " + g.dataset.grip + " → วางบนการ์ดรถ";
+  document.body.appendChild(ghost);
+  poDrag = { id: g.dataset.grip, ghost, over: null, x: e.clientX, y: e.clientY, moved: false };
+  moveGhost(e);
+});
+function dropTarget(e) {
+  const el = document.elementFromPoint(e.clientX, e.clientY); if (!el) return null;
+  const it = poDrag && build.items.find((x) => x.id === poDrag.id);
+  const onTruck = (box, idx) => ({ el: box, idx, block: !!(it && assign[it.id] !== trucks[idx].id && hasOtherPO(trucks[idx], it)) });
+  const card = el.closest(".tc[data-sel]"); if (card) return onTruck(card, +card.dataset.sel);
+  if (el.closest("#tNew")) return { el: $("tNew"), fresh: true };
+  if (el.closest("#stage") && trucks[sel]) return onTruck($("stage"), sel);
+  if (el.closest("#poBox")) return { el: $("poBox"), unassign: true };   // ปล่อยกลับที่รายการ PO = เอาออกจากรถ
+  return null;
+}
+// ลากไปชิดขอบ → เลื่อนรายการรถ/ทั้งหน้าตามเอง (ทำซ้ำทุกเฟรมระหว่างค้างไว้)
+let scrollRaf = 0, lastPt = null;
+function autoScroll() {
+  scrollRaf = 0; if (!poDrag || !lastPt) return;
+  const y = lastPt.y, x = lastPt.x, edge = 70, sp = (d) => Math.ceil((edge - d) / 5);
+  const box = $("trucks").getBoundingClientRect();
+  if (x >= box.left && x <= box.right) {
+    if (y < box.top + edge && y > box.top - 30) $("trucks").scrollTop -= sp(y - box.top);
+    else if (y > box.bottom - edge && y < box.bottom + 30) $("trucks").scrollTop += sp(box.bottom - y);
+  }
+  if (y < edge) window.scrollBy(0, -sp(y)); else if (y > innerHeight - edge) window.scrollBy(0, sp(innerHeight - y));
+  moveGhost({ clientX: x, clientY: y });
+  scrollRaf = requestAnimationFrame(autoScroll);
+}
+function moveGhost(e) {
+  if (!poDrag) return;
+  lastPt = { x: e.clientX, y: e.clientY };
+  poDrag.ghost.style.left = e.clientX + 12 + "px"; poDrag.ghost.style.top = e.clientY + 12 + "px";
+  const tg = dropTarget(e);
+  if (Math.hypot(e.clientX - poDrag.x, e.clientY - poDrag.y) > 5) poDrag.moved = true;
+  poDrag.ghost.textContent = "📦 PO " + poDrag.id + (!tg ? " → วางบนการ์ดรถ" : tg.unassign ? " → เอาออกจากรถ" : tg.fresh ? " → รถคันใหม่" : tg.block ? " → ⛔ คัน #" + trucks[tg.idx].id + " มี PO อื่นแล้ว" : " → คัน #" + trucks[tg.idx].id);
+  if (poDrag.over) poDrag.over.classList.remove("dropok", "dropno");
+  if (tg) { tg.el.classList.add(tg.block ? "dropno" : "dropok"); poDrag.over = tg.el; } else poDrag.over = null;
+  if (!scrollRaf) scrollRaf = requestAnimationFrame(autoScroll);
+}
+window.addEventListener("pointermove", (e) => { if (poDrag) { e.preventDefault(); moveGhost(e); } }, { passive: false });
+window.addEventListener("pointerup", (e) => {
+  if (!poDrag) return; const tg = dropTarget(e), d = poDrag; poDrag = null; lastPt = null; d.ghost.remove(); if (d.over) d.over.classList.remove("dropok", "dropno");
+  if (!d.moved) { toastMsg("กด ⠿ ค้างแล้วลากไปวางบนการ์ดรถ"); return; }   // แค่แตะ ⠿ ไม่ถือว่าย้าย
+  if (!tg) return;
+  if (tg.unassign) { if (!assign[d.id]) return; retarget(d.id, ""); toastMsg("เอา PO " + d.id + " ออกจากรถแล้ว"); return; }
+  const it = build.items.find((x) => x.id === d.id); if (!it) return;
+  const openIt = () => { const ni = trucks.findIndex((x) => x.id === assign[d.id]); if (ni >= 0) { sel = ni; renderTrucks(); renderPOs(); renderViewer(); } };
+  if (tg.fresh) {
+    const type = A.types.slice().reverse().find((x) => fitsType(x, it.units)) || A.types[0];   // คันเล็กสุดที่พอ
+    retarget(d.id, "new-" + type.k); openIt();
+    toastMsg("เพิ่ม " + type.name + " คัน #" + assign[d.id] + " ให้ PO " + d.id + " แล้ว");
+    return;
+  }
+  const t = trucks[tg.idx]; if (!t || assign[d.id] === t.id) return;
+  if (retarget(d.id, String(t.id)) === false) return;
+  openIt();
+  toastMsg("ย้าย PO " + d.id + " ไปคัน #" + t.id + " แล้ว");
+});
+window.addEventListener("pointercancel", () => { if (!poDrag) return; const d = poDrag; poDrag = null; lastPt = null; d.ghost.remove(); if (d.over) d.over.classList.remove("dropok", "dropno"); });
+// ลากการ์ดรถ → วางบนคนขับ
+document.addEventListener("pointerdown", (e) => {
+  const g = e.target.closest("[data-tgrip]"); if (!g || ROLE !== "puy") return;
+  e.preventDefault(); e.stopPropagation();
+  const t = trucks[+g.dataset.tgrip]; if (!t) return;
+  const ghost = document.createElement("div"); ghost.className = "ghost"; ghost.textContent = "🚚 คัน #" + t.id + " → วางบนคนขับ";
+  document.body.appendChild(ghost);
+  tDrag = { t, ghost, over: null };
+}, true);
+window.addEventListener("pointermove", (e) => {
+  if (!tDrag) return; e.preventDefault();
+  tDrag.ghost.style.left = e.clientX + 12 + "px"; tDrag.ghost.style.top = e.clientY + 12 + "px";
+  const tg = tTarget(e);
+  if (tDrag.over && tDrag.over !== tg) tDrag.over.classList.remove("dropok");
+  if (tg) { tg.classList.add("dropok"); tDrag.over = tg; const d = DRIVERS.find((x) => x.code === tg.dataset.drvdrop); tDrag.ghost.textContent = "🚚 คัน #" + tDrag.t.id + " → " + (d ? d.name : ""); }
+  else { tDrag.over = null; tDrag.ghost.textContent = "🚚 คัน #" + tDrag.t.id + " → วางบนคนขับ"; }
+  const ql = $("qList");   // ลากชิดขอบรายการคิว = เลื่อนเอง
+  if (ql) { const r = ql.getBoundingClientRect(); if (e.clientX >= r.left && e.clientX <= r.right) { if (e.clientY < r.top + 40 && e.clientY > r.top - 20) ql.scrollTop -= 12; else if (e.clientY > r.bottom - 40 && e.clientY < r.bottom + 20) ql.scrollTop += 12; } }
+}, { passive: false });
+window.addEventListener("pointerup", (e) => {
+  if (!tDrag) return; const d = tDrag; tDrag = null; d.ghost.remove(); if (d.over) d.over.classList.remove("dropok");
+  const tg = tTarget(e); if (tg) pinTruck(d.t, tg.dataset.drvdrop);
+});
+build(); renderAll(); renderAsm();
+</script>
+<script>
+/* รับ PO จากหน้าแม่ (origin เดียวกันเท่านั้น) แล้วค่อยเริ่ม · เปิดตรงๆ = บอกทางเข้า */
+(function () {
+  const emb = window.parent !== window;
+  const msg = (h) => { document.querySelector(".wrap").innerHTML = '<div class="card lpmsg">' + h + "</div>"; };
+  function run(pos) {
+    if (window.__LP) return;
+    if (!Array.isArray(pos) || !pos.length) { msg("ยังไม่มี PO ให้จัด"); return; }
+    window.__LP = { pos };
+    const s = document.createElement("script"); s.textContent = document.getElementById("lpMain").textContent; document.body.appendChild(s);
+  }
+  window.addEventListener("message", (e) => {
+    if (e.origin !== location.origin || e.source !== window.parent) return;
+    const d = e.data || {}; if (d.type === "lp-init") run(d.pos);
+  });
+  if (emb) window.parent.postMessage({ type: "lp-ready" }, location.origin);
+  else msg('หน้านี้เปิดจาก <b>แพลนรถ Packing</b> → ชิป 🏬 แพลนห้าง → 📦 จัด PO ลงรถ');
+})();
+</script>
+</body>
+</html>
