@@ -977,8 +977,8 @@ function renderMall(){
       +'<td>'+(d?esc(d.name):j.head?'<span class="or">ยังไม่ระบุ</span>':dash)+'</td><td><div class="stw">'+jstPill(j,dfx)+(MALL.snap[j.id]?'':'<button class="ib jdel" data-jdel="'+j.id+'" aria-label="ลบงาน '+j.id+'" title="ลบงานนี้ (ยังไม่แจก)">🗑</button>')+'</div></td></tr>';});
   if(!js.length)h+='<tr><td colspan="10" class="note" style="padding:18px">ยังไม่มีงานห้าง · กด ＋ เพิ่มงานห้าง</td></tr>';
   h+='</tbody></table></div><p class="note">งานที่ใส่รถแล้วจะโผล่ในแพลนรวมทันที แต่คนขับ/คลัง/บัญชี ยังไม่ได้รับจนกว่าจะกดแจกงาน</p>';
-  $('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="งานห้างที่เลือก / รายการรถ"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
-  if(JE)drawJob();else renderList();
+  const _sk=scSave();$('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="งานห้างที่เลือก / รายการรถ"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
+  scLoad(_sk);if(JE)drawJob();else renderList();
   $('rlog').onclick=openLog;$('jadd').onclick=()=>openJob(null);$('jexp').onclick=openMallExport;if($('jdelall'))$('jdelall').onclick=askDelUnsent;
   $('v-plan').querySelectorAll('[data-jdel]').forEach(b=>{b.onclick=e=>{e.stopPropagation();askDelJob(b.dataset.jdel);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-jset]').forEach(b=>b.onclick=e=>{e.stopPropagation();openJob(b.dataset.jset);});
@@ -1590,11 +1590,20 @@ const drLab=ms=>{const D=drMonths(),a=ms.map(k=>D[k]).filter(Boolean);if(!a.leng
   const nums=a.map(x=>x.m),run=nums.every((v,i)=>!i||v===nums[i-1]+1);
   return (a.length>1&&run?MON[nums[0]-1]+'–'+MON[nums[nums.length-1]-1]:nums.map(n=>MON[n-1]).join(', '))+' '+(ys[0]+543);};
 /* รวมเดือนที่เลือกเป็นรายคนขับ + เก็บแยกรายเดือนไว้เทียบ */
+/* ชนิดรถของคนขับ = ชนิดรถประจำ (4/6/10 ล้อ/พ่วง/หัวลาก) · อันดับ+เทียบเฉลี่ย = เทียบในรถชนิดเดียวกัน */
+const DR_TO=['4 ล้อ','6 ล้อ','10 ล้อ','พ่วง','หัวลาก'],DR_TC={'4 ล้อ':'#0E7490','6 ล้อ':'#7C3AED','10 ล้อ':'#B45309','พ่วง':'#BE123C','หัวลาก':'#334155'};
+const drTy=h=>{const v=VEH.find(x=>x.head===h);return v?vSize(v):'ไม่ระบุ';},drTyO=t=>{const i=DR_TO.indexOf(t);return i<0?9:i;};
+const drTyChip=t=>({html:'<span style="display:inline-block;line-height:16px;vertical-align:middle;padding:1px 8px;border-radius:9px;font-size:10px;font-weight:700;color:#fff;background:'+(DR_TC[t]||'#64748b')+'">'+esc(t)+'</span>'});
+const dr1=v=>Math.round(v*10)/10,drA=(h,a)=>{const n=parseInt(h.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+a+')';};   /* html2canvas ไม่รู้จัก #RRGGBBAA */
 function drData(){const D=drMonths(),ms=DR_MS.filter(k=>D[k]).sort(),by={};
-  ms.forEach(k=>D[k].rows.forEach(r=>{const x=by[r.code]||(by[r.code]={code:r.code,name:r.name,head:r.head,h:0,y:0,o:0,t:0,mo:{}});x.h+=r.h;x.y+=r.y;x.o+=r.o;x.t+=r.t;x.mo[k]=r;}));
+  ms.forEach(k=>D[k].rows.forEach(r=>{const x=by[r.code]||(by[r.code]={code:r.code,name:r.name,head:r.head,ty:drTy(r.head),h:0,y:0,o:0,t:0,mo:{}});x.h+=r.h;x.y+=r.y;x.o+=r.o;x.t+=r.t;x.mo[k]=r;}));
   const rows=Object.values(by).sort((a,b)=>b.t-a.t||a.name.localeCompare(b.name,'th')),n=rows.length,tot=rows.reduce((a,r)=>({h:a.h+r.h,y:a.y+r.y,o:a.o+r.o,t:a.t+r.t}),{h:0,y:0,o:0,t:0});
-  const avg=n?tot.t/n:0;rows.forEach((r,i)=>{r.rk=i+1;r.dv=r.t-avg;r.lv=avg&&r.t>avg*1.25?'วิ่งมาก':avg&&r.t<avg*.75?'วิ่งน้อย':'ปกติ';});
-  return {ms,D,rows,tot,avg,n,period:drLab(ms),note:ms.map(k=>D[k].label+' = '+D[k].note).join(' · ')};}
+  const avg=n?tot.t/n:0,G={};
+  rows.forEach(r=>{const g=G[r.ty]||(G[r.ty]={ty:r.ty,n:0,h:0,y:0,o:0,t:0,mx:-1,mn:1e9});g.n++;g.h+=r.h;g.y+=r.y;g.o+=r.o;g.t+=r.t;g.mx=Math.max(g.mx,r.t);g.mn=Math.min(g.mn,r.t);});
+  const grp=Object.values(G).sort((a,b)=>drTyO(a.ty)-drTyO(b.ty));grp.forEach(g=>g.avg=g.n?g.t/g.n:0);
+  rows.sort((a,b)=>drTyO(a.ty)-drTyO(b.ty)||b.t-a.t||a.name.localeCompare(b.name,'th'));
+  let k0=null,c=0;rows.forEach(r=>{if(r.ty!==k0){k0=r.ty;c=0;}r.rk=++c;const ga=G[r.ty].avg;r.ga=ga;r.dv=r.t-ga;r.lv=ga&&r.t>ga*1.25?'วิ่งมาก':ga&&r.t<ga*.75?'วิ่งน้อย':'ปกติ';});
+  return {ms,D,rows,tot,avg,n,grp,G,period:drLab(ms),note:ms.map(k=>D[k].label+' = '+D[k].note).join(' · ')};}
 const DR_ST={'วิ่งมาก':['#8a5a0b','#fef0d9'],'ปกติ':['#127a2e','#e7f5ee'],'วิ่งน้อย':['#185fa5','#e6f1fb']};
 const drPct=(a,b)=>b?Math.round(a/b*1000)/10:0;
 
@@ -1623,7 +1632,7 @@ const DR_CELL='padding:0 7px;height:26px;line-height:26px;white-space:nowrap;ove
 const DR_TH='padding:0 7px;height:30px;line-height:30px;font-size:10.5px;font-weight:700;color:#fff;background:'+DRT.mid+';white-space:nowrap;overflow:hidden';
 function drTable(cols,rows,total){const cg='<colgroup>'+cols.map(k=>'<col'+(k.w?' style="width:'+k.w+'px"':'')+'>').join('')+'</colgroup>';
   const hd='<tr>'+cols.map((k,i)=>'<th style="'+DR_TH+';text-align:'+(k.a||'left')+(i===0?';border-radius:8px 0 0 0':'')+(i===cols.length-1?';border-radius:0 8px 0 0':'')+'">'+esc(k.h)+'</th>').join('')+'</tr>';
-  const bd=rows.map((r,ri)=>'<tr style="background:'+(ri%2?'#f6f8fc':'#fff')+'">'+r.map((v,ci)=>'<td style="'+DR_CELL+';text-align:'+(cols[ci].a||'left')+'">'+(v&&typeof v==='object'?v.html:esc(v==null?'':String(v)))+'</td>').join('')+'</tr>').join('');
+  const bd=rows.map((r0,ri)=>{const g=!Array.isArray(r0),r=g?r0.c:r0;return '<tr style="background:'+(g?drA(r0.g,.1):ri%2?'#f6f8fc':'#fff')+'">'+r.map((v,ci)=>'<td style="'+DR_CELL+(g&&!ci?';border-left:4px solid '+r0.g:'')+';text-align:'+(cols[ci].a||'left')+'">'+(v&&typeof v==='object'?v.html:esc(v==null?'':String(v)))+'</td>').join('')+'</tr>';}).join('');
   const tt=total?'<tr style="background:'+DRT.totBg+'">'+total.map((v,ci)=>'<td style="'+DR_CELL+';border-bottom:2px solid '+DRT.acc+';border-top:2px solid '+DRT.acc+';font-weight:700;color:'+DRT.ink+';text-align:'+(cols[ci].a||'left')+'">'+esc(v==null?'':String(v))+'</td>').join('')+'</tr>':'';
   return '<table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px">'+cg+hd+bd+tt+'</table>';}
 const drBadge=st=>{const c=DR_ST[st]||['#475569','#eef2f7'];return {html:'<span style="display:inline-block;line-height:16px;vertical-align:middle;padding:1px 8px;border-radius:9px;font-size:10px;font-weight:700;color:'+c[0]+';background:'+c[1]+'">'+esc(st)+'</span>'};};
@@ -1642,26 +1651,30 @@ function drFacts(X){const R=X.rows;if(!R.length)return '';const top=R[0],low=R.s
   return '<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px 18px;background:#fbf8ee;border:1px solid #efe3b8;border-left:4px solid '+DRT.acc+';border-radius:10px;padding:9px 14px;margin-bottom:10px;font-size:11px">'
    +li(DRT.main,'วิ่งมากสุด <b>'+esc(top.name)+'</b> '+top.t+' เที่ยว · น้อยสุด <b>'+esc(low.name)+'</b> '+low.t+' เที่ยว')
    +li(TYC['ห้าง'],'งานห้างมากสุด <b>'+esc(mx('h').name)+'</b> '+mx('h').h+' เที่ยว · ยี่ปั๊วมากสุด <b>'+esc(mx('y').name)+'</b> '+mx('y').y+' เที่ยว')
-   +li('#8a5a0b','วิ่งมาก (เกินเฉลี่ย 25%) <b>'+nm+'</b> คน · วิ่งน้อย (ต่ำกว่าเฉลี่ย 25%) <b>'+nl+'</b> คน — ควรได้งานเพิ่มก่อน')
-   +li('#64748b','เฉลี่ย <b>'+(Math.round(X.avg*10)/10)+'</b> เที่ยว/คน · '+esc(X.note))+'</div>';}
-function drSumPages(X){const cols=[{h:'อันดับ',w:46,a:'center'},{h:'คนขับ',w:0},{h:'รถประจำ',w:96},{h:'ห้าง',w:62,a:'right'},{h:'ยี่ปั๊ว',w:62,a:'right'},{h:'อื่นๆ',w:62,a:'right'},{h:'รวมเที่ยว',w:76,a:'right'},{h:'สัดส่วนห้าง',w:80,a:'right'},{h:'เทียบเฉลี่ย',w:80,a:'right'},{h:'ระดับ',w:84,a:'center'}];
-  const rows=X.rows.map(r=>[r.rk,{html:'<b>'+esc(r.name)+'</b> <span style="color:#94a3b8">'+esc(r.code)+'</span>'},r.head,r.h,r.y,r.o,{html:'<b>'+r.t+'</b>'},drPct(r.h,r.t)+'%',(r.dv>=0?'+':'')+(Math.round(r.dv*10)/10),drBadge(r.lv)]);
-  const tot=['','รวม '+X.n+' คน','',comma(X.tot.h),comma(X.tot.y),comma(X.tot.o),comma(X.tot.t),drPct(X.tot.h,X.tot.t)+'%','',''];
-  const first=drHeader('สรุปเที่ยวรายคนขับ','แยกตามประเภทงาน ห้าง / ยี่ปั๊ว / อื่นๆ · เรียงเที่ยวรวมมาก→น้อย',X.period)+drKpis(X)+drFacts(X);
-  return drPaged('สรุปเที่ยวรายคนขับ (ต่อ)',X.period,'นับเที่ยวตามประเภทงานของจุดส่งแรก',cols,rows,tot,first,14,23);}
+   +li('#8a5a0b','วิ่งมาก (เกินเฉลี่ยรถชนิดเดียวกัน 25%) <b>'+nm+'</b> คน · วิ่งน้อย <b>'+nl+'</b> คน — ควรได้งานเพิ่มก่อน')
+   +li('#64748b','เฉลี่ยตามชนิดรถ: '+X.grp.map(g=>esc(g.ty)+' <b>'+dr1(g.avg)+'</b>').join(' · ')+' เที่ยว/คน')+'</div>';}
+function drGHead(g,ncol,cells){const b=s=>({html:'<b style="color:'+(DR_TC[g.ty]||'#334155')+'">'+s+'</b>'});const r=Array.from({length:ncol},()=>'');cells(r,b);return {g:DR_TC[g.ty]||'#64748b',c:r};}
+function drSumPages(X){const cols=[{h:'อันดับ',w:46,a:'center'},{h:'คนขับ',w:0},{h:'รถประจำ',w:92},{h:'ชนิดรถ',w:70,a:'center'},{h:'ห้าง',w:56,a:'right'},{h:'ยี่ปั๊ว',w:56,a:'right'},{h:'อื่นๆ',w:56,a:'right'},{h:'รวมเที่ยว',w:72,a:'right'},{h:'สัดส่วนห้าง',w:78,a:'right'},{h:'เฉลี่ยชนิดรถ',w:82,a:'right'},{h:'เทียบเฉลี่ย',w:76,a:'right'},{h:'ระดับ',w:80,a:'center'}];
+  const rows=[];X.grp.forEach(g=>{rows.push(drGHead(g,cols.length,(r,b)=>{r[1]=b('🚚 '+esc(g.ty)+' · '+g.n+' คน');r[3]=drTyChip(g.ty);r[4]=b(g.h);r[5]=b(g.y);r[6]=b(g.o);r[7]=b(g.t);r[8]=b(drPct(g.h,g.t)+'%');r[9]=b(dr1(g.avg));}));
+    X.rows.filter(r=>r.ty===g.ty).forEach(r=>rows.push([r.rk,{html:'<b>'+esc(r.name)+'</b> <span style="color:#94a3b8">'+esc(r.code)+'</span>'},r.head,drTyChip(r.ty),r.h,r.y,r.o,{html:'<b>'+r.t+'</b>'},drPct(r.h,r.t)+'%',dr1(r.ga),(r.dv>=0?'+':'')+dr1(r.dv),drBadge(r.lv)]));});
+  const tot=['','รวม '+X.n+' คน','','',comma(X.tot.h),comma(X.tot.y),comma(X.tot.o),comma(X.tot.t),drPct(X.tot.h,X.tot.t)+'%',dr1(X.avg),'',''];
+  const first=drHeader('สรุปเที่ยวรายคนขับ','แยกตามชนิดรถ · อันดับและเทียบเฉลี่ย = เทียบกับรถชนิดเดียวกัน',X.period)+drKpis(X)+drFacts(X);
+  return drPaged('สรุปเที่ยวรายคนขับ (ต่อ)',X.period,X.note,cols,rows,tot,first,13,23);}
 function drBars(R,mx){const W=1059,lw=200,rw=70,bw=W-lw-rw;return R.map((r,i)=>{let x=0;const seg=[['h','ห้าง'],['y','ยี่ปั๊ว'],['o','อื่นๆ']].map(([k,t])=>{const w=mx?r[k]/mx*bw:0,s=w>0?'<div style="position:absolute;left:'+x+'px;top:0;bottom:0;width:'+w+'px;background:'+TYC[t]+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:9.5px;font-weight:700;overflow:hidden">'+(w>18?r[k]:'')+'</div>':'';x+=w;return s;}).join('');
   return '<div style="display:flex;align-items:center;height:24px;margin-bottom:3px"><div style="flex:none;width:'+lw+'px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px"><b style="display:inline-block;width:26px;color:'+(r.rk<=3?DRT.acc2:'#94a3b8')+'">'+r.rk+'</b>'+esc(r.name)+'</div>'
-   +'<div style="flex:none;width:'+bw+'px;height:16px;position:relative;background:#f1f5f9;border-radius:5px;overflow:hidden">'+seg+'</div><div style="flex:none;width:'+rw+'px;text-align:right;font-weight:700;color:'+DRT.ink+'">'+r.t+' <span style="font-weight:400;color:#94a3b8;font-size:10px">เที่ยว</span>'+(r.lv!=='ปกติ'?'':'')+'</div></div>';}).join('');}
-function drRankPages(X){const R=X.rows,mx=Math.max(1,...R.map(r=>r.t)),avgX=200+(X.avg/mx)*(1059-270),pages=[];
-  const leg='<div style="display:flex;gap:16px;align-items:center;font-size:11px;color:#475569;margin:2px 0 8px">'+TYPES.map(t=>'<span>'+drTyDot(t)+t+'</span>').join('')+'<span style="margin-left:auto">เส้นประทอง = ค่าเฉลี่ย '+(Math.round(X.avg*10)/10)+' เที่ยว/คน · อันดับท้าย = ควรได้งานเพิ่ม</span></div>';
-  const wrap=b=>'<div style="position:relative">'+b+'<div style="position:absolute;top:0;bottom:0;left:'+avgX+'px;border-left:2px dashed '+DRT.acc+'"></div></div>';
-  const first=drHeader('จัดอันดับเที่ยวสะสมคนขับ','แท่งซ้อนตามประเภทงาน · เรียงมาก→น้อย',X.period)+drKpis(X)+leg;
+   +'<div style="flex:none;width:'+bw+'px;height:16px;position:relative;background:#f1f5f9;border-radius:5px;overflow:hidden">'+seg+(r.ga!=null&&mx?'<div style="position:absolute;top:0;bottom:0;left:'+Math.round(r.ga/mx*bw)+'px;border-left:2px dashed '+DRT.acc2+'"></div>':'')+'</div><div style="flex:none;width:'+rw+'px;text-align:right;font-weight:700;color:'+DRT.ink+'">'+r.t+' <span style="font-weight:400;color:#94a3b8;font-size:10px">เที่ยว</span>'+(r.lv!=='ปกติ'?'':'')+'</div></div>';}).join('');}
+function drRankPages(X){const R=X.rows,mx=Math.max(1,...R.map(r=>r.t)),pages=[];
+  const leg='<div style="display:flex;gap:16px;align-items:center;font-size:11px;color:#475569;margin:2px 0 8px">'+TYPES.map(t=>'<span>'+drTyDot(t)+t+'</span>').join('')+'<span style="margin-left:auto">เส้นประทอง = ค่าเฉลี่ยของรถชนิดเดียวกัน · อันดับในกลุ่ม · ท้ายกลุ่ม = ควรได้งานเพิ่ม</span></div>';
+  const gh=g=>'<div style="display:flex;align-items:center;gap:8px;height:24px;margin:2px 0 3px;padding-left:8px;border-left:4px solid '+(DR_TC[g.ty]||'#64748b')+';background:'+drA(DR_TC[g.ty]||'#64748b',.08)+';border-radius:4px;font-size:11.5px"><b style="color:'+(DR_TC[g.ty]||'#334155')+'">🚚 '+esc(g.ty)+'</b><span style="color:#475569">'+g.n+' คน · รวม '+g.t+' เที่ยว · เฉลี่ย <b>'+dr1(g.avg)+'</b> เที่ยว/คน · มากสุด '+g.mx+' · น้อยสุด '+g.mn+'</span></div>';
+  const items=[];X.grp.forEach(g=>{items.push({g});R.filter(r=>r.ty===g.ty).forEach(r=>items.push({r}));});
+  const draw=ch=>ch.map(it=>it.g?gh(it.g):drBars([it.r],mx)).join('');
+  const first=drHeader('จัดอันดับเที่ยวสะสมคนขับ','แยกตามชนิดรถ · แท่งซ้อนตามประเภทงาน · เรียงมาก→น้อยในกลุ่ม',X.period)+drKpis(X)+leg;
   let i=0,f=true;if(!R.length)pages.push(drPage(first+'<div style="color:#94a3b8;padding:20px">ไม่มีข้อมูลในช่วงที่เลือก</div>','—'));
-  while(i<R.length){const n=f?17:24,ch=R.slice(i,i+n);i+=n;pages.push(drPage((f?first:drMini('จัดอันดับเที่ยวสะสม (ต่อ)',X.period)+leg)+wrap(drBars(ch,mx)),X.note));f=false;}
+  while(i<items.length){const n=f?17:24,ch=items.slice(i,i+n);i+=n;pages.push(drPage((f?first:drMini('จัดอันดับเที่ยวสะสม (ต่อ)',X.period)+leg)+draw(ch),X.note));f=false;}
   return pages;}
-function drCmpPages(X){const ms=X.ms,cols=[{h:'อันดับ',w:46,a:'center'},{h:'คนขับ',w:0},{h:'รถประจำ',w:96}].concat(ms.map(k=>({h:X.D[k].label+(X.D[k].part?' (1–'+X.D[k].part+')':''),w:110,a:'right'})),[{h:'รวม',w:70,a:'right'},{h:'เฉลี่ย/เดือน',w:84,a:'right'}]);
-  const rows=X.rows.map(r=>[r.rk,{html:'<b>'+esc(r.name)+'</b>'},r.head].concat(ms.map(k=>{const v=r.mo[k];return v?{html:'<b>'+v.t+'</b> <span style="color:#94a3b8;font-size:10px">'+v.h+'·'+v.y+'·'+v.o+'</span>'}:{html:'<span style="color:#cbd5e1">—</span>'};}),[r.t,Math.round(r.t/ms.length*10)/10]));
-  const tot=['','รวม',''].concat(ms.map(k=>comma(X.D[k].rows.reduce((a,r)=>a+r.t,0))),[comma(X.tot.t),'']);
+function drCmpPages(X){const ms=X.ms,cols=[{h:'อันดับ',w:46,a:'center'},{h:'คนขับ',w:0},{h:'รถประจำ',w:92},{h:'ชนิดรถ',w:70,a:'center'}].concat(ms.map(k=>({h:X.D[k].label+(X.D[k].part?' (1–'+X.D[k].part+')':''),w:110,a:'right'})),[{h:'รวม',w:70,a:'right'},{h:'เฉลี่ย/เดือน',w:84,a:'right'}]);
+  const rows=X.rows.map(r=>[r.rk,{html:'<b>'+esc(r.name)+'</b>'},r.head,drTyChip(r.ty)].concat(ms.map(k=>{const v=r.mo[k];return v?{html:'<b>'+v.t+'</b> <span style="color:#94a3b8;font-size:10px">'+v.h+'·'+v.y+'·'+v.o+'</span>'}:{html:'<span style="color:#cbd5e1">—</span>'};}),[r.t,Math.round(r.t/ms.length*10)/10]));
+  const tot=['','รวม','',''].concat(ms.map(k=>comma(X.D[k].rows.reduce((a,r)=>a+r.t,0))),[comma(X.tot.t),'']);
   const first=drHeader('เทียบเที่ยวคนขับรายเดือน','ตัวเลขเล็ก = ห้าง·ยี่ปั๊ว·อื่นๆ · เดือนที่ยังไม่จบ = นับถึงวันที่ในวงเล็บ',X.period)+drKpis(X);
   return drPaged('เทียบเที่ยวคนขับรายเดือน (ต่อ)',X.period,X.note,cols,rows,tot,first,17,23);}
 async function drRender(pages,kind,base){await mxLoad('h2c');if(kind==='pdf')await mxLoad('jspdf');
@@ -1702,14 +1715,18 @@ function drSheet(X0,sh){const n=sh.cols.length,LN='D5DEEA',hx=c=>c.slice(1).toUp
 const drK=X=>[['เที่ยวรวม',X.tot.t],['คนขับ (คน)',X.n],['ห้าง',X.tot.h],['ยี่ปั๊ว',X.tot.y],['อื่นๆ',X.tot.o],['เฉลี่ย/คน',Math.round(X.avg*10)/10,'0.0']];
 function drSheets(type,X){
   if(type==='cmp'){const ms=X.ms;return [{name:'เทียบรายเดือน',title:'เทียบเที่ยวคนขับรายเดือน',sub:'แยกห้าง/ยี่ปั๊ว/อื่นๆ ทุกเดือน',period:X.period,kpis:drK(X),
-    cols:[{h:'อันดับ',x:7,a:'center'},{h:'คนขับ',x:24},{h:'รหัส',x:10},{h:'รถประจำ',x:12}].concat(...ms.map(k=>{const l=X.D[k].label;return [{h:l+' ห้าง',x:9},{h:l+' ยี่ปั๊ว',x:9},{h:l+' อื่นๆ',x:9},{h:l+' รวม',x:9}];}),[{h:'รวมทุกเดือน',x:11},{h:'เฉลี่ย/เดือน',x:11,z:'0.0'}]),
-    rows:X.rows.map(r=>[r.rk,r.name,r.code,r.head].concat(...ms.map(k=>{const v=r.mo[k];return v?[v.h,v.y,v.o,v.t]:['','','',''];}),[r.t,Math.round(r.t/ms.length*10)/10])),
-    total:['','รวม','',''].concat(...ms.map(k=>{const a=X.D[k].rows.reduce((s,r)=>({h:s.h+r.h,y:s.y+r.y,o:s.o+r.o,t:s.t+r.t}),{h:0,y:0,o:0,t:0});return [a.h,a.y,a.o,a.t];}),[X.tot.t,'']),foot:'หมายเหตุ: '+X.note}];}
+    cols:[{h:'อันดับ',x:7,a:'center'},{h:'คนขับ',x:24},{h:'รหัส',x:10},{h:'รถประจำ',x:12},{h:'ชนิดรถ',x:9,a:'center'}].concat(...ms.map(k=>{const l=X.D[k].label;return [{h:l+' ห้าง',x:9},{h:l+' ยี่ปั๊ว',x:9},{h:l+' อื่นๆ',x:9},{h:l+' รวม',x:9}];}),[{h:'รวมทุกเดือน',x:11},{h:'เฉลี่ย/เดือน',x:11,z:'0.0'}]),
+    rows:X.rows.map(r=>[r.rk,r.name,r.code,r.head,r.ty].concat(...ms.map(k=>{const v=r.mo[k];return v?[v.h,v.y,v.o,v.t]:['','','',''];}),[r.t,Math.round(r.t/ms.length*10)/10])),
+    total:['','รวม','','',''].concat(...ms.map(k=>{const a=X.D[k].rows.reduce((s,r)=>({h:s.h+r.h,y:s.y+r.y,o:s.o+r.o,t:s.t+r.t}),{h:0,y:0,o:0,t:0});return [a.h,a.y,a.o,a.t];}),[X.tot.t,'']),foot:'หมายเหตุ: '+X.note}];}
   const rk=type==='rank';
-  return [{name:rk?'อันดับเที่ยว':'สรุปรายคนขับ',title:rk?'จัดอันดับเที่ยวสะสมคนขับ':'สรุปเที่ยวรายคนขับ',sub:rk?'เรียงมาก→น้อย · อันดับท้าย = ควรได้งานเพิ่ม':'แยกตามประเภทงาน ห้าง / ยี่ปั๊ว / อื่นๆ',period:X.period,kpis:drK(X),status:10,
-    cols:[{h:'อันดับ',x:7,a:'center'},{h:'คนขับ',x:24},{h:'รหัส',x:10},{h:'รถประจำ',x:12},{h:'ห้าง',x:8},{h:'ยี่ปั๊ว',x:8},{h:'อื่นๆ',x:8},{h:'รวมเที่ยว',x:10},{h:'สัดส่วนห้าง',x:11,z:'0.0"%"'},{h:'เทียบเฉลี่ย',x:11,z:'+0.0;-0.0;0'},{h:'ระดับ',x:11}],
-    rows:X.rows.map(r=>[r.rk,r.name,r.code,r.head,r.h,r.y,r.o,r.t,drPct(r.h,r.t),Math.round(r.dv*10)/10,r.lv]),
-    total:['','รวม '+X.n+' คน','','',X.tot.h,X.tot.y,X.tot.o,X.tot.t,drPct(X.tot.h,X.tot.t),'',''],foot:'หมายเหตุ: '+X.note+' · ระดับ: วิ่งมาก = เกินค่าเฉลี่ย 25% · วิ่งน้อย = ต่ำกว่าค่าเฉลี่ย 25%'}];}
+  return [{name:rk?'อันดับเที่ยว':'สรุปรายคนขับ',title:rk?'จัดอันดับเที่ยวสะสมคนขับ':'สรุปเที่ยวรายคนขับ',sub:rk?'เรียงมาก→น้อย · อันดับท้าย = ควรได้งานเพิ่ม':'แยกตามประเภทงาน ห้าง / ยี่ปั๊ว / อื่นๆ',period:X.period,kpis:drK(X),status:12,
+    cols:[{h:'ชนิดรถ',x:9,a:'center'},{h:'อันดับในชนิดรถ',x:9,a:'center'},{h:'คนขับ',x:24},{h:'รหัส',x:10},{h:'รถประจำ',x:12},{h:'ห้าง',x:8},{h:'ยี่ปั๊ว',x:8},{h:'อื่นๆ',x:8},{h:'รวมเที่ยว',x:10},{h:'สัดส่วนห้าง',x:11,z:'0.0"%"'},{h:'เฉลี่ยชนิดรถ',x:11,z:'0.0'},{h:'เทียบเฉลี่ย',x:11,z:'+0.0;-0.0;0'},{h:'ระดับ',x:11}],
+    rows:X.rows.map(r=>[r.ty,r.rk,r.name,r.code,r.head,r.h,r.y,r.o,r.t,drPct(r.h,r.t),dr1(r.ga),dr1(r.dv),r.lv]),
+    total:['','','รวม '+X.n+' คน','','',X.tot.h,X.tot.y,X.tot.o,X.tot.t,drPct(X.tot.h,X.tot.t),dr1(X.avg),'',''],foot:'หมายเหตุ: '+X.note+' · อันดับ/เทียบเฉลี่ย/ระดับ = เทียบกับรถชนิดเดียวกัน · วิ่งมาก = เกินค่าเฉลี่ยชนิดรถ 25% · วิ่งน้อย = ต่ำกว่า 25%'},
+   {name:'ตามชนิดรถ',title:'สรุปเที่ยวตามชนิดรถ',sub:'ค่าเฉลี่ยต่อคนของรถแต่ละชนิด · ใช้เทียบความเป็นธรรมในกลุ่มเดียวกัน',period:X.period,
+    cols:[{h:'ชนิดรถ',x:12},{h:'คนขับ (คน)',x:10},{h:'ห้าง',x:8},{h:'ยี่ปั๊ว',x:8},{h:'อื่นๆ',x:8},{h:'รวมเที่ยว',x:10},{h:'สัดส่วนห้าง',x:11,z:'0.0"%"'},{h:'เฉลี่ย/คน',x:10,z:'0.0'},{h:'มากสุด',x:9},{h:'น้อยสุด',x:9},{h:'ห่างกัน',x:9}],
+    rows:X.grp.map(g=>[g.ty,g.n,g.h,g.y,g.o,g.t,drPct(g.h,g.t),dr1(g.avg),g.mx,g.mn,g.mx-g.mn]),
+    total:['รวม',X.n,X.tot.h,X.tot.y,X.tot.o,X.tot.t,drPct(X.tot.h,X.tot.t),dr1(X.avg),'','',''],foot:'หมายเหตุ: '+X.note}];}
 async function drXlsx(sheets,base){await mxLoad('xlsx');const X0=window.XLSX,wb=X0.utils.book_new();sheets.forEach(sh=>X0.utils.book_append_sheet(wb,drSheet(X0,sh),sh.name));
   drSave(new Blob([X0.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),base+'.xlsx');}
 
@@ -1825,8 +1842,8 @@ function renderPlan(){
   });
   h+='</tbody><tfoot><tr><td class="stk0" colspan="2">รวมทั้งเดือน (ทุกคนขับ)</td><td colspan="10"></td>'+[[tot.h,'ห้าง'],[tot.y,'ยี่ปั๊ว'],[tot.o,'อื่นๆ']].map(a=>'<td class="n stc"><b style="color:'+TYC[a[1]]+'">'+a[0]+'</b></td>').join('')+'<td class="n stc"><b>'+(tot.h+tot.y+tot.o)+'</b></td></tr></tfoot></table></div>';
   h+='<p class="note">เดโม: สถิติ 1–'+(today-1)+' '+mon+' เป็นตัวอย่าง (ย่อจากใบงาน 30.9.69) · +1 = งานวันนี้ในแพลน · ประเภทงานนับตามร้านจุดแรก แก้ได้ในแผงซ้าย · จังหวัด/ค่าลงสินค้ามีเฉพาะร้านที่มีข้อมูล</p>';
-  $('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="รายการรถ / รายละเอียดคันที่เลือก"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
-  if(ED)drawEditor();else renderList();
+  const _sk=scSave();$('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="รายการรถ / รายละเอียดคันที่เลือก"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
+  scLoad(_sk);if(ED)drawEditor();else renderList();
   $('tlp').onclick=()=>{HIDELP=!HIDELP;renderPlan();};if($('drep'))$('drep').onclick=()=>drOpen();$('pexp').onclick=openPlanExport;
   if($('gomall'))$('gomall').onclick=()=>setPM('mall');
   pmChips(mallTodo(dfx));
@@ -2273,6 +2290,10 @@ async function clearAll(){
   const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109w&r='+Date.now());}
   syncMall();FILTER='all';renderAll();window.scrollTo({top:0});
   toast('🧹 ล้างงานทั้งหมดแล้ว · '+(PM==='mall'?'กด 📥 นำเข้าแพลน PO ที่ 📦 จัด PO ลงรถ':'ไปที่ 🏬 แพลนห้าง → 📦 จัด PO ลงรถ → 📥 นำเข้าแพลน PO'));}
+/* จิ้มแถวแล้วตารางไม่เด้งขึ้นบน: เก็บตำแหน่งเลื่อนของตาราง (.sheet) ก่อนวาดใหม่ · เปลี่ยนโหมด/ตัวกรอง/ค้นหา/วัน = เริ่มบนสุด */
+let _SCK='';
+function scSave(){const k=[PM,typeof MSUB==='undefined'?'':MSUB,FILTER,Q,$('pdate').value].join('|'),same=k===_SCK;_SCK=k;return same?[...$('v-plan').querySelectorAll('.sheet')].map(e=>[e.scrollTop,e.scrollLeft]):[];}
+function scLoad(a){$('v-plan').querySelectorAll('.sheet').forEach((e,i)=>{if(a[i]){e.scrollTop=a[i][0];e.scrollLeft=a[i][1];}});}
 function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}
 $('pdate').onchange=()=>{$('pday').textContent=dateTH($('pdate').value);renderAll();};
 $('pday').textContent=dateTH($('pdate').value);
