@@ -632,7 +632,7 @@ let MSUB='jobs';   /* แท็บย่อยในแพลนห้าง: jo
 const LPSZ={trailer:'พ่วง',semi:'หัวลาก','10w':'10 ล้อ','6w':'6 ล้อ','4w':'4 ล้อ'};
 const DCST={W101:107,W501:67,W901:152,W121:158,W151:172,W131:187,W801:169,W301:231,W401:233,W141:241};   /* รหัสคลัง 7-11 → central_distances.id */
 function lpShow(){const h=document.getElementById('lpHost');if(!h)return;const on=PM==='mall'&&MSUB==='lp'&&!document.getElementById('v-plan').hidden;h.hidden=!on;
-  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109u');}
+  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109v');}
 /* รถที่ Loading Planner ส่งมา → งานห้างตามขนาดรถ (1 คัน = 1 งาน) · ส่งซ้ำ = อัปเดตงานเดิม (จับคู่วันส่ง+เลขคัน) · คันที่หายไป = ถอนงาน */
 /* ⏳ Pending = PO ที่ Loading Planner ยังไม่ได้จัดลงรถ · วันส่ง → {th,list} · ยังไม่เป็นงานห้าง → ไม่เข้าแพลนรวม/ไม่แจกคนขับ จนกว่าจะจัดลงรถแล้วส่งอีกครั้ง */
 let MP={};
@@ -745,7 +745,7 @@ function lpPreview(r,fname,skip,rows){const ok=r.add.length+r.change.length;
     +(ok?'<p class="note" style="margin-top:10px">ยืนยันแล้ว Loading Planner จะโหลด PO ใหม่ · ที่จัดลงรถไว้แต่ยังไม่กดส่งเข้าแพลนห้างจะเริ่มใหม่</p>':'<p class="note" style="margin-top:10px">ไม่มีรายการที่ต้องบันทึก</p>');
   return askModal({title:'ตรวจแพลน PO ก่อนนำเข้า',icon:'📥',wide:true,html,ok:ok?'ยืนยันนำเข้า '+ok+' PO':'ปิด',cancel:ok?'ยกเลิก':null}).then(v=>!!(v&&ok));}
 function lpReload(r){if(r.lpPos)LP_POS=r.lpPos;LPI.src=r.lpSrc||LPI.src;LPI.last=r.lpLast||LPI.last;LPI.off=r.lpOff||[];if(r.lpHist)LPI.hist=r.lpHist;LPI.view=r.lpView||'';
-  const f=$('lpFrame');if(f){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109u&r='+Date.now());}renderPlan();}
+  const f=$('lpFrame');if(f){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109v&r='+Date.now());}renderPlan();}
 /* ตัดจำนวน / ยกเลิก PO — ทีละใบ · กันแก้ทับด้วย Rev · PO ที่อยู่ในงานห้างแล้ว: แก้เสร็จต้องไปจัดรถใหม่แล้วกดส่งอีกครั้ง งานห้างจึงอัปเดต */
 function lpInJob(po){return MJ.some(j=>String(j.note||'').indexOf(po)>=0);}
 function lpMgr(){const ov=document.createElement('div');ov.className='mov';
@@ -1932,7 +1932,7 @@ async function clearAll(){
   VEH.forEach(v=>{const p=PLAN[v.head];if(!p)return;Object.assign(p,{stops:[],helpers:[],out:0,note:'',htime:'',jt:'',ot:''});});
   MJ=[];MP={};MALL.rev=-1;MALL.snap={};MALL.log=[];MALL.ack.clear();
   if(smp){LP_POS=[];LPI.src='empty';}
-  const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109u&r='+Date.now());}
+  const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109v&r='+Date.now());}
   syncMall();FILTER='all';renderAll();window.scrollTo({top:0});
   toast('🧹 ล้างงานทั้งหมดแล้ว · '+(PM==='mall'?'กด 📥 นำเข้าแพลน PO ที่ 📦 จัด PO ลงรถ':'ไปที่ 🏬 แพลนห้าง → 📦 จัด PO ลงรถ → 📥 นำเข้าแพลน PO'));}
 function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}
