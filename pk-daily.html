@@ -129,7 +129,7 @@ main{padding-block:14px 120px}
 .hrow.head{font-size:12px;color:var(--muted);font-weight:600;background:var(--surface2)}
 .code{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
 /* สรุปสถานะ */
-.rgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.rgrid{display:grid;grid-template-columns:minmax(0,640px) 340px;gap:20px;align-items:start;justify-content:start}
 .imgbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
 .imgbox img{display:block;width:100%;height:auto;border-radius:6px}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:10px 4px 0}
@@ -186,6 +186,17 @@ main{padding-block:14px 120px}
 .lh b{font-family:var(--display);font-size:17px}
 .lh span{opacity:.75;font-size:13px}
 .ll{flex:1;overflow:auto;overscroll-behavior:contain}
+.gbar{display:flex;gap:6px;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface2)}
+.gchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 10px;font-size:12px;font-weight:600;color:var(--muted);cursor:pointer}
+.gchip b{color:var(--ink);font-variant-numeric:tabular-nums}
+.gchip.on{border-color:var(--brand);color:var(--brand);box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 18%,transparent)}
+.gd{width:9px;height:9px;border-radius:50%;flex:none;display:inline-block}
+.g-run{background:#16A34A}.g-fac{background:#1F6B48}.g-idle{background:#EA8A0C}.g-park{background:#94A3B8}.g-off{background:#DC2626}.g-none{background:transparent;border:1.5px dashed var(--muted)}
+.r0{display:flex;align-items:center;gap:7px;font-size:12.5px;margin:-2px 0 6px;color:var(--muted);flex-wrap:wrap}
+.r0 .gl{font-weight:700;color:var(--ink)}
+.r0 .gl.run{color:var(--good)}.r0 .gl.idle{color:var(--warn)}.r0 .gl.off{color:var(--bad)}
+.r0 .gt{font-variant-numeric:tabular-nums}
+.lh small{display:block;font-size:11px;font-weight:500;opacity:.8}
 .vc{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:12px 18px;cursor:pointer}
 .vc:first-child{border-top:0}
 .vc:hover{background:var(--surface2)}
@@ -537,13 +548,40 @@ function openEditor(head){const v=VEH.find(x=>x.head===head);if($('lp'))$('lp').
   ED={v,p:JSON.parse(JSON.stringify(PLAN[head])),q:'',newLoc:null};renderPlan();
   const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
 function closeEditor(){ED=null;if($('lp'))$('lp').innerHTML='';renderPlan();}
+/* ---------- สถานะรถสด GPS (เหมือนหน้า Command Center · Edge manage-drivers getDrivers ทุก 1 นาที) ----------
+ * จับคู่ด้วยทะเบียน (หัว/หาง) ของคนขับในระบบ · รถที่ไม่มีคนขับผูก = ยังไม่รู้ตำแหน่ง · เปิดนอกเว็บ (artifact) = ไม่มีสถานะสด */
+let LIVE=null,LIVE_AT=0,GF='';
+const npl=s=>String(s||'').replace(/[\s\-]/g,'');
+async function loadLive(){if(typeof MY_UID==='undefined'||!MY_UID)return;
+  try{const r=await fetch('https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/manage-drivers?action=getDrivers&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(x=>x.json());
+    if(!r||!r.ok)return;const m={};(r.drivers||[]).forEach(d=>String(d.plates||d.plate||'').split(',').forEach(p=>{const k=npl(p);if(k&&!m[k])m[k]=d;}));
+    LIVE=m;LIVE_AT=Date.now();if(!ED)renderList();}catch(e){}}
+function liveOf(v){if(!LIVE)return null;for(const p of v.plate.split(',')){const d=LIVE[npl(p)];if(d)return d;}return null;}
+/* สถานะเดียวกับหน้า Command: อยู่ที่โรงงาน (≤2 กม.) · วิ่งออกไป/วิ่งกลับ · จอดไม่ดับเครื่อง · จอดดับเครื่อง · ออฟไลน์ */
+function gpsOf(v){const d=liveOf(v);if(!d)return {k:'none',t:LIVE?'ไม่พบใน GPS':'',d:null};
+  if(d.gps==='off')return {k:'off',t:'ออฟไลน์',d};
+  if(d.atFactory){const t=d.gps==='run'?(d.distTrend==='out'?'กำลังออกจากโรงงาน':d.distTrend==='in'?'กำลังเข้าโรงงาน':'วิ่งในโรงงาน'):'อยู่ที่โรงงาน';return {k:'fac',t,d};}
+  if(d.gps==='run')return {k:'run',t:(d.dirText||'วิ่งอยู่')+(d.speed?' '+Math.round(d.speed)+' กม./ชม.':''),d};
+  if(d.gps==='idling'){const m=d.idleStartMs?Math.max(0,Math.round((Date.now()-d.idleStartMs)/60000)):0;return {k:'idle',t:'จอดไม่ดับเครื่อง'+(m?' '+m+' นาที':''),d};}
+  return {k:'park',t:'จอดดับเครื่อง',d};}
+const GLAB=[['fac','อยู่ที่โรงงาน'],['run','วิ่งงาน'],['idle','จอดไม่ดับ'],['park','จอดดับ'],['off','ออฟไลน์'],['none','ไม่พบ GPS']];
+function gpsRow(g){if(!LIVE||!g.t)return '';const d=g.d;
+  const where=d?[d.loc&&d.loc!=='—'?d.loc:'',d.prov&&d.prov!=='—'?d.prov:''].filter(Boolean).join(' '):'';
+  const far=d&&d.distFactory!=null&&!d.atFactory?'ห่างโรงงาน '+(d.distFactory<10?d.distFactory:Math.round(d.distFactory))+' กม.':'';
+  return '<div class="r0"><span class="gd g-'+g.k+'"></span><span class="gl '+g.k+'">'+esc(g.t)+'</span><span>'
+    +[where,far,d&&d.ping&&d.ping!=='—'?'<span class="gt">'+esc(d.ping.slice(0,5))+' น.</span>':''].filter(Boolean).map(x=>x.startsWith('<')?x:esc(x)).join(' · ')+'</span></div>';}
 /* แผงซ้ายตอนยังไม่เลือกรถ: การ์ดรถเรียงตามเวลาที่ต้องถึงจุดแรก */
 function renderList(){
   const lp=$('lp');if(!lp)return;lp.classList.remove('ed');
-  const vs=VEH.filter(visible),order={job:0,wait:1,nod:2,rep:3,off:4,tail:5};
+  const G={};VEH.forEach(v=>{if(!v.tail)G[v.head]=gpsOf(v);});
+  const vs=VEH.filter(v=>visible(v)&&(!GF||(G[v.head]&&G[v.head].k===GF))),order={job:0,wait:1,nod:2,rep:3,off:4,tail:5};
   vs.sort((a,b)=>{const ka=kind(a),kb=kind(b);if(ka!==kb)return order[ka]-order[kb];
     const ta=(PLAN[a.head].stops[0]||{}).at||'99',tb=(PLAN[b.head].stops[0]||{}).at||'99';return ta<tb?-1:ta>tb?1:0;});
-  let h='<div class="lh"><b>รถวันนี้ · เรียงตามเวลาถึงหน้างาน</b><span>'+vs.length+' คัน</span></div><div class="ll">';
+  const at=LIVE_AT?new Date(LIVE_AT).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
+  let h='<div class="lh"><b>รถวันนี้ · สถานะสด GPS'+(at?'<small>อัปเดต '+at+' น. · รีเฟรชทุก 1 นาที · เรียงตามเวลาถึงหน้างาน</small>':'<small>เรียงตามเวลาถึงหน้างาน</small>')+'</b><span>'+vs.length+' คัน</span></div>';
+  if(LIVE){const c={};Object.values(G).forEach(g=>c[g.k]=(c[g.k]||0)+1);
+    h+='<div class="gbar">'+GLAB.filter(([k])=>c[k]||GF===k).map(([k,l])=>'<button type="button" class="gchip'+(GF===k?' on':'')+'" data-g="'+k+'"><span class="gd g-'+k+'"></span>'+l+' <b>'+(c[k]||0)+'</b></button>').join('')+'</div>';}
+  h+='<div class="ll">';
   let lastK='';
   vs.forEach(v=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver),s0=p.stops[0];
     const grp={job:'มีงาน',wait:'พร้อม · รอมีงาน',nod:'ไม่มีคนขับ',rep:'ซ่อม',off:'งดวิ่ง',tail:'หางสำรอง'}[k];
@@ -557,10 +595,11 @@ function renderList(){
     else{r2='<span class="big no">ยังไม่มีงาน</span>';r3=[BRAND[v.head],v.shape].filter(Boolean).join(' · ');}
     if(d&&!v.tail&&k!=='rep')r3+=' · สะสม '+drvStat(d.code).t+' เที่ยว';
     h+='<button class="vc" data-v="'+esc(v.head)+'"><div class="r1"><span class="pill '+KLAB[k][1]+'">'+KLAB[k][0]+'</span><span class="nm">'+esc(name)+'</span><span class="pl">'+esc(v.plate.replace(',',' / '))+'</span></div>'
-      +'<div class="r2">'+r2+'</div><div class="r3'+(k==='rep'?' bad':'')+'">'+esc(r3)+'</div></button>';});
+      +(v.tail?'':gpsRow(G[v.head]))+'<div class="r2">'+r2+'</div><div class="r3'+(k==='rep'?' bad':'')+'">'+esc(r3)+'</div></button>';});
   if(!vs.length)h+='<div class="note" style="padding:18px">ไม่มีรถตามตัวกรอง</div>';
   lp.innerHTML=h+'</div>';
-  lp.querySelectorAll('.vc').forEach(b=>b.onclick=()=>openEditor(b.dataset.v));}
+  lp.querySelectorAll('.vc').forEach(b=>b.onclick=()=>openEditor(b.dataset.v));
+  lp.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{GF=GF===b.dataset.g?'':b.dataset.g;renderList();});}
 function drawEditor(){
   const {v,p}=ED,{dc,hc}=busy(),is4=v.g==='4 ล้อ',k=kind(v),d=drvOf(p.driver);
   const pay=v.gvw?((v.gvw-v.tare)/1000).toFixed(1)+' ตัน':'-';
@@ -810,6 +849,7 @@ function gateMsg(h){ const g=document.getElementById('gate'); g.hidden=false; g.
     const at=r.pairAt?new Date(r.pairAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
     const dm=document.querySelector('.demo'); if(dm&&at) dm.insertAdjacentHTML('beforeend',' · ค่ากลาง DTC อัปเดต '+at+' ('+r.pairs.length+' คู่)');
     document.getElementById('gate').hidden=true;
+    if(typeof loadLive==='function'){ loadLive(); setInterval(()=>{ if(!document.hidden) loadLive(); },60000); }   // สถานะสด GPS แผงซ้าย
   }catch(e){ gateMsg('โหลดไม่สำเร็จ: '+String(e&&e.message||e).replace(/[<>&]/g,'')+'<br><button class="btn pri" style="margin-top:12px" onclick="location.reload()">↻ ลองใหม่</button>'); }
 })();
 </script>
