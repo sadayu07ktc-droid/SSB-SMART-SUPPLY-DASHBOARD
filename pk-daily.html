@@ -92,7 +92,7 @@ main{padding-block:14px 120px}
 .df{border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:10px;justify-content:flex-end;background:var(--surface)}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .box > label,.lb{font-weight:600;font-size:13.5px}
-.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg{flex-wrap:wrap;display:flex;gap:6px;flex-wrap:wrap}
 .seg button{border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:13.5px}
 .seg button.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
 .seg button.on.r{background:var(--bad);border-color:var(--bad)}
@@ -176,6 +176,8 @@ main{padding-block:14px 120px}
 .otl details{border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin-bottom:6px;background:var(--surface)}.otl summary{cursor:pointer;list-style-position:inside}
 .otl ul{margin:6px 0 2px 18px;padding:0;font-size:12.5px;max-height:190px;overflow:auto}.otl li{margin:2px 0}.otn{display:block;font-size:11px;color:var(--muted);margin-top:2px}
 .clrl{margin:4px 0 8px 18px;padding:0;line-height:1.7}
+.lphs{width:auto;max-width:240px;padding:5px 10px;font-size:13px}
+.lpsrc.h{color:#8a5a0b}
 .lpds{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface)}
 .lpdh{padding:9px 12px;font-weight:700;background:var(--mallbg,var(--surface2));display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .lpdt{width:100%;border-collapse:collapse;font-size:13px}.lpdt th{font-size:11.5px;color:var(--muted);font-weight:600;text-align:left;padding:6px 12px;border-bottom:1px solid var(--line)}
@@ -183,6 +185,7 @@ main{padding-block:14px 120px}
 .lpdt tfoot td{font-weight:700;border-bottom:0;border-top:1px solid var(--line);background:var(--surface2)}
 .lpsk{font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.5}.lpsk b{color:var(--ink);font-weight:600}
 .lpq{float:right;font-weight:700;font-variant-numeric:tabular-nums;margin-left:10px}
+.sqx{padding:10px 12px;border-top:1px dashed var(--line);background:var(--mallbg,var(--surface2));display:flex;flex-direction:column;gap:6px;align-items:flex-start;font-size:13px}
 .tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;border-radius:999px;padding:0 7px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);white-space:nowrap;vertical-align:1px}
 /* จุดส่งในแถว: เห็นครบทุกจุด */
 .sl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 8px;align-items:baseline;font-size:13px}
@@ -624,12 +627,12 @@ PLAN['84-9041'].note='วางบิล + เอกสาร CO/COA';PLAN['86-7
 let PM='all';
 /* ตัวอย่าง PO 7-11 (ไฟล์ Plan 7-11 ต.ค. 2569) สำหรับ Loading Planner · เว็บจริงมาจาก Edge pk-daily (ไม่ฝังในไฟล์) */
 let LP_POS=__D.lpPos||[]; /* PO 7-11 · Edge pk-daily (ตาราง pk_mall_po ที่แอดมินห้างอัปโหลด · ยังไม่มี = ตัวอย่าง) ไม่ฝังในไฟล์ */
-let LPI={src:__D.lpSrc||'sample',last:__D.lpLast||null,off:__D.lpOff||[],can:!!__D.canImport,dc:__D.lpDc||null};
+let LPI={src:__D.lpSrc||'sample',last:__D.lpLast||null,off:__D.lpOff||[],can:!!__D.canImport,dc:__D.lpDc||null,hist:__D.lpHist||[],view:__D.lpView||''};
 let MSUB='jobs';   /* แท็บย่อยในแพลนห้าง: jobs = ตารางงานห้าง · lp = Loading Planner */
-const LPSZ={trailer:'10/22 ล้อ','6w':'6 ล้อ','4w':'4 ล้อ'};
+const LPSZ={trailer:'พ่วง',semi:'หัวลาก','10w':'10 ล้อ','6w':'6 ล้อ','4w':'4 ล้อ'};
 const DCST={W101:107,W501:67,W901:152,W121:158,W151:172,W131:187,W801:169,W301:231,W401:233,W141:241};   /* รหัสคลัง 7-11 → central_distances.id */
 function lpShow(){const h=document.getElementById('lpHost');if(!h)return;const on=PM==='mall'&&MSUB==='lp'&&!document.getElementById('v-plan').hidden;h.hidden=!on;
-  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109t');}
+  const f=document.getElementById('lpFrame');if(on&&!f.getAttribute('src'))f.setAttribute('src','pk-loadplan.html?v=20261109u');}
 /* รถที่ Loading Planner ส่งมา → งานห้างตามขนาดรถ (1 คัน = 1 งาน) · ส่งซ้ำ = อัปเดตงานเดิม (จับคู่วันส่ง+เลขคัน) · คันที่หายไป = ถอนงาน */
 /* ⏳ Pending = PO ที่ Loading Planner ยังไม่ได้จัดลงรถ · วันส่ง → {th,list} · ยังไม่เป็นงานห้าง → ไม่เข้าแพลนรวม/ไม่แจกคนขับ จนกว่าจะจัดลงรถแล้วส่งอีกครั้ง */
 let MP={};
@@ -646,7 +649,7 @@ function lpImport(d){const keys=new Set(),miss=new Set();let add=0,upd=0,rm=0,lo
   (d.trucks||[]).forEach(t=>{const key=d.date+'#'+t.id;keys.add(key);
     const stops=t.stops.map(s=>{const id=DCST[s.dc];const b=id&&ST.find(x=>x.id===id);if(!b)miss.add(s.dc);
       return Object.assign(b?S(id):{id:null,n:s.dc+' '+s.n,km:null,pal:'',cs:'',at:''},{pal:String(s.pal),cs:String(s.cs),at:s.t||''});});
-    const size=LPSZ[t.k]||'10/22 ล้อ',note='PO '+t.stops.flatMap(s=>s.po).join(', ')+' · ขึ้นของ '+t.load+' · ส่ง '+d.dateTH+' (Loading Planner คัน #'+t.id+')';
+    const size=LPSZ[t.k]||'พ่วง',note='PO '+t.stops.flatMap(s=>s.po).join(', ')+' · ขึ้นของ '+t.load+' · ส่ง '+d.dateTH+' (Loading Planner คัน #'+t.id+')';
     const j=MJ.find(x=>x.lp===key);
     if(j){if(j.size!==size&&j.head){j.head='';j.driver='';lost++;}j.size=size;j.stops=stops;j.note=note;upd++;}
     else{MJ.push({id:'H'+(++MJN),size,stops,head:'',driver:'',note,lp:key});add++;}});
@@ -665,12 +668,20 @@ const LPX={busy:false};
 function lpBar(){const L=LPI.last,n=LP_POS.length,ds=[...new Set(LP_POS.map(p=>p.date))];
   const src=LPI.src==='sample'?'<span class="lpsrc s">🧪 PO ตัวอย่าง (ยังไม่มีแพลนจริง)</span>'
     :LPI.src==='empty'?'<span class="lpsrc s">📭 ยังไม่มีแพลน PO · กด 📥 นำเข้าแพลน PO</span>'
-    :'<span class="lpsrc">📄 แพลน PO '+n+' ใบ · ส่ง '+ds.map(d=>esc(lpTh(d))).join(', ')+(LPI.src==='db-old'?' (ยังไม่มีแพลนใหม่ · แสดง 3 วันล่าสุด)':'')+'</span>';
+    :LPI.src==='hist'?'<span class="lpsrc h">🕘 ประวัติ · ส่งแล้ว '+ds.map(d=>esc(lpTh(d))).join(', ')+' · '+n+' ใบ</span>'
+    :'<span class="lpsrc">📄 '+(LPI.src==='db-old'?'แพลน PO ':'ยังไม่ส่ง ')+n+' ใบ · '+ds.length+' วัน · ส่ง '+ds.map(d=>esc(lpTh(d))).join(', ')+(LPI.src==='db-old'?' (ไม่มีแพลนที่ยังไม่ส่ง · แสดงไฟล์ที่อัปล่าสุด)':'')+'</span>';
+  const H=LPI.hist||[],hs=H.length?'<select class="in lphs" id="lpHist" aria-label="ดูประวัติวันส่ง"><option value="">'+(LPI.src==='db-old'?'📄 ไฟล์ที่อัปล่าสุด':'📄 ยังไม่ส่ง (ทั้งหมด)')+'</option><optgroup label="🕘 ประวัติ (ส่งแล้ว)">'
+    +H.map(h=>'<option value="'+esc(h[0])+'"'+(LPI.view===h[0]?' selected':'')+'>'+esc(lpIsoTh(h[0]))+' · '+h[2]+' PO</option>').join('')+'</optgroup></select>':'';
   const last=L?'<span class="note">อัปเดตล่าสุด '+esc(lpAt(L.at))+(L.by_name?' · '+esc(L.by_name):'')+(L.file?' · '+esc(L.file):'')+'</span>':'';
-  return '<div class="lpbar">'+src+last+'<span class="sp"></span>'
+  return '<div class="lpbar">'+src+hs+last+'<span class="sp"></span>'
     +(LPI.can?'<button class="btn sm mallb" id="lpImp">📥 นำเข้าแพลน PO (Excel)</button>'+(LPI.src!=='sample'&&LPI.src!=='empty'?'<button class="btn sm" id="lpMgr">✂️ ตัดจำนวน / ยกเลิก PO'+(LPI.off.length?' · ยกเลิกไว้ '+LPI.off.length:'')+'</button>':''):'<span class="note">นำเข้า/แก้แพลน PO ได้เฉพาะแอดมินห้าง</span>')
     +'<input type="file" id="lpFile" accept=".xlsx,.xls" hidden></div>';}
-function lpWire(){const i=$('lpImp'),f=$('lpFile'),m=$('lpMgr');if(i)i.onclick=()=>f.click();if(f)f.onchange=()=>{const x=f.files[0];f.value='';if(x)lpPick(x);};if(m)m.onclick=lpMgr;}
+function lpWire(){const i=$('lpImp'),f=$('lpFile'),m=$('lpMgr'),hs=$('lpHist');if(hs)hs.onchange=()=>lpView(hs.value,hs);if(i)i.onclick=()=>f.click();if(f)f.onchange=()=>{const x=f.files[0];f.value='';if(x)lpPick(x);};if(m)m.onclick=lpMgr;}
+async function lpView(d,el){if(typeof PKD_URL==='undefined'||!MY_UID){toast('หน้าเดโมนี้ไม่ได้ต่อระบบ');if(el)el.value=LPI.view;return;}
+  if(el)el.disabled=true;
+  try{const x=await fetch(PKD_URL+'?action=lpPos&userId='+encodeURIComponent(MY_UID)+(d?'&date='+encodeURIComponent(d):'')).then(z=>z.json());
+    if(!x.ok)throw new Error(x.error||'โหลดไม่ได้');lpReload(x);toast(d?'🕘 ประวัติ ส่ง '+lpIsoTh(d)+' · '+x.lpPos.length+' PO':'📄 แพลนที่ยังไม่ส่ง '+x.lpPos.length+' PO');}
+  catch(e){toast('❌ '+(e.message||e));if(el){el.disabled=false;el.value=LPI.view;}}}
 function lpAt(s){const d=new Date(s);return isNaN(d)?String(s||''):d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});}
 function lpTh(d){const m=String(d||'').match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);return m?(+m[1])+' '+['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'][+m[2]]:d;}
 async function lpCall(body){if(typeof PKD_URL==='undefined'||!MY_UID)throw new Error('หน้าเดโมนี้ไม่ได้ต่อระบบ (เปิดจากหน้าแพลนรถ Packing จริง)');
@@ -733,8 +744,8 @@ function lpPreview(r,fname,skip,rows){const ok=r.add.length+r.change.length;
     +lpGrp('off','📌 ไม่อยู่ในไฟล์ · คงไว้ ไม่ลบ',r.notIn.length,'<div class="note">ถ้า PO ไหนไม่ส่งแล้ว ให้กด ✂️ ตัดจำนวน / ยกเลิก PO</div>'+r.notIn.map(x=>ln('<b class="mono">'+esc(x.po)+'</b> ส่ง '+esc(lpTh(x.date))+' · '+esc(x.dc.slice(0,4)))).join(''),false)
     +(ok?'<p class="note" style="margin-top:10px">ยืนยันแล้ว Loading Planner จะโหลด PO ใหม่ · ที่จัดลงรถไว้แต่ยังไม่กดส่งเข้าแพลนห้างจะเริ่มใหม่</p>':'<p class="note" style="margin-top:10px">ไม่มีรายการที่ต้องบันทึก</p>');
   return askModal({title:'ตรวจแพลน PO ก่อนนำเข้า',icon:'📥',wide:true,html,ok:ok?'ยืนยันนำเข้า '+ok+' PO':'ปิด',cancel:ok?'ยกเลิก':null}).then(v=>!!(v&&ok));}
-function lpReload(r){if(r.lpPos)LP_POS=r.lpPos;LPI.src=r.lpSrc||LPI.src;LPI.last=r.lpLast||LPI.last;LPI.off=r.lpOff||[];
-  const f=$('lpFrame');if(f){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109t&r='+Date.now());}renderPlan();}
+function lpReload(r){if(r.lpPos)LP_POS=r.lpPos;LPI.src=r.lpSrc||LPI.src;LPI.last=r.lpLast||LPI.last;LPI.off=r.lpOff||[];if(r.lpHist)LPI.hist=r.lpHist;LPI.view=r.lpView||'';
+  const f=$('lpFrame');if(f){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109u&r='+Date.now());}renderPlan();}
 /* ตัดจำนวน / ยกเลิก PO — ทีละใบ · กันแก้ทับด้วย Rev · PO ที่อยู่ในงานห้างแล้ว: แก้เสร็จต้องไปจัดรถใหม่แล้วกดส่งอีกครั้ง งานห้างจึงอัปเดต */
 function lpInJob(po){return MJ.some(j=>String(j.note||'').indexOf(po)>=0);}
 function lpMgr(){const ov=document.createElement('div');ov.className='mov';
@@ -749,7 +760,7 @@ function lpMgr(){const ov=document.createElement('div');ov.className='mov';
   draw();document.body.appendChild(ov);let changed=false;
   ov.onclick=async e=>{if(e.target===ov||e.target.closest('[data-close]')){ov.remove();if(changed)toast('Loading Planner โหลด PO ใหม่แล้ว · PO ที่อยู่ในงานห้าง: จัดรถแล้วกดส่งเข้าแพลนห้างอีกครั้ง');return;}
     const b=e.target.closest('[data-act]');if(!b||LPX.busy)return;const c=b.closest('.lpc'),po=c.dataset.po,act=b.dataset.act,why=(c.querySelector('.lpwhy')||{}).value||'';
-    const p=LP_POS.find(x=>x.po===po)||LPI.off.find(x=>x.po===po);if(!p)return;const body={action:'lpEdit',po,rev:p.rev,why};
+    const p=LP_POS.find(x=>x.po===po)||LPI.off.find(x=>x.po===po);if(!p)return;const body={action:'lpEdit',po,rev:p.rev,why,view:LPI.view};
     if(act==='save'){const L=(p.lines||[]).map((l,i)=>({p:l.p,q:Number(c.querySelector('[data-i="'+i+'"]').value)}));
       if(L.some(l=>!Number.isInteger(l.q)||l.q<0)){toast('⚠️ จำนวนต้องเป็นเลขเต็ม 0 ขึ้นไป');return;}
       if(L.every((l,i)=>l.q===+p.lines[i].q)){toast('จำนวนเท่าเดิม ไม่มีอะไรต้องบันทึก');return;}
@@ -760,19 +771,23 @@ function lpMgr(){const ov=document.createElement('div');ov.className='mov';
     else if(act==='on')body.active=true;
     LPX.busy=true;b.disabled=true;const t0=b.textContent;b.textContent='⏳ …';
     try{const r=await lpCall(body);if(r.same){toast('ไม่มีอะไรเปลี่ยน');}else{changed=true;lpReload(r);draw();toast('✅ PO '+po+' · '+(r.what||[]).join(' · '));}}
-    catch(e){toast('❌ '+(e.message||e));if(/โหลดใหม่/.test(String(e.message))){try{const x=await fetch(PKD_URL+'?action=lpPos&userId='+encodeURIComponent(MY_UID)).then(z=>z.json());if(x.ok){lpReload(x);draw();}}catch(_){}}}
+    catch(e){toast('❌ '+(e.message||e));if(/โหลดใหม่/.test(String(e.message))){try{const x=await fetch(PKD_URL+'?action=lpPos&userId='+encodeURIComponent(MY_UID)+(LPI.view?'&date='+encodeURIComponent(LPI.view):'')).then(z=>z.json());if(x.ok){lpReload(x);draw();}}catch(_){}}}
     finally{LPX.busy=false;if(b.isConnected){b.disabled=false;b.textContent=t0;}}};}
 function wireSub(){document.querySelectorAll('[data-msub]').forEach(b=>b.onclick=()=>{if(MSUB===b.dataset.msub)return;MSUB=b.dataset.msub;JE=null;renderPlan();});}
 const isMall=s=>tyOf(s)==='ห้าง';
 const skey=s=>s.id!=null?'#'+s.id:'n:'+s.n;
 const ME=()=>(typeof window.MY_NAME==='string'&&window.MY_NAME)||'คุณ (เดโม)';
-const SIZES=['4 ล้อ','6 ล้อ','10/22 ล้อ'];
-const SZL={'4 ล้อ':'4 ล้อ','6 ล้อ':'6 ล้อ','10/22 ล้อ':'พ่วง / หัวลาก'};
+const SIZES=['4 ล้อ','6 ล้อ','10 ล้อ','พ่วง','หัวลาก'];
+const SZL={'4 ล้อ':'4 ล้อ','6 ล้อ':'6 ล้อ','10 ล้อ':'10 ล้อ (เดี่ยว)','พ่วง':'พ่วง','หัวลาก':'หัวลาก','10/22 ล้อ':'พ่วง / หัวลาก'};
+const isSemi=v=>/หัวลาก/.test(v.shape||'');
+const vSize=v=>v.g==='10/22 ล้อ'?(isSemi(v)?'หัวลาก':'พ่วง'):v.g;   /* ขนาดงานตั้งต้นของรถคันนี้ */
+const szFits=(v,z)=>z==='10 ล้อ'||z==='พ่วง'?v.g==='10/22 ล้อ'&&!isSemi(v):z==='10/22 ล้อ'?v.g==='10/22 ล้อ':vSize(v)===z;   /* 10 ล้อ เดี่ยว = รถพ่วงไปแค่หัว */
+const szG=z=>z==='10 ล้อ'||z==='พ่วง'||z==='หัวลาก'?'10/22 ล้อ':z;   /* ขนาดงาน → กลุ่มรถ (ค่าลงสินค้าตามชนิดรถ) */
 let MJ=[],MJN=0;
 /* งานห้างตั้งต้น: แปลงจากแพลนตัวอย่าง (คันที่มีร้านห้าง = ได้รถแล้ว) + งานที่ยังรอรถ 2 งาน */
 VEH.forEach(v=>{const p=PLAN[v.head],st=p.stops.filter(isMall);if(!st.length||p.status!=='ready')return;
-  MJ.push({id:'H'+(++MJN),size:v.g,stops:st.map(s=>Object.assign({},s)),head:v.head,driver:p.driver,note:''});});
-MJ.push({id:'H'+(++MJN),size:'10/22 ล้อ',stops:[Object.assign(S(217),{pal:'26',at:'06:00'})],head:'',driver:'',note:''});
+  MJ.push({id:'H'+(++MJN),size:vSize(v),stops:st.map(s=>Object.assign({},s)),head:v.head,driver:p.driver,note:''});});
+MJ.push({id:'H'+(++MJN),size:'พ่วง',stops:[Object.assign(S(217),{pal:'26',at:'06:00'})],head:'',driver:'',note:''});
 MJ.push({id:'H'+(++MJN),size:'6 ล้อ',stops:[Object.assign(S(188),{pal:'8',cs:'240',at:'08:00'})],head:'',driver:'',note:''});
 /* งานห้างที่ได้รถแล้ว → ใส่เป็นจุดส่งของรถคันนั้นในแพลนรวม (จุดห้างขึ้นก่อน) · คนขับตามที่แอดมินห้างระบุ */
 function syncMall(){VEH.forEach(v=>{const p=PLAN[v.head];p.stops=p.stops.filter(s=>!isMall(s));});
@@ -825,7 +840,7 @@ function openLog(){const L=MALL.log.slice().reverse();
       +(e.items.length?'<ul>'+e.items.map(x=>'<li>'+esc(x.pl)+' · '+esc(x.txt)+'</li>').join('')+'</ul>':'')+'<div class="note">แจ้งถึง: '+esc(e.to.join(' · '))+'</div></div>').join('')+'</div>'});}
 /* รถว่างตามขนาด (คันที่ยังไม่ถูกใส่ในงานห้างอื่น · คันงานน้อยขึ้นก่อน) */
 function freeTrucks(size,except){const used=new Set(MJ.filter(j=>j.head&&j.id!==except).map(j=>j.head));
-  return VEH.filter(v=>v.g===size&&!v.tail&&PLAN[v.head].status==='ready'&&!used.has(v.head))
+  return VEH.filter(v=>szFits(v,size)&&!v.tail&&PLAN[v.head].status==='ready'&&!used.has(v.head))
     .sort((a,b)=>PLAN[a.head].stops.filter(s=>!isMall(s)).length-PLAN[b.head].stops.filter(s=>!isMall(s)).length);}
 async function sendMall(){const dfx=mallDiff(),items=MALL.rev<0?dfx.filter(x=>x.lvl):dfx,cur=mallSnap();
   const wait=MJ.filter(j=>!jReady(j));
@@ -881,7 +896,7 @@ function renderMall(){
   $('v-plan').querySelectorAll('[data-jset]').forEach(b=>b.onclick=e=>{e.stopPropagation();openJob(b.dataset.jset);});
   $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=()=>openJob(r.dataset.j);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
   wireSub();pmChips(mallTodo(dfx));updBar();lpShow();}
-function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'10/22 ล้อ',stops:[],head:'',driver:'',note:'',isNew:1};
+function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'พ่วง',stops:[],head:'',driver:'',note:'',isNew:1};
   JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
 function closeJob(){JE=null;renderPlan();}
 function syncJ(){if(!JE)return;const j=JE.j;
@@ -892,10 +907,10 @@ function syncJ(){if(!JE)return;const j=JE.j;
 function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   let h='<aside class="drawer" aria-label="งานห้าง '+esc(j.id)+'"><div class="dh"><div><div class="stc">'+(j.isNew?'<span class="rv w">งานใหม่</span>':jstPill(j))+'</div><h3>'+esc(j.id)+' · งานห้าง</h3><div class="m">'+esc(SZL[j.size])+(j.head?' · '+esc(plOf(j.head)):' · ยังไม่มีทะเบียน')+'</div></div><button class="x" id="jx" aria-label="ปิด">✕</button></div><div class="db">';
   h+='<div class="box"><span class="lb">① ขนาดรถ</span><div class="seg">'+SIZES.map(z=>'<button data-sz="'+z+'" class="'+(j.size===z?'on':'')+'">'+SZL[z]+'</button>').join('')+'</div>'
-    +(j.head?'<div class="note">เปลี่ยนขนาด = ล้างรถ '+esc(plOf(j.head))+' ออก ต้องใส่รถใหม่</div>':'')+'</div>';
+    +(j.size==='10 ล้อ'?'<div class="note">10 ล้อ (เดี่ยว) = ใช้รถพ่วง ไปแค่หัว ไม่ลากหาง</div>':'')+(j.head?'<div class="note">เปลี่ยนขนาด = ล้างรถ '+esc(plOf(j.head))+' ออก ต้องใส่รถใหม่</div>':'')+'</div>';
   {const fr=freeTrucks(j.size,j.id);if(j.head&&!fr.some(v=>v.head===j.head)){const v=VEH.find(x=>x.head===j.head);if(v)fr.unshift(v);}
   h+='<div class="box"><label for="jveh">② รถ <span class="note">(ตามที่พี่ปุ๋ยแจ้ง)</span></label><select class="in" id="jveh"><option value="">— ยังไม่ได้รับแจ้ง —</option>'
-    +fr.map(v=>'<option value="'+v.head+'"'+(j.head===v.head?' selected':'')+'>'+esc(v.plate.replace(',',' / '))+' · '+esc([BRAND[v.head],v.shape].filter(Boolean).join(' '))+'</option>').join('')+'</select>'
+    +fr.map(v=>'<option value="'+v.head+'"'+(j.head===v.head?' selected':'')+'>'+esc(j.size==='10 ล้อ'?v.head+' (หัว)':v.plate.replace(',',' / '))+' · '+esc([BRAND[v.head],v.shape].filter(Boolean).join(' '))+'</option>').join('')+'</select>'
     +(fr.length?'':'<div class="warn">ไม่มีรถ '+esc(SZL[j.size])+' ว่างในแพลนวันนี้</div>')
     +(j.head?'':'<div class="note">เลือกรถแล้ว ระบบใส่คนขับประจำคันให้ เปลี่ยนได้</div>')+'</div>';}
   h+='<div class="box"><label for="jdrv">③ คนขับ</label>'+(j.head?(()=>{const mine=DRV.find(d=>d.head===j.head);
@@ -949,7 +964,7 @@ const pvShort=s=>{const p=pvOf(s);return /^กรุงเทพ/.test(p)?'ก�
 const tmTH=t=>t?String(t).replace(':','.')+' น.':'';
 const jSort=(a,b)=>((a.stops[0]||{}).at||'99')<((b.stops[0]||{}).at||'99')?-1:1;
 /* เบิกค่าลงสินค้า: แอดมินพิมพ์เอง หรือคิดจากค่าลงของร้าน (ตามชนิดรถ + ค่าตักพาเลท) */
-function jUnlAuto(j){const v=VEH.find(x=>x.head===j.head)||{g:j.size};const f=j.stops.reduce((a,s)=>a+feeOf(v,s),0);return f>0?'โอนค่าลงสินค้า '+comma(f)+' บาท':'';}
+function jUnlAuto(j){const v=VEH.find(x=>x.head===j.head)||{g:szG(j.size)};const f=j.stops.reduce((a,s)=>a+feeOf(v,s),0);return f>0?'โอนค่าลงสินค้า '+comma(f)+' บาท':'';}
 const jUnl=j=>(j.unl!=null&&String(j.unl).trim()!=='')?String(j.unl).trim():jUnlAuto(j);
 function mallSheet(){const iso=$('pdate').value,d=new Date(iso+'T00:00:00'),ok=!isNaN(d);
   const js=MJ.filter(j=>j.stops.length&&(MX.all||jReady(j))).slice().sort(jSort);
@@ -1652,9 +1667,12 @@ function drawEditor(){
       +(s.id==null?'<label class="note" style="display:flex;flex-direction:column;gap:2px">ประเภทร้าน<select class="in" data-ty="'+i+'" style="width:96px">'+TYPES.map(t=>'<option'+(tyOf(s)===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>':'')+'</div></div>'
       +'<div class="ac"><button class="ib" data-up="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-dn="'+i+'" aria-label="เลื่อนลง"'+(i<p.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-rm="'+i+'" aria-label="ลบจุดนี้">✕</button></div></div>';});
     h+='<input class="in" id="sq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อร้าน'+(PM==='mall'?' (เฉพาะห้าง)':' (ร้านห้างเพิ่มที่แพลนห้าง)')+'" value="'+esc(ED.q)+'" autocomplete="off">';
-    if(ED.q){const nq=ED.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(s=>s.n.replace(/\s/g,'').toLowerCase().includes(nq)&&((tyOf({id:s.id})==='ห้าง')===(PM==='mall'))).slice(0,7);
+    if(ED.q){const nq=ED.q.replace(/\s/g,'').toLowerCase(),hit=ST.filter(s=>s.n.replace(/\s/g,'').toLowerCase().includes(nq)),side=s=>(tyOf({id:s.id})==='ห้าง')===(PM==='mall');
+      const r=hit.filter(side).slice(0,7),rx=hit.filter(s=>!side(s));
       h+='<div class="res">'+r.map(s=>'<button data-add="'+s.id+'"><span>'+esc(s.n)+'</span><span class="km">'+(()=>{const last=p.stops[p.stops.length-1];if(!last)return 'จากโรงงาน '+s.km+' กม.';const k=last.id?PAIR[last.id+'-'+s.id]:undefined;return k?'จากจุด '+p.stops.length+' '+k.km+' กม.':'<span class="warn" style="display:inline">ยังไม่มีค่ากลางจากจุด '+p.stops.length+'</span>';})()+'</span></button>').join('')
-       +'<button data-new="1"><span>＋ สถานที่ใหม่ “'+esc(ED.q)+'”</span><span class="km">ปักหมุด</span></button></div>';}
+       +(rx.length?'<div class="sqx"><div><b>'+(PM==='mall'?'ร้านแพลนรวม':'ร้านห้าง')+' '+rx.length+' ร้าน</b> ตรงกับ “'+esc(ED.q.trim())+'” · '+(PM==='mall'?'เพิ่มที่แพลนรวม':'ร้านห้างเพิ่มที่แพลนห้าง (จัด PO ลงรถ)')+'</div><div class="note">'+rx.slice(0,4).map(s=>esc(s.n)).join(' · ')+(rx.length>4?' …':'')+'</div>'
+         +'<button type="button" class="btn sm" '+(PM==='mall'?'data-goall':'data-gomall')+'>ไป'+(PM==='mall'?'แพลนรวม':'แพลนห้าง')+' →</button></div>':'')
+       +(r.length||!rx.length?'<button data-new="1"><span>＋ สถานที่ใหม่ “'+esc(ED.q)+'”</span><span class="km">ปักหมุด</span></button>':'')+'</div>';}
     if(ED.newLoc!=null)h+='<div class="box" style="background:var(--surface2)"><span class="lb">สถานที่ใหม่: '+esc(ED.newLoc)+'</span><input class="in" id="ll" placeholder="วางพิกัดจาก Google Maps เช่น 13.3611, 100.9847"><div class="note">บันทึกชื่อกับพิกัดไว้ แต่ระบบยังไม่มีระยะ กม. จึงยังคิดค่าแรงไม่ได้จนกว่า DEV จะใส่ค่ากลาง</div><div style="display:flex;gap:8px"><button class="btn sm pri" id="llok">เพิ่มจุดนี้</button><button class="btn sm ghost" id="llno">ยกเลิก</button></div></div>';
     h+='<div class="note">ค้นได้จากสถานีค่ากลาง Packing ทั้งหมด (เดโมมี 40 จาก 179 ร้าน)</div></div>';
     const act=HELP.filter(x=>x.status==='ใช้งาน');
@@ -1914,7 +1932,7 @@ async function clearAll(){
   VEH.forEach(v=>{const p=PLAN[v.head];if(!p)return;Object.assign(p,{stops:[],helpers:[],out:0,note:'',htime:'',jt:'',ot:''});});
   MJ=[];MP={};MALL.rev=-1;MALL.snap={};MALL.log=[];MALL.ack.clear();
   if(smp){LP_POS=[];LPI.src='empty';}
-  const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109t&r='+Date.now());}
+  const f=$('lpFrame');if(f&&f.getAttribute('src')){f.removeAttribute('src');f.setAttribute('src','pk-loadplan.html?v=20261109u&r='+Date.now());}
   syncMall();FILTER='all';renderAll();window.scrollTo({top:0});
   toast('🧹 ล้างงานทั้งหมดแล้ว · '+(PM==='mall'?'กด 📥 นำเข้าแพลน PO ที่ 📦 จัด PO ลงรถ':'ไปที่ 🏬 แพลนห้าง → 📦 จัด PO ลงรถ → 📥 นำเข้าแพลน PO'));}
 function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}

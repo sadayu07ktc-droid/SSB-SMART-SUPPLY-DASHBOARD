@@ -225,6 +225,7 @@ details.card summary{cursor:pointer;font-weight:700}
 .dropno{outline:3px dashed var(--bad)!important;outline-offset:2px}
 .tnew{flex:none;position:sticky;bottom:0;z-index:1;border:1.5px dashed var(--gold);border-radius:12px;background:var(--goldtint);color:var(--warn);padding:10px 12px;text-align:center;font-size:13px;font-weight:600}
 .stage canvas{touch-action:none}
+.tsel{font:inherit;font-size:12.5px;font-weight:600;padding:3px 8px;border-radius:999px;border:1px solid var(--line);background:var(--card,#fff);color:inherit;cursor:pointer}
 .axle{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2);display:flex;flex-direction:column;gap:8px}
 .axgrid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(60px,1fr) auto;gap:6px 10px;align-items:center;font-size:13px}
 .axgrid .num{text-align:right;white-space:nowrap}
@@ -339,6 +340,9 @@ const A = {
   types: [
     // axles = ตำแหน่งเพลาต่อช่วง (สัดส่วนความยาว) · dual = ล้อคู่ · หัวรถมีเพลาหน้าล้อเดี่ยวเสมอ
     { k: "trailer", name: "พ่วง 18 ล้อ", drv: "พ่วง", beds: [{ n: "หัว", L: 620, W: 240, H: 250, axles: [0.6, 0.8], dual: true }, { n: "หาง", L: 720, W: 240, H: 250, axles: [0.14, 0.86], dual: true }], pay: 30000, r: 50 },
+    // หัวลาก: หัวไม่มีกระบะ · หางเริ่มที่ semi.off ซม. หลังหัว · kp = จานลาก (ห่างหน้าหาง) · drive = เพลาขับ 2 เพลาของหัว · ไม่ใช้ในจัดรถอัตโนมัติ (noAuto)
+    { k: "semi", name: "หัวลาก 22 ล้อ", drv: "หัวลาก", noAuto: true, semi: { off: 120, kp: 110, drive: [200, 330] }, beds: [{ n: "หาง", L: 1400, W: 250, H: 290, axles: [0.721, 0.815, 0.909], dual: true }], pay: 33300, r: 50 },
+    { k: "10w", name: "10 ล้อ (เดี่ยว)", drv: "พ่วง", beds: [{ n: "กระบะ", L: 620, W: 240, H: 250, axles: [0.6, 0.8], dual: true }], pay: 15500, r: 50 },
     { k: "6w", name: "6 ล้อ", drv: "6 ล้อ", beds: [{ n: "กระบะ", L: 620, W: 230, H: 230, axles: [0.72], dual: true }], pay: 8000, r: 48 },
     { k: "4w", name: "4 ล้อ", drv: "4 ล้อ", beds: [{ n: "กระบะ", L: 250, W: 170, H: 180, axles: [0.7], dual: false }], pay: 1500, r: 34 },
   ],
@@ -360,6 +364,14 @@ const A = {
       { n: "หัว เพลาคู่ท้าย (ล้อคู่ 2 เพลา)", at: "bed0", tare: 5500, lim: 20000 },
       { n: "หาง เพลาหน้า (ล้อคู่)", at: "bed1a", tare: 3000, lim: 11000 },
       { n: "หาง เพลาท้าย (ล้อคู่)", at: "bed1b", tare: 3000, lim: 11000 }] },
+    // หัวลาก: รวม 50,500 + รถเปล่า 17,200 จากทะเบียนรถ · แบ่งรถเปล่ารายเพลาโดยประมาณ (ระบบมีแต่น้ำหนักรวม) · พิกัดรายเพลา = ชุดเดียวกับชนิดเดิม + หาง 3 เพลา 25,500
+    semi: { gvw: 50500, groups: [
+      { n: "เพลาหน้า (ล้อเดี่ยว)", at: "front", tare: 5000, lim: 7000 },
+      { n: "หัว เพลาขับ (ล้อคู่ 2 เพลา)", at: "drive", tare: 5700, lim: 20000 },
+      { n: "หาง 3 เพลา (ล้อคู่)", at: "tri", tare: 6500, lim: 25500 }] },
+    "10w": { gvw: 25000, groups: [
+      { n: "เพลาหน้า (ล้อเดี่ยว)", at: "front", tare: 4000, lim: 7000 },
+      { n: "เพลาคู่ท้าย (ล้อคู่ 2 เพลา)", at: "bed0", tare: 5500, lim: 20000 }] },
     "6w": { gvw: 15000, groups: [
       { n: "เพลาหน้า (ล้อเดี่ยว)", at: "front", tare: 2500, lim: 6000 },
       { n: "เพลาท้าย (ล้อคู่)", at: "bed0", tare: 2500, lim: 11000 }] },
@@ -369,18 +381,22 @@ const A = {
   },
 };
 const FRONT_AXLE_X = -120, BED_GAP = 90;   // ซม. · ตรงกับภาพ 3D (ล้อหน้าใต้หัวรถ / ช่องว่างหัว-หาง)
-function bedOffsets(type) { let x = 0; return type.beds.map((b) => { const o = x; x += b.L + BED_GAP; return o; }); }
+function bedOffsets(type) { let x = type.semi ? type.semi.off : 0; return type.beds.map((b) => { const o = x; x += b.L + BED_GAP; return o; }); }
 // คานรับน้ำหนักแบบง่าย: สินค้าแต่ละช่วงแบ่งลงเพลาตามระยะจากจุดศูนย์ถ่วง (หัว = เพลาหน้า+เพลาท้ายหัว · หางพ่วงเต็ม = เพลาหน้า+ท้ายของหาง)
 function axleLoad(r) {
   const type = r.type, off = bedOffsets(type), cfg = A.axle[type.k];
   const cargo = type.beds.map(() => ({ w: 0, m: 0 }));
   r.placed.forEach((p) => { const sp = p.sp, x = off[sp.bi] + sp.i * sp.g.along + sp.g.along / 2; cargo[sp.bi].w += p.u.kg; cargo[sp.bi].m += p.u.kg * x; });
   const pos = { front: FRONT_AXLE_X };
-  type.beds.forEach((b, bi) => { const xs = b.axles.map((f) => off[bi] + b.L * f); if (bi === 0) pos.bed0 = xs.reduce((a, v) => a + v, 0) / xs.length; else { pos.bed1a = xs[0]; pos.bed1b = xs[xs.length - 1]; } });
+  const avg = (a) => a.reduce((s, v) => s + v, 0) / a.length;
+  if (type.semi) { const b = type.beds[0]; pos.tri = avg(b.axles.map((f) => off[0] + b.L * f)); pos.kp = off[0] + type.semi.kp; pos.drive = avg(type.semi.drive); }
+  else type.beds.forEach((b, bi) => { const xs = b.axles.map((f) => off[bi] + b.L * f); if (bi === 0) pos.bed0 = xs.reduce((a, v) => a + v, 0) / xs.length; else { pos.bed1a = xs[0]; pos.bed1b = xs[xs.length - 1]; } });
   const loads = cfg.groups.map((g) => ({ n: g.n, at: g.at, lim: g.lim, tare: g.tare, kg: g.tare, x: pos[g.at] }));
   const add = (at, kg) => { const l = loads.find((q) => q.at === at); if (l) l.kg += kg; };
   const c0 = cargo[0];
-  if (c0.w) { const xc = c0.m / c0.w, rr = c0.w * (xc - pos.front) / (pos.bed0 - pos.front); add("bed0", rr); add("front", c0.w - rr); }
+  if (type.semi) {   // หาง: ระหว่างจานลากกับกลางหาง 3 เพลา · จานลาก: ระหว่างเพลาหน้ากับกลางเพลาขับ
+    if (c0.w) { const xc = c0.m / c0.w, rt = c0.w * (xc - pos.kp) / (pos.tri - pos.kp), kp = c0.w - rt, rd = kp * (pos.kp - pos.front) / (pos.drive - pos.front); add("tri", rt); add("drive", rd); add("front", kp - rd); }
+  } else if (c0.w) { const xc = c0.m / c0.w, rr = c0.w * (xc - pos.front) / (pos.bed0 - pos.front); add("bed0", rr); add("front", c0.w - rr); }
   const c1 = cargo[1];
   if (c1 && c1.w) { const xc = c1.m / c1.w, rb = c1.w * (xc - pos.bed1a) / (pos.bed1b - pos.bed1a); add("bed1b", rb); add("bed1a", c1.w - rb); }
   loads.forEach((l) => (l.pct = l.lim > 0 ? l.kg / l.lim * 100 : 0));
@@ -471,7 +487,7 @@ function place(type, units, stack, fix) {
   const spots = [];
   type.beds.forEach((b, bi) => { const g = bedGrid(b); for (let i = 0; i < g.nl; i++) for (let j = 0; j < g.na; j++) spots.push({ bi, i, j, g, b }); });
   if (opt.balance) {   // ของหนักวางใกล้จุดรับน้ำหนัก: ช่วงหัว = เพลาท้าย · หาง = กลางหาง → เพลาหน้าไม่เกิน
-    const sweet = (s) => (s.bi === 0 ? s.b.axles.reduce((a, v) => a + v, 0) / s.b.axles.length : 0.5) * s.b.L;
+    const sweet = (s) => (s.bi === 0 && !type.semi ? s.b.axles.reduce((a, v) => a + v, 0) / s.b.axles.length : 0.5) * s.b.L;
     const d = (s) => Math.abs(s.i * s.g.along + s.g.along / 2 - sweet(s));
     spots.sort((a, b) => d(a) - d(b) || a.bi - b.bi || a.j - b.j);
   }
@@ -541,7 +557,7 @@ function autoPlan(items) {
       t.items.push(it);
     });
     // คันที่ของน้อย ลดเป็นรถเล็กสุดที่พอ
-    open.forEach((t) => { const u = t.items.flatMap((i) => i.units); for (let k = A.types.length - 1; k >= 0; k--) if (fitsType(A.types[k], u)) { t.type = A.types[k].k; break; } });
+    open.forEach((t) => { const u = t.items.flatMap((i) => i.units); for (let k = A.types.length - 1; k >= 0; k--) if (!A.types[k].noAuto && fitsType(A.types[k], u)) { t.type = A.types[k].k; break; } });
     out.push(...open);
   });
   return out;
@@ -741,7 +757,7 @@ function retarget(itemId, truckId) {
   if (moving && dest && hasOtherPO(dest, moving)) { toastMsg("คัน #" + dest.id + " มี PO อื่นอยู่แล้ว · กฎ 7-11: 1 คัน = 1 PO"); renderPOs(); return false; }
   // ย้าย PO → เปลี่ยนเป็นโหมดแอดมินจัดเอง (เก็บรถที่ระบบจัดไว้เป็นจุดเริ่ม)
   if (mode === "auto") { mode = "manual"; trucks.forEach((t) => (t.manual = true)); }
-  if (truckId === "new-trailer" || truckId === "new-6w" || truckId === "new-4w") { const t = { id: newId(), type: truckId.slice(4), items: [], manual: true }; trucks.push(t); truckId = t.id; }
+  if (/^new-/.test(String(truckId))) { const t = { id: newId(), type: truckId.slice(4), items: [], manual: true }; trucks.push(t); truckId = t.id; }
   if (truckId === "") delete assign[itemId]; else assign[itemId] = +truckId;
   build(); renderAll();
   return true;
@@ -1411,11 +1427,11 @@ function addWheelPair(grp, x, W, S, mat, dual, r) {
   });
   return dual ? 4 : 2;
 }
-const wheelCount = (type) => 2 + type.beds.reduce((a, b) => a + b.axles.length * (b.dual ? 4 : 2), 0);
+const wheelCount = (type) => 2 + (type.semi ? type.semi.drive.length * 4 : 0) + type.beds.reduce((a, b) => a + b.axles.length * (b.dual ? 4 : 2), 0);
 // หัวรถบรรทุกหน้าแบน (cab-over แบบ HINO/ISUZU ที่วิ่งในไทย) · ขนาดตามชนิดรถ · หันหน้าไปทาง -x · ซม. (คูณ S ตอนวาง)
 //   4 ล้อ = หัวเล็ก เตี้ย · 6 ล้อ = หัวกลาง · พ่วง 18 ล้อ = หัวใหญ่ สูง มีสปอยเลอร์หลังคา + ท่อไอเสียตั้ง
 //   ล้อหน้าอยู่ที่ FRONT_AXLE_X เสมอ (ใช้คิดน้ำหนักลงเพลา) → ความยาวหัวต้องคลุมล้อหน้า
-const CAB = { "4w": { L: 150, H: 142, fair: 0, stack: 0 }, "6w": { L: 168, H: 176, fair: 0, stack: 1 }, trailer: { L: 182, H: 198, fair: 64, stack: 1 } };
+const CAB = { semi: { L: 186, H: 205, fair: 64, stack: 1 }, "10w": { L: 182, H: 198, fair: 64, stack: 1 }, "4w": { L: 150, H: 142, fair: 0, stack: 0 }, "6w": { L: 168, H: 176, fair: 0, stack: 1 }, trailer: { L: 182, H: 198, fair: 64, stack: 1 } };
 function addCab(grp, W, S, mat, r, k) {
   const P = CAB[k] || CAB["6w"], cw = W + 6, half = cw / 2, L = P.L, Hc = P.H, B = -64, bv = 7, body = new THREE.Group();
   // สีหัวรถ = ขาวเงา (รถส่วนใหญ่ของบริษัท) · เคลือบเงา clearcoat สะท้อนแสงโกดัง · บังแดด/แถบข้าง = เขียวแบรนด์
@@ -1831,10 +1847,17 @@ function draw3D() {
   const r = evalTruck(t), S = 0.01, type = r.type, gap = 90;
   const mat = (c, o) => stdMat({ color: c, transparent: o != null, opacity: o == null ? 1 : o, roughness: 0.5, envMapIntensity: 0.45 });
   // วางกระบะเรียงตามความยาว (แกน x) · หัวรถอยู่หน้า
-  let x0 = 0; const bedX = [];
+  let x0 = type.semi ? type.semi.off : 0; const bedX = [];
   type.beds.forEach((b) => { bedX.push(x0); x0 += b.L + gap; });
   const totalL = x0 - gap, W = Math.max(...type.beds.map((b) => b.W));
   addCab(grp, W, S, mat, type.r, type.k);
+  if (type.semi) {   // หัวลาก: แชสซีหัว + เพลาขับ 2 เพลา + จานลาก ใต้หน้าหาง · ขาค้ำหาง
+    const sm = type.semi, dk = mat(0x2a2f2c), rear = sm.drive[sm.drive.length - 1] + 70;
+    const ch = new THREE.Mesh(new THREE.BoxGeometry((rear + 12) * S, 20 * S, (W - 70) * S), dk); ch.position.set(((rear - 12) / 2) * S, -42 * S, 0); grp.add(ch);
+    sm.drive.forEach((x) => addWheelPair(grp, x * S, W, S, mat, true, type.r));
+    const fw = new THREE.Mesh(new THREE.CylinderGeometry(48 * S, 48 * S, 8 * S, 24), mat(0x1c1c1c)); fw.position.set((bedX[0] + sm.kp) * S, -30 * S, 0); grp.add(fw);
+    [1, -1].forEach((sd) => { const lg = new THREE.Mesh(new THREE.BoxGeometry(10 * S, 66 * S, 10 * S), dk); lg.position.set((bedX[0] + 330) * S, -61 * S, sd * (W / 2 - 40) * S); grp.add(lg); });
+  }
   R3.yard = addYard(grp, S, -200, totalL, W, (t.dcs || [t.dc]).filter(Boolean).map((c) => ({ code: c, n: (A.dc[c] || {}).n || "" })));
   R3.fk = addForklift(grp, totalL * 0.62, -(W / 2 + 235), Math.PI / 2, S); R3.fkX = null; R3.fkZ0 = -(W / 2 + 520); R3.fkZT = -(W / 2 + 110);
   const deck = keepMat("deck", () => stdMat({ map: cvTex("deck", 256, 256, paintDeck, 3, 2), roughness: 0.75 })), wood = keepMat("wood", () => stdMat({ map: cvTex("wood", 256, 256, paintWood), roughness: 0.85 }));
@@ -1951,7 +1974,7 @@ function renderViewer() {
   if (!t) { $("vTitle").textContent = "—"; $("vChips").innerHTML = ""; $("vAlert").innerHTML = ""; draw3D(); $("legend").innerHTML = ""; $("axlePanel").innerHTML = ""; renderSeq(); return; }
   const r = evalTruck(t);
   $("vTitle").textContent = `#${t.id} · ${r.type.name}${t.driver ? " · " + t.driver.name : ""}`;
-  $("vChips").innerHTML = `<span class="chip c-gold">🛞 ${wheelCount(r.type)} ล้อ</span><span class="chip ${r.over.length ? "c-bad" : "c-ok"}">พาเลท ${r.pos + r.over.length}/${r.capPos}</span>${r.hand ? `<span class="chip c-info">+ เศษเรียงมือ ${r.hand}</span>` : ""}<span class="chip ${r.overKg ? "c-bad" : "c-ok"}" title="สินค้า + พาเลทไม้ ไม่รวมตัวรถ · บรรทุกได้หักเผื่อ ${A.payBuf}%">สินค้า ${nf(r.kg)} / บรรทุกได้ ${nf(r.payMax)} กก.</span>${t.short ? '<span class="chip c-bad">⛔ ยังไม่มีรถ · ภาพนี้คือแผนถ้าได้รถ</span>' : t.items.length ? `<span class="chip c-info">${t.round === 2 ? "รอบ 2 · " : ""}ขึ้นของ ${hmDay(t.slot)} · ถึงคลังนัด ${esc((A.dc[t.dc] || {}).t || "")}</span>` : ""}${opt.stack ? '<span class="chip c-gold">ซ้อน 2 ชั้น</span>' : ""}`;
+  $("vChips").innerHTML = `<select class="tsel" data-ttype="${t.id}" aria-label="ชนิดรถคัน #${t.id}" title="เปลี่ยนชนิดรถคันนี้">${A.types.map((x) => `<option value="${x.k}"${x.k === t.type ? " selected" : ""}>${esc(x.name)}</option>`).join("")}</select><span class="chip c-gold">🛞 ${wheelCount(r.type)} ล้อ</span><span class="chip ${r.over.length ? "c-bad" : "c-ok"}">พาเลท ${r.pos + r.over.length}/${r.capPos}</span>${r.hand ? `<span class="chip c-info">+ เศษเรียงมือ ${r.hand}</span>` : ""}<span class="chip ${r.overKg ? "c-bad" : "c-ok"}" title="สินค้า + พาเลทไม้ ไม่รวมตัวรถ · บรรทุกได้หักเผื่อ ${A.payBuf}%">สินค้า ${nf(r.kg)} / บรรทุกได้ ${nf(r.payMax)} กก.</span>${t.short ? '<span class="chip c-bad">⛔ ยังไม่มีรถ · ภาพนี้คือแผนถ้าได้รถ</span>' : t.items.length ? `<span class="chip c-info">${t.round === 2 ? "รอบ 2 · " : ""}ขึ้นของ ${hmDay(t.slot)} · ถึงคลังนัด ${esc((A.dc[t.dc] || {}).t || "")}</span>` : ""}${opt.stack ? '<span class="chip c-gold">ซ้อน 2 ชั้น</span>' : ""}`;
   const skus = [...new Set(r.placed.flatMap((p) => p.u.segs.map((g) => g.s)))];
   $("legend").innerHTML = skus.map((s) => `<span><i style="background:${s.color}"></i>${esc(s.name)}</span>`).join("") + '<span><i style="background:#b08455"></i>พาเลทไม้</span><span><i style="background:#d04040"></i>สูงเกินกระบะ</span>';
   // แถบเตือนใหญ่เหนือภาพ: ล้น / เกินน้ำหนัก / เพลาเกินพิกัด
@@ -2149,6 +2172,9 @@ document.addEventListener("change", (e) => {
   const el = e.target;
   if (el.dataset.move != null) { retarget(el.dataset.move, el.value); return; }
   if (el.dataset.givecode) { const k = bk(), s = new Set(k.given || []); el.checked ? s.add(el.dataset.givecode) : s.delete(el.dataset.givecode); k.given = s; build(); renderAll(); return; }
+  if (el.dataset.ttype != null) { const tk = trucks.find((x) => x.id === +el.dataset.ttype); if (!tk || tk.type === el.value) return;
+    if (mode === "auto") { mode = "manual"; trucks.forEach((x) => (x.manual = true)); }
+    tk.type = el.value; build(); renderAll(); toastMsg("คัน #" + tk.id + " เปลี่ยนเป็น " + A.types.find((x) => x.k === el.value).name); return; }
   if (el.id === "addSel" && el.value) { if (mode === "auto") { mode = "manual"; trucks.forEach((t) => (t.manual = true)); } const t = { id: newId(), type: el.value.slice(4), items: [], manual: true }; trucks.push(t); sel = trucks.length - 1; build(); renderAll(); return; }
   if (el.id === "optOnePO" || el.id === "optStack" || el.id === "optBal") { opt.onePO = true; opt.stack = $("optStack").checked; opt.balance = $("optBal").checked; POS.forEach((p) => delete p._u); build(); renderAll(); return; }
   if (el.dataset.asm) {
@@ -2218,7 +2244,7 @@ window.addEventListener("pointerup", (e) => {
   const it = build.items.find((x) => x.id === d.id); if (!it) return;
   const openIt = () => { const ni = trucks.findIndex((x) => x.id === assign[d.id]); if (ni >= 0) { sel = ni; renderTrucks(); renderPOs(); renderViewer(); } };
   if (tg.fresh) {
-    const type = A.types.slice().reverse().find((x) => fitsType(x, it.units)) || A.types[0];   // คันเล็กสุดที่พอ
+    const type = A.types.slice().reverse().find((x) => !x.noAuto && fitsType(x, it.units)) || A.types[0];   // คันเล็กสุดที่พอ
     retarget(d.id, "new-" + type.k); openIt();
     toastMsg("เพิ่ม " + type.name + " คัน #" + assign[d.id] + " ให้ PO " + d.id + " แล้ว");
     return;
