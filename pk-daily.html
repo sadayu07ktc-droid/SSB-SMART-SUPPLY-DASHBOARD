@@ -1,0 +1,817 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta name="robots" content="noindex">
+<title>แพลนรถ Packing ประจำวัน</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: แถบหัวเขียว SSB + แท็บ 3 หน้า (แพลน / เด็กรถ / สรุปสถานะรถ) · แพลน = รายการรถตามกลุ่มล้อเหมือนใบงาน แก้ทีละคันในลิ้นชักขวา */
+:root{
+  --bg:#EDF2EE; --surface:#FFFFFF; --surface2:#F4F7F4; --ink:#14261C; --muted:#5D6E63; --line:#D7E1D9;
+  --head:#1B4332; --head-ink:#F3F7F4; --brand:#1F6B48; --brand-ink:#FFFFFF; --gold:#C9A227; --gold-ink:#5B4600;
+  --good:#17703F; --goodbg:#E2F2E7; --bad:#B42318; --badbg:#FCEBE9; --warn:#9A5B06; --warnbg:#FFF2D8;
+  --idle:#5D6E63; --idlebg:#ECF0ED; --info:#1E4FA3; --infobg:#E6EEFA; --shadow:rgba(20,38,28,.10);
+  --chat:#8DA9C9; --display:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif; --body:"IBM Plex Sans Thai",system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0D1611; --surface:#14211A; --surface2:#1A2A21; --ink:#E4EDE7; --muted:#9AAEA1; --line:#2A3C31;
+  --head:#123023; --head-ink:#E9F2EC; --brand:#3C8F66; --brand-ink:#FFFFFF; --gold:#D9B743; --gold-ink:#F4E3A6;
+  --good:#6BCB93; --goodbg:#173326; --bad:#F2877C; --badbg:#3A1C19; --warn:#F0B95A; --warnbg:#3A2C12;
+  --idle:#9AAEA1; --idlebg:#1E2C24; --info:#8DB2F2; --infobg:#18263F; --shadow:rgba(0,0,0,.45); --chat:#2C3D52; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1611; --surface:#14211A; --surface2:#1A2A21; --ink:#E4EDE7; --muted:#9AAEA1; --line:#2A3C31;
+  --head:#123023; --head-ink:#E9F2EC; --brand:#3C8F66; --brand-ink:#FFFFFF; --gold:#D9B743; --gold-ink:#F4E3A6;
+  --good:#6BCB93; --goodbg:#173326; --bad:#F2877C; --badbg:#3A1C19; --warn:#F0B95A; --warnbg:#3A2C12;
+  --idle:#9AAEA1; --idlebg:#1E2C24; --info:#8DB2F2; --infobg:#18263F; --shadow:rgba(0,0,0,.45); --chat:#2C3D52; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:14.5px;line-height:1.5}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.top{background:var(--head);color:var(--head-ink);padding-block:16px 0}
+.top h1{font-family:var(--display);font-size:22px;margin:0;font-weight:700;letter-spacing:.01em}
+.top .row{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between}
+.top .sub{opacity:.78;font-size:13px}
+.datebox{display:flex;align-items:center;gap:8px;font-size:13px}
+.datebox input{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:5px 8px;color:var(--head-ink);color-scheme:dark}
+.tabs{display:flex;gap:4px;margin-top:14px;overflow-x:auto;scrollbar-width:none}
+.tabs a{color:var(--head-ink);text-decoration:none;padding:10px 16px;border-radius:12px 12px 0 0;font-weight:600;white-space:nowrap;opacity:.75}
+.tabs a.on{background:var(--bg);color:var(--ink);opacity:1}
+.tabs a:hover{opacity:1}
+.demo{margin:14px 0 0;background:var(--warnbg);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px}
+main{padding-block:14px 120px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13.5px;display:inline-flex;gap:7px;align-items:center}
+.chip b{font-variant-numeric:tabular-nums}
+.chip.on{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.search{flex:1 1 220px;min-width:0;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:8px 12px}
+.grp{margin-top:18px}
+.grp h2{font-family:var(--display);font-size:16px;margin:0 0 8px;display:flex;gap:10px;align-items:baseline}
+.grp h2 span{font-family:var(--body);font-size:12.5px;color:var(--muted);font-weight:500}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.vr{display:grid;grid-template-columns:28px minmax(150px,1.15fr) minmax(140px,1fr) minmax(150px,1.1fr) minmax(200px,1.7fr) 112px;gap:12px;align-items:center;padding:11px 14px;border-top:1px solid var(--line);cursor:pointer}
+.vr:first-child{border-top:0}
+.vr:hover{background:var(--surface2)}
+.vr .no{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px;text-align:right}
+.plate{font-weight:700;font-variant-numeric:tabular-nums;line-height:1.3}
+.plate small{display:block;font-weight:500;color:var(--muted);font-size:12.5px}
+.cell{min-width:0;font-size:13.5px}
+.cell .k{display:none;color:var(--muted);font-size:12px}
+.cell .m{color:var(--muted);font-size:12.5px}
+.ell{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pill{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:3px 10px;font-size:12.5px;font-weight:600;white-space:nowrap}
+.p-job{background:var(--goodbg);color:var(--good)} .p-wait{background:var(--idlebg);color:var(--idle)}
+.p-rep{background:var(--badbg);color:var(--bad)} .p-nod{background:var(--warnbg);color:var(--warn)}
+.p-tail{background:var(--warnbg);color:var(--gold-ink)} .p-long{background:var(--infobg);color:var(--info)}
+.warn{color:var(--warn);font-size:12.5px}
+.tag{display:inline-block;border-radius:6px;padding:0 6px;font-size:11.5px;font-weight:600;background:var(--surface2);border:1px solid var(--line);margin-left:4px}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px -16px var(--shadow);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
+.bar .wrap{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:10px}
+.bar .sum{font-size:13px;color:var(--muted)}
+.bar .sum b{color:var(--ink);font-variant-numeric:tabular-nums}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--brand)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:#2A2000}
+.btn.sm{padding:5px 10px;font-size:13px;border-radius:8px}
+.btn.ghost{background:transparent}
+/* ลิ้นชักแก้งาน */
+.scrim{position:fixed;inset:0;background:rgba(8,16,11,.45);z-index:40}
+.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--bg);z-index:41;display:flex;flex-direction:column;box-shadow:-20px 0 40px -20px rgba(0,0,0,.5);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);padding-right:env(safe-area-inset-right,0px)}
+.dh{background:var(--head);color:var(--head-ink);padding:14px 18px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.dh h3{margin:0;font-family:var(--display);font-size:19px}
+.dh .m{opacity:.8;font-size:13px}
+.dh .x{background:rgba(255,255,255,.12);border:0;color:var(--head-ink);border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:17px;flex:none}
+.db{flex:1;overflow:auto;padding:16px 18px 24px;display:flex;flex-direction:column;gap:14px}
+.df{border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:10px;justify-content:flex-end;background:var(--surface)}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.box > label,.lb{font-weight:600;font-size:13.5px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:6px 12px;cursor:pointer;font-size:13.5px}
+.seg button.on{background:var(--brand);color:var(--brand-ink);border-color:var(--brand)}
+.seg button.on.r{background:var(--bad);border-color:var(--bad)}
+.in{border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:7px 10px;width:100%;min-width:0}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stop{display:grid;grid-template-columns:26px 1fr auto;gap:8px;align-items:start;border:1px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface2)}
+.stop .n{width:24px;height:24px;border-radius:50%;background:var(--head);color:var(--head-ink);display:grid;place-items:center;font-size:12px;font-weight:700}
+.stop .nm{font-weight:600;min-width:0}
+.stop .q{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.stop .q input{width:92px}
+.stop .ac{display:flex;gap:4px}
+.ib{border:1px solid var(--line);background:var(--surface);border-radius:7px;width:28px;height:28px;cursor:pointer;font-size:13px;line-height:1}
+.res{border:1px solid var(--line);border-radius:10px;background:var(--surface);overflow:hidden}
+.res button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:8px 10px;cursor:pointer}
+.res button:first-child{border-top:0}
+.res button:hover{background:var(--surface2)}
+.res .km{color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hl{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.hl label{display:flex;gap:8px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:6px 8px;cursor:pointer;background:var(--surface2);font-size:13px}
+.hl label.dis{opacity:.55}
+.hl small{display:block;color:var(--muted);font-size:11.5px}
+.step{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.step button{border:0;background:var(--surface2);width:32px;height:32px;cursor:pointer;font-size:16px}
+.step span{min-width:34px;text-align:center;font-variant-numeric:tabular-nums;font-weight:700}
+.note{color:var(--muted);font-size:12.5px}
+/* เด็กรถ */
+.hgrid{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:16px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+.card h3{font-family:var(--display);font-size:16px;margin:0 0 10px}
+.form{display:flex;flex-direction:column;gap:9px}
+.form label{font-size:13px;font-weight:600;display:flex;flex-direction:column;gap:4px}
+.hrow{display:grid;grid-template-columns:76px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.2fr) 96px;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.hrow:first-child{border-top:0}
+.hrow.head{font-size:12px;color:var(--muted);font-weight:600;background:var(--surface2)}
+.code{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
+/* สรุปสถานะ */
+.rgrid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
+.imgbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
+.imgbox img{display:block;width:100%;height:auto;border-radius:6px}
+.legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:10px 4px 0}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(0,0,0,.15)}
+.chat{background:var(--chat);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
+.chat .who{font-size:12px;color:#fff;opacity:.9}
+.flex{background:#fff;color:#1d2a22;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px -6px rgba(0,0,0,.35)}
+.flex .fh{background:#1B4332;color:#fff;padding:12px 14px}
+.flex .fh b{display:block;font-family:var(--display);font-size:16px;color:#E9CF6E}
+.flex .fb{padding:10px 14px;display:flex;flex-direction:column;gap:8px;font-size:13px}
+.flex .kp{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.flex .kp div{background:#F1F5F2;border-radius:8px;padding:6px 2px}
+.flex .kp b{display:block;font-size:18px;font-variant-numeric:tabular-nums}
+.flex .rp{color:#B42318;font-size:12.5px}
+.flex img{display:block;width:100%;max-height:170px;object-fit:cover;object-position:top}
+.flex .fbt{display:block;text-align:center;color:#1E4FA3;font-weight:700;padding:10px;border-top:1px solid #E3E9E5}
+.opt{display:flex;gap:8px;align-items:center;font-size:13px;margin:0 0 10px}
+/* สถิติรายเดือน */
+.stats{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:16px 22px;align-items:start}
+.stats h2{font-family:var(--display);font-size:16px;margin:0;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.stats h2 span{font-family:var(--body);font-size:12.5px;color:var(--muted);font-weight:500}
+.tot{display:flex;align-items:baseline;gap:8px;margin:8px 0 10px}
+.tot b{font-family:var(--display);font-size:36px;line-height:1;font-variant-numeric:tabular-nums}
+.tot span{color:var(--muted);font-size:13px}
+.tys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ty{border-radius:11px;padding:8px 10px;background:var(--surface2);border:1px solid var(--line)}
+.ty b{display:block;font-size:22px;font-variant-numeric:tabular-nums;line-height:1.2}
+.ty small{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted);font-weight:600}
+.ty small i,.tchip i{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.ty .pc{font-size:11.5px;color:var(--muted)}
+.days{display:flex;align-items:flex-end;gap:5px;height:118px;padding-top:6px;overflow-x:auto}
+.day{flex:1 0 22px;display:flex;flex-direction:column;align-items:center;gap:3px;min-width:22px}
+.day .stk{width:100%;max-width:30px;display:flex;flex-direction:column-reverse;border-radius:5px 5px 2px 2px;overflow:hidden}
+.day .stk span{display:block}
+.day .d{font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.day .n{font-size:11px;font-weight:700;font-variant-numeric:tabular-nums}
+.day.today .d{color:var(--ink);font-weight:700}
+.day.today .stk{outline:2px solid var(--gold);outline-offset:1px}
+.leg2{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.tchip{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;border-radius:999px;padding:0 7px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);white-space:nowrap;vertical-align:1px}
+/* จุดส่งในแถว: เห็นครบทุกจุด */
+.sl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 8px;align-items:baseline;font-size:13px}
+.sl + .sl{margin-top:5px;padding-top:5px;border-top:1px dashed var(--line)}
+.sl .t{font-variant-numeric:tabular-nums;font-weight:700;color:var(--info);font-size:12.5px;min-width:44px}
+.sl .t.no{color:var(--muted);font-weight:500}
+.sl .nm{font-weight:600}
+.sl .sub{grid-column:2;color:var(--muted);font-size:12px}
+.dotc{width:12px;height:12px;border-radius:50%;display:inline-block;flex:none;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 18%,transparent)}
+/* แผงซ้าย: รายการรถ ↔ รายละเอียดคันที่เลือก */
+.wrap.wide{max-width:none}
+.split{display:grid;grid-template-columns:400px minmax(0,1fr);gap:18px;align-items:start}
+.lp{position:sticky;top:12px;height:calc(100vh - 100px);min-height:520px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:0 10px 30px -18px var(--shadow)}
+.lh{background:var(--head);color:var(--head-ink);padding:14px 18px;border-bottom:3px solid var(--gold);display:flex;align-items:baseline;gap:10px}
+.lh b{font-family:var(--display);font-size:17px}
+.lh span{opacity:.75;font-size:13px}
+.ll{flex:1;overflow:auto;overscroll-behavior:contain}
+.vc{display:block;width:100%;text-align:left;border:0;border-top:1px solid var(--line);background:none;padding:12px 18px;cursor:pointer}
+.vc:first-child{border-top:0}
+.vc:hover{background:var(--surface2)}
+.vc .r1{display:flex;align-items:center;gap:8px;min-width:0}
+.vc .r1 .nm{font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vc .r1 .pl{color:var(--muted);font-size:12.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.vc .r2{display:flex;align-items:baseline;gap:8px;margin-top:4px;min-width:0}
+.vc .r2 .big{font-family:var(--display);font-size:24px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1.1}
+.vc .r2 .big.no{font-size:15px;color:var(--muted);font-weight:600}
+.vc .r2 .to{color:var(--muted);font-size:13px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vc .r3{color:var(--muted);font-size:12.5px;margin-top:2px}
+.vc .r3.bad{color:var(--bad)}
+.lgh{position:sticky;top:0;background:var(--surface2);padding:6px 18px;font-size:12px;font-weight:700;color:var(--muted);border-top:1px solid var(--line);border-bottom:1px solid var(--line);z-index:1}
+.lp .drawer{position:static;width:auto;flex:1;min-height:0;box-shadow:none;animation:none;padding:0}
+.lp .dh{border-bottom:3px solid var(--gold)}
+.dh .stc{margin-bottom:6px}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.sec h4{margin:0 0 10px;font-size:13px;color:var(--muted);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.kv{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px}
+.kv small{display:block;color:var(--muted);font-size:12px}
+.kv b{font-variant-numeric:tabular-nums;font-size:14px}
+.tl{position:relative;display:flex;flex-direction:column;gap:12px;padding-left:22px}
+.tl::before{content:"";position:absolute;left:6px;top:6px;bottom:6px;width:2px;background:var(--line)}
+.tl .ti{position:relative}
+.tl .ti::before{content:"";position:absolute;left:-22px;top:4px;width:14px;height:14px;border-radius:50%;background:var(--brand);box-shadow:0 0 0 3px var(--surface)}
+.tl .ti.fac::before{background:var(--head)}
+.tl .ti b{display:block}
+.tl .ti .m{color:var(--muted);font-size:12.5px}
+.tl .at{font-variant-numeric:tabular-nums;font-weight:700;color:var(--info)}
+.edl{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:.04em;margin:4px 2px -4px}
+.vr.sel{background:var(--goodbg);box-shadow:inset 3px 0 0 var(--brand)}
+@media (min-width:901px){.vr{grid-template-columns:26px minmax(120px,1fr) minmax(110px,.9fr) minmax(110px,.9fr) minmax(190px,1.7fr) 96px}}
+/* ใบงานเต็ม (แบบใบแจ้งงาน PK) + สถิติคนขับขวาสุด */
+.split{grid-template-columns:340px minmax(0,1fr)}
+.split.nolp{grid-template-columns:minmax(0,1fr)}
+.split.nolp .lp{display:none}
+.msum{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;margin:10px 0}
+.msum .note{flex-basis:100%}
+.sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:calc(100vh - 210px)}
+.jt{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:12.5px}
+.jt th,.jt td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
+.jt thead tr:nth-child(2) th{white-space:normal;vertical-align:bottom;max-width:84px}
+.jt thead th{position:sticky;top:0;background:var(--surface2);font-size:12px;color:var(--muted);font-weight:700;z-index:3}
+.jt thead tr:nth-child(2) th{top:33px}
+.jt thead .g1 th{background:var(--head);color:var(--head-ink);font-family:var(--display);font-size:14px;font-weight:700}
+.jt thead .g1 th.stg{background:#7A5C00;color:#FFF4CC;text-align:center}
+.jt th.stg{background:color-mix(in srgb,var(--gold) 22%,var(--surface2));color:var(--gold-ink)}
+.jt .stk0{position:sticky;left:0;z-index:2;background:var(--surface);min-width:150px;max-width:150px;white-space:normal}
+.jt .stk1{position:sticky;left:150px;z-index:2;background:var(--surface);min-width:120px;max-width:132px;white-space:normal;box-shadow:1px 0 0 var(--line)}
+.jt thead .stk0,.jt thead .stk1{z-index:4;background:var(--surface2)}
+.jt .gr td{background:var(--surface2);font-size:12.5px;position:sticky;left:0}
+.jt .gr span{color:var(--muted)}
+.vr2{cursor:pointer}
+.vr2:hover td{background:var(--surface2)}
+.vr2.sel td{background:var(--goodbg)}
+.vr2.rep td{background:var(--badbg)}
+.jt .pc{display:flex;gap:9px;align-items:flex-start}
+.jt .pc .dotc{margin-top:4px}
+.jt .pc small{display:block;color:var(--muted);font-size:11.5px}
+.jt .ln{min-height:20px;line-height:20px}
+.jt .cu .ell{display:inline-block;max-width:175px;vertical-align:bottom}
+.jt .n{text-align:right;font-variant-numeric:tabular-nums}
+.jt .tm{color:var(--info)}
+.jt .nt{white-space:normal;min-width:96px;max-width:118px;font-size:12.5px}
+.jt .hp{font-size:12.5px}
+.jt .rd{color:var(--bad);font-weight:600}
+.jt .or{color:var(--warn);font-weight:600}
+.jt .m{color:var(--muted)}
+.jt td.stc{background:color-mix(in srgb,var(--gold) 7%,var(--surface));min-width:56px;font-weight:600}
+.jt td.stc.td{color:var(--good)}
+.jt td.stc small{display:block;font-size:10.5px;color:var(--good);font-weight:700;line-height:1}
+.jt td.tt{min-width:72px}
+.jt td.tt b{font-size:15px}
+.jt .mb{display:block;height:4px;border-radius:2px;background:var(--line);margin-top:3px}
+.jt .mb{height:6px;border-radius:3px}.jt .mb .mbi{display:flex;height:100%;border-radius:3px;overflow:hidden;gap:1px}.jt .mb .mbi i{display:block;height:100%;min-width:3px}
+.jt .tyd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:5px;vertical-align:1px}
+.jt .tyn{font-weight:700}
+.nokm{color:var(--bad,#DC2626);font-weight:700;cursor:help}
+.mov{position:fixed;inset:0;z-index:90;background:rgba(10,25,18,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.mbox{background:var(--surface);color:var(--ink);border-radius:18px;max-width:440px;width:100%;padding:22px 22px 18px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45);max-height:86vh;display:flex;flex-direction:column}
+.mbox .mic{font-size:30px;line-height:1}.mbox h3{margin:8px 0 8px;font-size:18px}
+.mbox .mbody{overflow:auto;font-size:14px;line-height:1.55}.mbox .mbody p{margin:6px 0}
+.mbox .mact{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+.mrt{display:flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--surface2);border-radius:10px;padding:9px 11px;margin:6px 0}
+.mrt span{color:var(--muted)}.mrt.sm{padding:5px 9px;margin:4px 0;font-size:13px}.mrt.sm span{color:var(--ink)}.mrt.sm span:nth-child(2){color:var(--bad,#DC2626)}
+.mlist .mg{margin:8px 0}.mlist .mg>b{font-size:13px}.jt .tyn.z{opacity:.35}
+.jt tfoot td{background:var(--surface2);font-weight:700;position:sticky;bottom:0;border-top:2px solid var(--line)}
+@media (max-width:1100px){.split{grid-template-columns:minmax(0,1fr)}
+  .lp:not(.ed){display:none}
+  .lp.ed{position:fixed;inset:0;height:auto;z-index:41;border-radius:0;border:0}}
+@media (max-width:900px){.stats{grid-template-columns:minmax(0,1fr)}}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:13.5px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
+@media (max-width:900px){
+  .vr{grid-template-columns:22px 1fr auto;gap:4px 10px;align-items:start}
+  .vr .cell{grid-column:2 / 4}
+  .vr .st{grid-column:3;grid-row:1;justify-self:end}
+  .cell .k{display:inline}
+  .hgrid,.rgrid{grid-template-columns:minmax(0,1fr)}
+  .hrow{grid-template-columns:62px minmax(0,1fr) auto}
+  .hrow .hide-sm{display:none}
+}
+@media (prefers-reduced-motion:no-preference){.drawer{animation:slin .22s ease-out}@keyframes slin{from{transform:translateX(30px);opacity:.6}}}
+</style>
+
+<style>
+#gate{position:fixed;inset:0;z-index:90;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+#gate[hidden]{display:none}
+#gate .gbox{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:28px 26px;max-width:420px;text-align:center;color:var(--ink);box-shadow:0 10px 30px -14px var(--shadow);line-height:1.6}
+#gate .spin{width:34px;height:34px;margin:0 auto 12px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--brand);animation:gsp .9s linear infinite}
+@keyframes gsp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#gate .spin{animation:none}}
+</style>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261014a"></script>
+<script src="ssb-pin-gate.js?v=20261009a"></script>
+</head>
+<body>
+<div id="gate"><div class="gbox"><div class="spin"></div>กำลังเข้าสู่ระบบ…</div></div>
+
+
+<header class="top">
+  <div class="wrap">
+    <div class="row">
+      <div>
+        <h1>แพลนรถ Packing ประจำวัน</h1>
+        <div class="sub">แอดมิน Packing จัดงานในเว็บแทนการอัปโหลดใบงาน</div>
+      </div>
+      <label class="datebox">วันที่แพลน <input type="date" id="pdate" value="2026-11-10"> <span id="pday"></span></label>
+    </div>
+    <nav class="tabs" aria-label="หน้า">
+      <a href="#plan" data-t="plan">แพลนประจำวัน</a>
+      <a href="#helpers" data-t="helpers">เด็กรถใน</a>
+      <a href="#report" data-t="report">สรุปสถานะรถ · แจ้งผู้บริหาร</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap"><div class="demo">เดโม: รถ คนขับ ร้านปลายทาง และค่ากลาง กม. มาจากระบบจริง ส่วนงานในแพลนกับเด็กรถเป็นตัวอย่าง ในหน้านี้ไม่มีการบันทึกหรือส่ง LINE จริง</div></div>
+
+<main class="wrap wide">
+  <section id="v-plan"></section>
+  <section id="v-helpers" hidden></section>
+  <section id="v-report" hidden></section>
+</main>
+
+<div class="bar" id="bar"><div class="wrap">
+  <div class="sum" id="barsum"></div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <button class="btn" id="bSave">บันทึกแพลน</button>
+    <button class="btn pri" id="bSend">📲 แจกงานทั้งวัน</button>
+  </div>
+</div></div>
+
+<div id="drawerHost"></div>
+<div id="toastHost"></div>
+
+
+<script type="text/plain" id="pkMain">
+/* ---------- ข้อมูลจากระบบ (ตาราง vehicles / drivers / central_distances วันที่ 9 พ.ย. 69) ---------- */
+const VEH=[
+ ['4 ล้อ','ผอ-67','ตู้',9500,3200],['4 ล้อ','ยก-2438','ตู้',9500,3400],['4 ล้อ','ผอ-68','ตู้',9500,3200],
+ ['4 ล้อ','ยค-1054','ผ้าใบสไลด์',9500,3300],['4 ล้อ','ยค 1055','ผ้าใบสไลด์',9500,3300],['4 ล้อ','ยค-9996','ผ้าใบสไลด์',9500,3200],
+ ['6 ล้อ','84-9041','ตู้',15000,5600],['6 ล้อ','85-2783','ตู้',15000,4600],['6 ล้อ','86-7722','ผ้าใบสไลด์',15000,5300],
+ ['6 ล้อ','86-7723','ผ้าใบสไลด์',15000,5300],['6 ล้อ','86-6715','ผ้าใบสไลด์',15000,5600],['6 ล้อ','86-6716','ผ้าใบสไลด์',15000,5600],
+ ['6 ล้อ','86-0018','ผ้าใบสไลด์',15000,5300],['6 ล้อ','85-2718','คอกคลุมผ้าใบ',15000,4900],['6 ล้อ','86-1317','คอกคลุมผ้าใบ',15000,4600],
+ ['6 ล้อ','86-1319','คอกคลุมผ้าใบ',15000,4780],
+ ['10/22 ล้อ','85-5282,85-5324','ฮุกลิฟ',47000,18500],['10/22 ล้อ','85-5280,85-5325','ฮุกลิฟ',47000,18250],['10/22 ล้อ','85-0753,84-8285','ฮุกลิฟ',47000,14500],
+ ['10/22 ล้อ','84-9948,85-3580','คอกคลุมผ้าใบ',47000,15700],['10/22 ล้อ','85-9293,85-9294','พื้นเรียบ',50500,17800],['10/22 ล้อ','85-5281,85-7281','พื้นเรียบ',47000,15200],
+ ['10/22 ล้อ','85-7269,85-7271','พื้นเรียบ',50500,17100],['10/22 ล้อ','87-5214,87-3635','ฮุกลิฟ',47000,18500],['10/22 ล้อ','87-3274,87-3633','ฮุกลิฟ',47000,18000],
+ ['10/22 ล้อ','86-8454,86-7484','หัวลาก',50500,16600],['10/22 ล้อ','86-7079,86-7080','หัวลาก',50500,16500],['10/22 ล้อ','86-7081,86-7082','หัวลาก',50500,16500],
+ ['10/22 ล้อ','86-7395,86-7703','หัวลาก',50500,17200],['10/22 ล้อ','86-7401,86-7704','หัวลาก',50500,17200],['10/22 ล้อ','86-7398,87-0818','หัวลาก',50500,17850],
+ ['10/22 ล้อ','86-7397,86-7721','หัวลาก',50500,17200],['10/22 ล้อ','84-9219,86-7509','หัวลาก',50500,18640],['10/22 ล้อ','84-8660,86-7483','หัวลาก',50500,14300],
+ ['10/22 ล้อ','86-7508','หางผ้าใบสไลด์',null,null,1],['10/22 ล้อ','86-2223','หางพื้นเรียบ',null,null,1]
+].map(([g,plate,shape,gvw,tare,tail],i)=>({g,plate,shape,gvw,tare,tail:!!tail,head:plate.split(',')[0]}));
+/* ยี่ห้อยังว่างในระบบ — ในเดโมเติมจากชีต Template ของแอดมิน (ของจริงกรอกครั้งเดียวในหน้าทะเบียนรถ) */
+const BRAND={'ผอ-67':'ISUZU 130','ยก-2438':'HINO 136','ผอ-68':'ISUZU 130','ยค-1054':'HINO 136','ยค 1055':'HINO 136','ยค-9996':'ISUZU 130','84-9041':'ISUZU 175','85-2783':'ISUZU 210','86-7722':'ISUZU 190','86-7723':'ISUZU 190','86-6715':'HINO 210','86-6716':'HINO 210','86-0018':'ISUZU 190','85-2718':'ISUZU 150','86-1317':'ISUZU 175','86-1319':'ISUZU 175','85-5282':'ISUZU 300','85-5280':'ISUZU 300','85-0753':'ISUZU 300','84-9948':'ISUZU 240','85-9293':'VOLVO 370','85-5281':'ISUZU 300','85-7269':'ISUZU 360','87-5214':'ISUZU 240','87-3274':'ISUZU 240','86-8454':'UD 390','86-7079':'UD 390','86-7081':'UD 390','86-7395':'FUSO 340','86-7401':'FUSO 279','86-7398':'FUSO 279','86-7397':'FUSO 279','84-9219':'VOLVO 400','84-8660':'FUSO 279'};
+const DRV=__D.drv.map(([code,name,head])=>({code,name,head}));
+const ST=[[281,'ลิ้มฮะกี่',20],[168,'ร้านนิตยา(หัวกุญแจ)',26],[204,'วิภา',27],[27,'เปี๊ยก',32],[258,'โชคดีปลวกแดง 2 อีซี่',33],[31,'ร้านวรรณมาบยางพร',38],[39,'โชคดีปลวกแดง 1',50],[313,'ร้านตะวันออกหมูหยอง',58],[52,'ร้านวัชราวรรณ',65],[56,'บ.ศรีธิคำมาร์เก็ตติ้ง (เจ๊นงค์ นาเกลือ) สำนักงานใหญ่',72],[60,'บริษัทซิมมี้ (จุรีภรณ์)',79],[65,'Makro บางนา',94],[293,'เซ็นทรัลฟูดส์โฮลเซลล์บางนา DC',97],[235,'เบอร์ลี่ยุคเกอร์',106],[74,'คลังสุขสมบูรณ์ (ประเวศ)',114],[338,'เอกภาพ กรชัย ท่าประชุม',118],[261,'แม็คโคร จันทบุรี',118],[86,'ร้านอมร วังน้ำเย็น',139],[298,'บริษัท ไทยฟู้ดส์กรุ๊ป จำกัด (มหาชน) โรงงานชำแหละไก่ ปราจีนบุรี',146],[203,'ส.ทวีกิจบิ๊กวัน',149],[370,'บิ๊กซี รัชดาภิเษก',153],[188,'แม็คโคร เอฟซี รังสิต',161],[192,'แม็คโคร วังน้อย',165],[366,'ร้านธิดาปังปัง',165],[102,'LOSCAM(THAILAND) LTD. (WANG NOI SUPER DEPOT)',172],[141,'ศูนย์กระจายสินค้า แม็คโคร วังน้อยCDC',174],[315,'เจพีโกเด้นเชฟ',182],[354,'สหกรณ์การเกษตรคลองหลวง จำกัด',241],[111,'ซีพีเอฟ',244],[312,'เฮอริเทจ (เอก) เพชรบุรี',251],[304,'ร้านเต๋าเครื่องเค้ก',256],[217,'ห้างซีเอสพาร์คสิงห์บุรี',258],[263,'แม็คโคร เอฟซี นครราชสีมา',265],[273,'หจก ป เจริญทรัพย์ คอนวีเนียท์สโตร์',292],[116,'ซีเจ บุรีรัมย์',353],[271,'เอส.อาร์ ซุปเปอร์มาร์ท สาขาเมือง',462],[121,'ซีเจ ขอนแก่น',486],[252,'อีคอนพิษณุโลก (บจก.อีคอนแวร์เฮ้าส์)',492],[230,'บิ๊กซี สุราษฎร์ธานี',764],[124,'โลตัสลำพูน',785]].map(([id,n,km])=>({id,n,km}));
+const LONG_KM=__D.longKm||300; /* app_config PK_LONG_KM */
+/* ค่ากลาง ร้าน↔ร้าน จาก DTC (dtc_s2s เที่ยววิ่งตรง 20 ก.ย. 68–8 พ.ย. 69 · กติกาเดียวกับ dtc-central: ตัด IQR → มัธยฐานขาไป/กลับ → เฉลี่ย · ต่าง >20% ใช้ขาสั้น) [ร้าน, ร้าน, กม., เที่ยว] */
+const PAIRS=__D.pairs; /* ตาราง dtc_pair_km (คิดทุกคืน 04:00) ผ่าน Edge pk-daily */
+const PAIR={};PAIRS.forEach(([a,b,k,n])=>{PAIR[a+'-'+b]=PAIR[b+'-'+a]={km:k,n};});
+/* ระยะของช่วงที่วิ่งเข้าจุด i: จุดแรก = จากโรงงาน · จุดถัดไป = จากจุดก่อนหน้า */
+function legOf(stops,i){const s=stops[i];if(!i)return {from:'โรงงาน',km:s.km};
+  const pr=stops[i-1],q=(s.id&&pr.id)?PAIR[pr.id+'-'+s.id]:null;return {from:pr.n,to:s.n,km:q?q.km:null,n:q?q.n:0};}
+/* ทุกช่วงที่ยังไม่มีค่ากลาง ในแพลนวันนี้ */
+function missingAll(){const out=[];VEH.forEach(v=>{const p=PLAN[v.head];if(!p||p.status!=='ready'||v.tail)return;
+  p.stops.forEach((s,i)=>{const l=legOf(p.stops,i);if(l.km==null)out.push({plate:v.plate.split(',')[0],from:l.from,to:s.n,first:!i});});
+  const last=p.stops[p.stops.length-1];if(last&&last.km==null&&p.stops.length)out.push({plate:v.plate.split(',')[0],from:last.n,to:'โรงงาน',first:false});});return out;}
+/* popup ธีมเดียวกับหน้า (ไม่ใช้ alert/confirm) */
+function askModal(o){return new Promise(res=>{const ov=document.createElement('div');ov.className='mov';
+  ov.innerHTML='<div class="mbox" role="dialog" aria-modal="true"><div class="mic">'+(o.icon||'⚠️')+'</div><h3>'+esc(o.title)+'</h3><div class="mbody">'+o.html+'</div><div class="mact">'
+   +(o.cancel?'<button class="btn ghost" data-r="0">'+esc(o.cancel)+'</button>':'')+'<button class="btn pri" data-r="1">'+esc(o.ok||'ตกลง')+'</button></div></div>';
+  const done=r=>{ov.remove();res(r);};ov.onclick=e=>{if(e.target===ov)done(false);const b=e.target.closest('[data-r]');if(b)done(b.dataset.r==='1');};
+  document.body.appendChild(ov);ov.querySelector('[data-r="1"]').focus();});}
+function routeKm(stops){if(!stops.length)return null;let tot=0,miss=0;
+  stops.forEach((s,i)=>{const l=legOf(stops,i);if(l.km==null)miss++;else tot+=l.km;});
+  const back=stops[stops.length-1].km;if(back==null)miss++;else tot+=back;return {tot,miss,back};}
+function legTxt(stops,i){const l=legOf(stops,i),s=stops[i];
+  if(l.km==null)return '<span class="warn">'+(i?'ยังไม่มีค่ากลาง จาก '+esc(l.from)+' → จุดนี้':'สถานที่ใหม่ · พิกัด '+esc(s.ll||'-')+' · ยังไม่มีค่ากลาง จากโรงงาน')+' (DEV ใส่ก่อนคิดค่าแรง)</span>';
+  return 'ค่ากลาง จาก'+(i?'จุด '+i+' ('+esc(l.from)+')':'โรงงาน')+' <b>'+l.km+'</b> กม.'+(i?' <span class="m">· DTC '+l.n+' เที่ยว'+(l.n<3?' (ข้อมูลน้อย)':'')+'</span>':'')+(s.km>=LONG_KM?' · 🛣️ งานไกล':'');}
+/* Type ร้าน (central_distances.pk_type) — ในระบบยังว่างทั้ง 179 ร้าน · เดโมเดาจากชื่อ ของจริง DEV ใส่ในหน้าค่ากลาง */
+const TYPES=['ห้าง','ยี่ปั๊ว','อื่นๆ'];
+const TYC={'ห้าง':'#1E6FD9','ยี่ปั๊ว':'#D98E04','อื่นๆ':'#7A8A80'};
+const TY_OTHER=[60,74,298,102,315,354,111,235,252];
+const TY_MALL=[65,293,261,370,188,192,141,217,263,116,121,230,124,203,271];
+function tyOf(s){if(s&&s.ty)return s.ty;const id=s&&s.id;return TY_MALL.includes(id)?'ห้าง':TY_OTHER.includes(id)?'อื่นๆ':id?'ยี่ปั๊ว':'อื่นๆ';}
+const tchip=t=>'<span class="tchip"><i style="background:'+TYC[t]+'"></i>'+t+'</span>';
+let HELP=__D.help.map(([id,name,nick,ph,st])=>({id,name,nick,phone:'•••-•••-'+ph,status:st||'ใช้งาน',note:''}));
+
+/* ---------- แพลนตัวอย่าง ---------- */
+const S=id=>{const s=ST.find(x=>x.id===id);return {id:s.id,n:s.n,km:s.km,pal:'',cs:'',at:''}};
+/* time ในตัวอย่าง = เวลาที่ต้องถึงจุดแรก · จุดถัดไป +1:30 ชม. */
+const addMin=(t,m)=>{if(!t)return '';const [h,mm]=t.split(':').map(Number),x=h*60+mm+m;return String(Math.floor(x/60)%24).padStart(2,'0')+':'+String(x%60).padStart(2,'0');};
+const SEED={
+ 'ยค-9996':{stops:[S(31),S(281)],out:1,time:'07:30'},
+ 'ยก-2438':{stops:[S(39)],helpers:['HLP-001'],time:'08:00'},
+ 'ยค-1054':{stops:[S(52)],time:'08:30'},
+ '84-9041':{stops:[S(65),S(293)],helpers:['HLP-002','HLP-006'],time:'06:00'},
+ '86-7722':{stops:[S(192)],helpers:['HLP-007'],time:'05:30'},
+ '86-6715':{stops:[S(86)],out:1,time:'07:00'},
+ '85-2718':{stops:[S(56)],time:'08:00'},
+ '86-7079':{stops:[S(141),S(102)],helpers:['HLP-003','HLP-004'],time:'05:00'},
+ '86-7395':{stops:[S(263)],time:'04:30'},
+ '84-9219':{stops:[S(121)],helpers:['HLP-005'],time:'03:00'},
+ '85-9293':{stops:[S(74)],helpers:['HLP-001'],time:'06:30'},
+ '87-5214':{stops:[S(370)],out:2,time:'05:30'},
+ '85-5280':{status:'repair',reason:'ซ่อมรอจดทะเบียนหัว 85-5280 45 วัน นับ 15/7/69'},
+ '85-0753':{status:'repair',reason:'ซ่อมทำการติดตั้งฮุกลิฟ QSPD'}
+};
+SEED['84-9041'].stops[0].pal='12';SEED['84-9041'].stops[1].pal='8';SEED['86-7079'].stops[0].pal='30';SEED['86-7079'].stops[1].pal='เบิก 30';SEED['ยค-9996'].stops[0].cs='120';SEED['ยค-9996'].stops[1].cs='80';
+const PLAN={};
+VEH.forEach(v=>{const d=DRV.find(x=>x.head===v.head),s=SEED[v.head]||{};
+  const stops=(s.stops||[]).map((x,i)=>Object.assign(x,{at:addMin(s.time,i*90)}));
+  PLAN[v.head]={status:s.status||'ready',reason:s.reason||'',driver:d?d.code:'',helpers:s.helpers||[],out:s.out||0,stops,note:'',htime:(s.helpers||[]).length?'นัดเอง':'',jt:''};});
+PLAN['84-9041'].note='วางบิล + เอกสาร CO/COA';PLAN['86-7722'].htime='04:30';PLAN['86-7079'].note='เบิกพาเลท Loscam วังน้อย';PLAN['86-7395'].note='รับเช็ค';
+
+/* ---------- ตัวช่วย ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const drvOf=c=>DRV.find(d=>d.code===c);
+const helpOf=id=>HELP.find(h=>h.id===id);
+const first=n=>String(n||'').split(' ')[0];
+const DOW=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+function dateTH(iso){const d=new Date(iso+'T00:00:00');if(isNaN(d))return '';return DOW[d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1)+'.'+(d.getFullYear()+543);}
+function kind(v){const p=PLAN[v.head];
+  if(v.tail)return 'tail'; if(p.status==='repair')return 'rep'; if(p.status==='off')return 'off';
+  if(!p.driver)return 'nod'; return p.stops.length?'job':'wait';}
+const KLAB={job:['มีงาน','p-job'],wait:['รอมีงาน','p-wait'],rep:['ซ่อม','p-rep'],off:['งดวิ่ง','p-wait'],nod:['ไม่มีคนขับ','p-nod'],tail:['หางสำรอง','p-tail']};
+function busy(){/* ใครถูกใส่ซ้ำหลายคันวันเดียวกัน */
+  const dc={},hc={};VEH.forEach(v=>{const p=PLAN[v.head];if(p.status!=='ready'||!p.stops.length)return;
+    if(p.driver)(dc[p.driver]=dc[p.driver]||[]).push(v.head);p.helpers.forEach(h=>(hc[h]=hc[h]||[]).push(v.head));});
+  return {dc,hc};}
+function toast(m){const h=$('toastHost');h.innerHTML='<div class="toast" role="status">'+esc(m)+'</div>';clearTimeout(toast.t);toast.t=setTimeout(()=>h.innerHTML='',3800);}
+function counts(){const c={all:VEH.length,job:0,wait:0,rep:0,nod:0,tail:0,off:0};VEH.forEach(v=>c[kind(v)]++);return c;}
+
+/* ---------- หน้าแพลน ---------- */
+let FILTER='all',Q='';
+function visible(v){if(FILTER!=='all'&&kind(v)!==FILTER)return false;if(!Q)return true;const p=PLAN[v.head],d=drvOf(p.driver);
+  const t=[v.plate,d&&d.name,p.helpers.map(x=>helpOf(x)?.name).join(' '),p.stops.map(s=>s.n).join(' ')].join(' ');return t.toLowerCase().includes(Q.toLowerCase());}
+/* ---------- สถิติคนขับรอบเดือน (ห้าง / ยี่ปั๊ว / อื่นๆ / เที่ยวสะสม) ---------- */
+const MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+/* ตัวอย่าง: สัดส่วนจากใบงาน 30.9.69 ของแอดมิน (ทั้งเดือน) ย่อเหลือ 9 วัน · ของจริงนับจากงานที่คนขับปิดแล้วในเดือนนั้น */
+const SEPT={'ผอ-67':[0,11,3],'ยก-2438':[0,13,0],'ยค-1054':[0,14,2],'ยค 1055':[0,20,2],'ยค-9996':[0,16,0],'84-9041':[1,10,1],'86-7722':[2,8,8],'86-7723':[4,10,4],
+ '86-6715':[0,9,6],'86-6716':[2,10,7],'86-0018':[3,8,5],'85-2718':[0,8,4],'85-5282':[12,1,2],'84-9948':[9,1,0],'85-9293':[9,2,0],'85-5281':[11,3,2],'87-5214':[9,0,1],
+ '87-3274':[13,3,0],'86-8454':[19,0,1],'86-7079':[18,1,0],'86-7081':[17,1,0],'86-7395':[16,0,0],'86-7401':[15,1,0],'86-7398':[18,0,2],'86-7397':[14,1,1],'84-9219':[10,0,4],'84-8660':[13,0,1]};
+const MBASE={};DRV.forEach(d=>{const s=SEPT[d.head];if(s)MBASE[d.code]=s.map(n=>Math.round(n*9/30));});
+const jtOf=p=>p.jt||(p.stops[0]?tyOf(p.stops[0]):'');
+function drvStat(code){const b=(MBASE[code]||[0,0,0]).slice(),r={h:b[0],y:b[1],o:b[2],today:''};
+  VEH.forEach(v=>{const p=PLAN[v.head];if(p.driver!==code||kind(v)!=='job')return;const t=jtOf(p);r.today=t;if(t==='ห้าง')r.h++;else if(t==='ยี่ปั๊ว')r.y++;else r.o++;});
+  r.t=r.h+r.y+r.o;return r;}
+/* ค่าลงสินค้า: central_distances pk_unload_* ตามชนิดรถ + pk_pallet_fee × พาเลท (ในระบบกรอกไว้ไม่กี่ร้าน) */
+const UNL={52:{'4 ล้อ':300,'6 ล้อ':1400}},PFEE={217:40,31:76,252:50,203:50};
+function feeOf(v,s){const u=(UNL[s.id]||{})[v.g]||0,pn=parseInt(s.pal,10),pf=PFEE[s.id]&&pn>0?PFEE[s.id]*pn:0;return u+pf;}
+/* จังหวัด: ยังไม่มีในตารางร้าน · เดโมใส่ให้เฉพาะร้านที่ชื่อบอกชัด ของจริงเพิ่มคอลัมน์จังหวัดในหน้าค่ากลาง */
+const PV={65:'กรุงเทพฯ',293:'กรุงเทพฯ',370:'กรุงเทพฯ',74:'กรุงเทพฯ',192:'พระนครศรีอยุธยา',141:'พระนครศรีอยุธยา',102:'พระนครศรีอยุธยา',263:'นครราชสีมา',121:'ขอนแก่น',116:'บุรีรัมย์',
+ 261:'จันทบุรี',86:'สระแก้ว',39:'ระยอง',258:'ระยอง',31:'ระยอง',56:'ชลบุรี',188:'ปทุมธานี',230:'สุราษฎร์ธานี',124:'ลำพูน',252:'พิษณุโลก',217:'สิงห์บุรี',312:'เพชรบุรี',298:'ปราจีนบุรี',354:'ปทุมธานี'};
+const pvOf=s=>(s.pv||PV[s.id]||'').replace('พระนครศรีอยุธยา','อยุธยา');
+
+/* ---------- หน้าแพลน: แผงซ้าย + ใบงานเต็ม ---------- */
+let HIDELP=false;
+function renderPlan(){
+  if(ED)sync();
+  const c=counts(),{dc,hc}=busy();
+  const d0=new Date($('pdate').value+'T00:00:00'),mon=isNaN(d0)?'':MON[d0.getMonth()],today=isNaN(d0)?'':d0.getDate();
+  const chips=[['all','ทั้งหมด'],['job','มีงาน'],['wait','รอมีงาน'],['nod','ไม่มีคนขับ'],['rep','ซ่อม'],['tail','หางสำรอง']];
+  const all=DRV.map(d=>drvStat(d.code)),tot=all.reduce((a,s)=>({h:a.h+s.h,y:a.y+s.y,o:a.o+s.o}),{h:0,y:0,o:0}),mxT=Math.max(1,...all.map(s=>s.t));
+  let h='<div class="tools"><button class="btn sm" id="tlp">'+(HIDELP?'⇥ แสดงแผงรายการรถ':'⇤ ซ่อนแผงซ้าย ดูใบงานเต็มจอ')+'</button>'
+   +'<div class="chips" style="margin:0">'+chips.map(([k,l])=>'<button class="chip'+(FILTER===k?' on':'')+'" data-f="'+k+'">'+l+' <b>'+c[k]+'</b></button>').join('')+'</div>'
+   +'<input class="search" id="q" placeholder="ค้นหาทะเบียน คนขับ เด็กรถ หรือร้าน" value="'+esc(Q)+'"></div>';
+  h+='<div class="msum"><b>สะสม '+mon+' (1–'+today+')</b>'+TYPES.map(t=>tchip(t)+' <b>'+({'ห้าง':tot.h,'ยี่ปั๊ว':tot.y,'อื่นๆ':tot.o})[t]+'</b>').join(' ')
+   +' · รวม <b>'+(tot.h+tot.y+tot.o)+'</b> เที่ยว<span class="note">กดแถวเพื่อแก้งาน · คอลัมน์ขวาสุด = สถิติของคนขับคนนั้น ใช้ดูว่าใครวิ่งงานไหนมาน้อย/มาก</span></div>';
+  h+='<div class="sheet"><table class="jt"><thead><tr class="g1"><th colspan="12">ใบแจ้งงาน '+esc(dateTH($('pdate').value))+'</th><th colspan="4" class="stg">สถิติคนขับ '+mon+'</th></tr><tr>'
+   +['รถ','คนขับ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','ค่าลง (บ.)','หมายเหตุ','เด็กรถ','นัดเด็กรถ','ประเภทงาน'].map((t,i)=>'<th'+(i<2?' class="stk'+i+'"':'')+'>'+t+'</th>').join('')
+   +TYPES.map(x=>'<th class="stg n"><i class="tyd" style="background:'+TYC[x]+'"></i>'+x+'</th>').join('')+'<th class="stg n">เที่ยวสะสม</th></tr></thead><tbody>';
+  ['4 ล้อ','6 ล้อ','10/22 ล้อ'].forEach(g=>{
+    const rows=VEH.filter(v=>v.g===g).filter(visible);if(!rows.length)return;
+    const gall=VEH.filter(v=>v.g===g);
+    h+='<tr class="gr"><td colspan="16"><b>'+g+'</b> <span>'+gall.length+' คัน · มีงาน '+gall.filter(v=>kind(v)==='job').length+'</span></td></tr>';
+    rows.forEach(v=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver),st=d&&!v.tail?drvStat(d.code):null;
+      const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join('');
+      const S=p.status==='ready'?p.stops:[];
+      let cust;
+      if(k==='rep')cust='<span class="rd">'+esc(p.reason||'ซ่อม')+'</span>';
+      else if(k==='off')cust='<span class="m">งดวิ่ง '+esc(p.reason||'')+'</span>';
+      else if(v.tail)cust='<span class="m">หางสำรอง</span>';
+      else if(!S.length)cust='<span class="m">'+(d?'รอมีงาน':'รถสแปร์')+'</span>';
+      else cust=L(S,(s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+tchip(tyOf(s))+(legOf(S,i).km==null?' <span class="nokm" title="ยังไม่มีค่ากลาง'+(i?' จาก '+esc(S[i-1].n):' จากโรงงาน')+'">⚠</span>':''));
+      const dash='<span class="m">—</span>';
+      const hl=p.helpers.map(x=>{const hh=helpOf(x);const dup=hc[x]&&hc[x].length>1;return hh?'<span title="'+esc(hh.name)+'">'+esc(hh.nick)+'</span> <span class="m">'+esc(hh.phone)+'</span>'+(dup?' <span class="warn">⚠ซ้ำ</span>':''):esc(x);});
+      if(p.out)hl.push('เด็กนอก '+p.out+' คน');
+      const jt=jtOf(p);
+      const dw=d&&dc[p.driver]&&dc[p.driver].length>1?' <span class="warn">⚠ '+dc[p.driver].length+' คัน</span>':'';
+      const sc=(n,t)=>'<td class="n stc'+(st&&st.today===t?' td':'')+'">'+(st?'<b class="tyn'+(n?'':' z')+'" style="color:'+TYC[t]+'">'+n+'</b>'+(st.today===t?'<small>+1</small>':''):'')+'</td>';
+      h+='<tr class="vr2'+(ED&&ED.v.head===v.head?' sel':'')+(k==='rep'?' rep':'')+'" tabindex="0" data-v="'+esc(v.head)+'">'
+        +'<td class="stk0"><div class="pc"><i class="dotc" style="color:'+DOT[k]+';background:'+(k==='tail'||k==='off'?'transparent;border:2px solid '+DOT[k]:DOT[k])+'"></i><div><b>'+v.plate.split(',').map(esc).join('<br>')+'</b><small>'+esc([BRAND[v.head],v.shape].filter(Boolean).join(' · '))+'</small></div></div></td>'
+        +'<td class="stk1">'+(v.tail?dash:d?esc(d.name)+dw:'<span class="or">รถสแปร์ · ไม่มีคนขับ</span>')+'</td>'
+        +'<td class="cu">'+cust+'</td>'
+        +'<td>'+(S.length?L(S,s=>esc(pvOf(s))||'<span class="m">—</span>'):'')+'</td>'
+        +'<td class="n">'+(S.length?L(S,s=>s.at?'<b class="tm">'+esc(s.at)+'</b>':'<span class="m">—</span>'):'')+'</td>'
+        +'<td class="n">'+(S.length?L(S,s=>esc(s.pal)||'<span class="m">—</span>'):'')+'</td>'
+        +'<td class="n">'+(S.length?L(S,s=>esc(s.cs)||'<span class="m">—</span>'):'')+'</td>'
+        +'<td class="n">'+(S.length?L(S,s=>{const f=feeOf(v,s);return f?f.toLocaleString('th-TH'):'<span class="m">—</span>';}):'')+'</td>'
+        +'<td class="nt">'+(esc(p.note)||'')+'</td>'
+        +'<td class="hp">'+(hl.length?hl.map(x=>'<div class="ln">'+x+'</div>').join(''):'')+'</td>'
+        +'<td>'+esc(p.htime||'')+'</td>'
+        +'<td>'+(jt&&S.length?tchip(jt):'')+'</td>'
+                +sc(st&&st.h,'ห้าง')+sc(st&&st.y,'ยี่ปั๊ว')+sc(st&&st.o,'อื่นๆ')
+        +'<td class="n stc tt">'+(st?'<b>'+st.t+'</b><span class="mb"><span class="mbi" style="width:'+Math.round(st.t/mxT*100)+'%">'+[[st.h,'ห้าง'],[st.y,'ยี่ปั๊ว'],[st.o,'อื่นๆ']].filter(a=>a[0]).map(a=>'<i title="'+a[1]+' '+a[0]+'" style="flex:'+a[0]+';background:'+TYC[a[1]]+'"></i>').join('')+'</span></span>':'')+'</td></tr>';
+    });
+  });
+  h+='</tbody><tfoot><tr><td class="stk0" colspan="2">รวมทั้งเดือน (ทุกคนขับ)</td><td colspan="10"></td>'+[[tot.h,'ห้าง'],[tot.y,'ยี่ปั๊ว'],[tot.o,'อื่นๆ']].map(a=>'<td class="n stc"><b style="color:'+TYC[a[1]]+'">'+a[0]+'</b></td>').join('')+'<td class="n stc"><b>'+(tot.h+tot.y+tot.o)+'</b></td></tr></tfoot></table></div>';
+  h+='<p class="note">เดโม: สถิติ 1–'+(today-1)+' '+mon+' เป็นตัวอย่าง (ย่อจากใบงาน 30.9.69) · +1 = งานวันนี้ในแพลน · ประเภทงานนับตามร้านจุดแรก แก้ได้ในแผงซ้าย · จังหวัด/ค่าลงสินค้ามีเฉพาะร้านที่มีข้อมูล</p>';
+  $('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="รายการรถ / รายละเอียดคันที่เลือก"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
+  if(ED)drawEditor();else renderList();
+  $('tlp').onclick=()=>{HIDELP=!HIDELP;renderPlan();};
+  $('v-plan').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;renderPlan();});
+  const q=$('q');q.oninput=()=>{Q=q.value;const pos=q.selectionStart;renderPlan();const n=$('q');n.focus();n.setSelectionRange(pos,pos);};
+  $('v-plan').querySelectorAll('.vr2').forEach(r=>{r.onclick=()=>{if(HIDELP){HIDELP=false;}openEditor(r.dataset.v);};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();HIDELP=false;openEditor(r.dataset.v);}};});
+  updBar();
+}
+function updBar(){const c=counts();const nd=new Set(VEH.filter(v=>kind(v)==='job').map(v=>PLAN[v.head].driver)).size;
+  $('barsum').innerHTML='มีงาน <b>'+c.job+'</b> คัน · คนขับ <b>'+nd+'</b> คน · รอมีงาน <b>'+c.wait+'</b> · ซ่อม <b>'+c.rep+'</b>';
+  $('bSend').textContent='📲 แจกงานทั้งวัน ('+c.job+' งาน)';}
+
+/* ---------- ลิ้นชักแก้งานรายคัน ---------- */
+let ED=null;
+function openEditor(head){const v=VEH.find(x=>x.head===head);if($('lp'))$('lp').innerHTML='';
+  ED={v,p:JSON.parse(JSON.stringify(PLAN[head])),q:'',newLoc:null};renderPlan();
+  const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
+function closeEditor(){ED=null;if($('lp'))$('lp').innerHTML='';renderPlan();}
+/* แผงซ้ายตอนยังไม่เลือกรถ: การ์ดรถเรียงตามเวลาที่ต้องถึงจุดแรก */
+function renderList(){
+  const lp=$('lp');if(!lp)return;lp.classList.remove('ed');
+  const vs=VEH.filter(visible),order={job:0,wait:1,nod:2,rep:3,off:4,tail:5};
+  vs.sort((a,b)=>{const ka=kind(a),kb=kind(b);if(ka!==kb)return order[ka]-order[kb];
+    const ta=(PLAN[a.head].stops[0]||{}).at||'99',tb=(PLAN[b.head].stops[0]||{}).at||'99';return ta<tb?-1:ta>tb?1:0;});
+  let h='<div class="lh"><b>รถวันนี้ · เรียงตามเวลาถึงหน้างาน</b><span>'+vs.length+' คัน</span></div><div class="ll">';
+  let lastK='';
+  vs.forEach(v=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver),s0=p.stops[0];
+    const grp={job:'มีงาน',wait:'พร้อม · รอมีงาน',nod:'ไม่มีคนขับ',rep:'ซ่อม',off:'งดวิ่ง',tail:'หางสำรอง'}[k];
+    if(grp!==lastK){h+='<div class="lgh">'+grp+'</div>';lastK=grp;}
+    const name=v.tail?'หางสำรอง':d?d.name:'ยังไม่มีคนขับ';
+    let r2,r3;
+    if(k==='job'){r2='<span class="big">'+esc(s0.at||'--:--')+'</span><span class="to">ถึง '+esc(s0.n)+'</span>';
+      const km=Math.max(0,...p.stops.map(s=>s.km||0));
+      r3=p.stops.length+' จุด'+(p.stops.length>1?' · '+p.stops.slice(1).map(s=>(s.at?s.at+' ':'')+s.n).join(' → '):'')+' · '+km+' กม.'+(p.helpers.length||p.out?' · เด็กรถ '+(p.helpers.length+p.out)+' คน':'');}
+    else if(k==='rep'){r2='<span class="big no">ซ่อม</span>';r3=p.reason||'';}
+    else{r2='<span class="big no">ยังไม่มีงาน</span>';r3=[BRAND[v.head],v.shape].filter(Boolean).join(' · ');}
+    if(d&&!v.tail&&k!=='rep')r3+=' · สะสม '+drvStat(d.code).t+' เที่ยว';
+    h+='<button class="vc" data-v="'+esc(v.head)+'"><div class="r1"><span class="pill '+KLAB[k][1]+'">'+KLAB[k][0]+'</span><span class="nm">'+esc(name)+'</span><span class="pl">'+esc(v.plate.replace(',',' / '))+'</span></div>'
+      +'<div class="r2">'+r2+'</div><div class="r3'+(k==='rep'?' bad':'')+'">'+esc(r3)+'</div></button>';});
+  if(!vs.length)h+='<div class="note" style="padding:18px">ไม่มีรถตามตัวกรอง</div>';
+  lp.innerHTML=h+'</div>';
+  lp.querySelectorAll('.vc').forEach(b=>b.onclick=()=>openEditor(b.dataset.v));}
+function drawEditor(){
+  const {v,p}=ED,{dc,hc}=busy(),is4=v.g==='4 ล้อ',k=kind(v),d=drvOf(p.driver);
+  const pay=v.gvw?((v.gvw-v.tare)/1000).toFixed(1)+' ตัน':'-';
+  let h='<aside class="drawer" aria-label="รถ '+esc(v.plate)+'">'
+   +'<div class="dh"><div><div class="stc"><span class="pill '+KLAB[k][1]+'">'+KLAB[k][0]+'</span></div><h3>'+esc(v.tail?'หางสำรอง':d?d.name:'ยังไม่มีคนขับ')+'</h3><div class="m">'+(d?esc(d.code)+' · ':'')+'ทะเบียน '+esc(v.plate.replace(',',' / '))+'</div></div><button class="x" id="dx" aria-label="กลับไปรายการรถ">✕</button></div><div class="db">';
+  h+='<div class="sec"><h4>ข้อมูลรถ<span class="tchip">'+esc(v.g)+'</span></h4><div class="kv">'
+   +'<div><small>ยี่ห้อ / รุ่น</small><b>'+esc(BRAND[v.head]||'-')+'</b></div><div><small>แบบรถ</small><b>'+esc(v.shape)+'</b></div>'
+   +'<div><small>ทะเบียนหัว</small><b>'+esc(v.head)+'</b></div><div><small>ทะเบียนหาง</small><b>'+esc(v.plate.split(',')[1]||'-')+'</b></div>'
+   +'<div><small>บรรทุกได้</small><b>'+pay+'</b></div><div><small>เด็กรถ</small><b>'+(p.helpers.map(x=>helpOf(x)?.nick||x).join(', ')||'-')+(p.out?' + นอก '+p.out:'')+'</b></div></div></div>';
+  if(p.stops.length&&p.status==='ready'){
+    h+='<div class="sec"><h4>ไทม์ไลน์งานวันนี้<span class="tchip">'+p.stops.length+' จุด</span></h4><div class="tl"><div class="ti fac"><b>ออกจากโรงงาน SSB</b><span class="m">โหลดสินค้า'+(p.note?' · '+esc(p.note):'')+'</span></div>'
+     +p.stops.map((s,i)=>'<div class="ti"><b>'+esc(s.n)+' '+tchip(tyOf(s))+'</b><span class="m">'+(s.at?'<span class="at">ต้องถึง '+esc(s.at)+'</span> · ':'<span class="warn">ยังไม่ใส่เวลา</span> · ')+(()=>{const l=legOf(p.stops,i);return l.km==null?'<span class="warn">ไม่มีค่ากลางช่วงนี้</span>':(i?'จากจุดก่อน ':'จากโรงงาน ')+l.km+' กม.';})()+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</span></div>').join('')
+     +(()=>{const r=routeKm(p.stops);return '<div class="ti fac"><b>กลับโรงงาน</b><span class="m">'+(r.back==null?'<span class="warn">ไม่มีค่ากลางขากลับ</span>':'ขากลับ '+r.back+' กม.')+' · '+(r.miss?'<span class="warn">ระยะรวมยังไม่ครบ (ขาด '+r.miss+' ช่วง)</span>':'ระยะรวมทั้งเที่ยว <b>'+r.tot+'</b> กม.')+'</span></div>';})()+'</div></div>';}
+  h+='<div class="edl">แก้งานคันนี้</div>';
+  h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><div class="seg">'
+   +[['ready','พร้อมใช้งาน'],['repair','ซ่อม'],['off','งดวิ่ง']].map(([k,l])=>'<button data-s="'+k+'" class="'+(p.status===k?'on':'')+(k==='repair'?' r':'')+'">'+l+'</button>').join('')+'</div>'
+   +(p.status!=='ready'?'<input class="in" id="reason" placeholder="สาเหตุ เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 12/11" value="'+esc(p.reason)+'"><div class="note">ข้อความนี้ขึ้นในช่องสถานะของรูปสรุปที่ส่งผู้บริหาร</div>':'')+'</div>';
+  if(p.status==='ready'&&!v.tail){
+    const mine=DRV.find(d=>d.head===v.head);
+    h+='<div class="box"><label for="drv">คนขับ</label><select class="in" id="drv"><option value="">— ไม่มีคนขับ —</option>'
+     +DRV.map(d=>{const other=d.head!==v.head?' (ประจำ '+d.head+')':' · ประจำคันนี้';return '<option value="'+d.code+'"'+(p.driver===d.code?' selected':'')+'>'+esc(d.name)+other+' · สะสม '+drvStat(d.code).t+' เที่ยว</option>';}).join('')+'</select>'
+     +(p.driver&&mine&&p.driver!==mine.code?'<div class="warn">คนขับประจำคันนี้คือ '+esc(mine.name)+'</div>':'')
+     +(p.driver&&dc[p.driver]&&dc[p.driver].some(x=>x!==v.head)?'<div class="warn">⚠ คนนี้มีงานรถ '+esc(dc[p.driver].filter(x=>x!==v.head).join(', '))+' วันเดียวกัน</div>':'')
+     +(p.driver?(()=>{const s=drvStat(p.driver);return '<div class="note">สถิติ '+esc(drvOf(p.driver)?.name||'')+' เดือนนี้: ห้าง '+s.h+' · ยี่ปั๊ว '+s.y+' · อื่นๆ '+s.o+' · รวม <b>'+s.t+'</b> เที่ยว (รวมงานวันนี้)</div>';})():'')
+     +'<div class="two"><label class="lb" style="display:flex;flex-direction:column;gap:4px">ประเภทงาน (นับสถิติ)<select class="in" id="jt"><option value="">ตามร้านจุดแรก'+(p.stops[0]?' ('+tyOf(p.stops[0])+')':'')+'</option>'+TYPES.map(t=>'<option'+(p.jt===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'
+     +'<label class="lb" style="display:flex;flex-direction:column;gap:4px">เวลานัดเด็กรถ<input class="in" id="ht" placeholder="เช่น 05:00 หรือ นัดเอง" value="'+esc(p.htime||'')+'"></label></div></div>';
+    h+='<div class="box"><span class="lb">จุดส่ง / สถานที่ <span class="note">('+p.stops.length+' จุด · เรียงตามลำดับวิ่ง · ใส่เวลาที่ต้องถึงหน้างานแต่ละจุด)</span></span>';
+    p.stops.forEach((s,i)=>{h+='<div class="stop"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+'</div>'
+      +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-at="'+i+'" value="'+esc(s.at)+'" style="width:118px"></label>'
+      +'<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input class="in" data-pal="'+i+'" placeholder="0" value="'+esc(s.pal)+'"></label>'
+      +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input class="in" data-cs="'+i+'" placeholder="0" value="'+esc(s.cs)+'"></label>'
+      +'<label class="note" style="display:flex;flex-direction:column;gap:2px">จังหวัด<input class="in" data-pv="'+i+'" placeholder="จังหวัด" value="'+esc(pvOf(s))+'" style="width:120px"></label>'
+      +(feeOf(v,s)?'<span class="note" style="align-self:flex-end">ค่าลงสินค้า '+feeOf(v,s).toLocaleString('th-TH')+' บ.</span>':'')
+      +(s.id==null?'<label class="note" style="display:flex;flex-direction:column;gap:2px">ประเภทร้าน<select class="in" data-ty="'+i+'" style="width:96px">'+TYPES.map(t=>'<option'+(tyOf(s)===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>':'')+'</div></div>'
+      +'<div class="ac"><button class="ib" data-up="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-dn="'+i+'" aria-label="เลื่อนลง"'+(i<p.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-rm="'+i+'" aria-label="ลบจุดนี้">✕</button></div></div>';});
+    h+='<input class="in" id="sq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อร้าน" value="'+esc(ED.q)+'" autocomplete="off">';
+    if(ED.q){const nq=ED.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(s=>s.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,7);
+      h+='<div class="res">'+r.map(s=>'<button data-add="'+s.id+'"><span>'+esc(s.n)+'</span><span class="km">'+(()=>{const last=p.stops[p.stops.length-1];if(!last)return 'จากโรงงาน '+s.km+' กม.';const k=last.id?PAIR[last.id+'-'+s.id]:undefined;return k?'จากจุด '+p.stops.length+' '+k.km+' กม.':'<span class="warn" style="display:inline">ยังไม่มีค่ากลางจากจุด '+p.stops.length+'</span>';})()+'</span></button>').join('')
+       +'<button data-new="1"><span>＋ สถานที่ใหม่ “'+esc(ED.q)+'”</span><span class="km">ปักหมุด</span></button></div>';}
+    if(ED.newLoc!=null)h+='<div class="box" style="background:var(--surface2)"><span class="lb">สถานที่ใหม่: '+esc(ED.newLoc)+'</span><input class="in" id="ll" placeholder="วางพิกัดจาก Google Maps เช่น 13.3611, 100.9847"><div class="note">บันทึกชื่อกับพิกัดไว้ แต่ระบบยังไม่มีระยะ กม. จึงยังคิดค่าแรงไม่ได้จนกว่า DEV จะใส่ค่ากลาง</div><div style="display:flex;gap:8px"><button class="btn sm pri" id="llok">เพิ่มจุดนี้</button><button class="btn sm ghost" id="llno">ยกเลิก</button></div></div>';
+    h+='<div class="note">ค้นได้จากสถานีค่ากลาง Packing ทั้งหมด (เดโมมี 40 จาก 179 ร้าน)</div></div>';
+    const act=HELP.filter(x=>x.status==='ใช้งาน');
+    h+='<div class="box"><span class="lb">เด็กรถใน <span class="note">(เลือกได้หลายคน)</span></span><div class="hl">'
+     +act.map(x=>{const on=p.helpers.includes(x.id),else_=(hc[x.id]||[]).filter(z=>z!==v.head);return '<label class="'+(else_.length&&!on?'dis':'')+'"><input type="checkbox" data-h="'+x.id+'"'+(on?' checked':'')+'><span>'+esc(x.nick)+' · '+esc(x.name)+(else_.length?'<small>อยู่รถ '+esc(else_.join(', '))+'</small>':'<small>ว่าง</small>')+'</span></label>';}).join('')
+     +'</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="lb">เด็กนอก</span><span class="step"><button id="om" aria-label="ลด">−</button><span>'+p.out+'</span><button id="op" aria-label="เพิ่ม">＋</button></span><span class="note">คน</span></div>'
+     +'<div class="note">เรทค่าเด็กรถจากหน้าตั้งค่าค่าแรง: เด็กใน '+(is4?'350':'400')+' บ./คน ('+(is4?'4 ล้อ':'รถ 6 ล้อขึ้นไป')+' · จ่ายรอบ 1–15 / 16–สิ้นเดือน) · เด็กนอก 350 บ./เที่ยว (คนขับเบิกไปก่อน)</div></div>';
+    h+='<div class="box"><label for="nt">หมายเหตุถึงคนขับ</label><textarea class="in" id="nt" rows="2" placeholder="เช่น รับเช็ค + เก็บถังเปล่า, นัดเด็กรถหน้าโรงงาน 05:00">'+esc(p.note)+'</textarea></div>';
+  } else if(v.tail){h+='<div class="box note">หางสำรองไม่มีคนขับประจำ ใช้สลับกับหางที่ซ่อมได้ ตั้งสถานะพร้อมใช้งาน / ซ่อมได้จากด้านบน</div>';}
+  h+='</div><div class="df"><button class="btn ghost" id="dc">ยกเลิก</button><button class="btn pri" id="dsv">บันทึกคันนี้</button></div></aside>';
+  const D=$('lp');if(!D)return;
+  const st=D.querySelector('.db')?D.querySelector('.db').scrollTop:0;
+  D.innerHTML=h;D.classList.add('ed');
+  if(D.querySelector('.db'))D.querySelector('.db').scrollTop=st;
+  $('dx').onclick=$('dc').onclick=closeEditor;
+  D.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{sync();p.status=b.dataset.s;drawEditor();});
+  const dr=$('drv');if(dr)dr.onchange=()=>{sync();p.driver=dr.value;drawEditor();};
+  const sq=$('sq');if(sq){sq.oninput=()=>{sync();ED.q=sq.value;drawEditor();const n=$('sq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};}
+  D.querySelectorAll('[data-add]').forEach(b=>b.onclick=async()=>{sync();const s=ST.find(x=>x.id===+b.dataset.add),last=p.stops[p.stops.length-1];
+    if(last&&!(last.id&&PAIR[last.id+'-'+s.id])){
+      const ok=await askModal({title:'ไม่มีค่ากลางช่วงนี้ใน DTC',ok:'เพิ่มจุดนี้ต่อ',cancel:'ไม่เพิ่ม',
+        html:'<div class="mrt"><b>'+esc(last.n)+'</b><span>→</span><b>'+esc(s.n)+'</b></div><p>ยังไม่เคยมีรถวิ่งตรงระหว่าง 2 จุดนี้ในข้อมูล DTC จึงยังไม่มีระยะ กม.</p><p class="m">เพิ่มได้ แต่ค่าแรงช่วงนี้จะยังคิดไม่ได้จนกว่า DEV ใส่ค่ากลาง · ระบบจริงจะแจ้ง DEV ให้อัตโนมัติ</p>'});
+      if(!ok)return;}
+    p.stops.push({id:s.id,n:s.n,km:s.km,pal:'',cs:'',at:''});ED.q='';drawEditor();});
+  D.querySelectorAll('[data-new]').forEach(b=>b.onclick=()=>{sync();ED.newLoc=ED.q;ED.q='';drawEditor();$('ll').focus();});
+  if($('llok'))$('llok').onclick=()=>{sync();p.stops.push({id:null,n:ED.newLoc,km:null,ll:$('ll').value.trim(),pal:'',cs:'',at:'',ty:'ยี่ปั๊ว'});ED.newLoc=null;drawEditor();};
+  if($('llno'))$('llno').onclick=()=>{ED.newLoc=null;drawEditor();};
+  D.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{sync();p.stops.splice(+b.dataset.rm,1);drawEditor();});
+  D.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>{sync();const i=+b.dataset.up;[p.stops[i-1],p.stops[i]]=[p.stops[i],p.stops[i-1]];drawEditor();});
+  D.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>{sync();const i=+b.dataset.dn;[p.stops[i+1],p.stops[i]]=[p.stops[i],p.stops[i+1]];drawEditor();});
+  D.querySelectorAll('[data-h]').forEach(b=>b.onchange=()=>{sync();const id=b.dataset.h;p.helpers=b.checked?[...p.helpers,id]:p.helpers.filter(x=>x!==id);drawEditor();});
+  if($('om'))$('om').onclick=()=>{sync();p.out=Math.max(0,p.out-1);drawEditor();};
+  if($('op'))$('op').onclick=()=>{sync();p.out=Math.min(4,p.out+1);drawEditor();};
+  $('dsv').onclick=()=>{sync();if(p.status!=='ready'&&!p.reason.trim()&&p.status==='repair'){toast('ใส่สาเหตุการซ่อมก่อน จะได้ขึ้นในรูปสรุป');return;}
+    if(p.status!=='ready'){p.stops=[];p.helpers=[];p.out=0;}
+    PLAN[v.head]=p;closeEditor();renderAll();toast('บันทึกรถ '+v.head+' ในแพลนแล้ว (เดโม)');};
+  document.onkeydown=e=>{if(e.key==='Escape'&&ED)closeEditor();};
+}
+function sync(){if(!ED)return;const p=ED.p;
+  if($('reason'))p.reason=$('reason').value; if($('nt'))p.note=$('nt').value;
+  document.querySelectorAll('[data-at]').forEach(i=>p.stops[+i.dataset.at].at=i.value);
+  document.querySelectorAll('[data-ty]').forEach(i=>p.stops[+i.dataset.ty].ty=i.value);
+  document.querySelectorAll('[data-pv]').forEach(i=>p.stops[+i.dataset.pv].pv=i.value);
+  if($('jt'))p.jt=$('jt').value; if($('ht'))p.htime=$('ht').value;
+  document.querySelectorAll('[data-pal]').forEach(i=>p.stops[+i.dataset.pal].pal=i.value);
+  document.querySelectorAll('[data-cs]').forEach(i=>p.stops[+i.dataset.cs].cs=i.value);}
+
+/* ---------- หน้าเด็กรถใน ---------- */
+let HF='ใช้งาน';
+function renderHelpers(){
+  const {hc}=busy();
+  let h='<div class="hgrid"><div class="card"><h3>เพิ่มเด็กรถใน</h3><form class="form" id="hform">'
+   +'<label>ชื่อ-นามสกุล<input class="in" id="hn" required placeholder="เช่น สมชาย ใจดี"></label>'
+   +'<label>ชื่อเล่น<input class="in" id="hk" placeholder="ใช้แสดงในแพลนและรูปสรุป"></label>'
+   +'<label>เบอร์โทร<input class="in" id="hp" inputmode="tel" placeholder="0xx-xxx-xxxx"></label>'
+   +'<label>หมายเหตุ<input class="in" id="ht" placeholder="เช่น ขับรถได้ / ประจำรถพ่วง"></label>'
+   +'<button class="btn pri" type="submit">เพิ่มเข้าฐานข้อมูล</button>'
+   +'<div class="note">ระบบออกรหัส HLP- ให้เอง · ลบไม่ได้ ให้เปลี่ยนเป็น “พัก” หรือ “ลาออก” แทน เพื่อให้ประวัติงานและค่าแรงย้อนหลังยังอยู่ · แก้ได้เฉพาะแอดมิน Packing</div></form></div>';
+  const chips=['ใช้งาน','พัก','ลาออก','ทั้งหมด'];
+  const rows=HELP.filter(x=>HF==='ทั้งหมด'||x.status===HF);
+  h+='<div><div class="chips">'+chips.map(c=>'<button class="chip'+(HF===c?' on':'')+'" data-hf="'+c+'">'+c+' <b>'+(c==='ทั้งหมด'?HELP.length:HELP.filter(x=>x.status===c).length)+'</b></button>').join('')+'</div>'
+   +'<div class="list"><div class="hrow head"><span>รหัส</span><span>ชื่อ</span><span class="hide-sm">เบอร์</span><span class="hide-sm">งานวันที่เลือก</span><span>สถานะ</span></div>'
+   +rows.map(x=>{const on=hc[x.id]||[];return '<div class="hrow"><span class="code">'+x.id+'</span><span><b>'+esc(x.nick||'-')+'</b> · '+esc(x.name)+(x.note?'<div class="note">'+esc(x.note)+'</div>':'')+'</span><span class="hide-sm code">'+esc(x.phone||'-')+'</span><span class="hide-sm">'+(on.length?'รถ '+esc(on.join(', '))+(on.length>1?' <span class="warn">⚠ ซ้ำ</span>':''):'<span class="m" style="color:var(--muted)">ว่าง</span>')+'</span>'
+     +'<select class="in" data-hs="'+x.id+'" aria-label="สถานะ '+esc(x.name)+'">'+['ใช้งาน','พัก','ลาออก'].map(s=>'<option'+(x.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select></div>';}).join('')
+   +(rows.length?'':'<div class="hrow"><span></span><span class="note">ไม่มีรายชื่อในกลุ่มนี้</span></div>')+'</div>'
+   +'<p class="note">เด็กนอกไม่ต้องลงทะเบียน ใส่เป็นจำนวนคนตอนจัดงาน · เบอร์ในเดโมซ่อนไว้ 6 หลัก</p></div></div>';
+  $('v-helpers').innerHTML=h;
+  $('v-helpers').querySelectorAll('[data-hf]').forEach(b=>b.onclick=()=>{HF=b.dataset.hf;renderHelpers();});
+  $('v-helpers').querySelectorAll('[data-hs]').forEach(s=>s.onchange=()=>{helpOf(s.dataset.hs).status=s.value;
+    if(s.value!=='ใช้งาน')Object.values(PLAN).forEach(p=>p.helpers=p.helpers.filter(z=>z!==s.dataset.hs));renderAll();toast('เปลี่ยนสถานะเป็น '+s.value+' แล้ว');});
+  $('hform').onsubmit=e=>{e.preventDefault();const n=$('hn').value.trim();if(!n){toast('ใส่ชื่อก่อน');return;}
+    const id='HLP-'+String(HELP.length+1).padStart(3,'0');HELP.push({id,name:n,nick:$('hk').value.trim()||first(n),phone:$('hp').value.trim(),status:'ใช้งาน',note:$('ht').value.trim()});
+    HF='ใช้งาน';renderAll();toast('เพิ่ม '+id+' '+n+' แล้ว เลือกใส่รถได้ในหน้าแพลน');};
+}
+
+/* ---------- รูปสรุปสถานะรถ (การ์ดทันสมัย · วงกลม เขียว/เหลือง/แดง) ---------- */
+let WITHJOB=true,IMG='';
+/* เขียว = พร้อมใช้งาน มีคนขับ · เหลือง = พร้อม แต่ไม่มีคนขับ · แดง = ซ่อม · เทา = งดวิ่ง / หางสำรอง */
+const DOT={job:'#16A34A',wait:'#16A34A',nod:'#EAB308',rep:'#DC2626',off:'#9CA3AF',tail:'#9CA3AF'};
+function stTxt(v,k,p){return k==='rep'?(p.reason||'ซ่อม'):k==='off'?'งดวิ่ง'+(p.reason?' · '+p.reason:''):k==='tail'?'หางสำรอง':k==='nod'?'พร้อม · ไม่มีคนขับ':k==='job'?'ออกงาน':'พร้อม · รอมีงาน';}
+function rrect(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
+function dot(x,cx,cy,r,col,hollow){x.beginPath();x.arc(cx,cy,r+4,0,Math.PI*2);x.fillStyle=col+'2E';x.fill();
+  x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);if(hollow){x.lineWidth=3;x.strokeStyle=col;x.stroke();}else{x.fillStyle=col;x.fill();}}
+async function drawReport(){
+  try{await document.fonts.load('700 22px "IBM Plex Sans Thai"');await document.fonts.load('700 30px "Anuphan"');}catch(e){}
+  const W=1080,PAD=36,RH=WITHJOB?64:52,GH=50,HEAD=176,KP=118,FOOT=86;
+  const groups=['4 ล้อ','6 ล้อ','10/22 ล้อ'];
+  const H=HEAD+KP+groups.reduce((a,g)=>a+GH+VEH.filter(v=>v.g===g).length*RH+18,0)+FOOT;
+  const cv=document.createElement('canvas');cv.width=W;cv.height=H;const x=cv.getContext('2d');
+  const F=(w,s,f)=>w+' '+s+'px '+(f||'"IBM Plex Sans Thai", sans-serif');
+  x.fillStyle='#EEF3EF';x.fillRect(0,0,W,H);
+  /* หัว */
+  x.fillStyle='#1B4332';x.fillRect(0,0,W,HEAD);x.fillStyle='#C9A227';x.fillRect(0,HEAD-6,W,6);
+  x.textBaseline='alphabetic';x.textAlign='left';
+  x.fillStyle='#E9CF6E';x.font=F('600',20);x.fillText('SSB Smart Supply · Packing',PAD,56);
+  x.fillStyle='#FFFFFF';x.font=F('700',40,'"Anuphan", "IBM Plex Sans Thai", sans-serif');x.fillText('สรุปสถานะรถ PK ประจำวัน',PAD,108);
+  x.fillStyle='#CFE3D6';x.font=F('500',22);x.fillText(dateTH($('pdate').value),PAD,146);
+  /* การ์ดตัวเลข */
+  const c=counts(),ready=c.job+c.wait;
+  const tiles=[['รถทั้งหมด',VEH.length-c.tail,'#1B4332',null],['พร้อม มีคนขับ',ready,'#16A34A','ออกงาน '+c.job],['ไม่มีคนขับ',c.nod,'#EAB308',null],['ซ่อม',c.rep,'#DC2626',null]];
+  const tw=(W-PAD*2-3*14)/4;
+  tiles.forEach(([l,n,col,sub],i)=>{const X=PAD+i*(tw+14),Y=HEAD+20;
+    x.fillStyle='#FFFFFF';rrect(x,X,Y,tw,KP-34,16);x.fill();
+    if(i)dot(x,X+28,Y+30,9,col);
+    x.fillStyle='#5D6E63';x.font=F('600',17);x.textAlign='left';x.fillText(l,X+(i?46:20),Y+36);
+    x.fillStyle=i?col:'#14261C';x.font=F('700',38,'"Anuphan", "IBM Plex Sans Thai", sans-serif');x.fillText(String(n),X+20,Y+74);
+    if(sub){x.fillStyle='#5D6E63';x.font=F('500',15);x.textAlign='right';x.fillText(sub,X+tw-16,Y+72);}
+  });
+  /* รายการตามกลุ่มล้อ */
+  let y=HEAD+KP;
+  groups.forEach(g=>{const vs=VEH.filter(v=>v.g===g),h=GH+vs.length*RH;
+    x.fillStyle='#FFFFFF';rrect(x,PAD,y,W-PAD*2,h,18);x.fill();
+    x.save();rrect(x,PAD,y,W-PAD*2,h,18);x.clip();
+    x.fillStyle='#F4F7F4';x.fillRect(PAD,y,W-PAD*2,GH);
+    x.fillStyle='#14261C';x.font=F('700',21,'"Anuphan", "IBM Plex Sans Thai", sans-serif');x.textAlign='left';x.textBaseline='middle';x.fillText(g,PAD+22,y+GH/2);
+    const gr=vs.filter(v=>['job','wait'].includes(kind(v))).length,gn=vs.filter(v=>kind(v)==='nod').length,gp=vs.filter(v=>kind(v)==='rep').length;
+    x.font=F('500',16);x.fillStyle='#5D6E63';x.textAlign='right';
+    x.fillText(vs.length+' คัน · พร้อม '+gr+(gn?' · ไม่มีคนขับ '+gn:'')+(gp?' · ซ่อม '+gp:''),W-PAD-22,y+GH/2);
+    let ry=y+GH;
+    vs.forEach((v,i)=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver);
+      if(i){x.strokeStyle='#E3EAE5';x.lineWidth=1;x.beginPath();x.moveTo(PAD+20,ry);x.lineTo(W-PAD-20,ry);x.stroke();}
+      if(k==='rep'){x.fillStyle='#FDF0EF';x.fillRect(PAD,ry,W-PAD*2,RH);}
+      const cy=WITHJOB?ry+RH/2-10:ry+RH/2;
+      dot(x,PAD+34,ry+RH/2,10,DOT[k],k==='tail'||k==='off');
+      x.textBaseline='middle';x.textAlign='left';
+      x.fillStyle='#9AA8A0';x.font=F('600',15);x.fillText(v.tail?'':String(i+1),PAD+58,cy);
+      x.fillStyle='#14261C';x.font=F('700',20);x.fillText(v.plate.replace(',',' / '),PAD+86,cy);
+      x.fillStyle='#5D6E63';x.font=F('500',16);fitText(x,[BRAND[v.head],v.shape].filter(Boolean).join(' · '),PAD+330,cy,190,'left');
+      x.fillStyle=k==='rep'?'#B91C1C':k==='nod'?'#A16207':k==='tail'||k==='off'?'#6B7280':'#15803D';
+      x.font=F('700',k==='rep'?16:18);fitText(x,stTxt(v,k,p),W-PAD-22,cy,W-PAD*2-560,'right');
+      if(WITHJOB&&!v.tail&&k!=='rep'){const s0=p.stops[0];
+        const jt=(d?d.name:'ยังไม่มีคนขับ')+(s0?' · ถึง '+(s0.at||'--:--')+' '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):'');
+        x.fillStyle='#5D6E63';x.font=F('500',15);fitText(x,jt,PAD+86,ry+RH/2+14,W-PAD*2-110,'left');}
+      ry+=RH;});
+    x.restore();
+    y+=h+18;});
+  /* คำอธิบายสี */
+  y+=4;const leg=[['#16A34A','พร้อมใช้งาน มีคนขับ',0],['#EAB308','พร้อม ไม่มีคนขับ',0],['#DC2626','ซ่อม',0],['#9CA3AF','หางสำรอง / งดวิ่ง',1]];
+  let lx=PAD;x.textBaseline='middle';x.textAlign='left';x.font=F('500',15);
+  leg.forEach(([col,t,hol])=>{dot(x,lx+9,y+16,7,col,hol);x.fillStyle='#3F4F45';x.fillText(t,lx+24,y+17);lx+=24+x.measureText(t).width+26;});
+  const now=new Date();x.textAlign='right';x.fillStyle='#8A978F';x.font=F('500',14);
+  x.fillText('สร้าง '+now.getDate()+'/'+(now.getMonth()+1)+'/'+(now.getFullYear()+543)+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),W-PAD,y+50);
+  IMG=cv.toDataURL('image/png');return IMG;
+}
+function fitText(x,t,cx,cy,max,align){align=align||'center';x.textAlign=align;let s=t;
+  while(x.measureText(s).width>max&&s.length>4)s=s.slice(0,-2);if(s!==t)s=s.slice(0,-1)+'…';x.fillText(s,cx,cy);}
+async function renderReport(){
+  const c=counts(),reps=VEH.filter(v=>kind(v)==='rep');
+  $('v-report').innerHTML='<div class="rgrid"><div><label class="opt"><input type="checkbox" id="wj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาถึงหน้างานใต้ทะเบียน</label>'
+   +'<div class="imgbox"><img id="rimg" alt="รูปสรุปสถานะรถ PK ประจำวัน"></div>'
+   +'<div class="legend"><span><i style="background:#16A34A;border-radius:50%"></i>พร้อมใช้งาน มีคนขับ</span><span><i style="background:#EAB308;border-radius:50%"></i>พร้อม ไม่มีคนขับ</span><span><i style="background:#DC2626;border-radius:50%"></i>ซ่อม + สาเหตุ</span><span><i style="background:transparent;border:2px solid #9CA3AF;border-radius:50%"></i>หางสำรอง / งดวิ่ง</span></div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="dl">⬇ ดาวน์โหลดรูป (PNG)</button><button class="btn gold" id="ln">📤 ส่ง LINE ผู้บริหาร</button></div>'
+   +'<p class="note">รูปสร้างจากแพลนวันที่เลือกทุกครั้ง แก้รถในหน้าแพลนแล้วกลับมาที่หน้านี้ รูปจะเปลี่ยนตาม</p></div>'
+   +'<div><div class="chat" aria-label="ตัวอย่างข้อความใน LINE"><div class="who">SSB Smart Supply · ตัวอย่างที่ผู้บริหารจะเห็น</div><div class="flex"><div class="fh"><b>🚚 สถานะรถ PK ประจำวัน</b>'+esc(dateTH($('pdate').value))+'</div><div class="fb">'
+   +'<div class="kp"><div><b style="color:#15803D">● '+(c.job+c.wait)+'</b>มีคนขับ</div><div><b>'+c.job+'</b>ออกงาน</div><div><b style="color:#A16207">● '+c.nod+'</b>ไม่มีคนขับ</div><div><b style="color:#B42318">● '+c.rep+'</b>ซ่อม</div></div>'
+   +(reps.length?'<div class="rp">'+reps.map(v=>'🔧 '+esc(v.head)+' — '+esc(PLAN[v.head].reason||'ซ่อม')).join('<br>')+'</div>':'<div>ไม่มีรถซ่อม</div>')
+   +'</div><img id="limg" alt="รูปสรุปย่อ"><span class="fbt">ดูรูปเต็ม</span></div></div>'
+   +'<p class="note">ส่งถึง: ผู้บริหาร (รอคุณน้องเคาะรายชื่อ) · ส่งเมื่อแอดมินกดปุ่ม หรือตั้งเวลาส่งอัตโนมัติทุกเช้าได้</p></div></div>';
+  $('wj').onchange=e=>{WITHJOB=e.target.checked;renderReport();};
+  $('dl').onclick=()=>toast('เดโมดาวน์โหลดไฟล์ไม่ได้: คลิกขวาที่รูปแล้วเลือก “บันทึกรูปภาพ” · เว็บจริงกดปุ่มนี้ได้ไฟล์ PNG ทันที');
+  $('ln').onclick=()=>toast('เดโมไม่ส่งจริง · เว็บจริงจะส่งการ์ดนี้พร้อมรูปเต็มเข้า LINE ผู้บริหาร');
+  const src=await drawReport();if($('rimg')){$('rimg').src=src;$('limg').src=src;}
+}
+
+/* ---------- เปลี่ยนหน้า ---------- */
+const VIEWS=['plan','helpers','report'];
+function route(){const t=VIEWS.includes(location.hash.slice(1))?location.hash.slice(1):'plan';
+  VIEWS.forEach(v=>$('v-'+v).hidden=v!==t);document.querySelectorAll('.tabs a').forEach(a=>a.classList.toggle('on',a.dataset.t===t));
+  $('bar').hidden=t!=='plan';if(t==='report')renderReport();}
+function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)renderReport();}
+$('pdate').onchange=()=>{$('pday').textContent=dateTH($('pdate').value);renderAll();};
+$('pday').textContent=dateTH($('pdate').value);
+$('bSave').onclick=()=>toast('บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว (เดโม) · ยังไม่ส่งถึงคนขับจนกว่าจะกดแจกงาน');
+$('bSend').onclick=async()=>{const miss=missingAll();
+  if(miss.length){const by={};miss.forEach(m=>(by[m.plate]=by[m.plate]||[]).push(m));
+    const ok=await askModal({title:'มี '+miss.length+' ช่วงที่ยังไม่มีค่ากลาง',ok:'แจกงานต่อ (แจ้ง DEV)',cancel:'กลับไปแก้',
+      html:'<p>ช่วงต่อไปนี้ไม่พบระยะใน DTC ค่าแรงของช่วงนี้จะยังคิดไม่ได้จนกว่า DEV ใส่ค่ากลาง</p><div class="mlist">'
+        +Object.keys(by).map(pl=>'<div class="mg"><b>'+esc(pl)+'</b>'+by[pl].map(m=>'<div class="mrt sm"><span>'+esc(m.first?'โรงงาน':m.from)+'</span><span>→</span><span>'+esc(m.to)+'</span></div>').join('')+'</div>').join('')+'</div>'});
+    if(!ok)return;}
+  const c=counts(),{dc,hc}=busy();const dup=Object.values(dc).filter(a=>a.length>1).length+Object.values(hc).filter(a=>a.length>1).length;
+  toast(dup?'มีคนขับหรือเด็กรถซ้ำหลายคัน '+dup+' จุด ตรวจก่อนแจก (เดโม)':'เว็บจริงจะส่งการ์ดงาน '+c.job+' งานถึงคนขับทาง LINE ให้กดรับ เหมือนปุ่มแจกงานเดิม (เดโมไม่ส่ง)');};
+addEventListener('hashchange',route);
+renderAll();route();
+</script>
+
+<script>
+/* หน้าเว็บเดโม (2026-11-09) · ด่านเข้าเหมือน pk-plan.html: LINE/บัตร SSO → แอดมิน Packing/ผู้จัดการ/ผู้บริหาร/DEV + PIN
+ * ข้อมูลสด: Edge pk-daily (คนขับ Packing · เด็กรถ · ค่ากลาง DTC ร้าน↔ร้าน) · ยังไม่บันทึก/ไม่ส่ง LINE จริง */
+const LIFF_ID='2010274217-Ot7vGhri', PKD_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-daily';
+let MY_UID='';
+function gateMsg(h){ const g=document.getElementById('gate'); g.hidden=false; g.innerHTML='<div class="gbox">'+h+'</div>'; }
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){ liff.login({redirectUri:location.href}); return; }
+    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(!MY_UID){ gateMsg('ไม่พบบัญชี LINE'); return; }
+    let info=null; try{ info=await ssbAdminPinInfo(MY_UID); }catch(e){}
+    const ok = info&&info.isDev ? await ssbPinGate(MY_UID) : await ssbAdminPin(MY_UID,{info,text:'เข้าหน้าแพลนรถ Packing (เดโม)'});
+    if(!ok){ gateMsg('🔐 ต้องใส่ PIN ก่อนเข้าหน้านี้<br><button class="btn pri" style="margin-top:12px" onclick="location.reload()">ใส่ PIN อีกครั้ง</button>'); return; }
+    gateMsg('<div class="spin"></div>กำลังโหลดรถ คนขับ และค่ากลาง DTC…');
+    let r=null;
+    for(let i=0;i<2&&!r;i++){ try{ const x=await fetch(PKD_URL+'?action=boot&userId='+encodeURIComponent(MY_UID)); r=await x.json(); }catch(e){ if(i) throw e; } }
+    if(r.denied){ gateMsg('หน้านี้สำหรับแอดมิน Packing / ผู้จัดการ / ผู้บริหาร'); return; }
+    if(!r.ok) throw new Error(r.error||'โหลดไม่สำเร็จ');
+    window.__D=r;
+    const s=document.createElement('script'); s.textContent=document.getElementById('pkMain').textContent; document.body.appendChild(s);
+    const at=r.pairAt?new Date(r.pairAt).toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    const dm=document.querySelector('.demo'); if(dm&&at) dm.insertAdjacentHTML('beforeend',' · ค่ากลาง DTC อัปเดต '+at+' ('+r.pairs.length+' คู่)');
+    document.getElementById('gate').hidden=true;
+  }catch(e){ gateMsg('โหลดไม่สำเร็จ: '+String(e&&e.message||e).replace(/[<>&]/g,'')+'<br><button class="btn pri" style="margin-top:12px" onclick="location.reload()">↻ ลองใหม่</button>'); }
+})();
+</script>
+</body>
+</html>
