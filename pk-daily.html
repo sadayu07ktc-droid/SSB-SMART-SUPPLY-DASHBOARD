@@ -203,13 +203,15 @@ main{padding-block:14px 120px}
 .lcb{padding:10px 14px;display:flex;flex-direction:column;gap:5px}.lcw{font-size:16px;font-weight:700;color:#9A4A00}
 .lcr{display:flex;gap:8px}.lcr>span:first-child{flex:none;width:58px;color:#5D6E63}.lcr small{color:#5D6E63}
 .lcf{display:flex;gap:8px;padding:0 14px 12px}.lcf span{flex:1;text-align:center;border:1px solid #C9A227;color:#5B4600;border-radius:10px;padding:6px;font-weight:600}.lcf .ok{background:#1B4332;border-color:#1B4332;color:#fff}
-.mpl{margin-top:8px;padding:9px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--surface2,#f7faf8);display:flex;flex-direction:column;gap:7px}
+.stop>.mpl{grid-column:1/-1}.mpl{margin-top:8px;padding:9px 10px;border:1px dashed var(--line);border-radius:12px;background:var(--surface2,#f7faf8);display:flex;flex-direction:column;gap:7px}
 .mpt{font-size:13.5px;padding:6px 9px;border-radius:9px;background:var(--surface);border:1px solid var(--line)}.mph{font-weight:700;font-size:13.5px}.mph .note{font-weight:400;margin-left:4px}
-.mpr{display:grid;grid-template-columns:minmax(0,1fr) 78px 34px;gap:6px;align-items:center}.mpr .in{font-size:14px;padding:8px 10px}.mpx{grid-column:1/-1;margin-top:-3px}
+.mpr{display:grid;grid-template-columns:96px minmax(0,1fr) 34px;grid-template-areas:"sel sel x" "q txt txt";gap:6px 8px;align-items:center;padding-bottom:7px;border-bottom:1px dashed var(--line)}.mpr>select{grid-area:sel;min-width:0}.mpr>[data-mpq]{grid-area:q}.mpr>.ib{grid-area:x}.mpr>.mpx{grid-area:txt;line-height:1.4}.mpr .in{font-size:14px;padding:8px 10px}
 .in.auto{background:var(--chip,#eef3ef);color:var(--ink);font-weight:700;border-style:dashed}
 .mpsum .mpbar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin:6px 0 8px}.mpsum .mpbar i{display:block;height:100%;background:var(--good,#2D6A4F);border-radius:6px}
 .mpsum.w .mpbar i{background:#D97706}.mpsum.bad .mpbar i{background:var(--bad,#B91C1C)}.mpsum.bad{border-color:#F3B4B4}
 .mpk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mpk small{display:block;color:var(--muted);font-size:11.5px}.mpk b{font-size:17px}
+#lp.lpm{display:flex!important;position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,calc(100vw - 32px));height:min(90vh,940px);min-height:0;max-height:calc(100vh - 24px);border-radius:18px;z-index:81;box-shadow:0 30px 80px -20px rgba(0,0,0,.55)}
+.lpms{position:fixed;inset:0;z-index:80;background:rgba(12,24,18,.55)}
 .rtbox{border-color:#F3C98B}.rtloc{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .tl .ti.rt::before{border-color:#E59A3C}
 .lpds{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface)}
@@ -663,13 +665,15 @@ function rtNotify(v,p,ns){const d=drvOf(p.driver);
 function poCell(s,f,key){const D='<span class="m">—</span>';
   if(s.rt){const u=s.rt.u,show=s.rt.q&&(f==='pal'?u==='พาเลท':u!=='พาเลท');return show?'<span class="rtq" title="'+esc(rtTxt(s.rt))+'">↩ '+esc(s.rt.q)+'</span>':D;}
   if(!s[f])return D;
-  return s.items&&s.items.length?'<button type="button" class="pob" data-pod="'+esc(key)+'" title="ดูรายละเอียด PO ('+s.items.length+' ใบ)">'+esc(s[f])+'</button>':esc(s[f]);}
+  const it=s.items&&s.items.length,ln=mpHas(s);
+  return '<button type="button" class="pob'+(it?'':' pob0')+'" data-pod="'+esc(key)+'" title="'+(it?'ดูรายละเอียด PO ('+s.items.length+' ใบ)':ln?'ดูรายการสินค้า (ใส่เอง)':'ดูรายละเอียด · จุดนี้ใส่จำนวนเอง ไม่มีใบ PO')+'">'+esc(s[f])+'</button>';}
+const mpHas=s=>!!(s&&s.lines&&s.lines.some(l=>l.k&&+l.q));
 function podStop(key){const a=String(key).split(':'),t0=a[0],id=a.slice(1,-1).join(':'),i=+a[a.length-1];
   if(t0==='j'){const j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);return j&&j.stops[i]?{s:j.stops[i],ctx:'งาน '+j.id+(j.head?' · รถ '+plOf(j.head):' · ยังไม่มีทะเบียน')}:null;}
   const p=ED&&ED.v.head===id?ED.p:PLAN[id],s=p&&p.stops[i];return s?{s,ctx:'รถ '+plOf(id)+(s.mj?' · งาน '+s.mj:'')}:null;}
-function openPoDrawer(key){const r=podStop(key);if(!r)return;const s=r.s,its=s.items||[],kg=its.reduce((a,x)=>a+(+x.kg||0),0);
-  let h='<div class="scrim" data-pox></div><aside class="drawer pod" role="dialog" aria-modal="true" aria-label="รายละเอียด PO '+esc(s.n)+'"><div class="dh"><div><div class="stc"><span class="tchip">📄 รายละเอียด PO</span></div><h3>'+esc(s.n)+'</h3><div class="m">'+esc(r.ctx)+(s.at?' · ต้องถึง '+esc(s.at):'')+(pvOf(s)?' · '+esc(pvOf(s)):'')+'</div></div><button class="x" data-pox aria-label="ปิด">✕</button></div><div class="db">';
-  h+='<div class="pok">'+[['PO',its.length+' ใบ'],['พาเลท',pnN(s.pal)],['ลัง',pnN(s.cs)],['น้ำหนัก',pnN(kg)+' กก.']].map(a=>'<div><small>'+a[0]+'</small><b>'+a[1]+'</b></div>').join('')+'</div>';
+function openPoDrawer(key){const r=podStop(key);if(!r)return;const s=r.s,its=s.items||[],kg=its.reduce((a,x)=>a+(+x.kg||0),0)||n0(s.kg);
+  let h='<div class="scrim" data-pox></div><aside class="drawer pod" role="dialog" aria-modal="true" aria-label="รายละเอียด PO '+esc(s.n)+'"><div class="dh"><div><div class="stc"><span class="tchip">'+(its.length?'📄 รายละเอียด PO':mpHas(s)?'📦 รายการสินค้า':'📄 รายละเอียดจุดส่ง')+'</span></div><h3>'+esc(s.n)+'</h3><div class="m">'+esc(r.ctx)+(s.at?' · ต้องถึง '+esc(s.at):'')+(pvOf(s)?' · '+esc(pvOf(s)):'')+'</div></div><button class="x" data-pox aria-label="ปิด">✕</button></div><div class="db">';
+  h+='<div class="pok">'+[['PO',its.length?its.length+' ใบ':'ไม่มี (ใส่เอง)'],['พาเลท',pnN(s.pal)],['ลัง',pnN(s.cs)],['น้ำหนัก',pnN(kg)+' กก.']].map(a=>'<div><small>'+a[0]+'</small><b>'+a[1]+'</b></div>').join('')+'</div>';
   its.forEach(x=>{const on=LP_POS.find(y=>y.po===x.po),P=on||(LPI.off||[]).find(y=>y.po===x.po),tot=P?(P.lines||[]).reduce((a,l)=>a+(+l.q||0),0):0;
     h+='<div class="box poc"><div class="poh"><b class="mono">PO '+esc(x.po)+'</b>'+(x.so?'<span class="note">SO '+esc(x.so)+'</span>':'')+(P&&P.rev>1?'<span class="rv w">Rev.'+P.rev+' (แก้จำนวนแล้ว)</span>':'')+(P&&!on?'<span class="rv w">🚫 ยกเลิกแล้ว</span>':'')+'</div>'
       +(P?'<div class="note">'+esc(P.dc)+' · ส่ง '+esc(lpTh(P.date))+'</div>':'')
@@ -677,9 +681,19 @@ function openPoDrawer(key){const r=podStop(key);if(!r)return;const s=r.s,its=s.i
       +(tot&&tot!==+x.cs?'<div class="warn">PO นี้แบ่งหลายคัน / จำนวนไม่ตรง · คันนี้ '+pnN(x.cs)+' จากทั้ง PO '+pnN(tot)+' ลัง</div>':'')
       +(P?'<table class="pol"><thead><tr><th>สินค้า (ทั้ง PO)</th><th class="n">ลัง</th></tr></thead><tbody>'+(P.lines||[]).map(l=>'<tr><td>'+esc(l.p)+'</td><td class="n">'+pnN(l.q)+'</td></tr>').join('')+'</tbody></table>'
         :'<div class="note">ไม่พบรายการสินค้าของ PO นี้ในแพลนที่เปิดอยู่ (อาจเป็นวันส่งอื่น · เลือกดูในประวัติ)</div>')+'</div>';});
-  if(!its.length)h+='<div class="note">จุดนี้ไม่มี PO (ใส่จำนวนเอง ไม่ได้มาจาก Loading Planner)</div>';
+  const k0=String(key).split(':'),kt=k0[0],kid=k0.slice(1,-1).join(':'),canEd=kt==='j'||!isMall(s);
+  if(!its.length&&mpHas(s)){const r2=mpCalc(s.lines);
+    h+='<div class="box"><span class="lb">📦 สินค้า <span class="note">(แอดมินใส่เอง · ไม่มีใบ PO)</span></span><table class="pol"><thead><tr><th>สินค้า</th><th class="n">ลัง</th><th class="n">พาเลท</th><th class="n">กก.</th></tr></thead><tbody>'
+     +s.lines.filter(l=>l.k&&+l.q).map(l=>{const sk=mpSku(l.k),q=+l.q,per=sk.per*sk.lay,f=Math.floor(q/per),lo=q-f*per;
+        return '<tr><td>'+esc(sk.n)+'</td><td class="n">'+pnN(q)+'</td><td class="n">'+(f?f:'')+(f&&lo?' + ':'')+(lo?'เศษ '+lo+' ลัง':'')+'</td><td class="n">'+pnN(Math.round(q*sk.kg))+'</td></tr>';}).join('')
+     +'<tr><td><b>รวม</b></td><td class="n"><b>'+pnN(r2.cs)+'</b></td><td class="n"><b>'+r2.pal+'</b></td><td class="n"><b>'+pnN(r2.kg)+'</b></td></tr></tbody></table>'
+     +'<div class="note">พาเลทรวม = พาเลทเต็ม + เศษรวมกันได้ '+r2.mix+' พาเลท · น้ำหนักรวมไม้พาเลท '+PK_PAL.kg+' กก./ใบ</div></div>';}
+  else if(!its.length)h+='<div class="box"><div class="note" style="font-size:14px">ℹ️ จุดนี้<b>ไม่มีใบ PO</b> — ใส่จำนวนพาเลท/ลังเอง ไม่ได้ส่งมาจาก Loading Planner</div>'
+     +'<div class="note" style="margin-top:6px">ดูรายละเอียด PO ได้เมื่อจัดในหน้า 📦 จัด PO ลงรถ แล้วกด "ส่งเข้าแพลน" · หรือเลือกสินค้า + ลังในงาน เพื่อคิดพาเลท/น้ำหนักให้</div>'
+     +(canEd?'<button type="button" class="btn sm" id="podEd" style="margin-top:8px">📦 ใส่สินค้าในงานนี้</button>':'')+'</div>';
   h+='</div><div class="df"><button class="btn pri" data-pox>ปิด</button></div></aside>';
-  const H=$('drawerHost');H.innerHTML=h;H.querySelectorAll('[data-pox]').forEach(b=>b.onclick=closePoDrawer);H.querySelector('.x').focus();}
+  const H=$('drawerHost');H.innerHTML=h;H.querySelectorAll('[data-pox]').forEach(b=>b.onclick=closePoDrawer);H.querySelector('.x').focus();
+  const pe=$('podEd');if(pe)pe.onclick=()=>{closePoDrawer();if(kt==='j')openJob(kid);else openEditor(kid);};}
 function closePoDrawer(){const H=$('drawerHost');if(H)H.innerHTML='';}
 /* จับคลิกก่อนแถว (capture) — แถวมี onclick เปิดลิ้นชักแก้งาน */
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pod]');if(!b)return;e.stopPropagation();e.preventDefault();openPoDrawer(b.dataset.pod);},true);
@@ -998,9 +1012,7 @@ function syncJ(){if(!JE)return;const j=JE.j;
   document.querySelectorAll('[data-jat]').forEach(i=>j.stops[+i.dataset.jat].at=i.value);
   document.querySelectorAll('[data-jpal]').forEach(i=>j.stops[+i.dataset.jpal].pal=i.value);
   document.querySelectorAll('[data-jcs]').forEach(i=>j.stops[+i.dataset.jcs].cs=i.value);
-  document.querySelectorAll('[data-mpk]').forEach(e=>{const [a,b]=e.dataset.mpk.split(':').map(Number);j.stops[a].lines[b].k=e.value;});
-  document.querySelectorAll('[data-mpq]').forEach(e=>{const [a,b]=e.dataset.mpq.split(':').map(Number);j.stops[a].lines[b].q=e.value.replace(/[^\d]/g,'');});
-  j.stops.forEach(mpApply);
+  mpSyncDom(j.stops);
   if($('jnt'))j.note=$('jnt').value;if($('jcar'))j.carrier=$('jcar').value.trim();if($('junl'))j.unl=$('junl').value;}
 
 /* ═════════ ใส่สินค้าเองในงานห้าง: เลือกสินค้า + ลัง → พาเลท + น้ำหนัก (เทียบน้ำหนักบรรทุกรถ) ═════════
@@ -1036,6 +1048,14 @@ function mpSum(j){const cap=mpCap(j.size);let pl=0,kg=0,nokg=0;j.stops.forEach(s
    +(cap&&pl>cap.slots?'<div class="warn">⚠ พาเลทเกินพื้นรถ (ไม่ซ้อน) · ตรวจการวาง/ซ้อนใน Loading Planner</div>':'')
    +(nokg?'<div class="note">'+nokg+' จุดยังไม่มีน้ำหนัก (ใส่พาเลท/ลังเอง ไม่ได้เลือกสินค้า)</div>':'')
    +'<div class="note">รวมไม้พาเลท '+PK_PAL.kg+' กก./ใบ · บรรทุกได้ = เผื่อ '+PK_PAYBUF+'% และ 7-11 ไม่เกิน '+(PK_CUSTMAX/1000)+' ตัน/คัน (ค่าเดียวกับ Loading Planner)</div></div>';}
+function mpSyncDom(stops){document.querySelectorAll('[data-mpk]').forEach(e=>{const [a,b]=e.dataset.mpk.split(':').map(Number);if(stops[a]&&stops[a].lines&&stops[a].lines[b])stops[a].lines[b].k=e.value;});
+  document.querySelectorAll('[data-mpq]').forEach(e=>{const [a,b]=e.dataset.mpq.split(':').map(Number);if(stops[a]&&stops[a].lines&&stops[a].lines[b])stops[a].lines[b].q=e.value.replace(/[^\d]/g,'');});
+  stops.forEach(mpApply);}
+function mpWire(D,stops,syncF,drawF){
+  D.querySelectorAll('[data-mpadd]').forEach(b=>b.onclick=()=>{syncF();const x=stops()[+b.dataset.mpadd];(x.lines||(x.lines=[])).push({k:'',q:''});drawF();const s=D.querySelectorAll('[data-mpk^="'+b.dataset.mpadd+':"]');if(s.length)s[s.length-1].focus();});
+  D.querySelectorAll('[data-mprm]').forEach(b=>b.onclick=()=>{syncF();const [a,c]=b.dataset.mprm.split(':').map(Number),x=stops()[a];x.lines.splice(c,1);if(!mpHas(x))x.kg=0;drawF();});
+  D.querySelectorAll('[data-mpk]').forEach(e=>e.onchange=()=>{syncF();drawF();const n=D.querySelector('[data-mpq="'+e.dataset.mpk+'"]');if(n)n.focus();});
+  D.querySelectorAll('[data-mpq]').forEach(e=>e.oninput=()=>{const k=e.dataset.mpq,pos=e.selectionStart;syncF();drawF();const n=D.querySelector('[data-mpq="'+k+'"]');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(_){}}});}
 function mpApply(x){if(!x.lines||!x.lines.some(l=>l.k&&n0(l.q)))return;const r=mpCalc(x.lines);x.cs=String(r.cs);x.pal=String(r.pal);x.kg=r.kg;
   x.po=x.po||[];x.manual=1;}
 function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
@@ -1058,9 +1078,8 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
     +(()=>{const auto=x.lines&&x.lines.some(l=>l.k&&n0(l.q)),ro=auto?' readonly tabindex="-1" class="in auto" title="คิดจากสินค้า"':' class="in"';
       return '<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input'+ro+' data-jpal="'+i+'" placeholder="0" value="'+esc(x.pal)+'"></label>'
        +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input'+ro+' data-jcs="'+i+'" placeholder="0" value="'+esc(x.cs)+'"></label>'
-       +(auto?'<label class="note" style="display:flex;flex-direction:column;gap:2px">กก.<input class="in auto" readonly tabindex="-1" value="'+comma(x.kg||0)+'"></label>':'');})()+'</div>'
-    +(x.items&&x.items.length?'':mpBox(x,i))+'</div>'
-    +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบจุดนี้">✕</button></div></div>';});
+       +(auto?'<label class="note" style="display:flex;flex-direction:column;gap:2px">กก.<input class="in auto" readonly tabindex="-1" value="'+comma(x.kg||0)+'"></label>':'');})()+'</div></div>'
+    +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบจุดนี้">✕</button></div>'+(x.items&&x.items.length?'':mpBox(x,i))+'</div>';});
   h+='<input class="in" id="jsq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อห้าง" value="'+esc(JE.q)+'" autocomplete="off">';
   if(JE.q){const nq=JE.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&x.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,7);
     h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
@@ -1080,10 +1099,7 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   const sq=$('jsq');sq.oninput=()=>{syncJ();JE.q=sq.value;drawJob();const n=$('jsq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};
   D.querySelectorAll('[data-jadd]').forEach(b=>b.onclick=()=>{syncJ();const x=ST.find(y=>y.id===+b.dataset.jadd);j.stops.push({id:x.id,n:x.n,km:x.km,pal:'',cs:'',at:''});JE.q='';drawJob();});
   D.querySelectorAll('[data-jrm]').forEach(b=>b.onclick=()=>{syncJ();j.stops.splice(+b.dataset.jrm,1);drawJob();});
-  D.querySelectorAll('[data-mpadd]').forEach(b=>b.onclick=()=>{syncJ();const x=j.stops[+b.dataset.mpadd];(x.lines||(x.lines=[])).push({k:'',q:''});drawJob();const s=D.querySelectorAll('[data-mpk^="'+b.dataset.mpadd+':"]');if(s.length)s[s.length-1].focus();});
-  D.querySelectorAll('[data-mprm]').forEach(b=>b.onclick=()=>{syncJ();const [a,c]=b.dataset.mprm.split(':').map(Number),x=j.stops[a];x.lines.splice(c,1);if(!x.lines.some(l=>l.k&&n0(l.q))){x.kg=0;}drawJob();});
-  D.querySelectorAll('[data-mpk]').forEach(e=>e.onchange=()=>{syncJ();drawJob();const n=D.querySelector('[data-mpq="'+e.dataset.mpk+'"]');if(n)n.focus();});
-  D.querySelectorAll('[data-mpq]').forEach(e=>e.oninput=()=>{const k=e.dataset.mpq,pos=e.selectionStart;syncJ();drawJob();const n=D.querySelector('[data-mpq="'+k+'"]');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(_){}}});
+  mpWire(D,()=>JE.j.stops,syncJ,drawJob);
   D.querySelectorAll('[data-jup]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jup;[j.stops[i-1],j.stops[i]]=[j.stops[i],j.stops[i-1]];drawJob();});
   D.querySelectorAll('[data-jdn]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jdn;[j.stops[i+1],j.stops[i]]=[j.stops[i],j.stops[i+1]];drawJob();});
   if($('jdel'))$('jdel').onclick=async()=>{const sent=!!MALL.snap[j.id];
@@ -1921,9 +1937,11 @@ function updBar(){const c=counts();const nd=new Set(VEH.filter(v=>kind(v)==='job
 /* ---------- ลิ้นชักแก้งานรายคัน ---------- */
 let ED=null;
 function openEditor(head){const v=VEH.find(x=>x.head===head);if($('lp'))$('lp').innerHTML='';
-  ED={v,p:JSON.parse(JSON.stringify(PLAN[head])),q:'',newLoc:null};renderPlan();
-  const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
-function closeEditor(){ED=null;if($('lp'))$('lp').innerHTML='';renderPlan();}
+  const md=['wait','nod'].includes(kind(v));   /* รถยังไม่มีงาน → popup กลางจอ */
+  ED={v,p:JSON.parse(JSON.stringify(PLAN[head])),q:'',newLoc:null,modal:md};renderPlan();
+  const lp=$('lp');if(!md&&lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});
+  if(md){const ov=document.createElement('div');ov.id='lpmScrim';ov.className='lpms';ov.onclick=closeEditor;document.body.appendChild(ov);}}
+function closeEditor(){const sc=$('lpmScrim');if(sc)sc.remove();ED=null;if($('lp'))$('lp').innerHTML='';renderPlan();}
 /* ---------- สถานะรถสด GPS (เหมือนหน้า Command Center · Edge manage-drivers getDrivers ทุก 1 นาที) ----------
  * จับคู่ด้วยทะเบียน (หัว/หาง) ของคนขับในระบบ · รถที่ไม่มีคนขับผูก = ยังไม่รู้ตำแหน่ง · เปิดนอกเว็บ (artifact) = ไม่มีสถานะสด */
 let LIVE=null,LIVE_AT=0,GF='';
@@ -2033,12 +2051,15 @@ function drawEditor(){
           +'</div>':'<button type="button" class="btn sm ghost" data-rtfix="'+i+'">📍 เปลี่ยนสถานที่</button>')+'</div>'+ac+'</div>';return;}
       h+='<div class="stop'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+'</div>'
       +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-at="'+i+'" value="'+esc(s.at)+'" style="width:118px"></label>'
-      +'<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input class="in" data-pal="'+i+'" placeholder="0" value="'+esc(s.pal)+'"></label>'
-      +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input class="in" data-cs="'+i+'" placeholder="0" value="'+esc(s.cs)+'"></label>'
+      +(()=>{const au=mpHas(s),ro=au?' readonly tabindex="-1" class="in auto" title="คิดจากสินค้า"':' class="in"';
+        return '<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input'+ro+' data-pal="'+i+'" placeholder="0" value="'+esc(s.pal)+'"></label>'
+         +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input'+ro+' data-cs="'+i+'" placeholder="0" value="'+esc(s.cs)+'"></label>'
+         +(au?'<label class="note" style="display:flex;flex-direction:column;gap:2px">กก.<input class="in auto" readonly tabindex="-1" value="'+comma(s.kg||0)+'"></label>':'');})()
       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">จังหวัด<input class="in" data-pv="'+i+'" placeholder="จังหวัด" value="'+esc(pvOf(s))+'" style="width:120px"></label>'
       +(feeOf(v,s)?'<span class="note" style="align-self:flex-end">ค่าลงสินค้า '+feeOf(v,s).toLocaleString('th-TH')+' บ.</span>':'')
       +(s.id==null?'<label class="note" style="display:flex;flex-direction:column;gap:2px">ประเภทร้าน<select class="in" data-ty="'+i+'" style="width:96px">'+TYPES.map(t=>'<option'+(tyOf(s)===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>':'')+'</div></div>'
-      +'<div class="ac"><button class="ib" data-up="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-dn="'+i+'" aria-label="เลื่อนลง"'+(i<p.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-rm="'+i+'" aria-label="ลบจุดนี้">✕</button></div></div>';});
+      +'<div class="ac"><button class="ib" data-up="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-dn="'+i+'" aria-label="เลื่อนลง"'+(i<p.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-rm="'+i+'" aria-label="ลบจุดนี้">✕</button></div>'+(isMall(s)||(s.items&&s.items.length)?'':mpBox(s,i))+'</div>';});
+    h+=mpSum({size:vSize(v),stops:p.stops});
     h+='<input class="in" id="sq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อร้าน'+(PM==='mall'?' (เฉพาะห้าง)':' (ร้านห้างเพิ่มที่แพลนห้าง)')+'" value="'+esc(ED.q)+'" autocomplete="off">';
     if(ED.q){const nq=ED.q.replace(/\s/g,'').toLowerCase(),hit=ST.filter(s=>s.n.replace(/\s/g,'').toLowerCase().includes(nq)),side=s=>(tyOf({id:s.id})==='ห้าง')===(PM==='mall');
       const r=hit.filter(side).slice(0,7),rx=hit.filter(s=>!side(s));
@@ -2072,9 +2093,10 @@ function drawEditor(){
   h+='</div><div class="df"><button class="btn ghost" id="dc">ยกเลิก</button><button class="btn pri" id="dsv">บันทึกคันนี้</button></div></aside>';
   const D=$('lp');if(!D)return;
   const st=D.querySelector('.db')?D.querySelector('.db').scrollTop:0;
-  D.innerHTML=h;D.classList.add('ed');
+  D.innerHTML=h;D.classList.add('ed');D.classList.toggle('lpm',!!ED.modal);
   if(D.querySelector('.db'))D.querySelector('.db').scrollTop=st;
   $('dx').onclick=$('dc').onclick=closeEditor;
+  mpWire(D,()=>ED.p.stops,sync,drawEditor);
   D.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{sync();p.status=b.dataset.s;drawEditor();});
   const dr=$('drv');if(dr)dr.onchange=()=>{sync();p.driver=dr.value;drawEditor();};
   const sq=$('sq');if(sq){sq.oninput=()=>{sync();ED.q=sq.value;drawEditor();const n=$('sq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};}
@@ -2129,7 +2151,8 @@ function sync(){if(!ED)return;const p=ED.p;
   document.querySelectorAll('[data-pv]').forEach(i=>p.stops[+i.dataset.pv].pv=i.value);
   if($('jt'))p.jt=$('jt').value; if($('ot'))p.ot=otEff(p)==='อื่นๆ'?$('ot').value:'';if($('otd'))p.otd=otEff(p)==='อื่นๆ'?$('otd').value.trim():''; if($('ht'))p.htime=$('ht').value;
   document.querySelectorAll('[data-pal]').forEach(i=>p.stops[+i.dataset.pal].pal=i.value);
-  document.querySelectorAll('[data-cs]').forEach(i=>p.stops[+i.dataset.cs].cs=i.value);}
+  document.querySelectorAll('[data-cs]').forEach(i=>p.stops[+i.dataset.cs].cs=i.value);
+  mpSyncDom(p.stops);}
 
 /* ---------- หน้าเด็กรถใน ---------- */
 let HF='ใช้งาน';
