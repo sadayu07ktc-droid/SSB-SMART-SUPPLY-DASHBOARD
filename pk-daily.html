@@ -129,6 +129,7 @@ main{padding-block:14px 120px}
 .hrow.head{font-size:12px;color:var(--muted);font-weight:600;background:var(--surface2)}
 .code{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
 /* สรุปสถานะ */
+.rgrid.r1{grid-template-columns:minmax(0,760px)}
 .rgrid{display:grid;grid-template-columns:minmax(0,640px) 340px;gap:20px;align-items:start;justify-content:start}
 .imgbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:10px}
 .imgbox img{display:block;width:100%;height:auto;border-radius:6px}
@@ -472,7 +473,7 @@ main{padding-block:14px 120px}
     <nav class="tabs" aria-label="หน้า">
       <a href="#plan" data-t="plan">แพลนประจำวัน</a>
       <a href="#helpers" data-t="helpers">เด็กรถใน</a>
-      <a href="#report" data-t="report">สรุปสถานะรถ · แจ้งผู้บริหาร</a>
+      <a href="#report" data-t="report">สรุปสถานะรถ</a>
     </nav>
   </div>
 </header>
@@ -1594,7 +1595,7 @@ function drawEditor(){
   if(PM==='mall')h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><b>'+({ready:'พร้อมใช้งาน',repair:'ซ่อม',off:'งดวิ่ง'})[p.status]+'</b>'+(p.reason?' · '+esc(p.reason):'')+'<div class="note">ตั้งซ่อม/งดวิ่งที่แพลนรวม</div></div>';
   else h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><div class="seg">'
    +[['ready','พร้อมใช้งาน'],['repair','ซ่อม'],['off','งดวิ่ง']].map(([k,l])=>'<button data-s="'+k+'" class="'+(p.status===k?'on':'')+(k==='repair'?' r':'')+'">'+l+'</button>').join('')+'</div>'
-   +(p.status!=='ready'?'<input class="in" id="reason" placeholder="สาเหตุ เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 12/11" value="'+esc(p.reason)+'"><div class="note">ข้อความนี้ขึ้นในช่องสถานะของรูปสรุปที่ส่งผู้บริหาร</div>':'')+'</div>';
+   +(p.status!=='ready'?'<input class="in" id="reason" placeholder="สาเหตุ เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 12/11" value="'+esc(p.reason)+'"><div class="note">ข้อความนี้ขึ้นในช่องสถานะของรูปสรุปสถานะรถ</div>':'')+'</div>';
   if(p.status==='ready'&&!v.tail){
     const mine=DRV.find(d=>d.head===v.head);
     h+='<div class="box"><label for="drv">คนขับ'+(drvLock?' 🔒':'')+'</label><select class="in" id="drv"'+(drvLock?' disabled':'')+'><option value="">— ไม่มีคนขับ —</option>'
@@ -1771,20 +1772,15 @@ function fitText(x,t,cx,cy,max,align){align=align||'center';x.textAlign=align;le
   while(x.measureText(s).width>max&&s.length>4)s=s.slice(0,-2);if(s!==t)s=s.slice(0,-1)+'…';x.fillText(s,cx,cy);}
 async function renderReport(){
   const c=counts(),reps=VEH.filter(v=>kind(v)==='rep');
-  $('v-report').innerHTML='<div class="rgrid"><div><label class="opt"><input type="checkbox" id="wj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาถึงหน้างานใต้ทะเบียน</label>'
+  $('v-report').innerHTML='<div class="rgrid r1"><div><label class="opt"><input type="checkbox" id="wj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาถึงหน้างานใต้ทะเบียน</label>'
    +'<div class="imgbox"><img id="rimg" alt="รูปสรุปสถานะรถ PK ประจำวัน"></div>'
    +'<div class="legend"><span><i style="background:#16A34A;border-radius:50%"></i>พร้อมใช้งาน มีคนขับ</span><span><i style="background:#EAB308;border-radius:50%"></i>พร้อม ไม่มีคนขับ</span><span><i style="background:#DC2626;border-radius:50%"></i>ซ่อม + สาเหตุ</span><span><i style="background:transparent;border:2px solid #9CA3AF;border-radius:50%"></i>หางสำรอง / งดวิ่ง</span></div>'
-   +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="dl">⬇ ดาวน์โหลดรูป (PNG)</button><button class="btn gold" id="ln">📤 ส่ง LINE ผู้บริหาร</button></div>'
+   +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="dl">⬇ ดาวน์โหลดรูป (PNG)</button></div>'
    +'<p class="note">รูปสร้างจากแพลนวันที่เลือกทุกครั้ง แก้รถในหน้าแพลนแล้วกลับมาที่หน้านี้ รูปจะเปลี่ยนตาม</p></div>'
-   +'<div><div class="chat" aria-label="ตัวอย่างข้อความใน LINE"><div class="who">SSB Smart Supply · ตัวอย่างที่ผู้บริหารจะเห็น</div><div class="flex"><div class="fh"><b>🚚 สถานะรถ PK ประจำวัน</b>'+esc(dateTH($('pdate').value))+'</div><div class="fb">'
-   +'<div class="kp"><div><b style="color:#15803D">● '+(c.job+c.wait)+'</b>มีคนขับ</div><div><b>'+c.job+'</b>ออกงาน</div><div><b style="color:#A16207">● '+c.nod+'</b>ไม่มีคนขับ</div><div><b style="color:#B42318">● '+c.rep+'</b>ซ่อม</div></div>'
-   +(reps.length?'<div class="rp">'+reps.map(v=>'🔧 '+esc(v.head)+' — '+esc(PLAN[v.head].reason||'ซ่อม')).join('<br>')+'</div>':'<div>ไม่มีรถซ่อม</div>')
-   +'</div><img id="limg" alt="รูปสรุปย่อ"><span class="fbt">ดูรูปเต็ม</span></div></div>'
-   +'<p class="note">ส่งถึง: ผู้บริหาร (รอคุณน้องเคาะรายชื่อ) · ส่งเมื่อแอดมินกดปุ่ม หรือตั้งเวลาส่งอัตโนมัติทุกเช้าได้</p></div></div>';
+   +'</div>';
   $('wj').onchange=e=>{WITHJOB=e.target.checked;renderReport();};
   $('dl').onclick=()=>toast('เดโมดาวน์โหลดไฟล์ไม่ได้: คลิกขวาที่รูปแล้วเลือก “บันทึกรูปภาพ” · เว็บจริงกดปุ่มนี้ได้ไฟล์ PNG ทันที');
-  $('ln').onclick=()=>toast('เดโมไม่ส่งจริง · เว็บจริงจะส่งการ์ดนี้พร้อมรูปเต็มเข้า LINE ผู้บริหาร');
-  const src=await drawReport();if($('rimg')){$('rimg').src=src;$('limg').src=src;}
+  const src=await drawReport();if($('rimg')){$('rimg').src=src;}
 }
 
 /* ---------- เปลี่ยนหน้า ---------- */
