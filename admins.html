@@ -192,6 +192,12 @@
   .lg{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 11px;border-radius:999px;background:var(--surface);border:1px solid var(--line)}
   .lg .dot{width:9px;height:9px;border-radius:50%;flex:none}
   .lg .n{font-family:var(--mono);font-size:10px;color:var(--ink-faint);font-weight:400}
+  button.lg{font:inherit;font-size:11.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s}
+  button.lg:hover{border-color:var(--tc,var(--pine))}
+  button.lg.on{background:var(--tbg,var(--surface));border-color:var(--tc,var(--pine));box-shadow:inset 0 0 0 1px var(--tc,var(--pine))}
+  button.lg.on .n{color:var(--tc,var(--pine));font-weight:600}
+  button.lg.all .dot{background:conic-gradient(#5b4ae0,#1B7A8C,#C2410C,#A16207,#9F1239,#7C3AED,#1B4332)}
+  button.lg:focus-visible{outline:2px solid var(--tc,var(--pine));outline-offset:2px}
 
   .cap.off{background:var(--slate-bg);color:var(--slate)}
   .cap.inact{background:var(--red-bg);color:var(--red);border-color:transparent}
@@ -366,14 +372,26 @@ function render(){
     ? `<div class="banner"><span style="font-size:15px">⚠️</span><div><b>ไม่มีแอดมินที่รับแจ้งเตือนเลย</b><br>
         ระบบจะส่งแจ้งเตือนออเดอร์ใหม่ · ชั่งเสร็จ · ขอลา · แจ้งซ่อม ไม่ได้ — เปิดให้อย่างน้อย 1 คน</div></div>` : '';
   const used = TYPES.filter(t=>ADMINS.some(a=>a.type===t.v));
-  $('#legend').innerHTML = used.map(t=>{
-    const n = ADMINS.filter(a=>a.type===t.v).length;
-    return `<span class="lg" style="${tstyle(t.v)}"><span class="dot" style="background:var(--tc)"></span>
-      ${esc(t.t)} <span class="n">${t.v} · ${n}</span></span>`;
+  [...FILT].forEach(v=>{ if(!used.some(t=>t.v===v)) FILT.delete(v); });   // ประเภทที่ไม่มีคนแล้ว ไม่ต้องค้างตัวกรอง
+  $('#legend').innerHTML = (used.length>1 ? `<button type="button" class="lg all${FILT.size?'':' on'}" data-f="" aria-pressed="${!FILT.size}"><span class="dot"></span>
+      ทั้งหมด <span class="n">${ADMINS.length}</span></button>` : '') + used.map(t=>{
+    const n = ADMINS.filter(a=>a.type===t.v).length, on = FILT.has(t.v);
+    return `<button type="button" class="lg${on?' on':''}" style="${tstyle(t.v)}" data-f="${esc(t.v)}" aria-pressed="${on}" title="กรองเฉพาะ ${esc(t.t)} (กดซ้ำเพื่อเอาออก · เลือกได้หลายกลุ่ม)"><span class="dot" style="background:var(--tc)"></span>
+      ${esc(t.t)} <span class="n">${t.v} · ${n}</span></button>`;
   }).join('');
-  $('#list').innerHTML = ADMINS.length ? ADMINS.map((a,i)=>card(a,i)).join('')
-    : '<div class="empty">ยังไม่มีแอดมินในระบบ</div>';
+  const rows = ADMINS.map((a,i)=>[a,i]).filter(([a])=>!FILT.size || FILT.has(a.type));
+  $('#list').innerHTML = !ADMINS.length ? '<div class="empty">ยังไม่มีแอดมินในระบบ</div>'
+    : rows.length ? rows.map(([a,i])=>card(a,i)).join('')
+    : '<div class="empty">ไม่มีแอดมินในกลุ่มที่เลือก</div>';
+  if (FILT.size) $('#cnt').textContent += ` · แสดง ${rows.length}`;
 }
+const FILT = new Set();
+document.addEventListener('click', e=>{
+  const b = e.target.closest('#legend [data-f]'); if(!b) return;
+  const v = b.dataset.f;
+  if (!v) FILT.clear(); else if (FILT.has(v)) FILT.delete(v); else FILT.add(v);
+  render();
+});
 function card(a,i){
   return `<button class="card" style="${tstyle(a.type)}" onclick="open_(${i})">
     <span class="edge"></span><span class="avatar">${esc((a.name||'?').trim()[0]||'?')}</span>
