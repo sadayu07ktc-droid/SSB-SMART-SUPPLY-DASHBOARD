@@ -334,7 +334,7 @@ async function openDate(d,rev){
   DATE=d; $('body').innerHTML='<div class="msg">กำลังโหลดแพลน '+esc(thLong(d))+'…</div>';
   try{
     const r=await api('action=get&date='+d+(rev?'&rev='+rev:''));
-    ME.canEdit=r.canEdit; ME.me=r.me||ME.me; REVS=r.revs||[]; DOC=r.doc; DIRTY=false; MAILMODE=r.mailMode||MAILMODE;
+    ME.canEdit=r.canEdit; ME.me=r.me||ME.me; REVS=r.revs||[]; DOC=r.doc; DIRTY=false; MAILMODE=r.mailMode||MAILMODE; if(Array.isArray(r.packSpec)) PACK_SPEC=r.packSpec;
     const mt=(DOC&&DOC.meta)||{}; NOTES={accNote:mt.accNote||'',whNote:mt.whNote||'',bnNote:mt.bnNote||''};
     if(DOC){ ROWS=JSON.parse(JSON.stringify(DOC.rows||[])); }
     else { ROWS=[]; DAY=null; if(ME.canEdit){ ROWS=await draftDay(d); DIRTY=ROWS.length>0; } }
@@ -537,14 +537,19 @@ async function doPrint(f,b){
 /* ── ✉️ เตรียมเมล / ส่งแยกร้าน (v7 · 10 พ.ย. คุณน้อง "ปกติเขาไม่ได้ส่งรวม · ส่งในหน้านี้เลย · กดพรีวิวเมลจริงได้") ──
    ติ๊กเฉพาะร้านที่จะส่ง → 👁 พรีวิวเมลจริง (ผู้รับ/หัวเรื่อง/เนื้อเมลจาก Edge = ของที่ส่งจริง) หรือ ✉️ ส่งเมลนี้ (ระบบส่งจาก ssbsmartsupply@gmail.com)
    คัดลอกไปส่งเอง ยังใช้ได้ (สำรอง) · ประวัติส่งแยก = DOC.mail.parts
-   ข้อความท้ายตาราง (แจ้งจัดสินค้า): ร้าน "รับเอง" ไม่ต้องระบุ (คุณน้อง 10 พ.ย.) → ซ่อนช่อง · รอรายชื่อร้าน/บริษัทที่ต้องระบุการจัด → ใส่ใน PACK_SPEC */
+   ข้อความท้ายตาราง (แจ้งจัดสินค้า): ร้าน "รับเอง" ไม่ต้องระบุ (คุณน้อง 10 พ.ย.) → ซ่อนช่อง · รับเองบางนา = ไม่แจ้งจัด · รับเองหนองใหญ่ = แจ้งจัดเฉพาะรายชื่อในตาราง pk_pack_spec (PACK_SPEC จาก Edge) */
 const MAIL={
   acc:{t:'บัญชี + เซลส์ · เปิดราคา',priced:1,sub:(d,s)=>'แพลนจัดส่งสินค้า ประจำวันที่ '+d,hint:'FM-MK-15 · โชว์ราคา'},
   wh:{t:'คลัง · ปิดราคา',priced:0,sub:(d,s)=>'แพลนจัดส่งสินค้า แจ้งจัด '+s+' '+d,hint:'FM-MK-14 · ไม่โชว์ราคา',body:'แจ้งจัดสินค้า'}};
 let MK='acc';
-const PACK_SPEC=[];   // ชื่อร้าน/บริษัทที่ต้องระบุการจัดเสมอ (รอคุณน้องส่งรายชื่อ) · ว่าง = ทุกร้านที่ไม่ใช่รับเอง
+/* แจ้งจัดสินค้า (คุณน้อง 10 พ.ย.): ส่งโดยรถเรา = แจ้งจัด · ลูกค้ารับเองที่บางนา = ไม่ต้อง · รับเองที่ รง หนองใหญ่ = เฉพาะรายชื่อใน PACK_SPEC
+   (รายชื่อเก็บในตาราง pk_pack_spec · โหลดมากับแพลน · ไม่ฝังในหน้าเว็บ) */
+let PACK_SPEC=[];
 const isPickup=o=>/รับเอง|ลูกค้ารับ/.test(String(o.trans||'')+' '+String(o.wh||''));
-const needSpec=o=>PACK_SPEC.length?PACK_SPEC.some(s=>sameShop(s,o.shop)):!isPickup(o);
+const pnm=s=>nm(String(s||'').replace(/ห้างหุ้นส่วน|นางสาว|นาย|นาง|บมจ\.?/g,''));
+const inPackSpec=o=>{ const b=pnm(o.shop); return b.length>=2&&PACK_SPEC.some(s=>{ const a=pnm(s); return a.length>=2&&(a.indexOf(b)>=0||b.indexOf(a)>=0); }); };
+const needSpec=o=>!isPickup(o)?true:siteOf(o)==='บางนา'?false:inPackSpec(o);
+const specTag=o=>!isPickup(o)?'':siteOf(o)==='บางนา'?' <span class="mchip o">รับเองบางนา · ไม่ต้องแจ้งจัด</span>':inPackSpec(o)?' <span class="mchip w">📝 รับเองหนองใหญ่ · ต้องแจ้งจัด</span>':' <span class="mchip o">รับเองหนองใหญ่ · ไม่ต้องแจ้งจัด</span>';
 const needNote=rows=>!!MAIL[MK].body&&rows.some(needSpec);
 function mailRows(){ return ROWS.map((o,k)=>Object.assign({},o,{_no:k+1})); }
 function mailHtml(rows,extra){
@@ -565,6 +570,19 @@ async function copyRich(html,text){
     const r=document.createRange(); r.selectNodeContents(d); const s=getSelection(); s.removeAllRanges(); s.addRange(r); const ok=document.execCommand('copy'); s.removeAllRanges(); d.remove(); return ok; }catch(e){ return false; }
 }
 async function copyText(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ const a=document.createElement('textarea'); a.value=t; document.body.appendChild(a); a.select(); const ok=document.execCommand('copy'); a.remove(); return ok; } }
+/* 📋 แก้รายชื่อลูกค้ารับเองหนองใหญ่ที่ต้องแจ้งจัด (1 บรรทัด = 1 ราย · เอาออก = ปิดใช้) */
+function openPackSpec(after){
+  const w=document.createElement('div'); w.className='dlg'; document.body.appendChild(w);
+  const close=()=>{ w.remove(); if(after) after(); }; w.onclick=ev=>{if(ev.target===w)close();};
+  w.innerHTML='<div class="dlg-in" role="dialog" aria-modal="true" aria-label="รายชื่อที่ต้องแจ้งจัด"><div class="dlg-h"><b>📋 ลูกค้ารับเองที่ รง หนองใหญ่ ที่ต้องแจ้งจัดสินค้า<div class="sub">1 บรรทัด = 1 ราย · ชื่อตรงบางส่วนก็นับ (ไม่สนคำว่า บริษัท/จำกัด/คุณ/นาย/ช่องว่าง) · รับเองที่บางนาไม่ต้องแจ้งจัดเสมอ</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div>'
+    +'<textarea id="psT" rows="12" style="width:100%;margin-top:10px;font:inherit;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--txt)" aria-label="รายชื่อ">'+esc(PACK_SPEC.join('\n'))+'</textarea>'
+    +'<div class="row" style="margin-top:10px"><button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="psSave">💾 บันทึกรายชื่อ</button></div></div>';
+  w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close);
+  $('psSave').onclick=async ev=>{ const names=$('psT').value.split('\n').map(s=>s.replace(/\s+/g,' ').trim()).filter(Boolean);
+    const dn=btnBusy(ev.currentTarget,'กำลังบันทึก…');
+    try{ const r=await post({action:'packSpecSave',names}); PACK_SPEC=r.packSpec||[]; toast('✅ บันทึกรายชื่อแล้ว '+PACK_SPEC.length+' ราย'); close(); }
+    catch(e){ toast('❌ '+e.message,1); } finally{ dn(); } };
+}
 /* ร้านนี้ส่งแยกไปแล้วหรือยัง (กลุ่มที่เลือกอยู่) */
 const partsOf=g=>((DOC&&DOC.mail&&DOC.mail.parts)||[]).filter(p=>p&&p.g===g);
 function sentOf(g,no){ let last=null; partsOf(g).forEach(p=>{ if((p.nos||[]).indexOf(no)>=0) last=p; }); return last; }
@@ -582,7 +600,8 @@ async function openMail(e){
       +'<div class="seg" role="group" aria-label="ส่งถึง" style="margin-top:8px">'+Object.keys(MAIL).map(k=>'<button type="button" class="chip'+(k===MK?' on':'')+'" data-mk="'+k+'" aria-pressed="'+(k===MK)+'">'+esc(MAIL[k].t)+' <b>'+ROWS.length+'</b></button>').join('')+'</div>'
       +'<div class="note" style="margin-top:6px" id="mHint"></div><div class="dlg-b">'
       +(all.length?'<div class="row" style="gap:6px;margin:0 0 4px;flex-wrap:wrap"><button class="btn sm ghost" data-pk="all">ติ๊กทั้งหมด</button><button class="btn sm ghost" data-pk="none">ไม่ติ๊ก</button>'+(anySent?'<button class="btn sm ghost" data-pk="unsent">เฉพาะที่ยังไม่ส่ง</button>':'')+'</div>':'')
-      +(all.length?all.map(o=>'<label class="ck"><input type="checkbox" data-no="'+o._no+'"'+(prevSel[o._no]===false?'':' checked')+'><span><b>'+o._no+'. '+esc(o.shop)+'</b> <small>· '+esc(o.trans||'')+'</small>'+chip(o)+'</span></label>').join(''):'<div class="msg">ยังไม่มีร้านในแพลนนี้</div>')
+      +(all.length?all.map(o=>'<label class="ck"><input type="checkbox" data-no="'+o._no+'"'+(prevSel[o._no]===false?'':' checked')+'><span><b>'+o._no+'. '+esc(o.shop)+'</b> <small>· '+esc(o.trans||'')+'</small>'+(M.body?specTag(o):'')+chip(o)+'</span></label>').join(''):'<div class="msg">ยังไม่มีร้านในแพลนนี้</div>')
+      +(M.body&&ed?'<div class="row" style="margin-top:4px"><button class="btn sm ghost" id="mSpec">📋 รายชื่อลูกค้ารับเองหนองใหญ่ที่ต้องแจ้งจัด ('+PACK_SPEC.length+')</button></div>':'')
       +'<label class="fld">หัวเรื่องเมล<input id="mSub"></label>'
       +(M.body?'<label class="fld" id="mExW">ข้อความท้ายตาราง ('+esc(M.body)+')<textarea id="mExtra" placeholder="'+(MK==='wh'?'เช่น 1. ถุง 1 ล ไชโย SB ให้จัดขา 15*6 ชั้น เลทละ 90 ลัง รวม 2 พาเลท … *** จัดใส่พาเลท LOSCAM ***':'เช่น แจ้งเปิดบิลค่ะ')+'">'+esc(w._ex&&w._ex[MK]!=null?w._ex[MK]:(DOC.meta&&DOC.meta[MK+'Note'])||'')+'</textarea></label>':'')
       +'<div class="fld">ตัวอย่างเนื้อเมล</div><div class="mprev" id="mPrev"></div></div>'
@@ -592,7 +611,7 @@ async function openMail(e){
     const extra=rows=>needNote(rows)&&$('mExtra')?$('mExtra').value.trim():'';
     const upd=(keepSub)=>{ const rows=sel(), nn=needNote(rows), ex=extra(rows);
       if($('mExW')) $('mExW').style.display=nn?'':'none';
-      $('mHint').textContent=M.hint+(M.body?(nn?' · ใส่วิธีจัดพาเลทด้านล่างได้':rows.length?' · รับเอง ไม่ต้องใส่ข้อความท้ายตาราง':''):'');
+      $('mHint').textContent=M.hint+(M.body?(nn?' · ใส่วิธีจัดพาเลทด้านล่างได้':rows.length?' · ร้านที่เลือกไม่ต้องแจ้งจัดสินค้า (รับเอง)':''):'');
       if(!keepSub&&!w._se) $('mSub').value=M.sub(dotBE(DATE),rows.map(o=>o.shop).join(', '));
       $('mPrev').innerHTML=rows.length?mailHtml(rows,ex):'<div class="msg">เลือกร้านอย่างน้อย 1 ร้าน</div>';
       $('mCB').disabled=!rows.length;
@@ -604,6 +623,7 @@ async function openMail(e){
     w.querySelectorAll('input[data-no]').forEach(c=>c.onchange=()=>upd());
     w.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{ const k=b.dataset.pk; w.querySelectorAll('input[data-no]').forEach(c=>{ const p=sentOf(MK,+c.dataset.no); c.checked=k==='all'||(k==='unsent'&&!(p&&p.st==='sent')); }); upd(); });
     if($('mExtra')) $('mExtra').oninput=()=>{ (w._ex=w._ex||{})[MK]=$('mExtra').value; upd(true); };
+    if($('mSpec')) $('mSpec').onclick=()=>openPackSpec(()=>draw());
     $('mCS').onclick=async()=>toast(await copyText($('mSub').value)?'📋 คัดลอกหัวเรื่องแล้ว':'❌ คัดลอกไม่ได้',0);
     $('mCB').onclick=async()=>{ const rows=sel(), ex=extra(rows); toast(await copyRich(mailHtml(rows,ex),mailText(rows,ex))?'📋 คัดลอกเนื้อเมลแล้ว · วางในเมลได้เลย':'❌ คัดลอกไม่ได้ ลองลากคลุมตัวอย่างแล้วกด Ctrl+C',0); };
     const payload=()=>{ const rows=sel(); return {date:DATE,rev:DOC.rev,grp:MK,nos:rows.map(o=>o._no),subject:$('mSub').value.trim(),note:extra(rows),_rows:rows}; };
