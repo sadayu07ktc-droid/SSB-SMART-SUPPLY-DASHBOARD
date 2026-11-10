@@ -212,6 +212,12 @@ main{padding-block:14px 120px}
 .mpk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mpk small{display:block;color:var(--muted);font-size:11.5px}.mpk b{font-size:17px}
 #lpmHost.lpm{display:flex!important;position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,calc(100vw - 32px));height:min(90vh,940px);min-height:0;max-height:calc(100vh - 24px);border-radius:18px;z-index:81;box-shadow:0 30px 80px -20px rgba(0,0,0,.55)}
 .lpms{position:fixed;inset:0;z-index:80;background:rgba(12,24,18,.55)}
+.frb{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+.btn.frq2{background:#EAF4EC;color:#1B4332;border-color:#9CC8A8}.btn.frq2:hover{background:#DCEEE0}
+.btn.frx{color:var(--bad,#DC2626)}
+.frc{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;background:#EAF4EC;color:#1B4332;border:1px solid #9CC8A8;white-space:nowrap}
+.frbox{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:8px;padding:8px 10px;border:1px dashed #9CC8A8;border-radius:10px;background:color-mix(in srgb,#EAF4EC 55%,transparent)}
+.frq{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;margin:8px 0}.frq label{display:flex;flex-direction:column;gap:2px}
 .rtbox{border-color:#F3C98B}.rtloc{display:flex;flex-direction:column;gap:6px;margin-top:6px}
 .tl .ti.rt::before{border-color:#E59A3C}
 .lpds{border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden;background:var(--surface)}
@@ -938,7 +944,7 @@ function notifyOf(items){const dr=new Set(),all=items.some(x=>x.lvl==='all');ite
 function jst(j,dfx){if(!j.head)return 'draft';if(!j.driver)return 'nodrv';if(!MALL.snap[j.id])return 'ready';
   return (dfx||mallDiff()).some(x=>x.id===j.id)?'chg':'sent';}
 const JST={draft:['รอใส่รถ (พี่ปุ๋ยแจ้ง)','rv w'],nodrv:['ใส่รถแล้ว · รอใส่คนขับ','rv w'],ready:['พร้อมแจก','rv'],chg:['แก้ไข · ยังไม่ส่ง','rv w'],sent:['แจกแล้ว','rv g']};
-const jstPill=(j,dfx)=>{const s=jst(j,dfx),l=JST[s];return '<span class="'+l[1]+'">'+l[0]+(s==='sent'?' Rev.'+MALL.rev:'')+'</span>'+(s==='sent'?' <span class="rv '+(MALL.ack.has(j.id)?'g">คนขับรับแล้ว':'w">รอคนขับรับ')+'</span>':'');};
+const jstPill=(j,dfx)=>{const s=jst(j,dfx),l=JST[s];if(s==='draft'&&j.fr)return frChip(j);return '<span class="'+l[1]+'">'+l[0]+(s==='sent'?' Rev.'+MALL.rev:'')+'</span>'+(s==='sent'?' <span class="rv '+(MALL.ack.has(j.id)?'g">คนขับรับแล้ว':'w">รอคนขับรับ')+'</span>':'');};
 function mallBadge(h){const j=jobOfHead(h);if(!j)return '';if(!MALL.snap[j.id])return '<span class="rv w">รอแอดมินห้างแจก</span>';
   if(mallDiff().some(x=>x.id===j.id))return '<span class="rv w">แก้ไข · ยังไม่ส่ง</span>';
   return '<span class="rv">🔒 '+j.id+' Rev.'+MALL.rev+'</span>'+(MALL.ack.has(j.id)?' <span class="rv g">คนขับรับแล้ว</span>':' <span class="rv w">รอคนขับรับ</span>');}
@@ -947,6 +953,36 @@ function openLog(){const L=MALL.log.slice().reverse();
   askModal({title:'ประวัติแพลนห้าง · '+L.length+' ฉบับ',ok:'ปิด',cancel:null,icon:'🕘',
     html:'<div class="rlog">'+L.map(e=>'<div class="re"><h5>'+(e.rev?'ฉบับแก้ไข Rev.'+e.rev:'แจกงานครั้งแรก Rev.0')+'</h5><div class="m">'+fmtAt(e.at)+' · โดย <b>'+esc(e.by)+'</b></div>'
       +(e.items.length?'<ul>'+e.items.map(x=>'<li>'+esc(x.pl)+' · '+esc(x.txt)+'</li>').join('')+'</ul>':'')+'<div class="note">แจ้งถึง: '+esc(e.to.join(' · '))+'</div></div>').join('')+'</div>'});}
+/* 🚜 ขอรถไร่ · j.fr={at,by,need,note} · เว็บจริง = การ์ด LINE ถึงแอดมินรถไร่ (ADMIN ไร่) → ไร่ตอบรับ ระบุรถ/คนขับ → ขึ้นในงานนี้ (เฟสถัดไป) */
+function frSum(j){let pl=0,kg=0;j.stops.forEach(s=>{pl+=n0(s.pal);kg+=n0(s.kg);});return {pl,kg};}
+function frCard(j,f){const S=frSum(j);
+  return '<div class="lcard"><div class="lch">🚜 Packing ขอรถไร่ · '+esc(j.id)+'</div><div class="lcb">'
+    +'<div class="lcw" style="color:#1B4332">'+esc(SZL[j.size])+' · '+esc(dateTH($('pdate').value))+'</div>'
+    +(f.need?'<div class="lcr"><span>เข้าโหลด</span><b>'+esc(f.need)+' น. ที่ SSB</b></div>':'')
+    +j.stops.map((s,i)=>'<div class="lcr"><span>'+(i?'':'ส่ง')+'</span>'+esc(s.n)+(s.at?' <small>(ถึง '+esc(s.at)+')</small>':'')+'</div>').join('')
+    +(S.pl||S.kg?'<div class="lcr"><span>ของ</span>'+[S.pl?S.pl+' พาเลท':'',S.kg?comma(S.kg)+' กก.':''].filter(Boolean).join(' · ')+'</div>':'')
+    +(f.note?'<div class="lcr"><span>หมายเหตุ</span>'+esc(f.note)+'</div>':'')
+    +'<div class="lcr"><span>ผู้ขอ</span>'+esc(f.by)+'</div></div>'
+    +'<div class="lcf"><span>❌ ไม่มีรถว่าง</span><span class="ok">✅ ส่งรถให้</span></div></div>';}
+async function frAsk(id){let j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);if(!j)return;
+  if(JE&&JE.j===j){syncJ();if(!j.stops.length){toast('ใส่ร้านอย่างน้อย 1 จุดก่อนขอรถไร่');return;}if(j.isNew){saveJob(true);j=JE.j;}}
+  const first0=(j.stops.map(s=>s.at).filter(Boolean).sort()[0])||'';FRV.need='';FRV.note='';
+  const ok=await askModal({icon:'🚜',title:'ขอรถไร่ · งาน '+j.id,ok:'ส่งคำขอ',cancel:'ยกเลิก',wide:1,
+    html:'<p>รถ Packing '+esc(SZL[j.size])+' ไม่พอ → ขอยืมรถไร่ ส่งถึง<b>แอดมินรถไร่</b> ให้เลือกรถ + คนขับไร่ที่ว่าง</p>'
+      +'<div class="frq"><label class="note">รถต้องเข้าโหลดที่ SSB<input class="in" type="time" id="frNeed"></label>'
+      +'<label class="note">หมายเหตุถึงไร่<input class="in" id="frNote" placeholder="เช่น ต้องมีผ้าใบ / กลับวันเดียว"></label></div>'
+      +(first0?'<div class="note">จุดแรกต้องถึงหน้างาน '+esc(first0)+' น.</div>':'')
+      +'<div class="note" style="margin-top:8px">ตัวอย่างการ์ดที่แอดมินไร่จะได้รับ:</div><div id="frPrev">'+frCard(j,{by:ME(),need:'',note:''})+'</div>'
+      +'<p class="note">เดโม: ยังไม่ส่งจริง · เว็บจริงส่งการ์ดนี้ทาง LINE · ไร่กด ✅ ส่งรถให้ แล้วระบุทะเบียน/คนขับ → ขึ้นในงานนี้อัตโนมัติ</p>'});
+  if(!ok)return;const f={at:new Date().toTimeString().slice(0,5),by:ME(),need:FRV.need,note:FRV.note};frSet(j.id,f);
+  askModal({icon:'📲',title:'ส่งคำขอรถไร่แล้ว',ok:'ปิด',html:'<p>ถึง <b>แอดมินรถไร่</b> · งาน '+esc(j.id)+'</p>'+frCard(j,f)+'<p class="note">เดโม: ยังไม่ส่งจริง · ระหว่างรอ งานนี้ขึ้นป้าย 🚜 รอไร่ตอบ · ใส่รถ Packing เองทีหลังได้ คำขอจะถูกยกเลิกให้</p>'});}
+const FRV={need:'',note:''};
+document.addEventListener('input',e=>{if(e.target.id==='frNeed'||e.target.id==='frNote'){FRV.need=($('frNeed')||{}).value||'';FRV.note=(($('frNote')||{}).value||'').trim();
+  const p=$('frPrev'),jid=(document.querySelector('.mbox h3')||{}).textContent||'';const id=jid.split('งาน ').pop().trim(),j=(JE&&JE.j.id===id)?JE.j:MJ.find(x=>x.id===id);
+  if(p&&j)p.innerHTML=frCard(j,{by:ME(),need:FRV.need,note:FRV.note});}},true);
+function frSet(id,f){[MJ.find(x=>x.id===id),JE&&JE.j.id===id?JE.j:null].forEach(x=>{if(!x)return;if(f)x.fr=Object.assign({},f);else delete x.fr;});renderPlan();}
+async function frCancel(id){if(!(await askModal({icon:'🚜',title:'ยกเลิกคำขอรถไร่ '+id+'?',ok:'ยกเลิกคำขอ',cancel:'ไม่ยกเลิก',danger:1,html:'<p>เว็บจริงจะแจ้งแอดมินไร่ว่ายกเลิกแล้ว</p>'})))return;frSet(id,null);toast('ยกเลิกคำขอรถไร่ '+id+' แล้ว (เดโม)');}
+const frChip=j=>j.fr?'<span class="frc" title="'+esc('ขอเมื่อ '+j.fr.at+' โดย '+j.fr.by+(j.fr.need?' · เข้าโหลด '+j.fr.need:''))+'">🚜 ขอรถไร่แล้ว '+esc(j.fr.at)+' · รอไร่ตอบ</span>':'';
 /* รถว่างตามขนาด (คันที่ยังไม่ถูกใส่ในงานห้างอื่น · คันงานน้อยขึ้นก่อน) */
 function freeTrucks(size,except){const used=new Set(MJ.filter(j=>j.head&&j.id!==except).map(j=>j.head));
   return VEH.filter(v=>szFits(v,size)&&!v.tail&&PLAN[v.head].status==='ready'&&!used.has(v.head))
@@ -994,7 +1030,7 @@ function renderMall(){
       +'<td>'+L(S,x=>esc(pvOf(x))||dash)+'</td><td class="n">'+L(S,x=>x.at?'<b class="tm">'+esc(x.at)+'</b>':dash)+'</td>'
       +'<td class="n">'+L(S,(x,i)=>poCell(x,'pal','j:'+j.id+':'+i))+'</td><td class="n">'+L(S,(x,i)=>poCell(x,'cs','j:'+j.id+':'+i))+'</td>'
       +'<td>'+(j.head?'<b>'+esc(plOf(j.head))+'</b><small class="m" style="display:block">'+esc([BRAND[j.head],VEH.find(v=>v.head===j.head).shape].filter(Boolean).join(' · '))+'</small>'
-        :'<button class="btn sm" data-jset="'+j.id+'">＋ ใส่รถ / คนขับ</button>')+'</td>'
+        :'<div class="frb"><button class="btn sm" data-jset="'+j.id+'">＋ ใส่รถ / คนขับ</button>'+(j.fr?'<button class="btn sm frx" data-frx="'+j.id+'" title="ยกเลิกคำขอรถไร่">✕ ยกเลิกขอรถไร่</button>':'<button class="btn sm frq2" data-fra="'+j.id+'" title="รถ Packing ไม่พอ ขอยืมรถไร่">🚜 ขอรถไร่</button>')+'</div>')+'</td>'
       +'<td>'+(d?esc(d.name):j.head?'<span class="or">ยังไม่ระบุ</span>':dash)+'</td><td><div class="stw">'+jstPill(j,dfx)+(MALL.snap[j.id]?'':'<button class="ib jdel" data-jdel="'+j.id+'" aria-label="ลบงาน '+j.id+'" title="ลบงานนี้ (ยังไม่แจก)">🗑</button>')+'</div></td></tr>';});
   if(!js.length)h+='<tr><td colspan="10" class="note" style="padding:18px">ยังไม่มีงานห้าง · กด ＋ เพิ่มงานห้าง</td></tr>';
   h+='</tbody></table></div><p class="note">งานที่ใส่รถแล้วจะโผล่ในแพลนรวมทันที แต่คนขับ/คลัง/บัญชี ยังไม่ได้รับจนกว่าจะกดแจกงาน</p>';
@@ -1003,6 +1039,8 @@ function renderMall(){
   $('rlog').onclick=openLog;$('jadd').onclick=()=>openJob(null);$('jexp').onclick=openMallExport;if($('jdelall'))$('jdelall').onclick=askDelUnsent;
   $('v-plan').querySelectorAll('[data-jdel]').forEach(b=>{b.onclick=e=>{e.stopPropagation();askDelJob(b.dataset.jdel);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-jset]').forEach(b=>b.onclick=e=>{e.stopPropagation();openJob(b.dataset.jset);});
+  $('v-plan').querySelectorAll('[data-fra]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frAsk(b.dataset.fra);};b.onkeydown=e=>e.stopPropagation();});
+  $('v-plan').querySelectorAll('[data-frx]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frCancel(b.dataset.frx);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=()=>openJob(r.dataset.j);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
   wireSub();pmChips(mallTodo(dfx));updBar();lpShow();}
 function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'พ่วง',stops:[],head:'',driver:'',note:'',isNew:1};
@@ -1066,6 +1104,8 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   h+='<div class="box"><label for="jveh">② รถ <span class="note">(ตามที่พี่ปุ๋ยแจ้ง)</span></label><select class="in" id="jveh"><option value="">— ยังไม่ได้รับแจ้ง —</option>'
     +fr.map(v=>'<option value="'+v.head+'"'+(j.head===v.head?' selected':'')+'>'+esc(j.size==='10 ล้อ'?v.head+' (หัว)':v.plate.replace(',',' / '))+' · '+esc([BRAND[v.head],v.shape].filter(Boolean).join(' '))+'</option>').join('')+'</select>'
     +(fr.length?'':'<div class="warn">ไม่มีรถ '+esc(SZL[j.size])+' ว่างในแพลนวันนี้</div>')
+    +(j.head?'':j.fr?'<div class="frbox">'+frChip(j)+'<button type="button" class="btn sm frx" id="jfrx">✕ ยกเลิกคำขอ</button><div class="note">ไร่ตอบรับแล้ว รถ/คนขับไร่จะขึ้นในงานนี้ · ได้รถ Packing ก่อน เลือกด้านบนได้เลย คำขอจะถูกยกเลิก</div></div>'
+      :'<div class="frbox"><button type="button" class="btn sm frq2" id="jfra">🚜 ขอรถไร่</button><span class="note">รถ Packing ไม่พอ → ขอยืมรถไร่ (แจ้งแอดมินไร่ทาง LINE)</span></div>')
     +(j.head?'':'<div class="note">เลือกรถแล้ว ระบบใส่คนขับประจำคันให้ เปลี่ยนได้</div>')+'</div>';}
   h+='<div class="box"><label for="jdrv">③ คนขับ</label>'+(j.head?(()=>{const mine=DRV.find(d=>d.head===j.head);
       return '<select class="in" id="jdrv"><option value="">— เลือกคนขับ —</option>'+(mine?'<option value="'+mine.code+'"'+(j.driver===mine.code?' selected':'')+'>'+esc(mine.name)+' · ประจำคันนี้</option>':'')
@@ -1094,8 +1134,9 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   const re=()=>{syncJ();drawJob();};
   $('jx').onclick=$('jc').onclick=closeJob;
   D.querySelectorAll('[data-sz]').forEach(b=>b.onclick=()=>{syncJ();if(j.size===b.dataset.sz)return;j.size=b.dataset.sz;if(j.head){j.head='';j.driver='';toast('เปลี่ยนขนาดรถแล้ว ต้องใส่รถใหม่');}drawJob();});
-  const jv=$('jveh');if(jv)jv.onchange=()=>{syncJ();j.head=jv.value;const m=DRV.find(d=>d.head===j.head);j.driver=j.head?(m?m.code:''):'';drawJob();};
+  const jv=$('jveh');if(jv)jv.onchange=()=>{syncJ();j.head=jv.value;if(j.head&&j.fr){delete j.fr;toast('ได้รถ Packing แล้ว · ยกเลิกคำขอรถไร่ให้ (เว็บจริงแจ้งไร่)');}const m=DRV.find(d=>d.head===j.head);j.driver=j.head?(m?m.code:''):'';drawJob();};
   const dr=$('jdrv');if(dr)dr.onchange=()=>{syncJ();j.driver=dr.value;drawJob();};
+  if($('jfra'))$('jfra').onclick=()=>frAsk(j.id);if($('jfrx'))$('jfrx').onclick=()=>frCancel(j.id);
   const sq=$('jsq');sq.oninput=()=>{syncJ();JE.q=sq.value;drawJob();const n=$('jsq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};
   D.querySelectorAll('[data-jadd]').forEach(b=>b.onclick=()=>{syncJ();const x=ST.find(y=>y.id===+b.dataset.jadd);j.stops.push({id:x.id,n:x.n,km:x.km,pal:'',cs:'',at:''});JE.q='';drawJob();});
   D.querySelectorAll('[data-jrm]').forEach(b=>b.onclick=()=>{syncJ();j.stops.splice(+b.dataset.jrm,1);drawJob();});
