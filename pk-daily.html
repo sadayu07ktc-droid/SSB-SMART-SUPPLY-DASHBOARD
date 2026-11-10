@@ -314,6 +314,14 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 .msum{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:13px;margin:10px 0}
 .msum .note{flex-basis:100%}
 .sheet{background:var(--surface);border:1px solid var(--line);border-radius:14px;overflow:auto;max-height:calc(100vh - 210px)}
+/* ↔ แถบเลื่อนซ้าย-ขวาลอย (เหนือแถบปุ่มล่าง) · โผล่เมื่อตารางกว้างเกินจอ และแถบเลื่อนเดิมของตารางมองไม่เห็น */
+#hsb{position:fixed;z-index:19;height:18px;overflow-x:scroll;overflow-y:hidden;display:none;background:color-mix(in srgb,var(--surface) 92%,transparent);border:1px solid var(--line);border-bottom:0;border-radius:10px 10px 0 0;box-shadow:0 -6px 16px -12px var(--shadow);scrollbar-width:auto;scrollbar-color:var(--brand) transparent}
+#hsb.on{display:block}
+#hsb>div{height:1px}
+#hsb::-webkit-scrollbar{height:14px}
+#hsb::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--brand) 55%,transparent);border-radius:8px;border:3px solid transparent;background-clip:padding-box}
+#hsb::-webkit-scrollbar-thumb:hover{background:var(--brand);background-clip:padding-box}
+@media print{#hsb{display:none!important}}
 .jt{border-collapse:separate;border-spacing:0;width:max-content;min-width:100%;font-size:12.5px}
 .jt th,.jt td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top;white-space:nowrap}
 .jt thead tr:nth-child(2) th{white-space:normal;vertical-align:bottom;max-width:84px}
@@ -2530,6 +2538,35 @@ $('bSend').onclick=async()=>{if(PM==='mall'){sendMall();return;}
   toast(dup?'มีคนขับหรือเด็กรถซ้ำหลายคัน '+dup+' จุด ตรวจก่อนแจก (เดโม)':'เว็บจริงจะส่งแพลนรวมถึงคนขับ (การ์ดงานให้กดรับ) + คลังสินค้า + บัญชี · งานห้างที่แจกแล้วไม่ส่งซ้ำ (เดโมไม่ส่ง)');};
 addEventListener('hashchange',route);
 renderAll();route();
+/* ↔ แถบเลื่อนซ้าย-ขวาลอยเหนือแถบปุ่มล่าง · ผูกกับตาราง .sheet ที่อยู่บนจอและกว้างเกิน · เลื่อนอันไหนอีกอันตาม */
+(function(){
+  const hs=document.createElement('div');hs.id='hsb';hs.setAttribute('aria-hidden','true');hs.innerHTML='<div></div>';document.body.appendChild(hs);
+  const inner=hs.firstChild;let cur=null,lock=0,qd=0;
+  const unlock=()=>setTimeout(()=>{lock=0;},30);
+  function fromSheet(){if(lock||!cur)return;lock=1;hs.scrollLeft=cur.scrollLeft;unlock();}
+  hs.addEventListener('scroll',()=>{if(lock||!cur)return;lock=1;cur.scrollLeft=hs.scrollLeft;unlock();},{passive:true});
+  function pick(){
+    qd=0;const bar=document.getElementById('bar');const br=bar&&bar.getBoundingClientRect();const bt=br&&br.height>0?br.top:innerHeight;   // .bar = fixed → offsetParent เป็น null เสมอ ใช้ขนาดแทน
+    let s=null;
+    document.querySelectorAll('.sheet').forEach(el=>{
+      if(s||!el.offsetParent||el.scrollWidth-el.clientWidth<4)return;
+      const r=el.getBoundingClientRect();
+      if(r.top<bt-60&&r.bottom>bt-2)s=el;   // ตารางอยู่บนจอ แต่ขอบล่าง (แถบเลื่อนเดิม) จมใต้แถบปุ่ม/นอกจอ
+    });
+    if(s!==cur){if(cur)cur.removeEventListener('scroll',fromSheet);cur=s;if(cur)cur.addEventListener('scroll',fromSheet,{passive:true});}
+    if(!cur){hs.classList.remove('on');return;}
+    const r=cur.getBoundingClientRect();
+    hs.style.left=(r.left+cur.clientLeft)+'px';hs.style.width=cur.clientWidth+'px';hs.style.bottom=Math.max(0,innerHeight-bt)+'px';
+    inner.style.width=cur.scrollWidth+'px';
+    hs.classList.add('on');
+    if(Math.abs(hs.scrollLeft-cur.scrollLeft)>1){lock=1;hs.scrollLeft=cur.scrollLeft;unlock();}
+  }
+  const q=()=>{if(!qd){qd=1;setTimeout(pick,16);}};
+  addEventListener('scroll',q,{passive:true,capture:true});
+  addEventListener('resize',q);
+  new MutationObserver(q).observe(document.body,{childList:true,subtree:true});
+  setInterval(q,1500);q();
+})();
 </script>
 
 <script>
