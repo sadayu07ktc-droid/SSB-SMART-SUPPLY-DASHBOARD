@@ -239,7 +239,8 @@ async function load(){
   $('#gate').style.display='none';
   if(!res.ok){ $('#list').innerHTML=`<div class="empty">${esc(res.error||'โหลดข้อมูลไม่สำเร็จ')}</div>`; return; }
   // 🧭 เฉพาะกลุ่มที่เลือก (ปาล์ม=ไร่ · Packing · Bulk) — นับจำนวนต่อสถานะใหม่จากรายการที่เหลือ
-  ORDERS=(res.orders||[]).filter(o=>ssbOrderGroup(o.jobType)===GROUP);
+  // 10 พ.ย.: ออเดอร์จากใบขอรถไร่ (PKR) → Edge ส่ง group='ไร่' (แอดมินไร่จัดรถ) · เหมือนหน้าติดตามสถานะ
+  ORDERS=(res.orders||[]).filter(o=>(o.group||ssbOrderGroup(o.jobType))===GROUP);
   COUNTS={}; ORDERS.forEach(o=>{COUNTS[o.status]=(COUNTS[o.status]||0)+1;}); SEL.clear(); render();
 }
 
