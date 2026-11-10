@@ -431,6 +431,28 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 .lpa{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}.lpa .lpwhy{flex:1 1 200px;min-width:0;font:inherit;font-size:13px;padding:6px 9px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink)}
 .lpa .lpwhy::placeholder{color:var(--muted);opacity:.7}
 .mov{position:fixed;inset:0;z-index:90;background:rgba(10,25,18,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+/* ✉️ เมล FM-MK จาก Pending ยี่ปั๊ว · z 55 = เหนือลิ้นชัก (46) ใต้ toast (60) และ askModal (90) */
+.mov.ymov{z-index:55}
+.mbox.ymb{max-width:820px;padding:18px 18px 14px}
+.ymh{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:6px}.ymh h3{margin:0 0 2px;font-size:17px}
+.ymh .x,.ymb .ib{border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:9px;min-width:34px;height:34px;cursor:pointer;flex:none}
+.ytest{background:#FDE8E8;color:#8A1C12;border:1px solid #F3B8B3;border-radius:10px;padding:7px 10px;font-size:13px;margin:4px 0 8px}
+.ymg{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 8px}.ymg button{flex:1 1 200px;text-align:left;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:11px;padding:8px 11px;cursor:pointer;font:inherit;font-weight:700;line-height:1.35}
+.ymg button small{display:block;font-weight:500;color:var(--muted);font-size:12px}.ymg button.on{border-color:var(--brand);background:color-mix(in srgb,var(--brand) 12%,var(--surface));box-shadow:0 0 0 2px color-mix(in srgb,var(--brand) 25%,transparent)}
+.ymg button i{display:inline-block;font-style:normal;font-size:11.5px;font-weight:700;color:#127a2e;background:#e7f5ee;border-radius:999px;padding:0 7px;margin-top:3px}
+.ymsec{font-weight:700;font-size:13.5px;margin:10px 0 5px}
+.ymt{overflow-x:auto}.ymt table{width:100%;border-collapse:collapse;min-width:460px}.ymt th{font-size:12px;color:var(--muted);text-align:left;font-weight:600;padding:0 4px 3px}
+.ymt td{padding:2px 3px}.ymt td:nth-child(2),.ymt td:nth-child(4){width:92px}.ymt td:nth-child(3){width:64px}.ymt td:last-child{width:38px}
+.ymb .in.r{text-align:right}.ymb .in.c{text-align:center}.ymb .in{font-size:14px;padding:6px 8px}
+.ymf{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:6px 8px;margin-top:8px}.ymf label,.ymfl{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--muted)}.ymfl{margin-top:7px}
+.ymfl textarea{resize:vertical;font:inherit}
+.pvh{display:grid;gap:5px;background:var(--surface2);border-radius:10px;padding:8px 10px;font-size:13px}.pvh>div{display:flex;gap:8px;align-items:baseline}.pvh>div>span{color:var(--muted);flex:0 0 80px}
+.pvp{display:inline-block;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:0 8px;margin:1px 3px 1px 0;font-size:12.5px}
+.pvf{width:100%;border:1px solid var(--line);border-radius:10px;margin-top:8px;height:260px;background:#fff}
+.ymact{flex-wrap:wrap}
+.tchip.ypml{background:#e7f5ee;border-color:#b7dfc6;color:#127a2e}
+.spin0{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--brand);border-radius:50%;animation:gsp0 .9s linear infinite;vertical-align:-2px}@keyframes gsp0{to{transform:rotate(360deg)}}
+@media (max-width:560px){.mbox.ymb{padding:14px 12px 12px;max-height:92vh}.ymact .btn{flex:1 1 auto}}
 .mbox{background:var(--surface);color:var(--ink);border-radius:18px;max-width:440px;width:100%;padding:22px 22px 18px;box-shadow:0 24px 60px -20px rgba(0,0,0,.45);max-height:86vh;display:flex;flex-direction:column}
 .mbox .mic{font-size:30px;line-height:1}.mbox h3{margin:8px 0 8px;font-size:18px}
 .mbox .mbody{overflow:auto;font-size:14px;line-height:1.55}.mbox .mbody p{margin:6px 0}
@@ -2708,7 +2730,7 @@ function ypSeeDay(d){const L=YP.msgs.filter(m=>!ypSt(m)&&(d===''||ypDayOf(m)===d
   ypBadge();ypDraw();}
 /* ไม่ให้เด้ง (คุณน้อง 10 พ.ย. "จิ้มดูแล้วชอบเด้ง ช่วงรีเฟรช"): โหลดใหม่ทุก 1 นาที → วาดใหม่เฉพาะเมื่อข้อมูลเปลี่ยนจริง ·
    กำลังพิมพ์/เลือกรถอยู่ = รอให้เสร็จก่อนค่อยวาด · จำข้อความเดิมที่กางไว้ · ไม่เล่นแอนิเมชันเลื่อนเข้าซ้ำ */
-const ypSig=()=>JSON.stringify([YP.src,YP.canEdit,YP.err,YP.groups,YP.msgs.map(m=>[m.mid,m.st||'',m.stBy||'',m.p,m.plateHist||null])]);
+const ypSig=()=>JSON.stringify([YP.src,YP.canEdit,YP.err,YP.groups,YP.msgs.map(m=>[m.mid,m.st||'',m.stBy||'',m.p,m.plateHist||null,m.mailed||null])]);
 const ypTyping=()=>{const a=document.activeElement,d=$('ypDr');return !!(a&&d&&d.contains(a)&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));};
 const ypOpenD=new Set();
 /* ลูกค้ารับเองแต่เซลส์ยังไม่แจ้งทะเบียน → ทะเบียนที่ร้านนี้เคยมารับ ①②③ (ล่าสุดก่อน) ให้แอดมินเลือก / พิมพ์เอง */
@@ -2766,7 +2788,8 @@ function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').valu
     p.pickAt?'<span class="i">'+(p.pickAt==='บางนา'?'🏬 ขึ้นของ คลังบางนา':'🏭 ขึ้นของ โรงงานหนองใหญ่')+'</span>':'',
     p.statedCs?'<span class="'+(p.statedCs===sumQ?'g':'w')+'" title="'+esc(p.statedTxt||'')+'">เซลส์สรุป '+comma(p.statedCs)+(p.statedCs===sumQ?' ✓ ตรง':' ≠ นับได้ '+comma(sumQ))+'</span>':''].join('');
   const nw=st!=='planned'&&st!=='ignored'&&(ypIsNew(m)||YP.fresh.has(m.mid));
-  let h='<div class="box ypc'+(nw?' ypnew':'')+'" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+(nw?'<span class="tchip nw">🆕 ใหม่</span> ':'')+esc(p.shop||'(ไม่มีชื่อร้าน)')+(p.pickup?' <span class="tchip ypk">🙋 รับเอง</span>':'')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
+  const ml=m.mailed||{},mlT=[ml.acc&&'บัญชี+เซลส์',ml.wh&&'คลัง'].filter(Boolean);   /* 📨 ส่งเมล FM-MK แล้ว (pk-yp v10) */
+  let h='<div class="box ypc'+(nw?' ypnew':'')+'" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+(nw?'<span class="tchip nw">🆕 ใหม่</span> ':'')+esc(p.shop||'(ไม่มีชื่อร้าน)')+(p.pickup?' <span class="tchip ypk">🙋 รับเอง</span>':'')+(mlT.length?' <span class="tchip ypml" title="ส่งเมลแผนการส่งมอบแล้ว: '+esc(mlT.join(' · '))+'">📨 ส่งเมลแล้ว'+(mlT.length<2?' · '+esc(mlT[0]):'')+'</span>':'')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
   h+='<table class="pol"><thead><tr><th>สินค้า</th><th class="n">จำนวน</th><th class="n">แถมจริง</th><th class="n">ราคา</th></tr></thead><tbody>'
     +its.map(i=>{const tu=i.u==='ถัง'?' ถัง':'';return '<tr><td>'+(tu?'🛢️ ':'')+esc(i.n)+'</td><td class="n">'+(i.q?comma(i.q)+tu:'')+'</td><td class="n">'+(i.f?'+'+comma(i.f)+tu:'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>';}).join('')
     +'<tr><td><b>รวมลงแพลน</b></td><td class="n" colspan="2"><b>'+qT+'</b></td><td></td></tr></tbody></table>';
@@ -2784,7 +2807,7 @@ function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').valu
   h+='<details data-ypdt="raw"'+(ypOpenD.has(m.mid+':raw')?' open':'')+'><summary>ข้อความเดิมในกลุ่ม</summary><pre>'+esc(m.text||'')+'</pre></details>';
   const can=YP.canEdit||!ypLive();
   if(st==='planned'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">'+(m.head==='รับเอง'?'✅ ลูกค้ารับเอง (ไม่ใช้รถเรา)':'✅ ลงแพลนแล้ว')+(m.head==='รับเอง'?(p.pick&&p.pick.plate?' · ทะเบียน '+esc(p.pick.plate):' · ยังไม่มีทะเบียน'):inP?' · รถ '+esc(plOf(inP)):m.head?' · รถ '+esc(plOf(m.head)||m.head):'')+(m.planDate&&m.planDate!==pd?' · วันที่ '+esc(dateTH(m.planDate)):'')+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'
-      +(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
+      +(can?'<span style="display:flex;gap:6px;flex-wrap:wrap">'+(m.sample?'':'<button class="btn sm'+(mlT.length<2?' pri':'')+'" data-ypmail>✉️ '+(mlT.length?(mlT.length<2?'ส่งเมลต่อ':'เมล FM-MK'):'ส่งเมล FM-MK')+'</button>')+'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button></span>':'')+'</div>';}
   else if(st==='ignored'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">🙈 ไม่ใช่ออเดอร์'+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'+(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
   else if(can){const sv=YP.sel[m.mid]||{};
     if(p.pickup)h+='<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-yppick>✅ ลูกค้ารับเอง · ปิดรายการ</button></div><details class="ypalt" data-ypdt="alt"'+(ypOpenD.has(m.mid+':alt')?' open':'')+'><summary>เปลี่ยนเป็นส่งด้วยรถเรา</summary>';
@@ -2827,6 +2850,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const c=ypCnt(),pd=$('pda
     const bi=card.querySelector('[data-ypign]');if(bi)bi.onclick=()=>ypSet(m,'ignored',bi);
     const bk=card.querySelector('[data-yppick]');if(bk)bk.onclick=()=>ypPick(m,bk);
     const bb=card.querySelector('[data-ypback]');if(bb)bb.onclick=()=>ypBack(m,bb);
+    const bm=card.querySelector('[data-ypmail]');if(bm)bm.onclick=()=>ypMailOpen(m,false);
     card.querySelectorAll('[data-ypplt]').forEach(b=>b.onclick=()=>ypPlate(m,b.dataset.ypplt,b));
     const pin=card.querySelector('[data-ypplin]'),ps=card.querySelector('[data-ypplsave]'),pc=card.querySelector('[data-ypplclr]');
     if(pin){pin.oninput=()=>{sv.plt=pin.value;};pin.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ps.click();}};}
@@ -2849,15 +2873,118 @@ async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data
   try{await ypMark(m,'planned',{planDate:pd,head});m.head=head;m.planDate=pd;m.nAdd=nAdd;}
   catch(e){P.stops=P.stops.filter(y=>y!==stop);P.note=note0;toast('❌ '+(e.message||e));btn.disabled=false;return;}
   delete YP.sel[m.mid];if(PM!=='all')setPM('all');else renderAll();ypBadge();ypDraw();
-  toast('✅ ลง '+(stop.n)+' '+ypQty(p)+' เข้ารถ '+plOf(head)+' แล้ว · อย่าลืมกดบันทึกแพลน');}
+  toast('✅ ลง '+(stop.n)+' '+ypQty(p)+' เข้ารถ '+plOf(head)+' แล้ว · อย่าลืมกดบันทึกแพลน');
+  ypMailOpen(m,true);}   /* ✉️ เด้งเมล FM-MK ต่อทันที (บันทึกลงฟอร์มอัตโนมัติ) */
 async function ypPick(m,btn){const old=m.head,oldD=m.planDate,d=(m.p&&m.p.dlv)||$('pdate').value;m.head='รับเอง';m.planDate=d;
-  if(!(await ypSet(m,'planned',btn,{planDate:d,head:'รับเอง'}))){m.head=old;m.planDate=oldD;return;}toast('✅ '+((m.p&&m.p.shop)||'')+' ลูกค้ารับเอง · ปิดรายการแล้ว');}
-async function ypBack(m,btn){const h=ypInPlan(m.mid);
-  if(h&&!(await askModal({title:'คืนเป็น Pending',icon:'↩',html:'<p>จะเอาจุดส่งของออเดอร์นี้ออกจากรถ <b>'+esc(plOf(h))+'</b> ด้วย</p>',ok:'คืนเป็น Pending',cancel:'ยกเลิก',danger:true})))return;
+  if(!(await ypSet(m,'planned',btn,{planDate:d,head:'รับเอง'}))){m.head=old;m.planDate=oldD;return;}toast('✅ '+((m.p&&m.p.shop)||'')+' ลูกค้ารับเอง · ปิดรายการแล้ว');
+  ypMailOpen(m,true);}   /* รับเองก็ต้องส่งเมล (คุณน้อง 10 พ.ย.) */
+async function ypBack(m,btn){const h=ypInPlan(m.mid),wasP=m.st==='planned'||!!h,ml=m.mailed&&(m.mailed.acc||m.mailed.wh);
+  if((h||(wasP&&ml))&&!(await askModal({title:'คืนเป็น Pending',icon:'↩',html:(h?'<p>จะเอาจุดส่งของออเดอร์นี้ออกจากรถ <b>'+esc(plOf(h))+'</b> ด้วย</p>':'')+'<p>และเอาร้านนี้ออกจากฟอร์ม FM-MK (บันทึกเป็นฉบับใหม่)</p>'+(ml?'<p class="warn">📨 ร้านนี้ส่งเมลแจ้งไปแล้ว · ต้องแจ้งยกเลิกกับผู้รับเอง</p>':''),ok:'คืนเป็น Pending',cancel:'ยกเลิก',danger:true})))return;
+  const mc=wasP?{mid:m.mid,head:m.head||h,planDate:m.planDate,p:m.p,sample:m.sample}:null;
   const keep={};VEH.forEach(v=>{const p=PLAN[v.head];if(p&&p.stops.some(x=>x.yp===m.mid)){keep[v.head]=[p.stops.slice(),p.note];p.stops=p.stops.filter(x=>x.yp!==m.mid);if(m.nAdd)p.note=String(p.note||'').replace(' · '+m.nAdd,'').replace(m.nAdd,'').trim();}});
   const auto=m.auto&&m.auto!=='unsent'&&m.st==='ignored'&&!h;   /* ระบบซ่อนเอง (ข้อความถูกแทนที่) → คืนแบบ keep ไม่งั้นโหลดใหม่แล้วกลับไปซ่อน */
   if(!(await ypSet(m,'',btn,auto?{keep:1}:null))){Object.keys(keep).forEach(k=>{PLAN[k].stops=keep[k][0];PLAN[k].note=keep[k][1];});return;}
-  m.head='';m.planDate='';m.nAdd='';if(auto){m.auto='';m.autoNote='';}renderAll();ypDraw();}
+  m.head='';m.planDate='';m.nAdd='';if(auto){m.auto='';m.autoNote='';}renderAll();ypDraw();
+  if(mc)ypMkDrop(mc);}
+/* ── ✉️ ลงแพลน / ลูกค้ารับเอง → เมลแผนการส่งมอบ FM-MK (คุณน้อง 10 พ.ย. "กดลงแพลนแล้วเด้งหน้าส่งเมลพรีวิว แก้ไขได้ กดส่งได้เลย ·
+   ลงแพลนแล้วข้อมูลไปเก็บประวัติในฟอร์มอัตโนมัติ · ลูกค้าเจ้าไหนแจ้งแล้วขึ้นชิปส่งเมลแล้ว" + "รับเองก็ต้องส่งเมล ทำเหมือนกัน")
+   Edge pk-mk addRows = ใส่แถวในฉบับล่าสุดของวันนั้น → ฉบับใหม่ (ฉบับเก่าล็อกคงเดิม) · ส่งเมล = แอดมินกดเองเท่านั้น (พรีวิว+ยืนยันจำนวนผู้รับก่อน)
+   วันของฟอร์ม: รถเรา = วันแพลน (วันขึ้นของ) · รับเอง = วันรับ (รับ อา./จ. = ฟอร์มวันเสาร์ ตามกติกาหน้า FM-MK) */
+const mkUrl=()=>String(PKD_URL).replace(/pk-daily(?=[^\/]*$)/,'pk-mk');
+const ypAdd=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
+const ypDow=d=>new Date(Date.parse(d+'T00:00:00Z')).getUTCDay();
+const ypDm=d=>d?(+d.slice(8))+'/'+(+d.slice(5,7)):'';
+const ypDot=d=>d.slice(8)+'.'+d.slice(5,7)+'.'+String(+d.slice(0,4)+543).slice(2);
+const ypPickup=m=>m.head==='รับเอง';
+function ypMkDate(m){const dl=(m.p&&m.p.dlv)||'';if(!ypPickup(m))return m.planDate||$('pdate').value;if(!dl)return m.planDate||$('pdate').value;const w=ypDow(dl);return w===0?ypAdd(dl,-1):w===1?ypAdd(dl,-2):dl;}
+function ypPlace(p){const src=[p.dlvTxt].concat((p.notes||[]).filter(t=>/^ส่ง/.test(t)));
+  for(const t of src){if(!t)continue;const x=String(t).replace(/^ส่ง/,'').replace(/\+.*$/,'').replace(/\d{1,2}\s*\/\s*\d{1,2}(\s*\/\s*\d{2,4})?/g,'')
+    .replace(/(วัน)?(จันทร์|อังคาร|พุธ|พฤหัสบดี|พฤหัส|พฤ\.|ศุกร์|เสาร์|อาทิตย์)/g,'').replace(/พรุ่งนี้|มะรืน(นี้)?|วันนี้|ค่ะ|ครับ|คะ|นะ/g,'').replace(/ที่(?=\s|$)/g,'').replace(/\s+/g,' ').trim();if(x)return x;}
+  return '';}
+/* แถวฟอร์ม FM-MK จากออเดอร์ไลน์ (ตรรกะเดียวกับ fromMsg ใน pk-mk.html) · รถเรา = ทะเบียน/คนขับจากรถที่ลงแพลน */
+function ypMkRow(m,d){const p=m.p||{},k=p.pick||{},dl=p.dlv||'',pick=ypPickup(m);
+  const unitOf=i=>i.u==='ถัง'?'ถัง':/ปี๊บ/.test(i.n)?'ปี๊บ':'ลัง',items=[];
+  (p.items||[]).forEach(i=>{const u=unitOf(i);if(+i.q)items.push({n:i.n,q:String(i.q),u,price:i.price?String(i.price):''});if(+i.f)items.push({n:i.n,q:String(i.f),u,price:'แถม'});});
+  const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
+  const head=pick?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+ypPlace(p);
+  const P=!pick&&m.head?PLAN[m.head]:null,dv=P?drvOf(P.driver):null;
+  return {src:'line',mid:m.mid,shop:p.shop||'',loadAt:p.pickAt||'หนองใหญ่',trans:[head].concat(fl).join(' + ')+((dl||d)?' '+ypDm(dl||d):''),empty:'',so:'',
+    plate:pick?(k.plate||''):(m.head?plOf(m.head):''),driver:pick?(k.driver||''):(dv?dv.name:''),
+    wh:pick?(dl?'ลูกค้ารับ '+ypDm(dl):''):'ขึ้นของ '+ypDm(d)+(dl&&dl!==d?' ส่ง '+ypDm(dl):''),red:'',items};}
+async function mkGet(d){const r=await fetch(mkUrl()+'?action=get&userId='+encodeURIComponent(MY_UID)+'&date='+d+'&t='+Date.now()).then(z=>z.json());if(!r.ok)throw new Error(r.error||'โหลดฟอร์มไม่ได้');return r;}
+async function mkPost(o){const r=await fetch(mkUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({userId:MY_UID},o))}).then(z=>z.json());if(!r.ok&&!r.dup)throw new Error(r.error||'ไม่สำเร็จ');return r;}
+const YPG={acc:{t:'บัญชี + เซลส์',h:'เปิดราคา · FM-MK-15',priced:1},wh:{t:'คลัง',h:'ปิดราคา · FM-MK-14 · แจ้งจัดสินค้า',priced:0}};
+/* เปิดหน้าต่างเมล · fresh = เพิ่งลงแพลน (สร้างแถวจากข้อความ) · ไม่ fresh = เปิดซ้ำ ใช้แถวเดิมในฟอร์ม (แอดมินอาจแก้ในหน้า FM-MK แล้ว) */
+async function ypMailOpen(m,fresh){if(m.sample||!ypLive()){toast('หน้าเดโม: ไม่มีการบันทึกฟอร์ม/ส่งเมล');return;}
+  const d=ypMkDate(m),ov=document.createElement('div');ov.className='mov ymov';
+  ov.innerHTML='<div class="mbox wide ymb" role="dialog" aria-modal="true" aria-label="เมลแผนการส่งมอบ"><div class="mic">✉️</div><h3>เมลแผนการส่งมอบ</h3><div class="mbody"><div class="note"><span class="spin0"></span> กำลังบันทึกลงฟอร์ม FM-MK…</div></div></div>';
+  document.body.appendChild(ov);
+  const close=()=>{ov.remove();document.removeEventListener('keydown',ek);},ek=e=>{if(e.key==='Escape'&&!ov.querySelector('.mov'))close();};document.addEventListener('keydown',ek);
+  const S={d,row:null,rev:0,no:0,g:'acc',mode:'test',mail:null,sub:{},note:{},dirty:0};
+  const fail=e=>{ov.querySelector('.mbody').innerHTML='<div class="warn">❌ '+esc(e.message||e)+'</div><div class="mact"><button class="btn ghost" data-x>ปิด</button></div>';ov.querySelector('[data-x]').onclick=close;};
+  try{let g=await mkGet(d);const old=g.doc&&(g.doc.rows||[]).find(o=>o.mid===m.mid);
+    if(fresh||!old){const a=await mkPost({action:'addRows',date:d,rows:[old&&!fresh?old:ypMkRow(m,d)]});g=await mkGet(d);}
+    S.mode=g.mailMode||'test';ypMkSync(S,g,m);if(!S.row)throw new Error('ไม่พบร้านนี้ในฟอร์มวันที่ '+dateTH(d));}
+  catch(e){fail(e);return;}
+  const draw=()=>{const r=S.row,G=YPG[S.g],sent=ypSentOf(S,m.mid);
+    const it=r.items.map((x,i)=>'<tr><td><input class="in" data-it="'+i+'" data-k="n" value="'+esc(x.n)+'" aria-label="สินค้า"></td><td><input class="in r" data-it="'+i+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td><input class="in c" data-it="'+i+'" data-k="u" value="'+esc(x.u)+'" aria-label="หน่วย"></td><td><input class="in r" data-it="'+i+'" data-k="price" value="'+esc(x.price)+'" aria-label="ราคา"></td><td><button class="ib" data-itx="'+i+'" aria-label="ลบบรรทัด" title="ลบบรรทัด">✕</button></td></tr>').join('');
+    const fld=(k,l,ph)=>'<label>'+l+'<input class="in" data-f="'+k+'" value="'+esc(r[k]||'')+'" placeholder="'+esc(ph||'')+'"></label>';
+    const defSub=S.g==='acc'?'แพลนจัดส่งสินค้า ประจำวันที่ '+ypDot(d):'แพลนจัดส่งสินค้า แจ้งจัด '+r.shop+' '+ypDot(d);
+    ov.querySelector('.ymb').innerHTML='<div class="ymh"><div><h3>✉️ เมลแผนการส่งมอบ · '+esc(r.shop)+'</h3><div class="note">'+(ypPickup(m)?'🙋 ลูกค้ารับเอง':'🚚 ส่งด้วยรถเรา')+' · ฟอร์มส่งสินค้า '+esc(dateTH(d))+' · <b>บันทึกลงฟอร์ม FM-MK แล้ว</b> (ฉบับที่ '+S.rev+' · ร้านที่ '+S.no+')</div></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
+      +'<div class="mbody">'+(S.mode==='test'?'<div class="ytest">🧪 <b>โหมดทดสอบ</b> — เมลขึ้นต้น [เทสระบบ] + ป้ายแดง "ยังไม่ใช่แพลนจริง" แต่ส่งถึงผู้รับจริง</div>':S.mode==='off'?'<div class="warn">⛔ ปิดการส่งเมลอยู่ (PK_MAIL_MODE=off)</div>':'')
+      +'<div class="seg ymg" role="group" aria-label="ส่งถึง">'+Object.keys(YPG).map(k=>{const s=ypSentOf(S,m.mid,k);return '<button type="button" data-g="'+k+'" aria-pressed="'+(k===S.g)+'" class="'+(k===S.g?'on':'')+'">'+esc(YPG[k].t)+' <small>'+esc(YPG[k].h)+'</small>'+(s?'<i class="ok">📨 ส่งแล้ว '+esc(ypTime(s))+'</i>':'')+'</button>';}).join('')+'</div>'
+      +'<div class="ymsec">สินค้า <span class="note">· แก้จำนวน/ราคาได้ · ราคา "แถม" = ของแถม</span></div>'
+      +'<div class="ymt"><table><thead><tr><th>สินค้า</th><th>จำนวน</th><th>หน่วย</th><th>ราคา'+(G.priced?'':' <small>(ไม่โชว์ในเมลคลัง)</small>')+'</th><th></th></tr></thead><tbody>'+it+'</tbody></table></div>'
+      +'<button class="btn sm ghost" data-itadd>＋ เพิ่มบรรทัด</button>'
+      +'<div class="ymf">'+fld('trans','ขนส่ง')+fld('so','หมายเหตุ (SO)')+fld('plate','ทะเบียนรถ')+fld('driver','ชื่อคนขับรถ')+fld('wh','คลังสินค้า ระบุเวลา')+fld('empty','ลังเปล่า')+'</div>'
+      +'<label class="ymfl">หมายเหตุแดง (ใต้ร้าน)<input class="in" data-f="red" value="'+esc(r.red||'')+'"></label>'
+      +'<label class="ymfl">หัวเรื่องเมล<input class="in" id="ymSub" value="'+esc(S.sub[S.g]!=null?S.sub[S.g]:defSub)+'"></label>'
+      +'<label class="ymfl">ข้อความท้ายตาราง'+(S.g==='wh'?' (แจ้งจัดสินค้า)':'')+'<textarea class="in" id="ymNote" rows="2" placeholder="'+(S.g==='wh'?'เช่น จัดใส่พาเลท LOSCAM · ถุง 1 ล. จัดขา 15×6 ชั้น':'เช่น แจ้งเปิดบิลค่ะ')+'">'+esc(S.note[S.g]||'')+'</textarea></label>'
+      +'<div id="ymPv"></div></div>'
+      +'<div class="mact ymact"><a class="btn ghost" href="pk-mk.html?date='+d+'" target="_blank" rel="noopener">📑 เปิดฟอร์ม FM-MK</a><span style="flex:1"></span><button class="btn ghost" data-x>ส่งทีหลัง</button><button class="btn" id="ymPV">👁 พรีวิวเมลจริง</button><button class="btn pri" id="ymGo"'+(S.mode==='off'?' disabled':'')+'>✉️ '+(sent?'ส่งอีกครั้ง':'ส่งเมล')+' '+esc(YPG[S.g].t)+'</button></div>';
+    ov.querySelectorAll('[data-x]').forEach(b=>b.onclick=close);
+    ov.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{ypMkRead(S,ov);S.g=b.dataset.g;draw();});
+    ov.querySelectorAll('[data-it],[data-f]').forEach(i=>i.oninput=()=>{S.dirty=1;});
+    ov.querySelectorAll('[data-itx]').forEach(b=>b.onclick=()=>{ypMkRead(S,ov);S.row.items.splice(+b.dataset.itx,1);S.dirty=1;draw();});
+    ov.querySelector('[data-itadd]').onclick=()=>{ypMkRead(S,ov);S.row.items.push({n:'',q:'',u:'ลัง',price:''});S.dirty=1;draw();};
+    $('ymSub').oninput=()=>{S.sub[S.g]=$('ymSub').value;};$('ymNote').oninput=()=>{S.note[S.g]=$('ymNote').value;};
+    $('ymPV').onclick=ev=>ypMkPreview(S,m,ov,ev.currentTarget,false,draw);
+    $('ymGo').onclick=ev=>ypMkPreview(S,m,ov,ev.currentTarget,true,draw);};
+  draw();}
+function ypMkSync(S,g,m){S.rev=g.doc?g.doc.rev:0;S.mail=g.doc&&g.doc.mail||null;const rows=(g.doc&&g.doc.rows)||[],i=rows.findIndex(o=>o.mid===m.mid);
+  S.no=i+1;S.row=i>=0?JSON.parse(JSON.stringify(rows[i])):null;}
+/* ส่งแล้วหรือยัง (กลุ่มนี้ · ร้านนี้) จาก mail ของฉบับที่เปิด + ชิปจาก pk-yp (ฉบับก่อนๆ) */
+function ypSentOf(S,mid,g){g=g||S.g;let at='';const M=S.mail||{},rows=[];
+  if(M[g]&&M[g].st==='sent')at=M[g].at;(M.parts||[]).forEach(p=>{if(p.g===g&&p.st==='sent'&&((p.mids||[]).includes(mid)||(!p.mids&&(p.nos||[]).includes(S.no))))at=p.at;});
+  const mm=YP.msgs.find(x=>x.mid===mid);if(!at&&mm&&mm.mailed&&mm.mailed[g])at=mm.mailed[g];return at;}
+function ypMkRead(S,ov){const r=S.row;ov.querySelectorAll('[data-it]').forEach(i=>{const x=r.items[+i.dataset.it];if(x)x[i.dataset.k]=i.value.trim();});
+  ov.querySelectorAll('[data-f]').forEach(i=>{r[i.dataset.f]=i.value.trim();});const s=$('ymSub'),n=$('ymNote');if(s)S.sub[S.g]=s.value;if(n)S.note[S.g]=n.value;}
+/* แก้แล้ว → บันทึกฉบับใหม่ก่อน (ประวัติฟอร์มตรงกับเมลที่ส่ง) → พรีวิว (ผู้รับจริง) → ส่ง = ยืนยันอีกชั้น */
+async function ypMkPreview(S,m,ov,btn,send,redraw){ypMkRead(S,ov);
+  S.row.items=S.row.items.filter(x=>x.n||x.q);if(!S.row.items.length){toast('⚠️ ต้องมีสินค้าอย่างน้อย 1 บรรทัด');return;}
+  const lab=btn.textContent;btn.disabled=true;btn.textContent='กำลังโหลด…';
+  try{if(S.dirty){await mkPost({action:'addRows',date:S.d,rows:[S.row]});ypMkSync(S,await mkGet(S.d),m);S.dirty=0;}
+    const q={date:S.d,rev:S.rev,grp:S.g,nos:[S.no],subject:(S.sub[S.g]||'').trim(),note:(S.note[S.g]||'').trim()};
+    const r=await mkPost(Object.assign({action:'mailPreview'},q));
+    const ppl=l=>l.length?l.map(x=>'<span class="pvp">'+esc(x.name||x.email.split('@')[0])+'</span>').join(''):'<span class="warn">ยังไม่ได้ตั้งผู้รับ (ตั้งที่ 👥 ผู้รับเมล ในหน้า FM-MK)</span>';
+    const pv=$('ymPv');pv.innerHTML='<div class="ymsec">👁 พรีวิวเมลจริง (ยังไม่ได้ส่ง)</div><div class="pvh"><div><span>ถึง ('+r.to.length+')</span><div>'+ppl(r.to)+'</div></div><div><span>สำเนา ('+r.cc.length+')</span><div>'+ppl(r.cc)+'</div></div><div><span>หัวเรื่อง</span><b>'+esc(r.subject)+'</b></div></div><iframe class="pvf" title="เนื้อเมล" sandbox="allow-same-origin"></iframe>';
+    const f=pv.querySelector('.pvf');f.onload=()=>{try{f.style.height=Math.min(Math.max(f.contentDocument.documentElement.scrollHeight+4,160),1400)+'px';}catch(e){}};
+    f.srcdoc='<!doctype html><meta charset="utf-8"><body style="margin:0;padding:10px;background:#eef1f4">'+r.html+'</body>';
+    if(!send){pv.scrollIntoView({behavior:'smooth',block:'start'});return;}
+    if(!r.to.length){toast('⚠️ ยังไม่ได้ตั้งผู้รับ "'+YPG[S.g].t+'" · ตั้งที่หน้า FM-MK → 👥 ผู้รับเมล');return;}
+    const again=!!ypSentOf(S,m.mid);
+    if(!(await askModal({title:(again?'ส่งอีกครั้ง':'ส่งเมล')+' "'+YPG[S.g].t+'"',icon:'✉️',html:'<p><b>'+esc(S.row.shop)+'</b> · '+esc(YPG[S.g].h)+'</p><p>ถึง <b>'+r.to.length+'</b> คน'+(r.cc.length?' · สำเนา <b>'+r.cc.length+'</b> คน':'')+'</p>'+(S.mode==='test'?'<p class="note">🧪 โหมดทดสอบ: หัวเรื่องขึ้นต้น [เทสระบบ] แต่ส่งถึงผู้รับจริง</p>':'')+(again?'<p class="warn">ร้านนี้ส่งกลุ่มนี้ไปแล้ว · ผู้รับจะได้เมลซ้ำ</p>':''),ok:'✉️ ส่งเลย',cancel:'ยกเลิก'})))return;
+    btn.textContent='กำลังส่ง…';
+    let s=await mkPost(Object.assign({action:'sendPart'},q));
+    if(s.dup){if(!(await askModal({title:'ส่งซ้ำ?',icon:'⚠️',html:'<p>'+esc(s.error||'ร้านนี้เพิ่งส่งไป')+'<br>ส่งอีกครั้งไหม? ผู้รับจะได้เมลซ้ำ</p>',ok:'ส่งซ้ำ',cancel:'ยกเลิก',danger:true})))return;s=await mkPost(Object.assign({action:'sendPart',again:true},q));}
+    if(s.mail)S.mail=s.mail;
+    if(s.ok){const mm=YP.msgs.find(x=>x.mid===m.mid);if(mm){mm.mailed=Object.assign({},mm.mailed,{[S.g]:s.part.at});}
+      toast('✅ ส่งเมล '+YPG[S.g].t+' แล้ว'+(S.g==='acc'?' · ส่งคลังต่อได้เลย':''));if(S.g==='acc')S.g='wh';redraw();if($('ypDr'))ypDraw();}
+    else toast('❌ ส่งไม่สำเร็จ: '+(s.error||''));}
+  catch(e){toast('❌ '+(e.message||e)+(send?' · ตรวจสถานะก่อนกดส่งอีกครั้ง':''));}
+  finally{if(btn.isConnected){btn.disabled=false;btn.textContent=lab;}}}
+/* คืน Pending → เอาร้านออกจากฟอร์ม FM-MK (ฉบับใหม่ · ฉบับที่ส่งเมลไปแล้วยังอยู่ในประวัติ) */
+async function ypMkDrop(m){if(m.sample||!ypLive())return;try{const g=await mkGet(ypMkDate(m));if(!g.doc||!(g.doc.rows||[]).some(o=>o.mid===m.mid))return;await mkPost({action:'addRows',date:ypMkDate(m),rows:[],drop:[m.mid]});}catch(e){toast('⚠️ เอาออกจากฟอร์ม FM-MK ไม่ได้: '+(e.message||e));}}
 $('bYp').onclick=ypOpen;ypBadge();
 /* 🏠 หน้าแรก Packing (pk-plan) · ส่ง uid ต่อถ้าเปิดมาพร้อม ?uid= */
 (()=>{const b=$('homeB'),u=new URLSearchParams(location.search).get('uid');if(b&&u)b.href+='?uid='+encodeURIComponent(u);})();
