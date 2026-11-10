@@ -297,6 +297,7 @@ const TH_D=['อาทิตย์','จันทร์','อังคาร','�
 const thToday=()=>new Date(Date.now()+7*36e5).toISOString().slice(0,10);
 const addDay=(d,n)=>new Date(Date.parse(d+'T00:00:00Z')+n*864e5).toISOString().slice(0,10);
 const dowOf=d=>new Date(Date.parse(d+'T00:00:00Z')).getUTCDay();
+const pickDay=(d,dlv)=>!!dlv&&(dlv===d||(dowOf(d)===6&&(dlv===addDay(d,1)||dlv===addDay(d,2))));   // วันรับเองที่ลงแพลนวัน d (เสาร์ = รวม อา./จ.)
 const thLong=d=>'วัน '+TH_D[dowOf(d)]+' ที่ '+(+d.slice(8))+' '+TH_M[+d.slice(5,7)-1]+' '+(+d.slice(0,4)+543);
 const dm=d=>d?(+d.slice(8))+'/'+(+d.slice(5,7)):'';
 const dotBE=d=>d.slice(8)+'.'+d.slice(5,7)+'.'+String(+d.slice(0,4)+543).slice(2);
@@ -370,7 +371,9 @@ async function draftDay(d){
     const dl=row.src==='mall'?row.mid.slice(0,10):row.src==='line'?((msgs.find(m=>m.mid===row.mid)||{}).p||{}).dlv:'';
     row.wh='ขึ้นของ '+dm(d)+(dl&&dl!==d?' ส่ง '+dm(dl):'');
     out.push(row); }));
-  msgs.filter(m=>!used.has(m.mid)&&m.p.pickup&&m.p.dlv===d).forEach(m=>{ used.add(m.mid); out.push(fromMsg(m)); });
+  // ลูกค้ารับเอง: แพลนวันเสาร์รวมวันรับ อา./จ. ด้วย (คุณน้อง: "17 แพลนวันเสาร์ ลูกค้ารับเอง 19/10" · วันรับอยู่ในช่องขนส่ง) · แพลนวันจันทร์ข้ามร้านที่อยู่ในแพลนเสาร์แล้ว
+  if(dowOf(d)===1){ try{ const sat=await api('action=get&date='+addDay(d,-2)); ((sat.doc&&sat.doc.rows)||[]).forEach(o=>{ if(o.mid) used.add(o.mid); }); }catch(_){} }
+  msgs.filter(m=>!used.has(m.mid)&&m.p.pickup&&pickDay(d,m.p.dlv)).forEach(m=>{ used.add(m.mid); out.push(fromMsg(m)); });
   if(!day.plan){
     msgs.filter(m=>!used.has(m.mid)&&!m.p.pickup&&m.st==='planned'&&m.planDate===d).forEach(m=>{ used.add(m.mid); const r=fromMsg(m); r.wh='ขึ้นของ '+dm(d)+(m.p.dlv&&m.p.dlv!==d?' ส่ง '+dm(m.p.dlv):''); out.push(r); });
     malls.filter(e=>e.date===addDay(d,1)).forEach(e=>out.push(fromMall(e)));   // PO ห้างส่งพรุ่งนี้ = ขึ้นของวันนี้
@@ -478,10 +481,11 @@ function wire(){
 async function openYp(b){
   const done=btnBusy(b,'กำลังโหลด…'); let y; try{ y=await loadYP(true); }catch(e){ toast('❌ '+e.message,1); return; } finally{ done(); }
   const inDoc=new Set(ROWS.map(o=>o.mid).filter(Boolean));
-  const ms=y.msgs.filter(m=>m.st!=='ignored'&&m.p&&(m.p.pickup||m.st==='planned')&&!inDoc.has(m.mid)).sort((a,c)=>{const ka=(a.p.dlv===DATE||a.planDate===DATE)?0:1,kc=(c.p.dlv===DATE||c.planDate===DATE)?0:1;return ka-kc||String(c.at).localeCompare(String(a.at));});
+  const onDay=m=>m.planDate===DATE||(m.p.pickup?pickDay(DATE,m.p.dlv):m.p.dlv===DATE);
+  const ms=y.msgs.filter(m=>m.st!=='ignored'&&m.p&&(m.p.pickup||m.st==='planned')&&!inDoc.has(m.mid)).sort((a,c)=>(onDay(a)?0:1)-(onDay(c)?0:1)||String(c.at).localeCompare(String(a.at)));
   const w=document.createElement('div'); w.className='dlg';
-  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="ดึงออเดอร์จากไลน์"><div class="dlg-h"><b>⬇ ดึงออเดอร์จากไลน์<div class="sub">เฉพาะออเดอร์ที่ลงแพลนรถแล้ว + ลูกค้ามารับเอง (Pending ที่ยังไม่ลงรถไม่แสดง) · ติ๊กไว้ให้แล้ว = ขึ้นของวันที่ '+esc(dm(DATE))+'</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
-    +(ms.length?ms.map((m,i)=>{const p=m.p,on=p.dlv===DATE||m.planDate===DATE;return '<label class="ck"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'><span><b>'+esc(p.shop)+'</b> <small>· '+(p.pickup?'รับเอง':'ส่ง')+' '+(p.dlv?esc(dm(p.dlv)):'ไม่พบวัน')+(p.pickAt?' · '+esc(p.pickAt):'')+' · '+(p.cs?p.cs+' ลัง':'')+(p.tk?' '+p.tk+' ถัง':'')+(m.st==='planned'?' · ลงแพลนแล้ว':'')+'</small></span></label>';}).join(''):'<div class="msg">ไม่มีออเดอร์ที่ลงแพลนรถแล้ว / ลูกค้ารับเอง<br><small>(ออเดอร์ Pending ต้องลงแพลนรถในหน้าแพลนรถประจำวันก่อน)</small></div>')
+  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="ดึงออเดอร์จากไลน์"><div class="dlg-h"><b>⬇ ดึงออเดอร์จากไลน์<div class="sub">เฉพาะออเดอร์ที่ลงแพลนรถแล้ว + ลูกค้ามารับเอง (Pending ที่ยังไม่ลงรถไม่แสดง) · ติ๊กไว้ให้แล้ว = แพลนวันที่ '+esc(dm(DATE))+(dowOf(DATE)===6?' (เสาร์ รวมลูกค้ารับเอง อา./จ.)':'')+'</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
+    +(ms.length?ms.map((m,i)=>{const p=m.p,on=onDay(m);return '<label class="ck"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'><span><b>'+esc(p.shop)+'</b> <small>· '+(p.pickup?'รับเอง':'ส่ง')+' '+(p.dlv?esc(dm(p.dlv)):'ไม่พบวัน')+(p.pickAt?' · '+esc(p.pickAt):'')+' · '+(p.cs?p.cs+' ลัง':'')+(p.tk?' '+p.tk+' ถัง':'')+(m.st==='planned'?' · ลงแพลนแล้ว':'')+'</small></span></label>';}).join(''):'<div class="msg">ไม่มีออเดอร์ที่ลงแพลนรถแล้ว / ลูกค้ารับเอง<br><small>(ออเดอร์ Pending ต้องลงแพลนรถในหน้าแพลนรถประจำวันก่อน)</small></div>')
     +'</div><div class="row" style="margin-top:10px"><button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="ypGo">เพิ่มเข้าแพลน</button></div></div>';
   document.body.appendChild(w); const close=()=>w.remove();
   w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close); w.onclick=e=>{if(e.target===w)close();};
@@ -726,7 +730,7 @@ async function openSend(b){
   const w=document.createElement('div'); w.className='dlg'; document.body.appendChild(w);
   const close=()=>w.remove(); w.onclick=ev=>{if(ev.target===w)close();};
   const meta=(DOC&&DOC.meta)||{};
-  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="บันทึกและส่งเมล"><div class="dlg-h"><b>✉️ บันทึก + ส่งเมลแผนการส่งมอบ<div class="sub">ขึ้นของ'+esc(thLong(DATE))+' · ระบบส่งจาก ssbsmartsupply@gmail.com · สำเนาถึงคนกดส่ง (ถ้ามีอีเมลในระบบ)</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
+  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="บันทึกและส่งเมล"><div class="dlg-h"><b>✉️ บันทึก + ส่งเมลแผนการส่งมอบ<div class="sub">ส่งสินค้า'+esc(thLong(DATE))+' · ระบบส่งจาก ssbsmartsupply@gmail.com · สำเนาถึงคนกดส่ง (ถ้ามีอีเมลในระบบ)</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
     +(MAILMODE==='test'?'<div class="testbox">🧪 <b>โหมดทดสอบ</b> — หัวเรื่องจะขึ้นต้น [เทสระบบ] และในเมลมีป้ายแดง "ยังไม่ใช่แพลนจริง" · เปิดใช้จริงเมื่อ DEV เปลี่ยนเป็นโหมดจริง</div>':'')
     +(MAILMODE==='off'?'<div class="warnbox">⛔ ปิดการส่งเมลอยู่ (PK_MAIL_MODE=off) · ใช้ 📋 คัดลอกเมล แทน</div>':'')
     +gs.map(g=>{ const c=toCount(g), shops=ROWS.filter(o=>inGrp(o,g)), none=!c.to, ms=!DIRTY&&DOC&&DOC.mail&&DOC.mail[g], sent=ms&&ms.st==='sent';
