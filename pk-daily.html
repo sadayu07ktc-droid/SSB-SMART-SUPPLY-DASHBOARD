@@ -73,6 +73,29 @@ main{padding-block:14px 120px}
 .tag{display:inline-block;border-radius:6px;padding:0 6px;font-size:11.5px;font-weight:600;background:var(--surface2);border:1px solid var(--line);margin-left:4px}
 .bar{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -8px 24px -16px var(--shadow);padding-bottom:env(safe-area-inset-bottom,0px);z-index:20}
 .bar .wrap{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:10px}
+/* 📋 Pending ยี่ปั๊ว (ออเดอร์จากกลุ่มไลน์ เซลส์แอดมิน) */
+.barl{display:flex;gap:10px;align-items:center;flex-wrap:wrap;min-width:0}
+.btn.yp{background:color-mix(in srgb,var(--gold) 14%,var(--surface));border-color:color-mix(in srgb,var(--gold) 55%,var(--line));color:var(--ink);white-space:nowrap}
+.btn.yp b{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:10px;background:var(--line);font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
+.btn.yp b.on{background:var(--bad);color:#fff}
+.yptab{display:flex;gap:6px;flex-wrap:wrap}
+.yptab button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink)}
+.yptab button.on{background:var(--head);color:var(--head-ink);border-color:var(--head)}
+.yptab b{font-variant-numeric:tabular-nums;margin-left:3px}
+.ypc .yph{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.ypc .yph b{font-size:16px}
+.ypm{display:flex;gap:6px;flex-wrap:wrap}
+.ypm span{font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 9px;background:var(--surface2);border:1px solid var(--line)}
+.ypm .w{background:var(--warnbg);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
+.ypm .g{background:var(--goodbg);color:var(--good);border-color:color-mix(in srgb,var(--good) 30%,transparent)}
+.ypm .i{background:var(--infobg);color:var(--info);border-color:color-mix(in srgb,var(--info) 30%,transparent)}
+.ypc details summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+.ypc pre{white-space:pre-wrap;font:inherit;font-size:13px;background:var(--surface2);border-radius:8px;padding:8px 10px;margin:6px 0 0}
+.ypa{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ypa label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.ypb{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.ypban{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:13px}
+@media(max-width:560px){.ypa{grid-template-columns:1fr}}
 .bar .sum{font-size:13px;color:var(--muted)}
 .bar .sum b{color:var(--ink);font-variant-numeric:tabular-nums}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600}
@@ -568,7 +591,7 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 </main>
 
 <div class="bar" id="bar"><div class="wrap">
-  <div class="sum" id="barsum"></div>
+  <div class="barl"><button class="btn yp" id="bYp" type="button" title="ออเดอร์ยี่ปั๊วที่เซลส์พิมพ์ในกลุ่มไลน์ เซลส์แอดมิน · ยังไม่ลงแพลน">📋 Pending ยี่ปั๊ว<b id="ypN">·</b></button><div class="sum" id="barsum"></div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn ghost" id="bClr" title="ล้างงานในหน้านี้ทั้งหมด เริ่มจากว่าง (เดโม · ไม่ลบในระบบ)">🧹 ล้างงานทั้งหมด</button>
     <button class="btn" id="bSave">บันทึกแพลน</button>
@@ -2567,6 +2590,106 @@ renderAll();route();
   new MutationObserver(q).observe(document.body,{childList:true,subtree:true});
   setInterval(q,1500);q();
 })();
+/* ---------- 📋 Pending ยี่ปั๊ว · ออเดอร์จากกลุ่มไลน์ "เซลส์แอดมิน" (Edge pk-yp) ----------
+   LINE OA อยู่ในกลุ่มเงียบๆ (ไม่ตอบ) → line-webhook เก็บข้อความ → pk-yp แยกร้าน/สินค้า/ลัง/วันส่ง
+   ลังรวม = จำนวน + แถมจริง (+N / "แถม N ลัง") · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง
+   ลงแพลน = เพิ่มจุดส่งยี่ปั๊วเข้ารถที่เลือก (ลังตามออเดอร์) + บันทึกสถานะว่าลงแล้ว (ไม่ขึ้น Pending ซ้ำ) */
+const YP={msgs:[],src:'',groups:[],canEdit:false,tab:'p',err:'',busy:0,loaded:0,sel:{}};
+const ypLive=()=>typeof PKD_URL!=='undefined'&&typeof MY_UID!=='undefined'&&!!MY_UID;
+const ypUrl=()=>String(PKD_URL).replace(/pk-daily(?=[^\/]*$)/,'pk-yp');
+const ypNorm=x=>String(x||'').toLowerCase().replace(/ร้าน|บจก\.?|หจก\.?|จำกัด|บริษัท|\s|[.\-()\/,'"]/g,'');
+function ypMatch(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=null;
+  ST.forEach(x=>{if(tyOf({id:x.id})==='ห้าง')return;const n=ypNorm(x.n);if(n.length<3)return;
+    if(n===k||n.includes(k)||k.includes(n)){const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});
+  return best?best.x:null;}
+const ypInPlan=mid=>{for(const v of VEH){const p=PLAN[v.head];if(p&&p.stops.some(x=>x.yp===mid))return v.head;}return '';};
+const ypSt=m=>m.st||(ypInPlan(m.mid)?'planned':'');
+const ypCnt=()=>{const c={p:0,planned:0,ignored:0};YP.msgs.forEach(m=>{const t=ypSt(m)||'p';c[t]=(c[t]||0)+1;});return c;};
+function ypBadge(){const b=$('ypN');if(!b)return;if(!YP.loaded){b.textContent='·';b.className='';return;}
+  const n=ypCnt().p;b.textContent=n;b.className=n&&YP.src==='db'?'on':'';}
+const ypTime=iso=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});};
+async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;
+  try{const x=await fetch(ypUrl()+'?action=list&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());
+    if(x.denied){YP.denied=1;const b=$('bYp');if(b)b.hidden=true;return;}
+    if(!x.ok)throw new Error(x.error||'โหลดไม่ได้');
+    const keep={};YP.msgs.forEach(m=>{if(m.sample&&m.st)keep[m.mid]=m.st;});   /* ตัวอย่าง = จำสถานะในหน้าเท่านั้น */
+    YP.msgs=(x.msgs||[]).map(m=>m.sample&&keep[m.mid]?Object.assign(m,{st:keep[m.mid]}):m);YP.src=x.src;YP.groups=x.groups||[];YP.canEdit=!!x.canEdit;YP.err='';YP.loaded=1;}
+  catch(e){YP.err=String(e.message||e);}
+  finally{YP.busy=0;}
+  ypBadge();if($('ypDr'))ypDraw();}
+async function ypMark(m,st,extra){m.st=st;if(m.sample||!ypLive())return;
+  const r=await fetch(ypUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action:'mark',userId:MY_UID,mid:m.mid,st},extra||{}))}).then(z=>z.json());
+  if(!r.ok)throw new Error(r.error||'บันทึกสถานะไม่ได้');if(r.by)m.stBy=r.by;if(r.at)m.stAt=r.at;}
+function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head].status==='ready').map(v=>{const p=PLAN[v.head],d=drvOf(p.driver),n=p.stops.length;
+  return '<option value="'+esc(v.head)+'"'+(v.head===sel?' selected':'')+'>'+esc(plOf(v.head))+' · '+esc(v.g||'')+(d?' · '+esc(d.name.split(' ')[0]):' · ไม่มีคนขับ')+(n?' · มี '+n+' จุด':' · ว่าง')+'</option>';}).join('');}
+function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=ypMatch(p.shop),inP=ypInPlan(m.mid);
+  const chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">🚚 ส่ง '+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
+    '<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>',p.cheque?'<span class="w">🧾 รับเช็ค</span>':''].join('');
+  let h='<div class="box ypc" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+esc(p.shop||'(ไม่มีชื่อร้าน)')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
+  h+='<table class="pol"><thead><tr><th>สินค้า</th><th class="n">ลัง</th><th class="n">แถมจริง</th><th class="n">ราคา/ลัง</th></tr></thead><tbody>'
+    +its.map(i=>'<tr><td>'+esc(i.n)+'</td><td class="n">'+(i.q?comma(i.q):'')+'</td><td class="n">'+(i.f?'+'+comma(i.f):'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>').join('')
+    +'<tr><td><b>รวมลงแพลน</b></td><td class="n" colspan="2"><b>'+comma(p.cs||0)+'</b> ลัง</td><td></td></tr></tbody></table>';
+  if((p.notes||[]).length)h+='<div class="note">📝 '+p.notes.map(esc).join(' · ')+'</div>';
+  h+='<details><summary>ข้อความเดิมในกลุ่ม</summary><pre>'+esc(m.text||'')+'</pre></details>';
+  const can=YP.canEdit||!ypLive();
+  if(st==='planned'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">✅ ลงแพลนแล้ว'+(inP?' · รถ '+esc(plOf(inP)):m.head?' · รถ '+esc(plOf(m.head)||m.head):'')+(m.planDate&&m.planDate!==pd?' · วันที่ '+esc(dateTH(m.planDate)):'')+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'
+      +(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
+  else if(st==='ignored'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">🙈 ไม่ใช่ออเดอร์'+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'+(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
+  else if(can){const sv=YP.sel[m.mid]||{};
+    h+='<div class="ypa"><label>จุดส่ง (ค่ากลาง)<input class="in" data-ypst list="ypStL" value="'+esc(sv.st!=null?sv.st:hit?hit.n:'')+'" placeholder="ไม่พบในรายชื่อ · พิมพ์ชื่อร้าน"></label>'
+      +'<label>ลงรถ<select class="in" data-ypveh><option value="">— เลือกรถ —</option>'+ypVehOpts(sv.veh||'')+'</select></label></div>'
+      +(hit||sv.st?'':'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ในรายชื่อจุดส่ง · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV เพิ่มร้านที่หน้าค่ากลาง)</div>')
+      +'<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-ypplan>➕ ลงแพลน '+comma(p.cs||0)+' ลัง</button></div>';}
+  else h+='<div class="note">ดูได้อย่างเดียว · ลงแพลนได้เฉพาะแอดมิน Packing</div>';
+  return h+'</div>';}
+function ypDraw(){const H=$('drawerHost');if(!H)return;const c=ypCnt(),pd=$('pdate').value;
+  const L=YP.msgs.filter(m=>(ypSt(m)||'p')===YP.tab).sort((a,b)=>{const da=a.p&&a.p.dlv||'9',db=b.p&&b.p.dlv||'9';return YP.tab==='p'?(da<db?-1:da>db?1:String(b.at).localeCompare(String(a.at))):String(b.at).localeCompare(String(a.at));});
+  let h='<div class="scrim" data-ypx></div><aside class="drawer pod" id="ypDr" role="dialog" aria-modal="true" aria-label="Pending ยี่ปั๊ว"><div class="dh"><div><div class="stc"><span class="tchip">📋 ออเดอร์ยี่ปั๊วจากไลน์</span></div><h3>Pending ยี่ปั๊ว</h3><div class="m">'
+    +(YP.groups.length?'กลุ่ม '+esc(YP.groups.join(', ')):'กลุ่ม เซลส์แอดมิน')+' · แพลนวันที่ '+esc(dateTH(pd))+'</div></div><button class="x" data-ypx aria-label="ปิด">✕</button></div><div class="db">';
+  if(!ypLive())h+='<div class="ypban">หน้าเดโมนี้ไม่ได้ต่อระบบ · เปิดจากหน้าแพลนรถ Packing จริง จะเห็นออเดอร์จากกลุ่มไลน์ “เซลส์แอดมิน”</div>';
+  else if(!YP.loaded)h+='<div class="note">'+(YP.err?'❌ '+esc(YP.err):'กำลังโหลด…')+'</div>';
+  if(YP.src==='nogroup')h+='<div class="ypban">ยังไม่ได้เชิญ LINE OA เข้ากลุ่ม “เซลส์แอดมิน” · ข้างล่างเป็น<b>ตัวอย่าง</b> '+YP.msgs.length+' ข้อความ (ลองลงแพลนได้ · สถานะไม่บันทึก)</div>';
+  if(YP.err&&YP.loaded)h+='<div class="warn">โหลดล่าสุดไม่สำเร็จ: '+esc(YP.err)+'</div>';
+  if(ypLive()||YP.msgs.length){h+='<div class="yptab" role="tablist">'+[['p','⏳ Pending',c.p],['planned','✅ ลงแพลนแล้ว',c.planned],['ignored','🙈 ซ่อน',c.ignored]].map(([k,l,n])=>'<button role="tab" data-yptab="'+k+'" aria-selected="'+(YP.tab===k)+'" class="'+(YP.tab===k?'on':'')+'">'+l+'<b>'+(n||0)+'</b></button>').join('')+'</div>';
+    h+=L.length?L.map(ypCard).join(''):(YP.loaded?'<div class="note" style="text-align:center;padding:24px 0">'+(YP.tab==='p'?'ไม่มีออเดอร์ค้าง 🎉':'ไม่มีรายการ')+'</div>':'');
+    h+='<div class="note">อ่านจากข้อความ 14 วันล่าสุด · ลังรวม = จำนวน + แถมจริง (+N / แถม N ลัง) · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง · ข้อความคุยทั่วไปไม่แสดง</div>';}
+  h+='</div><div class="df"><button class="btn sm" data-ypre'+(ypLive()?'':' disabled')+'>↻ โหลดใหม่</button><button class="btn pri" data-ypx>ปิด</button></div></aside>'
+    +'<datalist id="ypStL">'+ST.filter(x=>tyOf({id:x.id})!=='ห้าง').map(x=>'<option value="'+esc(x.n)+'">').join('')+'</datalist>';
+  const sc=H.querySelector('#ypDr .db'),top=sc?sc.scrollTop:0;H.innerHTML=h;const nb=H.querySelector('#ypDr .db');if(nb&&top)nb.scrollTop=top;
+  H.querySelectorAll('[data-ypx]').forEach(b=>b.onclick=closePoDrawer);
+  H.querySelectorAll('[data-yptab]').forEach(b=>b.onclick=()=>{YP.tab=b.dataset.yptab;ypDraw();});
+  const re=H.querySelector('[data-ypre]');if(re)re.onclick=()=>{YP.loaded=YP.loaded&&1;ypLoad();};
+  H.querySelectorAll('.ypc').forEach(card=>{const m=YP.msgs.find(x=>x.mid===card.dataset.ypm);if(!m)return;
+    const sv=YP.sel[m.mid]=YP.sel[m.mid]||{},i1=card.querySelector('[data-ypst]'),i2=card.querySelector('[data-ypveh]');
+    if(i1)i1.oninput=()=>{sv.st=i1.value;};if(i2)i2.onchange=()=>{sv.veh=i2.value;};
+    const bp=card.querySelector('[data-ypplan]');if(bp)bp.onclick=()=>ypPlan(m,card,bp);
+    const bi=card.querySelector('[data-ypign]');if(bi)bi.onclick=()=>ypSet(m,'ignored',bi);
+    const bb=card.querySelector('[data-ypback]');if(bb)bb.onclick=()=>ypBack(m,bb);});}
+function ypOpen(){if(typeof ED!=='undefined'&&ED){toast('ปิดลิ้นชักแก้งานรถก่อน แล้วค่อยเปิด Pending ยี่ปั๊ว');return;}
+  ypDraw();const x=document.querySelector('#ypDr .x');if(x)x.focus();if(ypLive())ypLoad();}
+async function ypSet(m,st,btn,extra){const old=m.st;if(btn)btn.disabled=true;
+  try{await ypMark(m,st,extra);ypBadge();ypDraw();return true;}catch(e){m.st=old;toast('❌ '+(e.message||e));if(btn)btn.disabled=false;return false;}}
+async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data-ypveh]').value,stn=card.querySelector('[data-ypst]').value.trim();
+  if(!head){toast('⚠️ กรุณาเลือกรถที่จะลงงานนี้');card.querySelector('[data-ypveh]').focus();return;}
+  if(ypInPlan(m.mid)){toast('ออเดอร์นี้ลงแพลนไว้แล้ว');return;}
+  const P=PLAN[head];if(!P||P.status!=='ready'){toast('⚠️ รถคันนี้ไม่พร้อมวิ่ง');return;}
+  const pd=$('pdate').value;
+  if(p.dlv&&p.dlv!==pd&&!(await askModal({title:'วันส่งไม่ตรงวันแพลน',icon:'📅',html:'<p>ออเดอร์ <b>'+esc(p.shop||'')+'</b> ส่ง <b>'+esc(dateTH(p.dlv))+'</b><br>แต่แพลนที่เปิดอยู่คือ <b>'+esc(dateTH(pd))+'</b> · ลงแพลนนี้เลยไหม?</p>',ok:'ลงแพลนวันนี้',cancel:'ยกเลิก'})))return;
+  const x=ST.find(y=>y.n===stn),cs=String(p.cs||'');
+  const stop=x?{id:x.id,n:x.n,km:x.km,pal:'',cs,at:'',ty:'ยี่ปั๊ว',yp:m.mid}:{id:null,n:stn||p.shop||'ร้านยี่ปั๊ว',km:null,pal:'',cs,at:'',ty:'ยี่ปั๊ว',yp:m.mid};
+  P.stops.push(stop);const nAdd=p.cheque&&!/รับเช็ค/.test(P.note||'')?'รับเช็ค '+(x?x.n:stop.n):'',note0=P.note;if(nAdd)P.note=(P.note?P.note+' · ':'')+nAdd;
+  btn.disabled=true;
+  try{await ypMark(m,'planned',{planDate:pd,head});m.head=head;m.planDate=pd;m.nAdd=nAdd;}
+  catch(e){P.stops=P.stops.filter(y=>y!==stop);P.note=note0;toast('❌ '+(e.message||e));btn.disabled=false;return;}
+  delete YP.sel[m.mid];if(PM!=='all')setPM('all');else renderAll();ypBadge();ypDraw();
+  toast('✅ ลง '+(stop.n)+' '+comma(p.cs||0)+' ลัง เข้ารถ '+plOf(head)+' แล้ว · อย่าลืมกดบันทึกแพลน');}
+async function ypBack(m,btn){const h=ypInPlan(m.mid);
+  if(h&&!(await askModal({title:'คืนเป็น Pending',icon:'↩',html:'<p>จะเอาจุดส่งของออเดอร์นี้ออกจากรถ <b>'+esc(plOf(h))+'</b> ด้วย</p>',ok:'คืนเป็น Pending',cancel:'ยกเลิก',danger:true})))return;
+  const keep={};VEH.forEach(v=>{const p=PLAN[v.head];if(p&&p.stops.some(x=>x.yp===m.mid)){keep[v.head]=[p.stops.slice(),p.note];p.stops=p.stops.filter(x=>x.yp!==m.mid);if(m.nAdd)p.note=String(p.note||'').replace(' · '+m.nAdd,'').replace(m.nAdd,'').trim();}});
+  if(!(await ypSet(m,'',btn))){Object.keys(keep).forEach(k=>{PLAN[k].stops=keep[k][0];PLAN[k].note=keep[k][1];});return;}
+  m.head='';m.planDate='';m.nAdd='';renderAll();ypDraw();}
+$('bYp').onclick=ypOpen;ypBadge();
+if(ypLive()){ypLoad();setInterval(()=>{if(!document.hidden)ypLoad();},60000);}
 </script>
 
 <script>
