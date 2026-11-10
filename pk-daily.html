@@ -2624,7 +2624,7 @@ function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head]
   return '<option value="'+esc(v.head)+'"'+(v.head===sel?' selected':'')+'>'+esc(plOf(v.head))+' · '+esc(v.g||'')+(d?' · '+esc(d.name.split(' ')[0]):' · ไม่มีคนขับ')+(n?' · มี '+n+' จุด':' · ว่าง')+'</option>';}).join('');}
 function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=ypMatch(p.shop),inP=ypInPlan(m.mid);
   const chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">🚚 ส่ง '+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
-    '<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>',p.cheque?'<span class="w">🧾 รับเช็ค</span>':''].join('');
+    '<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':''].join('');
   let h='<div class="box ypc" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+esc(p.shop||'(ไม่มีชื่อร้าน)')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
   h+='<table class="pol"><thead><tr><th>สินค้า</th><th class="n">ลัง</th><th class="n">แถมจริง</th><th class="n">ราคา/ลัง</th></tr></thead><tbody>'
     +its.map(i=>'<tr><td>'+esc(i.n)+'</td><td class="n">'+(i.q?comma(i.q):'')+'</td><td class="n">'+(i.f?'+'+comma(i.f):'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>').join('')
@@ -2677,7 +2677,7 @@ async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data
   if(p.dlv&&p.dlv!==pd&&!(await askModal({title:'วันส่งไม่ตรงวันแพลน',icon:'📅',html:'<p>ออเดอร์ <b>'+esc(p.shop||'')+'</b> ส่ง <b>'+esc(dateTH(p.dlv))+'</b><br>แต่แพลนที่เปิดอยู่คือ <b>'+esc(dateTH(pd))+'</b> · ลงแพลนนี้เลยไหม?</p>',ok:'ลงแพลนวันนี้',cancel:'ยกเลิก'})))return;
   const x=ST.find(y=>y.n===stn),cs=String(p.cs||'');
   const stop=x?{id:x.id,n:x.n,km:x.km,pal:'',cs,at:'',ty:'ยี่ปั๊ว',yp:m.mid}:{id:null,n:stn||p.shop||'ร้านยี่ปั๊ว',km:null,pal:'',cs,at:'',ty:'ยี่ปั๊ว',yp:m.mid};
-  P.stops.push(stop);const nAdd=p.cheque&&!/รับเช็ค/.test(P.note||'')?'รับเช็ค '+(x?x.n:stop.n):'',note0=P.note;if(nAdd)P.note=(P.note?P.note+' · ':'')+nAdd;
+  P.stops.push(stop);const nm0=x?x.n:stop.n,nAdd=[p.cheque?'รับเช็ค '+nm0:'',p.cash?'เก็บเงินสด '+nm0:''].filter(t=>t&&!String(P.note||'').includes(t)).join(' · '),note0=P.note;if(nAdd)P.note=(P.note?P.note+' · ':'')+nAdd;
   btn.disabled=true;
   try{await ypMark(m,'planned',{planDate:pd,head});m.head=head;m.planDate=pd;m.nAdd=nAdd;}
   catch(e){P.stops=P.stops.filter(y=>y!==stop);P.note=note0;toast('❌ '+(e.message||e));btn.disabled=false;return;}
