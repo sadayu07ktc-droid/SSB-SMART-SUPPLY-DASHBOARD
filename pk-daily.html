@@ -259,7 +259,8 @@ main{padding-block:14px 120px}
 .lpms{position:fixed;inset:0;z-index:80;background:rgba(12,24,18,.55)}
 .frb{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .btn.frq2{background:#EAF4EC;color:#1B4332;border-color:#9CC8A8}.btn.frq2:hover{background:#DCEEE0}
-.btn.frx{color:var(--bad,#DC2626)}.frtag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d8f3dc;color:#1b4332;white-space:nowrap}tr.frv td{box-shadow:inset 0 0 0 999px rgba(64,145,108,.12)}
+.btn.frx{color:var(--bad,#DC2626)}.dsst{font-size:12px;font-weight:600;color:var(--muted,#6b7280);white-space:nowrap;align-self:center}.dsst.w{color:#b45309}.dsst.e{color:#b91c1c}
+.frtag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d8f3dc;color:#1b4332;white-space:nowrap}tr.frv td{box-shadow:inset 0 0 0 999px rgba(64,145,108,.12)}
 .frpan{border:1px solid rgba(60,143,102,.35);background:rgba(60,143,102,.08);border-radius:12px;padding:10px 12px;margin:0 0 10px;display:flex;flex-direction:column;gap:6px}
 .frpan>b{font-size:13.5px}.frrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px}.frrow .ell{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .frc.ok{background:#1B4332;color:#fff;border-color:#1B4332}
@@ -631,7 +632,7 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
   </div>
 </header>
 
-<div class="wrap"><div class="pmrow"><div class="pmode" id="pmode" role="tablist" aria-label="เลือกแพลน"><button type="button" role="tab" data-pm="all"><span class="pmi">📋</span><span class="pml">แพลนรวม</span><small>ยี่ปั๊ว · อื่นๆ · ทุกงาน</small></button><button type="button" role="tab" data-pm="mall"><span class="pmi">🏬</span><span class="pml">แพลนห้าง</span><small>แจกล่วงหน้า · ต้นทางงานห้าง</small></button></div><div class="demo">เดโม: รถ คนขับ ร้านปลายทาง และค่ากลาง กม. มาจากระบบจริง ส่วนงานในแพลนกับเด็กรถเป็นตัวอย่าง ในหน้านี้ไม่มีการบันทึกหรือส่ง LINE จริง</div></div></div>
+<div class="wrap"><div class="pmrow"><div class="pmode" id="pmode" role="tablist" aria-label="เลือกแพลน"><button type="button" role="tab" data-pm="all"><span class="pmi">📋</span><span class="pml">แพลนรวม</span><small>ยี่ปั๊ว · อื่นๆ · ทุกงาน</small></button><button type="button" role="tab" data-pm="mall"><span class="pmi">🏬</span><span class="pml">แพลนห้าง</span><small>แจกล่วงหน้า · ต้นทางงานห้าง</small></button></div><div class="demo">เดโม: รถ คนขับ ร้านปลายทาง และค่ากลาง กม. มาจากระบบจริง งานในแพลนรวมและแพลนห้าง <b>บันทึกอัตโนมัติต่อวัน</b> (ดูสถานะ 💾 ข้างปุ่มบันทึกแพลน) · ยังไม่ส่งถึงคนขับ/คลัง/บัญชี จนกว่าจะกดแจกงาน</div></div></div>
 
 <main class="wrap wide">
   <section id="v-plan"></section>
@@ -644,7 +645,7 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
   <div class="barl"><button class="btn yp" id="bYp" type="button" title="ออเดอร์ยี่ปั๊วที่เซลส์พิมพ์ในกลุ่มไลน์ เซลส์แอดมิน · ยังไม่ลงแพลน">📋 Pending ยี่ปั๊ว<b id="ypN">·</b></button><div class="sum" id="barsum"></div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn ghost" id="bClr" title="ล้างงานในหน้านี้ทั้งหมด เริ่มจากว่าง (เดโม · ไม่ลบในระบบ)">🧹 ล้างงานทั้งหมด</button>
-    <button class="btn" id="bSave">บันทึกแพลน</button>
+    <span class="dsst" id="dsSt" hidden></span><button class="btn" id="bSave">บันทึกแพลน</button>
     <button class="btn pri" id="bSend">📲 แจกงานทั้งวัน</button>
   </div>
 </div></div>
@@ -2688,7 +2689,54 @@ function renderAll(){renderPlan();renderHelpers();if(!$('v-report').hidden)rende
 $('pdate').onchange=()=>{$('pday').textContent=dateTH($('pdate').value);renderAll();};
 $('pday').textContent=dateTH($('pdate').value);
 $('bClr').onclick=clearAll;
-$('bSave').onclick=()=>toast(PM==='mall'?'บันทึกแพลนห้างแล้ว (เดโม) · ยังไม่ถึงใครจนกว่าจะกด'+(MALL.rev<0?'แจกงานห้าง':'ส่งฉบับแก้ไข'):'บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว (เดโม) · ยังไม่ส่งถึงคนขับจนกว่าจะกดแจกงาน');
+/* 💾 10 พ.ย. คุณน้อง "งานที่สร้างหน้านี้ หายไปไหน" — เดิมแพลนอยู่แค่ในหน้าจอ รีเฟรช = หาย
+ * เว็บจริง: บันทึกอัตโนมัติต่อ "วันแพลน" ลง Edge pk-draft (ตาราง pk_day_draft + ประวัติ pk_day_draft_log)
+ *   เก็บ: แพลนรวมทุกคัน (PLAN) + งานห้าง (MJ) + ประวัติแจกงานห้าง (MALL) · เปลี่ยนวัน = บันทึกวันเดิมก่อน แล้วโหลดวันใหม่
+ *   ver กันสองคนเขียนทับกัน → ถามว่าจะโหลดของล่าสุด หรือบันทึกทับ */
+const DS={on:frLive(),date:'',ver:0,last:'',ready:false,t:null,busy:false,err:0,edit:true,at:null,by:''};
+const DS_URL=typeof PKD_URL!=='undefined'?PKD_URL.replace(/pk-daily$/,'pk-draft'):'';
+const DS_BASE=JSON.stringify(PLAN);
+function dsSnap(){return JSON.stringify({v:1,plan:PLAN,mj:MJ,mjn:MJN,mall:{rev:MALL.rev,snap:MALL.snap,log:MALL.log,ack:[...MALL.ack]}});}
+function dsApply(d){const base=JSON.parse(DS_BASE),pl=d&&d.plan||{};
+  VEH.forEach(v=>{PLAN[v.head]=pl[v.head]?Object.assign(base[v.head]||{},pl[v.head]):(base[v.head]||PLAN[v.head]);});
+  MJ=Array.isArray(d&&d.mj)?d.mj:[];MJN=d&&+d.mjn||MJ.reduce((a,j)=>Math.max(a,+(String(j.id).replace(/\D/g,''))||0),0);
+  const m=d&&d.mall||{};MALL.rev=m.rev!=null?m.rev:-1;MALL.snap=m.snap||{};MALL.log=m.log||[];MALL.ack.clear();(m.ack||[]).forEach(x=>MALL.ack.add(x));
+  if(ED)closeEditor();JE=null;}
+function dsBadge(){const b=$('dsSt');if(!b)return;if(!DS.on){b.hidden=true;return;}b.hidden=false;
+  const hm=s=>{const x=new Date(s);return isNaN(x)?'':x.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});};
+  b.className='dsst'+(DS.err?' e':DS.t||DS.busy?' w':'');
+  b.textContent=!DS.ready?'⏳ กำลังโหลดแพลนวันนี้…':!DS.edit?'👁 ดูอย่างเดียว':DS.err?'⚠️ ยังบันทึกไม่ได้ · ลองใหม่อัตโนมัติ':DS.t||DS.busy?'💾 กำลังบันทึก…':DS.at?'💾 บันทึกแล้ว '+hm(DS.at)+(DS.by?' · '+DS.by:''):'💾 บันทึกอัตโนมัติ';}
+async function dsLoad(d){DS.ready=false;DS.date=d;dsBadge();
+  for(let i=0;i<3;i++){try{const x=await fetch(DS_URL+'?action=get&userId='+encodeURIComponent(MY_UID)+'&date='+d+'&t='+Date.now()).then(r=>r.json());
+    if(!x.ok)throw new Error(x.error||'โหลดแพลนไม่สำเร็จ');if($('pdate').value!==d)return;
+    dsApply(x.data);DS.ver=x.ver||0;DS.at=x.at;DS.by=x.by||'';DS.edit=x.edit!==false;DS.last=dsSnap();DS.err=0;DS.ready=true;syncMall();_rA();dsBadge();return;}
+  catch(e){if(i===2){DS.err=1;dsBadge();toast('❌ โหลดแพลนวันนี้ไม่สำเร็จ: '+(e.message||e)+' · รีเฟรชหน้าอีกครั้ง (ยังไม่บันทึกทับ)');return;}await new Promise(r=>setTimeout(r,1500));}}}
+async function dsSave(force){clearTimeout(DS.t);DS.t=null;if(!DS.on||!DS.ready||!DS.edit||DS.busy)return;
+  const s=dsSnap();if(s===DS.last&&!force){dsBadge();return;}
+  DS.busy=true;dsBadge();const d=DS.date;
+  try{const x=await fetch(DS_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'save',userId:MY_UID,date:d,data:JSON.parse(s),ver:DS.ver,force:force===2})}).then(r=>r.json());
+    if(x.conflict){DS.busy=false;
+      const load=await askModal({icon:'👥',title:'มีคนแก้แพลนวันนี้ไปก่อน',ok:'โหลดฉบับล่าสุด',cancel:'บันทึกของฉันทับ',
+        html:'<p>'+(x.by?'<b>'+esc(x.by)+'</b> ':'')+'บันทึกแพลน '+esc(dateTH(d))+' หลังจากที่หน้านี้เปิดอยู่</p><p class="note">โหลดฉบับล่าสุด = ที่แก้ในหน้านี้หลังจากนั้นจะหาย · บันทึกทับ = ของอีกคนจะหาย (ยังกู้ได้จากประวัติ)</p>'});
+      if(load){await dsLoad(d);toast('โหลดแพลนฉบับล่าสุดแล้ว');}else{await dsSave(2);}return;}
+    if(!x.ok)throw new Error(x.error||'บันทึกไม่สำเร็จ');
+    if(DS.date===d){DS.ver=x.ver;DS.last=s;DS.at=x.at;DS.by=x.by||'';}DS.err=0;}
+  catch(e){DS.err=1;if(!DS.t)DS.t=setTimeout(()=>dsSave(),8000);}
+  finally{DS.busy=false;dsBadge();}
+  if(DS.ready&&DS.date===d&&dsSnap()!==DS.last)dsKick();}
+function dsKick(){if(!DS.on||!DS.ready||!DS.edit)return;clearTimeout(DS.t);DS.t=setTimeout(()=>dsSave(),1200);dsBadge();}
+const _rA=renderAll;
+if(DS.on){
+  renderAll=function(){_rA();dsKick();};
+  $('pdate').onchange=async()=>{const nd=$('pdate').value;if(DS.ready&&DS.date&&DS.date!==nd)await dsSave();
+    $('pday').textContent=dateTH(nd);await dsLoad(nd);};
+  window.addEventListener('beforeunload',e=>{if(DS.ready&&DS.edit&&(DS.t||DS.busy||dsSnap()!==DS.last)){dsSave();e.preventDefault();e.returnValue='';}});
+  document.addEventListener('visibilitychange',()=>{if(document.hidden&&DS.ready&&dsSnap()!==DS.last)dsSave();});
+  setInterval(()=>{if(DS.ready&&!DS.busy&&!DS.t&&dsSnap()!==DS.last)dsKick();},5000);
+  dsLoad($('pdate').value);
+}
+$('bSave').onclick=()=>{if(DS.on){if(!DS.ready){toast('⏳ รอโหลดแพลนวันนี้ก่อน');return;}if(!DS.edit){toast('บัญชีนี้ดูอย่างเดียว บันทึกไม่ได้');return;}dsSave(1).then(()=>toast(DS.err?'❌ ยังบันทึกไม่ได้ · ระบบจะลองใหม่เอง':'💾 บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว · ยังไม่ส่งถึงใครจนกว่าจะกด'+(PM==='mall'?(MALL.rev<0?'แจกงานห้าง':'ส่งฉบับแก้ไข'):'แจกงาน')));return;}
+  toast(PM==='mall'?'บันทึกแพลนห้างแล้ว (เดโม) · ยังไม่ถึงใครจนกว่าจะกด'+(MALL.rev<0?'แจกงานห้าง':'ส่งฉบับแก้ไข'):'บันทึกแพลน '+dateTH($('pdate').value)+' แล้ว (เดโม) · ยังไม่ส่งถึงคนขับจนกว่าจะกดแจกงาน');};
 document.querySelectorAll('#pmode [data-pm]').forEach(b=>b.onclick=()=>{if(b.dataset.pm!==PM)setPM(b.dataset.pm);});
 $('bSend').onclick=async()=>{if(PM==='mall'){sendMall();return;}
   const miss=missingAll();
