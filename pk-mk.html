@@ -204,6 +204,10 @@
   .seg{display:flex;flex-wrap:wrap;gap:6px}
   .ck{display:flex;gap:8px;align-items:center;padding:6px 4px;border-bottom:1px solid var(--line);font-size:13.5px;cursor:pointer}
   .ck small{color:var(--txt2)}
+  .pvh{display:grid;gap:6px;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--card2)}
+  .pvh>div{display:grid;grid-template-columns:96px 1fr;gap:8px;align-items:start}.pvh span{color:var(--txt2)}
+  .pvp{display:inline-block;background:var(--card);border:1px solid var(--line);border-radius:999px;padding:1px 9px;margin:0 4px 4px 0;font-size:12.5px;word-break:break-all}.pvn{color:var(--txt2)}
+  .pvf{width:100%;height:420px;border:1px solid var(--line);border-radius:10px;margin-top:10px;background:#eef1f4}
   .mprev{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff;color:#111;overflow:auto;margin-top:8px}
   .fld{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--txt2);font-weight:600;margin-top:8px}
   .fld input,.fld textarea{font:inherit;font-size:14px;font-weight:400;color:var(--txt);padding:8px 10px;border:1px solid var(--line2);border-radius:10px;background:var(--field)}
@@ -530,11 +534,18 @@ async function doPrint(f,b){
   setTimeout(()=>{ window.print(); document.title=t; },60);
 }
 
-/* ── เตรียมเมล (แอดมินคัดลอกไปส่งเอง) ── */
+/* ── ✉️ เตรียมเมล / ส่งแยกร้าน (v7 · 10 พ.ย. คุณน้อง "ปกติเขาไม่ได้ส่งรวม · ส่งในหน้านี้เลย · กดพรีวิวเมลจริงได้") ──
+   ติ๊กเฉพาะร้านที่จะส่ง → 👁 พรีวิวเมลจริง (ผู้รับ/หัวเรื่อง/เนื้อเมลจาก Edge = ของที่ส่งจริง) หรือ ✉️ ส่งเมลนี้ (ระบบส่งจาก ssbsmartsupply@gmail.com)
+   คัดลอกไปส่งเอง ยังใช้ได้ (สำรอง) · ประวัติส่งแยก = DOC.mail.parts
+   ข้อความท้ายตาราง (แจ้งจัดสินค้า): ร้าน "รับเอง" ไม่ต้องระบุ (คุณน้อง 10 พ.ย.) → ซ่อนช่อง · รอรายชื่อร้าน/บริษัทที่ต้องระบุการจัด → ใส่ใน PACK_SPEC */
 const MAIL={
-  acc:{t:'บัญชี + เซลส์ · เปิดราคา',priced:1,sub:(d,s)=>'แพลนจัดส่งสินค้า ประจำวันที่ '+d,hint:'FM-MK-15 · โชว์ราคา · ทุกร้านของวัน'},
-  wh:{t:'คลัง · ปิดราคา',priced:0,sub:(d,s)=>'แพลนจัดส่งสินค้า แจ้งจัด '+s+' '+d,hint:'FM-MK-14 · ไม่โชว์ราคา · ใส่วิธีจัดพาเลทด้านล่างได้',body:'แจ้งจัดสินค้า'}};
+  acc:{t:'บัญชี + เซลส์ · เปิดราคา',priced:1,sub:(d,s)=>'แพลนจัดส่งสินค้า ประจำวันที่ '+d,hint:'FM-MK-15 · โชว์ราคา'},
+  wh:{t:'คลัง · ปิดราคา',priced:0,sub:(d,s)=>'แพลนจัดส่งสินค้า แจ้งจัด '+s+' '+d,hint:'FM-MK-14 · ไม่โชว์ราคา',body:'แจ้งจัดสินค้า'}};
 let MK='acc';
+const PACK_SPEC=[];   // ชื่อร้าน/บริษัทที่ต้องระบุการจัดเสมอ (รอคุณน้องส่งรายชื่อ) · ว่าง = ทุกร้านที่ไม่ใช่รับเอง
+const isPickup=o=>/รับเอง|ลูกค้ารับ/.test(String(o.trans||'')+' '+String(o.wh||''));
+const needSpec=o=>PACK_SPEC.length?PACK_SPEC.some(s=>sameShop(s,o.shop)):!isPickup(o);
+const needNote=rows=>!!MAIL[MK].body&&rows.some(needSpec);
 function mailRows(){ return ROWS.map((o,k)=>Object.assign({},o,{_no:k+1})); }
 function mailHtml(rows,extra){
   const css='border-collapse:collapse;font-family:Tahoma,sans-serif;font-size:13px', td='border:1px solid #000;padding:3px 7px';
@@ -554,31 +565,90 @@ async function copyRich(html,text){
     const r=document.createRange(); r.selectNodeContents(d); const s=getSelection(); s.removeAllRanges(); s.addRange(r); const ok=document.execCommand('copy'); s.removeAllRanges(); d.remove(); return ok; }catch(e){ return false; }
 }
 async function copyText(t){ try{ await navigator.clipboard.writeText(t); return true; }catch(e){ const a=document.createElement('textarea'); a.value=t; document.body.appendChild(a); a.select(); const ok=document.execCommand('copy'); a.remove(); return ok; } }
+/* ร้านนี้ส่งแยกไปแล้วหรือยัง (กลุ่มที่เลือกอยู่) */
+const partsOf=g=>((DOC&&DOC.mail&&DOC.mail.parts)||[]).filter(p=>p&&p.g===g);
+function sentOf(g,no){ let last=null; partsOf(g).forEach(p=>{ if((p.nos||[]).indexOf(no)>=0) last=p; }); return last; }
 async function openMail(e){
   if(!(await needSaved(e&&e.currentTarget))) return;
+  const ed=ME.canEdit;
   const w=document.createElement('div'); w.className='dlg'; w.id='mailDlg'; document.body.appendChild(w);
   const close=()=>w.remove(); w.onclick=ev=>{if(ev.target===w)close();};
   const draw=()=>{
     const all=mailRows(), M=MAIL[MK], prevSel=w._sel||{};
-    w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="เตรียมเมล"><div class="dlg-h"><b>✉️ เตรียมเมล · ฉบับที่ '+DOC.rev+'<div class="sub">ทางสำรอง — คัดลอกหัวเรื่อง + เนื้อเมล ไปวางส่งจากเมลของแอดมินเอง (ปกติใช้ ✉️ บันทึก + ส่งเมล ให้ระบบส่ง)</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div>'
+    const chip=o=>{ const p=sentOf(MK,o._no); if(!p) return ''; return p.st==='sent'?' <span class="mchip ok">✓ ส่งแล้ว '+esc(tsTH(p.at))+'</span>':' <span class="mchip bad">✕ ส่งไม่สำเร็จ '+esc(tsTH(p.at))+'</span>'; };
+    const anySent=all.some(o=>{const p=sentOf(MK,o._no);return p&&p.st==='sent';});
+    w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="ส่งเมล"><div class="dlg-h"><b>✉️ ส่งเมล · ฉบับที่ '+DOC.rev+'<div class="sub">ติ๊กเฉพาะร้านที่จะส่งในเมลนี้ (ส่งแยกทีละร้านได้) · 👁 ดูเมลจริงก่อนส่ง'+(ed?' · ระบบส่งจาก ssbsmartsupply@gmail.com':' · ส่งได้เฉพาะแอดมิน Packing / DEV')+'</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div>'
+      +(ed&&MAILMODE==='test'?'<div class="testbox" style="margin-top:6px">🧪 <b>โหมดทดสอบ</b> — เมลที่ส่งจะขึ้นต้น [เทสระบบ] และมีป้ายแดง "ยังไม่ใช่แพลนจริง"</div>':'')
       +'<div class="seg" role="group" aria-label="ส่งถึง" style="margin-top:8px">'+Object.keys(MAIL).map(k=>'<button type="button" class="chip'+(k===MK?' on':'')+'" data-mk="'+k+'" aria-pressed="'+(k===MK)+'">'+esc(MAIL[k].t)+' <b>'+ROWS.length+'</b></button>').join('')+'</div>'
-      +'<div class="note" style="margin-top:6px">'+esc(M.hint)+'</div><div class="dlg-b">'
-      +(all.length?all.map(o=>'<label class="ck"><input type="checkbox" data-no="'+o._no+'"'+(prevSel[o._no]===false?'':' checked')+'><span><b>'+o._no+'. '+esc(o.shop)+'</b> <small>· '+esc(o.trans||'')+'</small></span></label>').join(''):'<div class="msg">ยังไม่มีร้านในแพลนนี้</div>')
+      +'<div class="note" style="margin-top:6px" id="mHint"></div><div class="dlg-b">'
+      +(all.length?'<div class="row" style="gap:6px;margin:0 0 4px;flex-wrap:wrap"><button class="btn sm ghost" data-pk="all">ติ๊กทั้งหมด</button><button class="btn sm ghost" data-pk="none">ไม่ติ๊ก</button>'+(anySent?'<button class="btn sm ghost" data-pk="unsent">เฉพาะที่ยังไม่ส่ง</button>':'')+'</div>':'')
+      +(all.length?all.map(o=>'<label class="ck"><input type="checkbox" data-no="'+o._no+'"'+(prevSel[o._no]===false?'':' checked')+'><span><b>'+o._no+'. '+esc(o.shop)+'</b> <small>· '+esc(o.trans||'')+'</small>'+chip(o)+'</span></label>').join(''):'<div class="msg">ยังไม่มีร้านในแพลนนี้</div>')
       +'<label class="fld">หัวเรื่องเมล<input id="mSub"></label>'
-      +(M.body?'<label class="fld">ข้อความท้ายตาราง ('+esc(M.body)+')<textarea id="mExtra" placeholder="'+(MK==='wh'?'เช่น 1. ถุง 1 ล ไชโย SB ให้จัดขา 15*6 ชั้น เลทละ 90 ลัง รวม 2 พาเลท … *** จัดใส่พาเลท LOSCAM ***':'เช่น แจ้งเปิดบิลค่ะ')+'">'+esc(w._ex&&w._ex[MK]||'')+'</textarea></label>':'')
+      +(M.body?'<label class="fld" id="mExW">ข้อความท้ายตาราง ('+esc(M.body)+')<textarea id="mExtra" placeholder="'+(MK==='wh'?'เช่น 1. ถุง 1 ล ไชโย SB ให้จัดขา 15*6 ชั้น เลทละ 90 ลัง รวม 2 พาเลท … *** จัดใส่พาเลท LOSCAM ***':'เช่น แจ้งเปิดบิลค่ะ')+'">'+esc(w._ex&&w._ex[MK]!=null?w._ex[MK]:(DOC.meta&&DOC.meta[MK+'Note'])||'')+'</textarea></label>':'')
       +'<div class="fld">ตัวอย่างเนื้อเมล</div><div class="mprev" id="mPrev"></div></div>'
-      +'<div class="row" style="margin-top:10px"><button class="btn ghost" data-x>ปิด</button><span class="grow"></span><button class="btn ol" id="mCS">📋 คัดลอกหัวเรื่อง</button><button class="btn" id="mCB">📋 คัดลอกเนื้อเมล</button></div></div>';
+      +'<div class="row" style="margin-top:10px;flex-wrap:wrap;gap:6px"><button class="btn ghost" data-x>ปิด</button><span class="grow"></span><button class="btn sm ghost" id="mCS">📋 คัดลอกหัวเรื่อง</button><button class="btn sm ghost" id="mCB">📋 คัดลอกเนื้อเมล</button>'
+      +(ed?'<button class="btn ol" id="mPV">👁 พรีวิวเมลจริง</button><button class="btn gold" id="mGo">✉️ ส่งเมลนี้</button>':'')+'</div></div>';
     const sel=()=>{ const s={}; w.querySelectorAll('input[data-no]').forEach(c=>s[c.dataset.no]=c.checked); w._sel=s; return all.filter(o=>s[o._no]!==false); };
-    const upd=(keepSub)=>{ const rows=sel(), ex=$('mExtra')?$('mExtra').value.trim():''; if(!keepSub) $('mSub').value=M.sub(dotBE(DATE),rows.map(o=>o.shop).join(', ')); $('mPrev').innerHTML=rows.length?mailHtml(rows,ex):'<div class="msg">เลือกร้านอย่างน้อย 1 ร้าน</div>'; $('mCB').disabled=!rows.length; };
+    const extra=rows=>needNote(rows)&&$('mExtra')?$('mExtra').value.trim():'';
+    const upd=(keepSub)=>{ const rows=sel(), nn=needNote(rows), ex=extra(rows);
+      if($('mExW')) $('mExW').style.display=nn?'':'none';
+      $('mHint').textContent=M.hint+(M.body?(nn?' · ใส่วิธีจัดพาเลทด้านล่างได้':rows.length?' · รับเอง ไม่ต้องใส่ข้อความท้ายตาราง':''):'');
+      if(!keepSub&&!w._se) $('mSub').value=M.sub(dotBE(DATE),rows.map(o=>o.shop).join(', '));
+      $('mPrev').innerHTML=rows.length?mailHtml(rows,ex):'<div class="msg">เลือกร้านอย่างน้อย 1 ร้าน</div>';
+      $('mCB').disabled=!rows.length;
+      if($('mGo')){ $('mGo').disabled=$('mPV').disabled=!rows.length; $('mGo').disabled=!rows.length||MAILMODE==='off'; $('mGo').textContent='✉️ ส่งเมลนี้'+(rows.length?' ('+rows.length+' ร้าน)':''); } };
     upd();
     w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close);
-    w.querySelectorAll('[data-mk]').forEach(x=>x.onclick=()=>{ MK=x.dataset.mk; w._sel={}; draw(); });
+    w.querySelectorAll('[data-mk]').forEach(x=>x.onclick=()=>{ MK=x.dataset.mk; w._sel={}; w._se=0; draw(); });
+    $('mSub').oninput=()=>{ w._se=1; };
     w.querySelectorAll('input[data-no]').forEach(c=>c.onchange=()=>upd());
+    w.querySelectorAll('[data-pk]').forEach(b=>b.onclick=()=>{ const k=b.dataset.pk; w.querySelectorAll('input[data-no]').forEach(c=>{ const p=sentOf(MK,+c.dataset.no); c.checked=k==='all'||(k==='unsent'&&!(p&&p.st==='sent')); }); upd(); });
     if($('mExtra')) $('mExtra').oninput=()=>{ (w._ex=w._ex||{})[MK]=$('mExtra').value; upd(true); };
     $('mCS').onclick=async()=>toast(await copyText($('mSub').value)?'📋 คัดลอกหัวเรื่องแล้ว':'❌ คัดลอกไม่ได้',0);
-    $('mCB').onclick=async()=>{ const rows=sel(), ex=$('mExtra')?$('mExtra').value.trim():''; toast(await copyRich(mailHtml(rows,ex),mailText(rows,ex))?'📋 คัดลอกเนื้อเมลแล้ว · วางในเมลได้เลย':'❌ คัดลอกไม่ได้ ลองลากคลุมตัวอย่างแล้วกด Ctrl+C',0); };
+    $('mCB').onclick=async()=>{ const rows=sel(), ex=extra(rows); toast(await copyRich(mailHtml(rows,ex),mailText(rows,ex))?'📋 คัดลอกเนื้อเมลแล้ว · วางในเมลได้เลย':'❌ คัดลอกไม่ได้ ลองลากคลุมตัวอย่างแล้วกด Ctrl+C',0); };
+    const payload=()=>{ const rows=sel(); return {date:DATE,rev:DOC.rev,grp:MK,nos:rows.map(o=>o._no),subject:$('mSub').value.trim(),note:extra(rows),_rows:rows}; };
+    if($('mPV')) $('mPV').onclick=ev=>realPreview(ev.currentTarget,payload(),()=>draw());
+    if($('mGo')) $('mGo').onclick=ev=>sendPart(ev.currentTarget,payload(),()=>draw());
   };
   draw();
+}
+/* 👁 พรีวิวเมลจริง — Edge สร้างเนื้อหา + ผู้รับ แบบเดียวกับตอนส่ง (ยังไม่ส่ง) */
+async function realPreview(btn,p,after){
+  const done=btnBusy(btn,'กำลังโหลด…'); let r;
+  try{ const q=Object.assign({},p); delete q._rows; r=await post(Object.assign({action:'mailPreview'},q)); }catch(e){ toast('❌ '+e.message,1); return; } finally{ done(); }
+  const w=document.createElement('div'); w.className='dlg'; document.body.appendChild(w);
+  const close=()=>w.remove(); w.onclick=ev=>{if(ev.target===w)close();};
+  const ppl=l=>l.length?l.map(x=>'<span class="pvp">'+(x.name?esc(x.name)+' ':'')+'&lt;'+esc(x.email)+'&gt;</span>').join(''):'<span class="pvn">—</span>';
+  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="พรีวิวเมลจริง"><div class="dlg-h"><b>👁 พรีวิวเมลจริง<div class="sub">หน้าตาที่ผู้รับจะเห็น · ยังไม่ได้ส่ง</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
+    +(r.mode==='off'?'<div class="warnbox">⛔ ปิดการส่งเมลอยู่ (PK_MAIL_MODE=off)</div>':'')
+    +(!r.to.length?'<div class="warnbox">⚠ ยังไม่ได้ตั้งผู้รับ "'+esc(GRPT[p.grp])+'" สำหรับร้านที่เลือก — ตั้งที่ 👥 ผู้รับเมล</div>':'')
+    +'<div class="pvh"><div><span>จาก</span><b>'+esc(r.from)+'</b></div><div><span>ถึง ('+r.to.length+')</span><div>'+ppl(r.to)+'</div></div><div><span>สำเนา ('+r.cc.length+')</span><div>'+ppl(r.cc)+'</div></div><div><span>หัวเรื่อง</span><b>'+esc(r.subject)+'</b></div></div>'
+    +'<iframe class="pvf" title="เนื้อเมล" sandbox="allow-same-origin"></iframe></div>'
+    +'<div class="row" style="margin-top:10px"><button class="btn ghost" data-x>← กลับไปแก้</button><span class="grow"></span><button class="btn gold" id="pvGo"'+(!r.to.length||r.mode==='off'?' disabled':'')+'>✉️ ส่งเมลนี้ ('+r.shops.length+' ร้าน)</button></div></div>';
+  w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close);
+  const f=w.querySelector('.pvf'); f.onload=()=>{ try{ f.style.height=Math.min(Math.max(f.contentDocument.documentElement.scrollHeight+4,200),2000)+'px'; }catch(e){} };
+  f.srcdoc='<!doctype html><meta charset="utf-8"><body style="margin:0;padding:12px;background:#eef1f4">'+r.html+'</body>';
+  $('pvGo').onclick=ev=>sendPart(ev.currentTarget,p,()=>{ close(); if(after) after(); },{to:r.to.length,cc:r.cc.length});
+}
+/* ✉️ ส่งเฉพาะร้านที่เลือก (รอผล ~5–20 วิ) */
+async function sendPart(btn,p,after,cnt){
+  if(BUSY) return;
+  if(!cnt){ try{ if(!MAILTO) await loadMailTo(); }catch(e){}
+    const st=new Set(p._rows.map(siteOf)), l=(MAILTO||[]).filter(x=>x.grp===p.grp&&(!x.site||st.has(x.site))); cnt={to:l.filter(x=>x.kind!=='cc').length,cc:l.filter(x=>x.kind==='cc').length}; }
+  if(!cnt.to){ toast('⚠️ ยังไม่ได้ตั้งผู้รับ "'+GRPT[p.grp]+'" · กด 👥 ผู้รับเมล',1); return; }
+  const names=p._rows.map(o=>o._no+'. '+o.shop).join('\n');
+  if(!(await askYes('ส่งเมล "'+GRPT[p.grp]+'"','ส่งเมล '+p._rows.length+' ร้าน\n'+names+'\n\nถึง '+cnt.to+' คน'+(cnt.cc?' · สำเนา '+cnt.cc+' คน':'')+' (+ สำเนาถึงคุณ ถ้ามีอีเมลในระบบ)'+(MAILMODE==='test'?'\n🧪 โหมดทดสอบ: หัวเรื่องขึ้นต้น [เทสระบบ]':''),'✉️ ส่งเลย'))) return;
+  const q=Object.assign({action:'sendPart'},p); delete q._rows;
+  const go=async again=>{ BUSY=true; const dn=btnBusy(btn,'กำลังส่ง…');
+    try{ const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({userId:MY_UID,again:!!again},q))}).then(x=>x.json());
+      if(r.dup&&!again){ dn(); BUSY=false; if(await askYes('ส่งซ้ำ?',(r.error||'ร้านชุดนี้เพิ่งส่งไป')+'\nส่งอีกครั้งไหม? ผู้รับจะได้เมลซ้ำ','✉️ ส่งซ้ำ',true)) return await go(true); return; }
+      if(r.mail&&DOC) DOC.mail=r.mail;
+      if(r.ok) toast('✅ ส่งเมลแล้ว · ถึง '+(r.part.to||0)+(r.part.cc?' · CC '+r.part.cc:''));
+      else toast('❌ ส่งไม่สำเร็จ: '+(r.error||''),1);
+      drawStrip(); if(after) after();
+    }catch(e){ toast('❌ '+e.message+' · ตรวจสถานะก่อนกดส่งอีกครั้ง',1); }
+    finally{ BUSY=false; dn(); } };
+  await go(false);
 }
 
 /* ── ✉️ ส่งเมลอัตโนมัติ (v4 · แบบเมล Bulk) ──
@@ -602,6 +672,7 @@ function mailStrip(){
       else if(s.st==='sent'){c='ok';t='✅ ส่งแล้ว '+tsTH(s.at)+' · ถึง '+(s.to||0)+(s.cc?' · CC '+s.cc:'');}
       else {c='bad';t='❌ '+(s.err||'ส่งไม่สำเร็จ');}
       return '<span class="mchip '+c+'" title="'+esc(t)+'"><b>'+GRPT[g]+'</b> '+esc(t)+(ed&&s&&s.st!=='sending'?' <button class="lnk" data-resend="'+g+'">'+(s.st==='sent'?'ส่งซ้ำ':'ส่งใหม่')+'</button>':'')+'</span>'; }).join('')
+    +((m.parts||[]).filter(p=>p&&GRPT[p.g]).slice(-8).map(p=>'<span class="mchip '+(p.st==='sent'?'ok':'bad')+'" title="'+esc(p.subject||'')+'"><b>'+GRPT[p.g]+'</b> '+esc((p.shops||[]).join(', '))+' '+(p.st==='sent'?'✅ '+esc(tsTH(p.at)):'❌ '+esc(p.err||'ส่งไม่สำเร็จ'))+'</span>').join(''))
     +'</div>';
 }
 function wireStrip(){ document.querySelectorAll('[data-resend]').forEach(b=>b.onclick=()=>resend(b,b.dataset.resend)); }
