@@ -1206,32 +1206,44 @@ function mpCalc(lines){const P=PK_PAL,part=[];let full=0,kg=0,cs=0;
     const per=s.per*s.lay,f=Math.floor(q/per),lo=q-f*per;full+=f;if(lo)part.push(Math.ceil(lo/s.per)*s.h);});
   part.sort((a,b)=>b-a);const mix=[];part.forEach(h=>{const m=mix.find(u=>u.h+h+P.h<=P.maxH);if(m)m.h+=h;else mix.push({h});});
   const pl=full+mix.length;return {cs,pal:pl,kg:Math.round(kg+pl*P.kg),mix:mix.length};}
-/* น้ำหนักบรรทุกตามขนาดงาน (เหมือน Loading Planner: เผื่อ 5% · 7-11 ไม่เกิน 20 ตัน/คัน) */
-function mpCap(size){const k=Object.keys(LPSZ).find(x=>LPSZ[x]===size),ty=PK_TYPES.find(x=>x.k===k);
-  return ty?{kg:Math.round(Math.min(ty.pay*(1-PK_PAYBUF/100),PK_CUSTMAX)),slots:ty.slots}:null;}
+/* น้ำหนักบรรทุก (10 พ.ย. คุณน้อง "ลูกค้าที่ไม่ใช่ 7 ควรใช้น้ำหนักที่บรรทุกได้ของรถคันนั้น"):
+   เลือกรถแล้ว + ขนาดตรงกัน = GVW − น้ำหนักรถ ของคันนั้น · ยังไม่เลือก = ค่ากลางตามขนาด (Loading Planner) · เผื่อ 5% ทั้งคู่
+   เพดาน 20 ตัน/คัน ใช้เฉพาะเที่ยวที่มีร้าน 7-11 (กติกา 7-11) */
+const is711=s=>!!s&&(Object.values(DCST).includes(s.id)||/7-?11|เซเว่น|ซีพี\s*ออลล์|cp\s*all/i.test(String(s.n||''))||!!(s.po&&s.po.length));
+function mpCap(size,v,stops){const k=Object.keys(LPSZ).find(x=>LPSZ[x]===size),ty=PK_TYPES.find(x=>x.k===k);
+  const own=v&&!v.tail&&v.gvw&&v.tare&&vSize(v)===size?v.gvw-v.tare:0,pay=own||(ty&&ty.pay);if(!pay)return null;
+  const c711=(stops||[]).some(is711),kg=pay*(1-PK_PAYBUF/100);
+  return {kg:Math.round(c711?Math.min(kg,PK_CUSTMAX):kg),slots:ty?ty.slots:0,own:!!own,c711,capped:c711&&kg>PK_CUSTMAX};}
 function mpLineTxt(l){const s=mpSku(l.k),q=Math.floor(n0(l.q));if(!s||!q)return s?'ลัง/พาเลท '+(s.per*s.lay)+' · '+s.kg+' กก./ลัง':'';
   const per=s.per*s.lay,f=Math.floor(q/per),lo=q-f*per;
   return (f?'<b>'+f+'</b> พาเลทเต็ม':'')+(f&&lo?' + ':'')+(lo?'เศษ <b>'+lo+'</b> ลัง ('+Math.ceil(lo/s.per)+' ชั้น)':'')+' · สินค้า '+comma(q*s.kg)+' กก. <span style="opacity:.7">· '+per+' ลัง/พาเลท</span>';}
 function mpBox(x,i){const L=x.lines||[];
-  return '<div class="mpl"><div class="mph">📦 สินค้า <span class="note">เลือกสินค้า + ใส่ลัง ระบบคิดพาเลท/น้ำหนักให้</span></div>'
+  return '<div class="mpl"><div class="mph">📦 สินค้า <span class="note">(ไม่บังคับ) เลือกสินค้า + ใส่ลัง ระบบคิดพาเลท/น้ำหนักให้ · ไม่เลือก = กรอก นน. เองด้านบน</span></div>'
    +L.map((l,li)=>'<div class="mpr"><select class="in" data-mpk="'+i+':'+li+'" aria-label="สินค้า"><option value="">— เลือกสินค้า —</option>'+PSKU.map(s=>'<option value="'+s.k+'"'+(l.k===s.k?' selected':'')+'>'+esc(s.n)+'</option>').join('')+'</select>'
      +'<input class="in" data-mpq="'+i+':'+li+'" inputmode="numeric" placeholder="ลัง" value="'+esc(l.q||'')+'" aria-label="จำนวนลัง">'
      +'<button type="button" class="ib" data-mprm="'+i+':'+li+'" aria-label="ลบสินค้านี้">✕</button><div class="mpx note" data-mpx="'+i+':'+li+'">'+mpLineTxt(l)+'</div></div>').join('')
    +(()=>{const r=mpCalc(L);return r.cs?'<div class="mpt">รวมจุดนี้ <b>'+r.pal+'</b> พาเลท · <b>'+comma(r.cs)+'</b> ลัง · <b>'+comma(r.kg)+'</b> กก.'+(r.mix?' <span class="note">(เศษรวมกันได้ '+r.mix+' พาเลท · รวมไม้พาเลทแล้ว)</span>':' <span class="note">(รวมไม้พาเลทแล้ว)</span>')+'</div>':'';})()
    +'<button type="button" class="btn sm" data-mpadd="'+i+'">＋ เพิ่มสินค้า</button></div>';}
-function mpSum(j){const cap=mpCap(j.size);let pl=0,kg=0,nokg=0;j.stops.forEach(s=>{pl+=n0(s.pal);if(n0(s.kg))kg+=n0(s.kg);else if(n0(s.pal)||n0(s.cs))nokg++;});
+function mpSum(j){const cap=mpCap(j.size,j.v,j.stops);let pl=0,kg=0,nokg=0;j.stops.forEach(s=>{pl+=n0(s.pal);if(n0(s.kg))kg+=n0(s.kg);else if(n0(s.pal)||n0(s.cs))nokg++;});
   if(!pl&&!kg)return '';const pct=cap&&cap.kg?kg/cap.kg:0,cls=pct>1?'bad':pct>.9?'w':'ok';
   return '<div class="box mpsum '+cls+'"><span class="lb">⚖️ น้ำหนักเทียบรถ '+esc(SZL[j.size]||j.size)+'</span>'
    +'<div class="mpbar"><i style="width:'+Math.min(100,Math.round(pct*100))+'%"></i></div>'
    +'<div class="mpk"><div><small>น้ำหนักรวม</small><b>'+comma(kg)+'</b> กก.</div><div><small>บรรทุกได้</small><b>'+(cap?comma(cap.kg):'-')+'</b> กก.</div><div><small>พาเลท</small><b>'+pl+'</b>'+(cap?' / พื้นรถ ~'+cap.slots:'')+'</div></div>'
    +(pct>1?'<div class="warn">⚠ เกินน้ำหนักบรรทุก '+comma(kg-cap.kg)+' กก. · แบ่งของไปอีกคัน หรือเปลี่ยนเป็นรถใหญ่ขึ้น</div>':pct>.9?'<div class="note">ใกล้เต็ม ('+Math.round(pct*100)+'%)</div>':'')
    +(cap&&pl>cap.slots?'<div class="warn">⚠ พาเลทเกินพื้นรถ (ไม่ซ้อน) · ตรวจการวาง/ซ้อนใน Loading Planner</div>':'')
-   +(nokg?'<div class="note">'+nokg+' จุดยังไม่มีน้ำหนัก (ใส่พาเลท/ลังเอง ไม่ได้เลือกสินค้า)</div>':'')
-   +'<div class="note">รวมไม้พาเลท '+PK_PAL.kg+' กก./ใบ · บรรทุกได้ = เผื่อ '+PK_PAYBUF+'% และ 7-11 ไม่เกิน '+(PK_CUSTMAX/1000)+' ตัน/คัน (ค่าเดียวกับ Loading Planner)</div></div>';}
-function mpSyncDom(stops){document.querySelectorAll('[data-mpk]').forEach(e=>{const [a,b]=e.dataset.mpk.split(':').map(Number);if(stops[a]&&stops[a].lines&&stops[a].lines[b])stops[a].lines[b].k=e.value;});
+   +(nokg?'<div class="note">'+nokg+' จุดยังไม่มีน้ำหนัก · ใส่ช่อง นน. (กก.) เอง หรือเลือกสินค้า</div>':'')
+   +'<div class="note">รวมไม้พาเลท '+PK_PAL.kg+' กก./ใบ · บรรทุกได้ = '+(cap&&cap.own?'น้ำหนักบรรทุกของรถคันนี้ (GVW − น้ำหนักรถ)':'ค่ากลางรถ'+esc(SZL[j.size]||j.size)+' (ยังไม่เลือกรถ)')+' เผื่อ '+PK_PAYBUF+'%'
+   +(cap&&cap.c711?' · มีร้าน 7-11 → ไม่เกิน '+(PK_CUSTMAX/1000)+' ตัน/คัน'+(cap.capped?' (ตัดเหลือ '+(PK_CUSTMAX/1000)+' ตัน)':''):'')+'</div></div>';}
+/* น้ำหนักรายจุด: เลือกสินค้า = คิดให้ (อ่านอย่างเดียว) · ไม่เลือกสินค้า = กรอก กก. เองได้ (10 พ.ย. คุณน้อง: ไม่บังคับใส่สินค้า · รถไร่ไม่ใช้รายการสินค้า) */
+function mpKgIn(s,i,auto){return '<label class="note" style="display:flex;flex-direction:column;gap:2px">นน. (กก.)'
+  +(auto?'<input class="in auto" readonly tabindex="-1" value="'+comma(s.kg||0)+'" title="คิดจากสินค้า">'
+   :'<input class="in" data-mkg="'+i+'" inputmode="numeric" placeholder="0" value="'+(n0(s.kg)?Math.round(n0(s.kg)):'')+'" style="width:92px" aria-label="น้ำหนักจุดนี้ (กก.)">')+'</label>';}
+function mpSyncDom(stops){document.querySelectorAll('[data-mkg]').forEach(e=>{const x=stops[+e.dataset.mkg];if(x&&!mpHas(x))x.kg=Math.min(60000,Math.max(0,Math.round(n0(e.value.replace(/[^\d.]/g,'')))));});
+document.querySelectorAll('[data-mpk]').forEach(e=>{const [a,b]=e.dataset.mpk.split(':').map(Number);if(stops[a]&&stops[a].lines&&stops[a].lines[b])stops[a].lines[b].k=e.value;});
   document.querySelectorAll('[data-mpq]').forEach(e=>{const [a,b]=e.dataset.mpq.split(':').map(Number);if(stops[a]&&stops[a].lines&&stops[a].lines[b])stops[a].lines[b].q=e.value.replace(/[^\d]/g,'');});
   stops.forEach(mpApply);}
 function mpWire(D,stops,syncF,drawF){
+  D.querySelectorAll('[data-mkg]').forEach(e=>e.onchange=()=>{syncF();drawF();});
   D.querySelectorAll('[data-mpadd]').forEach(b=>b.onclick=()=>{syncF();const x=stops()[+b.dataset.mpadd];(x.lines||(x.lines=[])).push({k:'',q:''});drawF();const s=D.querySelectorAll('[data-mpk^="'+b.dataset.mpadd+':"]');if(s.length)s[s.length-1].focus();});
   D.querySelectorAll('[data-mprm]').forEach(b=>b.onclick=()=>{syncF();const [a,c]=b.dataset.mprm.split(':').map(Number),x=stops()[a];x.lines.splice(c,1);if(!mpHas(x))x.kg=0;drawF();});
   D.querySelectorAll('[data-mpk]').forEach(e=>e.onchange=()=>{syncF();drawF();const n=D.querySelector('[data-mpq="'+e.dataset.mpk+'"]');if(n)n.focus();});
@@ -1261,13 +1273,13 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
     +(()=>{const auto=x.lines&&x.lines.some(l=>l.k&&n0(l.q)),ro=auto?' readonly tabindex="-1" class="in auto" title="คิดจากสินค้า"':' class="in"';
       return '<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input'+ro+' data-jpal="'+i+'" placeholder="0" value="'+esc(x.pal)+'"></label>'
        +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input'+ro+' data-jcs="'+i+'" placeholder="0" value="'+esc(x.cs)+'"></label>'
-       +(auto?'<label class="note" style="display:flex;flex-direction:column;gap:2px">กก.<input class="in auto" readonly tabindex="-1" value="'+comma(x.kg||0)+'"></label>':'');})()+'</div></div>'
+       +mpKgIn(x,i,auto);})()+'</div></div>'
     +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบจุดนี้">✕</button></div>'+(x.items&&x.items.length?'':mpBox(x,i))+'</div>';});
   h+='<input class="in" id="jsq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อห้าง" value="'+esc(JE.q)+'" autocomplete="off">';
   if(JE.q){const sN=s=>String(s||'').replace(/\s/g,'').toLowerCase().replace(/เอฟซี/g,'fc').replace(/ดีซี/g,'dc').replace(/แมคโคร|makro/g,'แม็คโคร');   /* "FC" เจอ "เอฟซี" ด้วย */
     const nq=sN(JE.q);const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&sN(x.n).includes(nq)).slice(0,12);
     h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
-  h+='</div>'+mpSum(j)+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
+  h+='</div>'+mpSum(Object.assign({},j,{v:j.head?VEH.find(x=>x.head===j.head):null}))+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
     +'<label class="note">รถขนส่ง<input class="in" id="jcar" list="carL" value="'+esc(j.carrier||'SSB')+'"></label>'
     +'<label class="note">เบิกค่าลงสินค้า<input class="in" id="junl" placeholder="'+esc(jUnlAuto(j)||'เช่น โอนค่าลงสินค้า 1500 บาท')+'" value="'+esc(j.unl||'')+'"></label></div>'
     +'<datalist id="carL"><option value="SSB"><option value="รถนอก"></datalist><div class="note">เว้นว่าง = คิดจากค่าลงของร้าน (ถ้ามีในระบบ)</div></div>';
@@ -2283,12 +2295,12 @@ function drawEditor(){
       +(()=>{const au=mpHas(s),ro=au?' readonly tabindex="-1" class="in auto" title="คิดจากสินค้า"':' class="in"';
         return '<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input'+ro+' data-pal="'+i+'" placeholder="0" value="'+esc(s.pal)+'"></label>'
          +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input'+ro+' data-cs="'+i+'" placeholder="0" value="'+esc(s.cs)+'"></label>'
-         +(au?'<label class="note" style="display:flex;flex-direction:column;gap:2px">กก.<input class="in auto" readonly tabindex="-1" value="'+comma(s.kg||0)+'"></label>':'');})()
+         +mpKgIn(s,i,au);})()
       +'<label class="note" style="display:flex;flex-direction:column;gap:2px">จังหวัด<input class="in" data-pv="'+i+'" placeholder="จังหวัด" value="'+esc(pvOf(s))+'" style="width:120px"></label>'
       +(feeOf(v,s)?'<span class="note" style="align-self:flex-end">ค่าลงสินค้า '+feeOf(v,s).toLocaleString('th-TH')+' บ.</span>':'')
       +(s.id==null?'<label class="note" style="display:flex;flex-direction:column;gap:2px">ประเภทร้าน<select class="in" data-ty="'+i+'" style="width:96px">'+TYPES.map(t=>'<option'+(tyOf(s)===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>':'')+'</div></div>'
       +'<div class="ac"><button class="ib" data-up="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-dn="'+i+'" aria-label="เลื่อนลง"'+(i<p.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-rm="'+i+'" aria-label="ลบจุดนี้">✕</button></div>'+(isMall(s)||(s.items&&s.items.length)?'':mpBox(s,i))+'</div>';});
-    h+=mpSum({size:vSize(v),stops:p.stops});
+    h+=mpSum({size:vSize(v),stops:p.stops,v});
     h+='<input class="in" id="sq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อร้าน'+(PM==='mall'?' (เฉพาะห้าง)':' (ร้านห้างเพิ่มที่แพลนห้าง)')+'" value="'+esc(ED.q)+'" autocomplete="off">';
     if(ED.q){const nq=ED.q.replace(/\s/g,'').toLowerCase(),hit=ST.filter(s=>s.n.replace(/\s/g,'').toLowerCase().includes(nq)),side=s=>(tyOf({id:s.id})==='ห้าง')===(PM==='mall');
       const r=hit.filter(side).slice(0,7),rx=hit.filter(s=>!side(s));
