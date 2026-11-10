@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-<title>แผนการส่งมอบ FM-MK · SSB Packing</title>
+<title>แผนการส่งมอบสินค้า FM-MK · SSB Packing</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
@@ -243,7 +243,7 @@
   <main class="main"><div class="wrap">
     <div class="bar">
       <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='pk-plan.html'" aria-label="กลับ">←</button>
-      <div><h1>แผนการส่งมอบ ยี่ปั๊ว (FM-MK-14 / 15)</h1><div class="sub">ทำแพลนรายวัน → บันทึก (เก็บทุกฉบับให้ออดิท) → พิมพ์ คลัง ปิดราคา / การตลาด เปิดราคา → เตรียมเมลให้แอดมินส่ง <span style="opacity:.6">· build 2026-11-10a</span></div></div>
+      <div><h1>แผนการส่งมอบสินค้า (FM-MK-14 / 15)</h1><div class="sub">ยี่ปั๊ว + งานห้าง ในแพลนเดียว → บันทึก (เก็บทุกฉบับให้ออดิท) → พิมพ์ คลัง ปิดราคา / การตลาด เปิดราคา → เตรียมเมลให้แอดมินส่ง <span style="opacity:.6">· build 2026-11-10b</span></div></div>
     </div>
     <div class="road" aria-hidden="true"></div>
     <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
@@ -256,8 +256,9 @@
 const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-mk';
 const EDGE_YP='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-yp';
 const EDGE_PROD='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-products';
+const EDGE_PKD='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-daily';
 const LIFF_ID='2010274217-Ot7vGhri';
-let MY_UID='', ME={canEdit:false,me:''}, DATE='', DOC=null, REVS=[], ROWS=[], DIRTY=false, YP=null, BUSY=false;
+let MY_UID='', ME={canEdit:false,me:''}, DATE='', DOC=null, REVS=[], ROWS=[], DIRTY=false, YP=null, BUSY=false, DAY=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function toast(t,err){const e=$('toast');e.textContent=String(t);e.className='toast on'+(err||/ไม่สำเร็จ|ไม่ได้|❌/.test(String(t))?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>e.className='toast',3400);}
@@ -288,6 +289,25 @@ async function api(q){const r=await fetch(EDGE+'?'+q+'&userId='+encodeURICompone
 async function loadYP(force){ if(YP&&!force) return YP;
   const r=await fetch(EDGE_YP+'?action=list&userId='+encodeURIComponent(MY_UID)).then(x=>x.json());
   if(!r.ok) throw new Error(r.error||'โหลดออเดอร์ไลน์ไม่สำเร็จ'); YP=r; return r; }
+/* งานห้าง: แพลน PO 7-11 (pk_mall_po ผ่าน pk-daily) → 1 แถว = 1 คลังต่อวันส่ง (รวมทุก PO/SO ของคลังนั้น) */
+const isoDmy=s=>{const m=String(s||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);if(!m)return '';const y=m[3].length===2?'20'+m[3]:m[3];return y+'-'+m[2].padStart(2,'0')+'-'+m[1].padStart(2,'0');};
+async function loadMall(d){
+  const past=d&&d<thToday();
+  const r=await fetch(EDGE_PKD+'?action=lpPos&userId='+encodeURIComponent(MY_UID)+(past?'&date='+d:'')).then(x=>x.json());
+  if(!r.ok) throw new Error(r.error||'โหลดแพลน PO ห้างไม่สำเร็จ');
+  if(!/^(db|db-old|hist)$/.test(r.lpSrc||'')) return [];   // sample = PO ตัวอย่าง / empty = ยังไม่มีแพลน → ไม่เอา
+  const g=new Map();
+  (r.lpPos||[]).forEach(p=>{ const iso=isoDmy(p.date); if(!iso) return; const dc=String(p.dc||''), code=(dc.match(/^W\d+/)||[''])[0]||dc.slice(0,20), k=iso+':'+code;
+    let e=g.get(k); if(!e){ e={key:k,date:iso,code,dc,so:[],po:[],lines:new Map()}; g.set(k,e); }
+    if(p.so&&e.so.indexOf(p.so)<0) e.so.push(p.so); e.po.push(p.po);
+    (p.lines||[]).forEach(l=>{ if(+l.q>0) e.lines.set(l.p,(e.lines.get(l.p)||0)+(+l.q)); }); });
+  return [...g.values()].filter(e=>e.lines.size);
+}
+const dcPlace=e=>e.dc.replace(/^W\d+\s*/,'').replace(/บมจ\.?\s*ซีพี\s*ออลล์|\((คลังดี|คลังสินค้าดี)\)|ศูนย์กระจายสินค้า(ภูมิภาค)?|คลัง|RDC/g,'').replace(/\s+/g,' ').trim();
+function fromMall(e){ const pl=dcPlace(e);
+  return {src:'mall',mid:e.key,shop:'7-11 '+e.code+(pl?' '+pl:''),loadAt:'หนองใหญ่',trans:'ส่ง'+(pl||e.code)+' '+dm(e.date),empty:'',so:e.so.join(', '),plate:'',driver:'',wh:'ขึ้นของ '+dm(addDay(e.date,-1))+' ส่ง '+dm(e.date),red:'',
+    items:[...e.lines].map(([n,q])=>({n,q:String(q),u:'ลัง',price:''}))};
+}
 async function openDate(d,rev){
   if(DIRTY&&!(await askYes('ยังไม่ได้บันทึก','แพลนวันที่ '+dm(DATE)+' ยังไม่ได้บันทึก\nเปลี่ยนไปวันอื่นจะทิ้งที่แก้ไว้','ทิ้งแล้วไปต่อ',true))) { render(); return; }
   DATE=d; $('body').innerHTML='<div class="msg">กำลังโหลดแพลน '+esc(thLong(d))+'…</div>';
@@ -295,9 +315,45 @@ async function openDate(d,rev){
     const r=await api('action=get&date='+d+(rev?'&rev='+rev:''));
     ME.canEdit=r.canEdit; ME.me=r.me||ME.me; REVS=r.revs||[]; DOC=r.doc; DIRTY=false;
     if(DOC){ ROWS=JSON.parse(JSON.stringify(DOC.rows||[])); }
-    else { ROWS=[]; if(ME.canEdit){ try{ const y=await loadYP(); ROWS=y.msgs.filter(m=>m.st!=='ignored'&&m.p&&(m.p.dlv===d||m.planDate===d)).map(fromMsg); DIRTY=ROWS.length>0; }catch(e){ toast('⚠ '+e.message,1); } } }
+    else { ROWS=[]; DAY=null; if(ME.canEdit){ ROWS=await draftDay(d); DIRTY=ROWS.length>0; } }
     render();
   }catch(e){ $('body').innerHTML='<div class="msg">'+(e.denied?'🔒 ':'❌ ')+esc(e.message)+(e.denied?'':'<br><button class="btn" style="margin-top:12px" onclick="openDate(DATE)">↻ ลองใหม่</button>')+'</div>'; }
+}
+/* ── ร่างแพลน = งานที่ขึ้นของวันนั้น (คุณน้อง: "งานที่จะส่ง แพลนขึ้นของวันนั้น ไม่ใช่แพลน Pending") ──
+   ① ใบแจ้งงาน PK ของวัน (pk_plans/pk_jobs · work_date = วันขึ้นของ) → ทุกจุดส่งบนรถ + ทะเบียน/คนขับ/ลัง
+      เติมสินค้า+ราคาจากออเดอร์ไลน์ยี่ปั๊ว (ชื่อร้านตรงกัน) / แพลน PO ห้าง (คลังเดียวกัน ส่งวันนั้นหรือวันถัดไป)
+   ② ลูกค้ายี่ปั๊วมารับเองวันนั้น (ขึ้นของที่โรงงาน/คลังบางนา ไม่ใช้รถเรา)
+   ③ ยังไม่มีใบแจ้งงาน PK → ยี่ปั๊วที่ "ลงแพลนรถ" วันนั้นแล้ว + PO ห้างที่ส่งคลังวันถัดไป (ไม่เอา Pending) */
+const DC_PLACE={W101:'บางบัวทอง',W501:'สุวรรณภูมิ',W901:'มหาชัย',W121:'ชลบุรี',W151:'นครสวรรค์',W131:'บุรีรัมย์',W801:'ขอนแก่น',W301:'ลำพูน',W401:'สุราษฎร์',W141:'หาดใหญ่'};
+const nm=s=>String(s||'').replace(/\(.*?\)/g,'').replace(/ส่ง.*$|วางบิล.*$|รับเช็ค.*$/,'').replace(/ร้าน|คุณ|บริษัท|จำกัด|หจก\.?|[\s.\-+,/]/g,'').toLowerCase();
+const sameShop=(a,b)=>{ a=nm(a); b=nm(b); return a.length>=2&&b.length>=2&&(a.indexOf(b)>=0||b.indexOf(a)>=0); };
+async function loadDay(d){ const r=await api('action=day&date='+d); return r; }
+async function draftDay(d){
+  const [dy,y,ml]=await Promise.allSettled([loadDay(d),loadYP(),loadMall(d)]);
+  const warn=x=>toast('⚠ '+(x.reason&&x.reason.message||x.reason),1);
+  const day=dy.status==='fulfilled'?dy.value:(warn(dy),{plan:null,jobs:[]}); DAY=day;
+  const msgs=y.status==='fulfilled'?y.value.msgs.filter(m=>m.st!=='ignored'&&m.p):(warn(y),[]);
+  const malls=ml.status==='fulfilled'?ml.value.filter(e=>e.date===d||e.date===addDay(d,1)):(warn(ml),[]);
+  const used=new Set(), out=[];
+  (day.jobs||[]).forEach(j=>j.stops.forEach((s,i)=>{
+    const txt=s.n+' '+s.st, isMall=/7-?11|เซเว่น|ซีพี\s*ออลล์/i.test(txt);
+    let row=null;
+    if(isMall){ const g=malls.filter(e=>!used.has(e.key)&&DC_PLACE[e.code]&&txt.indexOf(DC_PLACE[e.code])>=0);
+      if(g.length){ const twins=(day.jobs||[]).reduce((a,jj)=>a+jj.stops.filter(ss=>(ss.n+' '+ss.st).indexOf(DC_PLACE[g[0].code])>=0).length,0);
+        row=fromMall(g[0]); if(twins>1){ row.items=[{n:'',q:s.cs,u:'ลัง',price:''}]; row.red='คลังนี้มี '+twins+' คัน · ใส่สินค้าตาม PO ที่ขึ้นคันนี้'; } else used.add(g[0].key); } }
+    else { const m=msgs.find(m=>!used.has(m.mid)&&!m.p.pickup&&(m.planDate===d||(m.p.dlv>=addDay(d,-1)&&m.p.dlv<=addDay(d,3)))&&(sameShop(m.p.shop,s.n)||(s.st&&sameShop(m.p.shop,s.st))));
+      if(m){ used.add(m.mid); row=fromMsg(m); } }
+    if(!row) row={src:'manual',mid:'job:'+j.no+'.'+i,shop:s.n||s.st,loadAt:'หนองใหญ่',trans:'ส่ง'+(s.st||s.n),empty:'',so:'',plate:'',driver:'',wh:'',red:'',items:[{n:'',q:s.cs,u:'ลัง',price:''}]};
+    row.plate=j.plate||row.plate; row.driver=j.driver||row.driver;
+    const dl=row.src==='mall'?row.mid.slice(0,10):row.src==='line'?((msgs.find(m=>m.mid===row.mid)||{}).p||{}).dlv:'';
+    row.wh='ขึ้นของ '+dm(d)+(dl&&dl!==d?' ส่ง '+dm(dl):'');
+    out.push(row); }));
+  msgs.filter(m=>!used.has(m.mid)&&m.p.pickup&&m.p.dlv===d).forEach(m=>{ used.add(m.mid); out.push(fromMsg(m)); });
+  if(!day.plan){
+    msgs.filter(m=>!used.has(m.mid)&&!m.p.pickup&&m.st==='planned'&&m.planDate===d).forEach(m=>{ used.add(m.mid); const r=fromMsg(m); r.wh='ขึ้นของ '+dm(d)+(m.p.dlv&&m.p.dlv!==d?' ส่ง '+dm(m.p.dlv):''); out.push(r); });
+    malls.filter(e=>e.date===addDay(d,1)).forEach(e=>out.push(fromMall(e)));   // PO ห้างส่งพรุ่งนี้ = ขึ้นของวันนี้
+  }
+  return out;
 }
 /* ออเดอร์ไลน์ (pk-yp) → แถวในแพลน · แอดมินแก้ต่อได้ทุกช่อง */
 function placeOf(p){
@@ -316,7 +372,7 @@ function fromMsg(m){ const p=m.p||{}, k=p.pick||{}, d=p.dlv||m.planDate||'';
   const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
   const head=p.pickup?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+placeOf(p);
   return {src:'line',mid:m.mid,shop:p.shop||'',loadAt:p.pickAt||'หนองใหญ่',trans:[head].concat(fl).join(' + ')+(d?' '+dm(d):''),
-    empty:'',so:'',plate:p.pickup?(k.plate||''):'',driver:p.pickup?(k.driver||''):'',wh:p.pickup?'':(d?'ส่ง '+dm(d):''),red:'',items};
+    empty:'',so:'',plate:p.pickup?(k.plate||''):'',driver:p.pickup?(k.driver||''):'',wh:p.pickup?(d?'ลูกค้ารับ '+dm(d):''):(d?'ส่ง '+dm(d):''),red:'',items};
 }
 async function save(b){
   if(BUSY) return false; const err=validate(); if(err){ toast('⚠️ '+err,1); return false; }
@@ -330,7 +386,8 @@ async function save(b){
 }
 function validate(){
   if(!ROWS.length) return 'ยังไม่มีร้านในแพลน';
-  for(let i=0;i<ROWS.length;i++){ const o=ROWS[i]; if(!String(o.shop||'').trim()) return 'ร้านลำดับ '+(i+1)+' ยังไม่มีชื่อบริษัท'; if(!o.items.some(x=>String(x.n||'').trim()||String(x.q||'').trim())) return (o.shop||'ลำดับ '+(i+1))+' ยังไม่มีสินค้า'; }
+  for(let i=0;i<ROWS.length;i++){ const o=ROWS[i]; if(!String(o.shop||'').trim()) return 'ร้านลำดับ '+(i+1)+' ยังไม่มีชื่อบริษัท'; if(!o.items.some(x=>String(x.n||'').trim()||String(x.q||'').trim())) return (o.shop||'ลำดับ '+(i+1))+' ยังไม่มีสินค้า';
+    if(o.items.some(x=>String(x.q||'').trim()&&!String(x.n||'').trim())) return (o.shop||'ลำดับ '+(i+1))+' ยังไม่ได้ใส่ชื่อสินค้า'; }
   return '';
 }
 
@@ -346,10 +403,13 @@ function render(){
     +'<span class="grow"></span><button class="btn sm ol" id="bHist">📚 เอกสารย้อนหลัง</button></div>'
     +'<div class="kpis"><div class="kpi"><b>'+ROWS.length+'</b><span>ร้านในแพลน</span></div><div class="kpi"><b>'+ny+'</b><span>🏭 ขึ้นของหนองใหญ่</span></div><div class="kpi"><b>'+bn+'</b><span>🏬 ขึ้นของคลังบางนา</span></div><div class="kpi"><b>'+ROWS.reduce((a,o)=>a+o.items.length,0)+'</b><span>รายการสินค้า</span></div></div>'
     +'<div class="tools" style="margin-top:10px">'
-    +(ed?'<button class="btn sm ol" id="bYp">⬇ ดึงออเดอร์จากไลน์</button><button class="btn sm ol" id="bAdd">＋ เพิ่มร้านเอง</button><button class="btn sm" id="bSave"'+(DIRTY?'':' disabled')+'>💾 บันทึกเป็นฉบับใหม่</button>':'')
+    +(ed?'<button class="btn sm ol" id="bYp">⬇ ดึงยี่ปั๊ว (ไลน์)</button><button class="btn sm ol" id="bMall">⬇ ดึงงานห้าง (PO)</button><button class="btn sm ol" id="bAdd">＋ เพิ่มร้านเอง</button><button class="btn sm" id="bSave"'+(DIRTY?'':' disabled')+'>💾 บันทึกเป็นฉบับใหม่</button>':'')
     +'<span class="grow"></span><button class="btn sm pr14" data-print="14">🖨 FM-MK-14 คลัง · ปิดราคา</button><button class="btn sm pr15" data-print="15">🖨 FM-MK-15 การตลาด · เปิดราคา</button><button class="btn sm gold" id="bMail">✉️ เตรียมเมล</button></div>'
+    +(!DOC&&ed&&DAY?'<div class="note" style="margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--card2);border:1px solid var(--line)">'+(DAY.plan
+        ?'🚚 ร่างจากใบแจ้งงาน PK ขึ้นของวันที่ '+esc(dm(DATE))+' · '+DAY.jobs.length+' คัน · สินค้า/ราคาเติมจากออเดอร์ไลน์ยี่ปั๊ว และแพลน PO ห้าง · จุดที่ขึ้น "ใบแจ้งงาน PK" = หาออเดอร์ไม่เจอ ต้องใส่สินค้าเอง'
+        :'⚠ ยังไม่มีใบแจ้งงาน PK ของวันที่ '+esc(dm(DATE))+' (อัปในหน้าแจกงาน Packing) · ร่างนี้มีเฉพาะลูกค้ารับเอง + ยี่ปั๊วที่ลงแพลนรถวันนี้แล้ว + PO ห้างที่ส่งคลังพรุ่งนี้ (ยังไม่มีทะเบียน/คนขับ) · Pending ไม่นำมาลง')+'</div>':'')
     +'<div class="note" style="margin-top:8px">บันทึกแต่ละครั้ง = ฉบับใหม่ ฉบับเก่าเก็บไว้ทั้งหมด (แก้/ลบไม่ได้) ให้ออดิทเรียกดูย้อนหลัง · ต้องบันทึกก่อนพิมพ์/ส่งเมล · ระบบไม่ส่งเมลเอง'+(ed?'':' · ดูได้อย่างเดียว (แก้ได้เฉพาะแอดมิน Packing / DEV)')+'</div></div>';
-  h+='<div class="card'+(ed?'':' ro')+'" id="ords">'+(ROWS.length?ROWS.map(ordHtml).join(''):'<div class="msg">'+(ed?'ยังไม่มีร้าน — กด ⬇ ดึงออเดอร์จากไลน์ หรือ ＋ เพิ่มร้านเอง':'ยังไม่มีแพลนวันนี้')+'</div>')+'</div>';
+  h+='<div class="card'+(ed?'':' ro')+'" id="ords">'+(ROWS.length?ROWS.map(ordHtml).join(''):'<div class="msg">'+(ed?'ยังไม่มีร้าน — กด ⬇ ดึงยี่ปั๊ว / ⬇ ดึงงานห้าง หรือ ＋ เพิ่มร้านเอง':'ยังไม่มีแพลนวันนี้')+'</div>')+'</div>';
   $('body').innerHTML=h; wire();
 }
 function ordHtml(o,i){
@@ -357,10 +417,10 @@ function ordHtml(o,i){
   return '<div class="ord '+(o.loadAt==='บางนา'?'bn':'ny')+'"><div class="oh"><span class="no">'+(i+1)+'</span>'
     +'<input class="shop" data-o="'+i+'" data-k="shop" value="'+esc(o.shop)+'" placeholder="บริษัท / ร้าน" aria-label="บริษัท">'
     +'<select data-o="'+i+'" data-k="loadAt" aria-label="ที่ขึ้นของ"><option value="หนองใหญ่"'+(o.loadAt!=='บางนา'?' selected':'')+'>🏭 ขึ้นของ หนองใหญ่</option><option value="บางนา"'+(o.loadAt==='บางนา'?' selected':'')+'>🏬 ขึ้นของ คลังบางนา</option></select>'
-    +'<span class="badge">'+(o.src==='line'?'จากไลน์':'เพิ่มเอง')+'</span>'
+    +'<span class="badge">'+(o.src==='line'?'ยี่ปั๊ว · ไลน์':o.src==='mall'?'งานห้าง · PO':/^job:/.test(o.mid||'')?'ใบแจ้งงาน PK':'เพิ่มเอง')+'</span>'
     +'<button class="ib" data-mv="'+i+'" data-d="-1" title="เลื่อนขึ้น" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-mv="'+i+'" data-d="1" title="เลื่อนลง" aria-label="เลื่อนลง"'+(i<ROWS.length-1?'':' disabled')+'>↓</button><button class="ib" data-del="'+i+'" title="เอาร้านนี้ออก" aria-label="เอาร้านนี้ออก">✕</button></div>'
     +'<table class="it"><thead><tr><th>ชนิดน้ำมัน / สินค้า</th><th class="q">จำนวน</th><th class="u">หน่วย</th><th class="p">ราคา</th><th></th></tr></thead><tbody>'
-    +o.items.map((x,j)=>'<tr><td><input list="dlProd" data-o="'+i+'" data-j="'+j+'" data-k="n" value="'+esc(x.n)+'" aria-label="สินค้า"></td><td class="q"><input data-o="'+i+'" data-j="'+j+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td class="u"><input data-o="'+i+'" data-j="'+j+'" data-k="u" value="'+esc(x.u)+'" list="dlUnit" aria-label="หน่วย"></td><td class="p"><input data-o="'+i+'" data-j="'+j+'" data-k="price" value="'+esc(x.price)+'" placeholder="ราคา / แถม / ***" aria-label="ราคา"></td><td><button class="ib" data-deli="'+i+'" data-j="'+j+'" title="ลบรายการ" aria-label="ลบรายการ">✕</button></td></tr>').join('')
+    +o.items.map((x,j)=>'<tr><td><input list="dlProd" data-o="'+i+'" data-j="'+j+'" data-k="n" value="'+esc(x.n)+'" placeholder="ใส่ชื่อสินค้า" aria-label="สินค้า"></td><td class="q"><input data-o="'+i+'" data-j="'+j+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td class="u"><input data-o="'+i+'" data-j="'+j+'" data-k="u" value="'+esc(x.u)+'" list="dlUnit" aria-label="หน่วย"></td><td class="p"><input data-o="'+i+'" data-j="'+j+'" data-k="price" value="'+esc(x.price)+'" placeholder="ราคา / แถม / ***" aria-label="ราคา"></td><td><button class="ib" data-deli="'+i+'" data-j="'+j+'" title="ลบรายการ" aria-label="ลบรายการ">✕</button></td></tr>').join('')
     +'</tbody></table><button class="btn sm ghost addit" data-addi="'+i+'">＋ สินค้า</button>'
     +'<div class="og">'+inp('trans','ขนส่ง (เช่น ส่งเพชรบุรี + รับเช็ค 9/11)',1)+inp('empty','ลังเปล่า / หมายเหตุแดง (*…*)')+inp('so','หมายเหตุ · เลข SO (P2/…)')+inp('plate','ทะเบียนรถ')+inp('driver','ชื่อคนขับรถ')+inp('wh','คลังสินค้า ระบุเวลา (ขึ้นของ 8/11 ส่ง 9/11)',1)+inp('red','ข้อความแดงใต้ร้าน (เช่น ***เอกสารทุกอย่าง ส่งตามที่อยู่หน้าบิล***)',1)+'</div></div>';
 }
@@ -372,6 +432,7 @@ function wire(){
   $('bHist').onclick=openHist; $('bMail').onclick=openMail;
   document.querySelectorAll('[data-print]').forEach(b=>b.onclick=()=>doPrint(b.dataset.print,b));
   if($('bYp')) $('bYp').onclick=e=>openYp(e.currentTarget);
+  if($('bMall')) $('bMall').onclick=e=>openMallPick(e.currentTarget);
   if($('bAdd')) $('bAdd').onclick=()=>{ ROWS.push({src:'manual',mid:'',shop:'',loadAt:'หนองใหญ่',trans:'',empty:'',so:'',plate:'',driver:'',wh:'',red:'',items:[{n:'',q:'',u:'ลัง',price:''}]}); DIRTY=true; render(); const s=document.querySelectorAll('.ord .shop'); s[s.length-1].focus(); };
   if($('bSave')) $('bSave').onclick=e=>save(e.currentTarget);
   const box=$('ords');
@@ -388,14 +449,29 @@ function wire(){
 async function openYp(b){
   const done=btnBusy(b,'กำลังโหลด…'); let y; try{ y=await loadYP(true); }catch(e){ toast('❌ '+e.message,1); return; } finally{ done(); }
   const inDoc=new Set(ROWS.map(o=>o.mid).filter(Boolean));
-  const ms=y.msgs.filter(m=>m.st!=='ignored'&&!inDoc.has(m.mid)).sort((a,c)=>{const ka=(a.p.dlv===DATE||a.planDate===DATE)?0:1,kc=(c.p.dlv===DATE||c.planDate===DATE)?0:1;return ka-kc||String(c.at).localeCompare(String(a.at));});
+  const ms=y.msgs.filter(m=>m.st!=='ignored'&&m.p&&(m.p.pickup||m.st==='planned')&&!inDoc.has(m.mid)).sort((a,c)=>{const ka=(a.p.dlv===DATE||a.planDate===DATE)?0:1,kc=(c.p.dlv===DATE||c.planDate===DATE)?0:1;return ka-kc||String(c.at).localeCompare(String(a.at));});
   const w=document.createElement('div'); w.className='dlg';
-  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="ดึงออเดอร์จากไลน์"><div class="dlg-h"><b>⬇ ดึงออเดอร์จากไลน์<div class="sub">ออเดอร์ที่เซลส์พิมพ์ในกลุ่ม 14 วันล่าสุด · ติ๊กไว้ให้แล้ว = ส่ง/รับวันที่ '+esc(dm(DATE))+'</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
-    +(ms.length?ms.map((m,i)=>{const p=m.p,on=p.dlv===DATE||m.planDate===DATE;return '<label class="ck"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'><span><b>'+esc(p.shop)+'</b> <small>· '+(p.pickup?'รับเอง':'ส่ง')+' '+(p.dlv?esc(dm(p.dlv)):'ไม่พบวัน')+(p.pickAt?' · '+esc(p.pickAt):'')+' · '+(p.cs?p.cs+' ลัง':'')+(p.tk?' '+p.tk+' ถัง':'')+(m.st==='planned'?' · ลงแพลนแล้ว':'')+'</small></span></label>';}).join(''):'<div class="msg">ไม่มีออเดอร์ใหม่จากไลน์</div>')
+  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="ดึงออเดอร์จากไลน์"><div class="dlg-h"><b>⬇ ดึงออเดอร์จากไลน์<div class="sub">เฉพาะออเดอร์ที่ลงแพลนรถแล้ว + ลูกค้ามารับเอง (Pending ที่ยังไม่ลงรถไม่แสดง) · ติ๊กไว้ให้แล้ว = ขึ้นของวันที่ '+esc(dm(DATE))+'</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
+    +(ms.length?ms.map((m,i)=>{const p=m.p,on=p.dlv===DATE||m.planDate===DATE;return '<label class="ck"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'><span><b>'+esc(p.shop)+'</b> <small>· '+(p.pickup?'รับเอง':'ส่ง')+' '+(p.dlv?esc(dm(p.dlv)):'ไม่พบวัน')+(p.pickAt?' · '+esc(p.pickAt):'')+' · '+(p.cs?p.cs+' ลัง':'')+(p.tk?' '+p.tk+' ถัง':'')+(m.st==='planned'?' · ลงแพลนแล้ว':'')+'</small></span></label>';}).join(''):'<div class="msg">ไม่มีออเดอร์ที่ลงแพลนรถแล้ว / ลูกค้ารับเอง<br><small>(ออเดอร์ Pending ต้องลงแพลนรถในหน้าแพลนรถประจำวันก่อน)</small></div>')
     +'</div><div class="row" style="margin-top:10px"><button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="ypGo">เพิ่มเข้าแพลน</button></div></div>';
   document.body.appendChild(w); const close=()=>w.remove();
   w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close); w.onclick=e=>{if(e.target===w)close();};
   $('ypGo').onclick=()=>{ const pick=[...w.querySelectorAll('input[data-i]:checked')].map(c=>ms[+c.dataset.i]); close(); if(!pick.length) return; pick.forEach(m=>ROWS.push(fromMsg(m))); DIRTY=true; render(); toast('เพิ่ม '+pick.length+' ร้าน · ตรวจ/เติมเลข SO ทะเบียน คนขับ แล้วกดบันทึก'); };
+}
+
+/* ── ดึงงานห้าง (แพลน PO 7-11 ที่แอดมินห้างนำเข้าในหน้าแพลนรถประจำวัน) ── */
+async function openMallPick(b){
+  const done=btnBusy(b,'กำลังโหลด…'); let gs; try{ gs=await loadMall(DATE); }catch(e){ toast('❌ '+e.message,1); return; } finally{ done(); }
+  const inDoc=new Set(ROWS.map(o=>o.mid).filter(Boolean));
+  const D1=addDay(DATE,1);   // ขึ้นของวันนี้ = ส่งคลังพรุ่งนี้ (วันขึ้นของ = วันก่อนวันส่ง ตาม Loading Planner)
+  const ms=gs.filter(e=>!inDoc.has(e.key)).sort((a,c)=>(a.date===D1?0:1)-(c.date===D1?0:1)||a.date.localeCompare(c.date)||a.code.localeCompare(c.code));
+  const w=document.createElement('div'); w.className='dlg';
+  w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="ดึงงานห้าง"><div class="dlg-h"><b>⬇ ดึงงานห้าง (แพลน PO)<div class="sub">จากแพลน PO ที่นำเข้าในหน้าแพลนรถประจำวัน · 1 แถว = 1 คลังต่อวันส่ง · ติ๊กไว้ให้แล้ว = ขึ้นของ '+esc(dm(DATE))+' (ส่งคลัง '+esc(dm(D1))+')</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
+    +(ms.length?ms.map((e,i)=>{const cs=[...e.lines.values()].reduce((a,q)=>a+q,0);return '<label class="ck"><input type="checkbox" data-i="'+i+'"'+(e.date===D1?' checked':'')+'><span><b>7-11 '+esc(e.code)+' '+esc(dcPlace(e))+'</b> <small>· ขึ้นของ '+esc(dm(addDay(e.date,-1)))+' ส่ง '+esc(dm(e.date))+' · '+e.po.length+' PO · '+qty(cs)+' ลัง · '+e.lines.size+' รายการ</small></span></label>';}).join(''):'<div class="msg">ไม่มีงานห้างที่ยังไม่อยู่ในแพลนนี้<br><small>(แพลน PO นำเข้าที่หน้า แพลนรถประจำวัน → งานห้าง → 📥 นำเข้าแพลน PO)</small></div>')
+    +'</div><div class="row" style="margin-top:10px"><button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="mlGo">เพิ่มเข้าแพลน</button></div></div>';
+  document.body.appendChild(w); const close=()=>w.remove();
+  w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close); w.onclick=e=>{if(e.target===w)close();};
+  $('mlGo').onclick=()=>{ const pick=[...w.querySelectorAll('input[data-i]:checked')].map(c=>ms[+c.dataset.i]); close(); if(!pick.length) return; pick.forEach(e=>ROWS.push(fromMall(e))); DIRTY=true; render(); toast('เพิ่มงานห้าง '+pick.length+' คลัง · ใส่ราคา/ทะเบียน/คนขับ แล้วกดบันทึก'); };
 }
 
 /* ── เอกสาร FM-MK-14 (คลัง ปิดราคา) / FM-MK-15 (การตลาด เปิดราคา) ── */
@@ -511,7 +587,7 @@ const NAV=[{sec:'งาน Packing'},
   {ic:'box',t:'แจกงาน Packing',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-plan.html'},
   {ic:'dash',t:'แพลนรถประจำวัน',s:'เดโม · จัดงานในเว็บ',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-daily.html'},
   {ic:'db',t:'ฐานข้อมูลสินค้า',s:'รหัส SAP · ขนาด · พาเลท',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-products.html'},
-  {ic:'doc',t:'แผนการส่งมอบ ยี่ปั๊ว',s:'FM-MK-14/15 · เตรียมเมล',on:1,act:'navTop()'},
+  {ic:'doc',t:'แผนการส่งมอบสินค้า',s:'ยี่ปั๊ว + ห้าง · FM-MK-14/15',on:1,act:'navTop()'},
   {sec:'ระบบขนส่ง'},
   {ic:'dash',t:'Command Center',tag:'gold',url:'/ManageDrivers/'},
   {ic:'track',t:'ติดตามสถานะ',s:'ไทม์ไลน์รายออเดอร์',url:'/Order_Status/'},
