@@ -1694,6 +1694,15 @@ function planSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=
         stops:S.map(s=>({n:s.rt?'↩ '+rtTxt(s.rt)+' · '+s.n:s.n,ty:tyOf(s),pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:feeOf(v,s)||0})),
         hl,ht:/^[0-9]{1,2}[:.][0-9]{2}$/.test(String(p.htime||'').trim())?tmTH(String(p.htime).trim()):String(p.htime||'').trim(),note:String(p.note||'').trim()});});
     if(rows.length)groups.push({g,rows});});
+  /* 10 พ.ย. คุณน้อง "ปริ้นแพลน รถนอกไม่ขึ้น": ใบแจ้งงานแพลนรวมใส่หมวด 🚜 รถไร่ (คำขอที่ไร่ได้รถ/คนขับแล้ว · ตัวกรองเดียวกับตารางบนจอ) · ค่าลงไม่คิด (รถนอก) */
+  if(FILTER==='all'||FILTER==='job'){const q=(Q||'').trim().toLowerCase();
+    const fr=frPlanList().map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),JS=!!(j&&j.stops&&j.stops.length);return {r,j,JS,S:JS?j.stops:(r.stops||[])};})
+      .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord].concat(S.map(s=>s.n||jsN(s))).join(' ').toLowerCase().includes(q));
+    const rows=fr.map(({r,j,JS,S})=>{const pls=String(r.plate||'').split(',').map(s=>s.trim()).filter(Boolean),jn=j?String(j.note||'').trim():'';
+      return {no:++no,plate:pls.join(' / ')||'รอทะเบียน',pls:pls.length?pls:['รอทะเบียน'],shape:'🚜 รถไร่'+(r.vt?' · '+r.vt:''),drv:r.drv||'',k:'job',status:'',
+        stops:(S.length?S:[{n:r.dest}]).map(s=>({n:s.n||jsN(s),ty:JS?tyOf(s):'ห้าง',pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:0})),
+        hl:[],ht:'',note:[jn&&'📝 '+jn,'ใบขอ '+r.rid,r.ord,r.need&&'เข้าโหลด '+r.need].filter(Boolean).join(' · ')};});
+    if(rows.length)groups.push({g:'🚜 รถไร่',rows});}
   const rows=groups.flatMap(x=>x.rows),sum=k=>rows.reduce((a,r)=>a+r.stops.reduce((b,s)=>b+s[k],0),0),job=rows.filter(r=>r.k==='job');
   const dd=ok?String(dt.getDate()).padStart(2,'0')+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+dt.getFullYear():'';
   const filt=[FILTER!=='all'?'เฉพาะ '+PFL[FILTER]:'',Q?'ค้นหา “'+Q+'”':''].filter(Boolean).join(' · ');
