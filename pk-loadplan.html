@@ -568,8 +568,8 @@ const hmDay = (h) => (h >= 24 ? "วันส่ง " : "") + hm(h);   // ชม
 // ── จองรถกับพี่ปุ๋ย (แอดมินรถ PK) ──
 //   ขั้นตอนจริง: planner ทำแพลนตาม PO (ไม่ดูรถ) → ห้างคอนเฟิร์มวันรับ → จองรถกับพี่ปุ๋ย → พี่ปุ๋ยให้ตามรอบรถที่กลับมา (อาจได้น้อยกว่าที่ขอ)
 //   สถานะรถในเดโม = จำลอง · ของจริงอ่านจาก DTC (ตำแหน่ง + งานที่วิ่งอยู่ → เวลากลับถึงโรงงาน)
-const OUTS = ["74-6228", "73-8493", "73-5255"].map((p, i) => ({ code: "OUT-" + (i + 1), name: "รถร่วม", plate: p, type: "พ่วง", outs: true }));   // ข้อ 11: ไม่จำกัดว่าเจ้าไหน (ตัวอย่าง 3 คัน)
-const BOOK = {};   // วันส่ง → { given: Set(รหัสคนขับ) | null = ยังไม่จอง, outs: ใช้รถร่วม }
+const OUTS = ["74-6228", "73-8493", "73-5255"].map((p, i) => ({ code: "OUT-" + (i + 1), name: "รถนอก", plate: p, type: "พ่วง", outs: true }));   // ข้อ 11: ไม่จำกัดว่าเจ้าไหน (ตัวอย่าง 3 คัน)
+const BOOK = {};   // วันส่ง → { given: Set(รหัสคนขับ) | null = ยังไม่จอง, outs: ใช้รถนอก }
 const bk = () => BOOK[date] || (BOOK[date] = { given: null, r2: false, outs: false, sentAt: 0, farm: null });
 // รถไร่ (ยืมข้ามกลุ่ม) — รายชื่อจากตารางคนขับกลุ่มไร่ · แอดมินไร่อนุมัติทีละคัน · รถยังอยู่กลุ่มไร่ วิ่งงานนี้ในนาม Packing
 const FARM = [{"code":"DV-0001","name":"วทัญญู ศีรัมรัมย์","plate":"87-5215,87-6185","type":"พ่วง","farmDrv":true},{"code":"DV-0002","name":"ยงยศ คงประเวศ","plate":"87-3276,84-8284","type":"พ่วง","farmDrv":true},{"code":"DV-0003","name":"สมพงษ์ มะโนศรี","plate":"87-3273,87-3634","type":"พ่วง","farmDrv":true},{"code":"DV-0004","name":"ประสิทธิ์ เปรมประเสริฐ","plate":"86-6064,87-1974","type":"พ่วง","farmDrv":true},{"code":"DV-0005","name":"นวชาติ แสงจันทร์","plate":"87-1973,87-2025","type":"พ่วง","farmDrv":true},{"code":"DV-0006","name":"พงศ์ธร เย้ยรัมย์","plate":"87-4649,87-5331","type":"พ่วง","farmDrv":true},{"code":"DV-0007","name":"ธนทัต พุทธบุรี","plate":"87-5212,87-6186","type":"พ่วง","farmDrv":true},{"code":"DV-0008","name":"ณัฐพร หาญกล้า","plate":"87-3275,87-3632","type":"พ่วง","farmDrv":true},{"code":"DV-0009","name":"อนุวัฒน์ เผ่าสกุลทอง","plate":"87-5213,87-3631","type":"พ่วง","farmDrv":true},{"code":"DV-0010","name":"สมชาย จันดาสุข","plate":"87-2024,86-6315","type":"พ่วง","farmDrv":true},{"code":"DV-0011","name":"นครินทร์ สง่างาม","plate":"87-3272,87-3630","type":"พ่วง","farmDrv":true},{"code":"DV-0012","name":"ธนกร เริงไทสงค์","plate":"86-1685,87-3639","type":"พ่วง","farmDrv":true},{"code":"DV-0013","name":"พิชชากร บาคาน","plate":"82-0510,82-0511","type":"พ่วง","farmDrv":true},{"code":"DV-0014","name":"จุมพล ยาทองทิพย์","plate":"87-1972,86-7369","type":"พ่วง","farmDrv":true},{"code":"DV-0015","name":"สนิท วรสุข","plate":"81-5904,89-9999","type":"พ่วง","farmDrv":true},{"code":"DV-0016","name":"มนตรี บุตล้อม","plate":"87-4649,87-5331","type":"พ่วง","farmDrv":true},{"code":"DV-0018","name":"อุกฤษ์ หงษ์ษา","plate":"86-6064,87-1974","type":"พ่วง","farmDrv":true},{"code":"DV-0019","name":"พรชัย วิบูลย์อรรถ","plate":"86-7368,87-2165","type":"พ่วง","farmDrv":true},{"code":"DV-0020","name":"ธีรพงษ์ ทวีทรัพย์","plate":"87-3277,87-5329","type":"พ่วง","farmDrv":true}];
@@ -602,7 +602,7 @@ function seeded(s) { let h = 2166136261; for (const c of s) { h ^= c.charCodeAt(
 // ready = ชม. นับจาก 00:00 วันขึ้นของ ที่รถพร้อมขึ้นของ · null = ใช้ไม่ได้วันนี้
 function fleetStatus(d, day) {
   day = day || date;
-  if (d.outs) return { ready: A.dayStart, txt: "รถร่วม · ต้องยืนยันเวลาเข้ากับบริษัทรถร่วม", tone: "info" };
+  if (d.outs) return { ready: A.dayStart, txt: "รถนอก · ต้องยืนยันเวลาเข้ากับบริษัทรถนอก", tone: "info" };
   const r = seeded(day + d.code), r2 = seeded(d.code + "|" + day);
   if (r < 0.55) return { ready: 0, txt: "จอดที่โรงงาน", tone: "ok" };
   if (r < 0.86) {
@@ -705,7 +705,7 @@ function schedule(list) {
       Object.assign(t, { driver: c.d, ready: c.ready, short: false, round: 1, farm: true, slot: h, late: h > t.latestLoad, afterHours: h > A.dayEnd });
     });
   }
-  // ทางแก้ ③: เรียกรถนอก (รถร่วม) ให้คันที่ยังขาด
+  // ทางแก้ ③: เรียกรถนอก ให้คันที่ยังขาด
   if (booked && b.outs) {
     const free = OUTS.filter((o) => o.type === "พ่วง");
     order.filter((t) => t.short).forEach((t) => {
@@ -790,7 +790,7 @@ function renderKpis() {
     r.ax.loads.filter((l) => l.pct > 100).forEach((l) => w.push(`<div class="warn b">คัน #${t.id}: ${esc(l.n)} รับ ${nf(l.kg)} กก. เกินพิกัด ${nf(l.lim)} · ลองย้ายพาเลทหนักไปช่วงอื่น</div>`));
     if (r.ax.gvwPct > 100) w.push(`<div class="warn b">คัน #${t.id}: น้ำหนักรวมทั้งคัน ${nf(r.ax.total)} กก. เกิน ${nf(r.ax.gvw)}</div>`);
     if (r.overKg) w.push(`<div class="warn b">คัน #${t.id}: น้ำหนัก ${nf(r.kg)} กก. เกิน ${nf(r.payMax)} (เผื่อ ${A.payBuf}%)</div>`);
-    if (!t.driver && !t.short && !t.open) w.push(`<div class="warn">คัน #${t.id}: ไม่มีคนขับ ${r.type.drv} ว่าง → ต้องใช้รถร่วม</div>`);
+    if (!t.driver && !t.short && !t.open) w.push(`<div class="warn">คัน #${t.id}: ไม่มีคนขับ ${r.type.drv} ว่าง → ต้องใช้รถนอก</div>`);
     if (t.afterHours) w.push(`<div class="warn">คัน #${t.id}: รอบขึ้นของ ${hm(t.slot)} เลยเวลาขึ้นของปกติ (${hm(A.dayEnd)}) · เพิ่มช่องขึ้นของ หรือย้ายไปขึ้นของวันก่อน</div>`);
     if (t.late) w.push(`<div class="warn">คัน #${t.id} → ${esc(A.dc[t.dc] ? A.dc[t.dc].n : t.dc)}: ขึ้นของ ${hm(t.slot)} ช้ากว่าที่ควร (${hm(t.latestLoad)})</div>`);
   });
@@ -868,7 +868,7 @@ function renderBook() {
       (fixes ? `<div class="note"><b>ทางแก้ตามลำดับ</b> · 7-11 เลื่อนส่งไม่ได้ ต้องส่งตรงวัน (เลื่อนได้เฉพาะกรณีฝ่ายผลิตผลิตไม่ทัน)</div>
       <div class="row" style="gap:6px"><button class="btn ${b.r2 ? "sec " : ""}sm" data-give="r2" aria-pressed="${!!b.r2}">${b.r2 ? "✓ ① รอบ 2 (กดเพื่อเลิก)" : "🔁 ① ให้รถบริษัทวิ่งรอบ 2"}</button>
       ${farmBtn}
-      <button class="btn ${b.outs ? "sec " : ""}sm" data-give="outs" aria-pressed="${!!b.outs}">${b.outs ? "✓ ③ รถร่วม (กดเพื่อเลิก)" : "🚛 ③ เรียกรถร่วม (" + OUTS.length + " คัน)"}</button>
+      <button class="btn ${b.outs ? "sec " : ""}sm" data-give="outs" aria-pressed="${!!b.outs}">${b.outs ? "✓ ③ รถนอก (กดเพื่อเลิก)" : "🚛 ③ เรียกรถนอก (" + OUTS.length + " คัน)"}</button>
       ${r2.length ? '<button class="btn sec sm" data-bcopy="r2">📋 ข้อความแจ้งคนขับรอบ 2</button>' : ""}${sh.length ? '<button class="btn sec sm" data-bcopy="more">📋 ข้อความขอรถเพิ่ม → พี่ปุ๋ย</button>' : ""}</div>` : "") +
       (outs.length ? `<div class="note"><b>🚛 รถนอก</b><br>${outs.map((t) => `<span class="tlink" data-fjob="${trucks.indexOf(t)}" role="button" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้">#${t.id} ${esc(t.driver.name || "")} ${esc((t.driver.plate || "").split(",")[0])} → ขึ้นของ ${hmDay(t.slot)} ${esc(t.dc)} ${esc((A.dc[t.dc] || {}).n || "")}</span>`).join("<br>")}</div>` : "") +
       (farmT.length ? `<div class="note"><b>🌴 รถไร่ที่ยืม</b><br>${farmT.map((t) => `<span class="tlink" data-fjob="${trucks.indexOf(t)}" role="button" tabindex="0" title="จิ้มดูรายการสินค้าในคันนี้">#${t.id} ${esc(t.driver.name)} ${esc(t.driver.plate.split(",")[0])} → ขึ้นของ ${hmDay(t.slot)} ${esc(t.dc)} ${esc((A.dc[t.dc] || {}).n || "")}</span>`).join("<br>")}</div>` : "") +
@@ -944,7 +944,7 @@ function renderDisp() {
       <td><div class="kgc"><span class="num">${nf(r.kg)} / ${nf(r.payMax)} กก.</span><span class="bar"><i class="${r.overKg ? "x" : r.kg / r.payMax > 0.92 ? "w" : ""}" style="width:${Math.min(100, r.kg / r.payMax * 100)}%"></i></span></div></td>
       <td>${bad.length ? '<span class="chip c-bad">⚠️ ' + esc(bad.join(" · ")) + "</span>" : '<span class="chip c-ok">ผ่าน</span>'}</td>
       <td class="mono">${t.short ? "—" : hmDay(t.slot)}${t.round === 2 ? ' <span class="chip c-info">รอบ 2</span>' : ""}</td>
-      <td>${t.driver ? (t.pinned ? "📌 " : "") + esc(t.driver.name) + '<div class="note">' + esc(t.driver.plate.split(",")[0]) + (t.farm ? " · 🌴 รถไร่" : t.driver.outs ? " · รถร่วม" : " · ฿" + nf(wageOf(t.driver.code))) + "</div>" : t.short ? '<span style="color:var(--bad)">⛔ ขาดรถ</span>' : t.open ? '<span style="color:var(--warn)">✋ รอพี่ปุ๋ยเลือก</span>' : '<span style="color:var(--warn)">ยังไม่มีคนขับ</span>'}</td>
+      <td>${t.driver ? (t.pinned ? "📌 " : "") + esc(t.driver.name) + '<div class="note">' + esc(t.driver.plate.split(",")[0]) + (t.farm ? " · 🌴 รถไร่" : t.driver.outs ? " · รถนอก" : " · ฿" + nf(wageOf(t.driver.code))) + "</div>" : t.short ? '<span style="color:var(--bad)">⛔ ขาดรถ</span>' : t.open ? '<span style="color:var(--warn)">✋ รอพี่ปุ๋ยเลือก</span>' : '<span style="color:var(--warn)">ยังไม่มีคนขับ</span>'}</td>
       <td><div class="dacts">${sc}${btn}</div></td><td class="more" aria-hidden="true">›</td></tr>`;
   }).join("");
   $("dispBox").innerHTML = `<div class="row" style="justify-content:space-between"><h2>📋 น้ำหนัก · คนขับ · แจ้งงาน <span class="muted">ส่ง ${thd(date)}</span></h2>
@@ -2131,7 +2131,7 @@ document.addEventListener("click", (e) => {
       build(); renderAll(); toastMsg("ส่งคำขอยืมรถไร่ " + sh.length + " คัน → แอดมินไร่ (ดูแท็บ ③)"); return;
     }
     if (g === "outs" || g === "r2") { const k = bk(); k[g] = !k[g]; if (!k.given) k.given = new Set(); build(); renderAll();
-      toastMsg(g === "r2" ? (k.r2 ? "ให้รถบริษัทที่กลับทันวิ่งรอบ 2 · อย่าลืมคุยกับคนขับล่วงหน้า" : "เลิกวิ่งรอบ 2 แล้ว") : (k.outs ? "เรียกรถร่วม " + OUTS.length + " คัน (ใช้หลังรอบ 2 และรถไร่)" : "เลิกใช้รถร่วมแล้ว")); return; }
+      toastMsg(g === "r2" ? (k.r2 ? "ให้รถบริษัทที่กลับทันวิ่งรอบ 2 · อย่าลืมคุยกับคนขับล่วงหน้า" : "เลิกวิ่งรอบ 2 แล้ว") : (k.outs ? "เรียกรถนอก " + OUTS.length + " คัน (ใช้หลังรอบ 2 และรถไร่)" : "เลิกใช้รถนอกแล้ว")); return; }
     const n = g === "all" ? all.length : Math.max(0, Math.min(all.length, Math.floor(+$("giveN").value || 0)));
     setGiven(all.slice(0, n)); toastMsg("พี่ปุ๋ยให้ " + n + " คัน · เลือกคันที่พร้อมเร็วสุดก่อน (ติ๊กเปลี่ยนเองได้)"); return;
   }
