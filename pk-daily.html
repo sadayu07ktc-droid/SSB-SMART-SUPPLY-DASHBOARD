@@ -272,6 +272,13 @@ main{padding-block:14px 120px}
 .frt td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:middle}.frt td.frn{font-weight:600;max-width:190px}.frt .in{width:100%;min-width:0;padding:5px 7px}
 .frt td:nth-child(3){width:96px}.frt td:nth-child(4){width:70px}.frt td:nth-child(5){width:78px}
 @media(max-width:620px){.frq.frq3{grid-template-columns:1fr 1fr}}
+.frck{display:inline-flex;align-items:center;margin-right:6px;vertical-align:-2px;cursor:pointer}.frck input{width:16px;height:16px;accent-color:#2d6a4f;cursor:pointer;margin:0}
+.btn.frq2{background:#2d6a4f;color:#fff;border-color:#2d6a4f}
+.jnote{margin-top:3px;display:inline-block;max-width:100%;font-size:12px;font-weight:700;color:#9A3412;background:#FFEDD5;border:1px solid #FDBA74;border-radius:6px;padding:1px 7px;white-space:normal;line-height:1.45}
+:root[data-theme=dark] .jnote{color:#FDBA74;background:rgba(234,88,12,.16);border-color:rgba(253,186,116,.4)}
+.frmj{border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin:8px 0;background:var(--surface2,transparent)}
+.frmh{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin-bottom:6px}.frmh label{display:flex;align-items:center;gap:6px;margin-left:auto}.frmh .in{width:110px;padding:5px 7px}
+.frmd{margin-top:8px}.frmd summary{cursor:pointer}
 input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 .t24p{position:fixed;z-index:300;width:176px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px -16px rgba(0,0,0,.45);padding:8px;color:var(--ink)}
 .t24h{display:grid;grid-template-columns:1fr 1fr;text-align:center;font-size:11.5px;color:var(--muted);padding:0 0 4px}
@@ -1052,14 +1059,14 @@ async function frAsk(id){let j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);if(!j
   if(JE&&JE.j===j){syncJ();if(!j.stops.length){toast('ใส่ร้านอย่างน้อย 1 จุดก่อนขอรถไร่');return;}if(j.isNew){saveJob(true);j=JE.j;}}
   const first0=(j.stops.map(s=>s.at).filter(Boolean).sort()[0])||'',pd=$('pdate').value;
   const ld=new Date(pd+'T00:00:00Z');ld.setUTCDate(ld.getUTCDate()-1);   /* งานห้าง: ขึ้นของวันก่อนวันส่ง (กติกา Loading Planner) — แก้ได้ */
-  Object.assign(FRV,{need:'',note:'',dlv:pd,load:isNaN(ld)?'':ld.toISOString().slice(0,10),j,rows:frRows(j).map(r=>Object.assign({},r))});
+  Object.assign(FRV,{need:'',note:String(j.note||'').trim(),dlv:pd,load:isNaN(ld)?'':ld.toISOString().slice(0,10),j,rows:frRows(j).map(r=>Object.assign({},r))});
   const fx=()=>({by:ME(),need:FRV.need,note:FRV.note,load:FRV.load,dlv:FRV.dlv,rows:FRV.rows});
   const ok=await askModal({icon:'🚜',title:'ขอรถไร่ · งาน '+j.id,ok:'ส่งคำขอ',cancel:'ยกเลิก',wide:1,
     html:'<p>ตกลงกับแอดมินไร่แล้ว (คุยกันก่อน) → ส่งงานนี้เข้า<b>แดชบอร์ด Packing ของแอดมินไร่</b> (คิว รอจัด) · แอดมินไร่กด <b>สร้างออเดอร์</b> แล้วหาคนขับไร่เอง</p>'
       +'<div class="frq frq3"><label class="note">ขึ้นสินค้าวันที่<input class="in" type="date" id="frLoad" value="'+esc(FRV.load)+'" max="'+esc(pd)+'"></label>'
       +'<label class="note">งานห้างวันที่<input class="in" type="date" value="'+esc(pd)+'" disabled title="= วันที่แพลน (เปลี่ยนที่หัวหน้า)"></label>'
       +'<label class="note">รถต้องเข้าโหลดที่ SSB<input class="in" type="time" id="frNeed"></label></div>'
-      +'<label class="note frnl">หมายเหตุถึงไร่ (ทั้งเที่ยว)<input class="in" id="frNote" placeholder="เช่น เก็บของเสียตามเอกสาร / ต้องมีผ้าใบ"></label>'
+      +'<label class="note frnl">หมายเหตุถึงไร่ (ทั้งเที่ยว)<input class="in" id="frNote" value="'+esc(FRV.note)+'" placeholder="เช่น เก็บของเสียตามเอกสาร / ต้องมีผ้าใบ"></label>'
       +'<div class="note" style="margin-top:8px">จำนวนรายร้าน (กรอก/แก้เองได้ · ตั้งต้นจากแพลน):</div>'
       +'<div class="tw"><table class="frt"><thead><tr><th>#</th><th>ร้าน</th><th>เวลาลงสินค้า</th><th>พาเลท</th><th>นน. (ตัน)</th><th>หมายเหตุร้านนี้</th></tr></thead><tbody>'
       +FRV.rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="frn">'+esc(r.n)+'</td>'
@@ -1108,15 +1115,16 @@ function frPanel(){const L=frOrphans();if(!L.length)return '';
 function frPlanList(){if(!frLive())return [];const d=$('pdate').value;return FRL.filter(x=>x.date===d&&frAct(x)&&(x.drv||x.plate));}
 function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTER==='job'))return '';
   const q=(Q||'').trim().toLowerCase(),dash='<span class="m">—</span>',ln=x=>'<div class="ln">'+x+'</div>';
-  const rows=L.map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),S=j&&j.stops&&j.stops.length?j.stops:null;return {r,S};})
-    .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord].concat(S?S.map(s=>s.n):[]).join(' ').toLowerCase().includes(q));
+  /* งานห้างในหน้าไม่อยู่แล้ว (ลบ/เปิดวันอื่น) → ใช้ร้าน/เวลา/พาเลท/นน./จังหวัด จากคำขอ PKR (Edge farm[].stops) */
+  const rows=L.map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),JS=!!(j&&j.stops&&j.stops.length),S=JS?j.stops:(r.stops&&r.stops.length?r.stops:null);return {r,S,JS,jn:j?String(j.note||'').trim():''};})
+    .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord].concat(S?S.map(s=>s.n||jsN(s)):[]).join(' ').toLowerCase().includes(q));
   if(!rows.length)return '';
   return '<tr class="gr"><td colspan="16"><b>🚜 รถไร่</b> <span>'+rows.length+' คัน · งานห้างที่ขอรถไร่ (แอดมินไร่จัดรถ/คนขับ · แก้ที่แดชบอร์ดไร่)</span></td></tr>'
-    +rows.map(({r,S})=>{const pl=String(r.plate||'').split(',').map(x=>x.trim()).filter(Boolean),f=frOf(r),done=/เสร็จ/.test(r.ost||'');
+    +rows.map(({r,S,JS,jn})=>{const pl=String(r.plate||'').split(',').map(x=>x.trim()).filter(Boolean),f=frOf(r),done=/เสร็จ/.test(r.ost||'');
       const cell=fn=>S?S.map(fn).map(ln).join(''):'';
       return '<tr class="vr2 frv"><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
         +'<td class="stk1">'+(r.drv?esc(r.drv):'<span class="or">รอคนขับไร่</span>')+'</td>'
-        +'<td class="cu">'+(S?S.map((s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+stChip(s)+(i?'':' <span class="frtag">🚜 รถไร่</span>')).map(ln).join(''):'<span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest||'—')+'</span> <span class="frtag">🚜 รถไร่</span>')+'</td>'
+        +'<td class="cu">'+(S?S.map((s,i)=>{const nm=s.n||jsN(s);return '<span class="ell" title="'+esc(nm)+'">'+esc(nm)+'</span> '+(JS?stChip(s):'')+(i?'':' <span class="frtag">🚜 รถไร่</span>');}).map(ln).join(''):'<span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest||'—')+'</span> <span class="frtag">🚜 รถไร่</span>')+(jn?'<div class="jnote">📝 '+esc(jn)+'</div>':'')+'</td>'
         +'<td>'+cell(s=>esc(pvOf(s))||'<span class="m">—</span>')+'</td>'
         +'<td class="n">'+cell(s=>s.at?'<b class="tm">'+esc(s.at)+'</b>':'<span class="m">—</span>')+'</td>'
         +'<td class="n">'+cell(s=>esc(s.pal||'')||'<span class="m">—</span>')+'</td>'
@@ -1143,6 +1151,58 @@ document.addEventListener('input',e=>{const t=e.target,k=t.dataset&&t.dataset.fr
   else{FRV.need=($('frNeed')||{}).value||'';FRV.note=(($('frNote')||{}).value||'').trim();FRV.load=($('frLoad')||{}).value||'';}
   const p=$('frPrev');if(p&&FRV.j)p.innerHTML=frCard(FRV.j,{by:ME(),need:FRV.need,note:FRV.note,load:FRV.load,dlv:FRV.dlv,rows:FRV.rows});},true);
 function frSet(id,f){[MJ.find(x=>x.id===id),JE&&JE.j.id===id?JE.j:null].forEach(x=>{if(!x)return;if(f)x.fr=Object.assign({},f);else delete x.fr;});renderPlan();}
+/* 10 พ.ย. คุณน้อง: ติ๊กหลายงาน → ขอรถไร่ทีเดียว · LINE การ์ดเดียว (เกิน 4 งาน = ปัดดูต่อ) · 1 งาน = 1 คัน = 1 คำขอ PKR */
+let FRSEL=new Set();
+const frCan=j=>!!(j&&!j.head&&!j.fr&&j.stops&&j.stops.length);
+const frSelJobs=()=>MJ.filter(j=>FRSEL.has(j.id)&&frCan(j));
+const FRM={load:'',jobs:[]};
+function frmPrev(){const p=$('frmPrev');if(!p)return;
+  p.innerHTML=FRM.jobs.map(x=>frCard(x.j,{by:ME(),need:x.need,note:x.note,load:FRM.load,dlv:$('pdate').value,rows:x.rows})).join('');}
+async function frAskMulti(){const L=frSelJobs();if(!L.length){toast('ติ๊กงานที่จะขอรถไร่ก่อน');return;}
+  if(L.length===1){FRSEL.clear();return frAsk(L[0].id);}
+  if(L.length>12){toast('⚠️ ขอได้ครั้งละไม่เกิน 12 งาน');return;}
+  const pd=$('pdate').value,ld=new Date(pd+'T00:00:00Z');ld.setUTCDate(ld.getUTCDate()-1);
+  FRM.load=isNaN(ld)?'':ld.toISOString().slice(0,10);
+  FRM.jobs=L.map(j=>({j,need:'',note:String(j.note||'').trim(),rows:frRows(j).map(r=>Object.assign({},r))}));
+  const ok=await askModal({icon:'🚜',title:'ขอรถไร่ '+L.length+' งาน (การ์ดเดียว)',ok:'ส่งคำขอ '+L.length+' คัน',cancel:'ยกเลิก',wide:1,
+    html:'<p>ตกลงกับแอดมินไร่แล้ว → ส่ง <b>'+L.length+' งาน = '+L.length+' คัน</b> เข้าคิว รอจัด ของแอดมินไร่ · LINE ถึงแอดมินไร่ <b>การ์ดเดียว</b>'+(L.length>4?' (เกิน 4 งาน ปัดดูต่อ)':'')+'</p>'
+      +'<div class="frq frq3"><label class="note">ขึ้นสินค้าวันที่ (ทุกงาน)<input class="in" type="date" id="frmLoad" value="'+esc(FRM.load)+'" max="'+esc(pd)+'"></label>'
+      +'<label class="note">งานห้างวันที่<input class="in" type="date" value="'+esc(pd)+'" disabled></label><span></span></div>'
+      +FRM.jobs.map((x,k)=>'<div class="frmj"><div class="frmh"><b>🚚 คันที่ '+(k+1)+' · '+esc(x.j.id)+'</b> <span class="szc">'+esc(SZL[x.j.size]||x.j.size)+'</span>'
+        +'<label class="note">เข้าโหลด SSB <input class="in" type="time" data-frm="need" data-j="'+k+'"></label></div>'
+        +'<label class="note frnl">📝 หมายเหตุถึงคนขับ (ขึ้นการ์ด LINE + ออเดอร์คนขับ)<input class="in" data-frm="jnote" data-j="'+k+'" value="'+esc(x.note)+'" maxlength="200" placeholder="เช่น เก็บของเสียตามเอกสาร"></label>'
+        +'<div class="tw"><table class="frt"><thead><tr><th>#</th><th>ร้าน</th><th>เวลาลง</th><th>พาเลท</th><th>นน. (ตัน)</th><th>หมายเหตุร้านนี้</th></tr></thead><tbody>'
+        +x.rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="frn">'+esc(r.n)+'</td>'
+          +'<td><input class="in" type="time" data-frm="at" data-j="'+k+'" data-i="'+i+'" value="'+esc(r.at)+'"></td>'
+          +'<td><input class="in" type="number" min="0" max="999" step="1" inputmode="numeric" data-frm="pal" data-j="'+k+'" data-i="'+i+'" value="'+(r.pal||'')+'"></td>'
+          +'<td><input class="in" type="number" min="0" max="60" step="0.01" inputmode="decimal" data-frm="t" data-j="'+k+'" data-i="'+i+'" value="'+(r.t||'')+'"></td>'
+          +'<td><input class="in" data-frm="note" data-j="'+k+'" data-i="'+i+'" maxlength="120" placeholder="เช่น เก็บของเสีย"></td></tr>').join('')+'</tbody></table></div></div>').join('')
+      +'<details class="frmd"><summary class="note">ดูงานที่จะเข้าแดชบอร์ดแอดมินไร่</summary><div id="frmPrev"></div></details>'
+      +(frLive()?'<p class="note">กด ส่งคำขอ = เข้าคิว <b>รอจัด</b> ทุกงาน + <b>การ์ด LINE ใบเดียว</b> ถึงแอดมินไร่ · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในแต่ละงานเอง</p>'
+        :'<p class="note">เดโม: ยังไม่ส่งจริง</p>')});
+  if(!ok)return;
+  if(FRM.load&&FRM.load>pd){toast('⚠️ วันขึ้นสินค้าต้องไม่เกินวันงานห้าง ('+dateTH(pd)+')');return;}
+  if(!frLive()){const now=new Date(),ymd=pd.replace(/-/g,'').slice(2);
+    FRM.jobs.forEach(x=>{FRN++;frSet(x.j.id,{rid:'PKR-'+ymd+'-'+String(900+FRN),st:'Waiting',at:now.toTimeString().slice(0,5),by:ME(),need:x.need,note:x.note,load:FRM.load,dlv:pd,rows:x.rows});});
+    FRSEL.clear();renderPlan();toast('เดโม: ส่ง '+FRM.jobs.length+' งานให้แอดมินไร่แล้ว');return;}
+  if(FRB)return;if(!LPI.can){toast('⚠️ ขอรถไร่ได้เฉพาะแอดมินห้าง (ADMIN_PK)');return;}
+  FRB=true;toast('กำลังส่งคำขอรถไร่ '+FRM.jobs.length+' งาน…');
+  try{const x=await lpCall({action:'farmReqBatch',date:pd,jobs:FRM.jobs.map(o=>{const j=o.j;return {ref:frRef(j),size:SZL[j.size]||j.size,label:j.id+' · '+(SZL[j.size]||j.size),
+      need:o.need,note:o.note,loadDate:FRM.load,dlvDate:pd,
+      stops:j.stops.map((s,i)=>{const r=o.rows[i]||{};return {n:jsN(s),at:r.at||'',pal:n0(r.pal),cs:n0(s.cs),t:n0(r.t),note:r.note||'',po:s.po||[]};})};})});
+    FRL=x.farm||FRL;frApply();FRSEL.clear();renderPlan();
+    const R=x.results||[],okN=R.filter(r=>r.ok).length,ln=x.line||{};
+    const lt=ln.off?'⚠️ ปิดส่ง LINE ไว้ (PK_FARM_LINE=off)':ln.sent?'✅ ส่งการ์ด LINE ใบเดียวถึงแอดมินไร่แล้ว '+ln.sent+' คน':okN?'⚠️ ส่ง LINE ไม่สำเร็จ'+(ln.error?' ('+ln.error+')':'')+' — โทรแจ้งแอดมินไร่':'';
+    askModal({icon:okN?'📦':'⚠️',title:'ส่งงานให้แอดมินไร่ '+okN+'/'+R.length+' งาน',ok:'ปิด',
+      html:(lt?'<p><b>'+esc(lt)+'</b></p>':'')+'<div class="rlog">'+R.map(r=>'<div class="re"><b>'+(r.ok?'✅':'❌')+' '+esc(r.label||r.ref)+'</b> '
+        +(r.ok?'<span class="note">'+esc(r.rid||'')+(r.itemErr?' · ⚠️ จำนวนรายร้านบันทึกไม่สำเร็จ แจ้ง DEV':'')+'</span>':'<span class="note" style="color:#B91C1C">'+esc(r.dup?'งานนี้ขอรถไร่ไปแล้ว':(r.error||'ไม่สำเร็จ'))+'</span>')+'</div>').join('')+'</div>'});}
+  catch(e){toast('❌ '+(e.message||e));}finally{FRB=false;frPull();}}
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='frmLoad'){FRM.load=t.value;frmPrev();return;}
+  const k=t.dataset&&t.dataset.frm;if(!k)return;const o=FRM.jobs[+t.dataset.j];if(!o)return;
+  if(k==='need')o.need=t.value;else if(k==='jnote')o.note=t.value.trim();
+  else{const r=o.rows[+t.dataset.i];if(r)r[k]=k==='pal'||k==='t'?n0(t.value):k==='note'?t.value.trim():t.value;}
+  frmPrev();},true);
+document.addEventListener('toggle',e=>{if(e.target&&e.target.classList&&e.target.classList.contains('frmd')&&e.target.open)frmPrev();},true);
 async function frCancel(id){const jj=(JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id))||{};
   if(frLive()&&jj.fr){if(jj.fr.st!=='Waiting'){toast('⚠️ ไร่จัดรถแล้ว — ยกเลิกต้องคุยกับแอดมินไร่ (ให้ไร่ยกเลิกออเดอร์ '+(jj.fr.ord||jj.fr.rid)+')');return;}
     if(!(await askModal({icon:'🚜',title:'ยกเลิกคำขอรถไร่ '+jj.fr.rid+'?',ok:'ยกเลิกคำขอ',cancel:'ไม่ยกเลิก',danger:1,html:'<p>คำขอของงาน '+esc(id)+' ออกจากคิว รอจัด ของแอดมินไร่</p>'})))return;
@@ -1186,14 +1246,14 @@ function renderMall(){frApply();
   const sub='<div class="msub" role="tablist" aria-label="แพลนห้าง">'+[['jobs','📋 งานห้าง <b>'+MJ.length+'</b>'],['lp','📦 จัด PO ลงรถ · Loading Planner']].map(([k,l])=>'<button role="tab" data-msub="'+k+'" aria-selected="'+(MSUB===k)+'" class="'+(MSUB===k?'on':'')+'">'+l+'</button>').join('')+'</div>';
   if(MSUB==='lp'){$('v-plan').innerHTML=h+'<div class="tools">'+sub+'<span class="note">จัด PO 7-11 ลงรถตามขนาด + ผัง 3D แล้วกด "ส่งเข้าแพลนห้าง" → ได้งานห้างในแท็บ 📋 งานห้าง (ยังไม่มีทะเบียน)</span></div>'+lpBar();
     $('rlog').onclick=openLog;wireSub();lpWire();pmChips(mallTodo(dfx));updBar();lpShow();return;}
-  h+='<div class="tools">'+sub+'<button class="btn sm pri mallb" id="jadd">＋ เพิ่มงานห้าง</button><button class="btn sm" id="jexp" title="บันทึกเป็นรูป / PDF / Excel หน้าตาแบบชีตแจ้งงานห้าง">🖼 ใบแจ้งงานห้าง (รูป · PDF · Excel)</button>'+(unsent().length?'<button class="btn sm dang" id="jdelall">🗑 ลบงานที่ยังไม่แจก ('+unsent().length+')</button>':'')+'<span class="note">เลือกขนาดรถก่อน ยังไม่ต้องรู้ทะเบียน · พี่ปุ๋ยแจ้งรถ + คนขับมาแล้ว ค่อยกดงานใส่ แล้วกดแจกงาน · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
+  h+='<div class="tools">'+sub+'<button class="btn sm pri mallb" id="jadd">＋ เพิ่มงานห้าง</button><button class="btn sm" id="jexp" title="บันทึกเป็นรูป / PDF / Excel หน้าตาแบบชีตแจ้งงานห้าง">🖼 ใบแจ้งงานห้าง (รูป · PDF · Excel)</button>'+(()=>{const n=frSelJobs().length;return n?'<button class="btn sm frq2" id="frmulti">🚜 ขอรถไร่ '+n+' งานที่เลือก</button><button class="btn sm" id="frmclr">ล้างที่เลือก</button>':(MJ.filter(frCan).length>1?'<span class="note">☑ ติ๊กช่องหน้างานหลายงาน → ขอรถไร่ทีเดียว (LINE การ์ดเดียว)</span>':'');})()+(unsent().length?'<button class="btn sm dang" id="jdelall">🗑 ลบงานที่ยังไม่แจก ('+unsent().length+')</button>':'')+'<span class="note">เลือกขนาดรถก่อน ยังไม่ต้องรู้ทะเบียน · พี่ปุ๋ยแจ้งรถ + คนขับมาแล้ว ค่อยกดงานใส่ แล้วกดแจกงาน · ต่อไปรับงานจาก Loading Planner (จัด PO ลงรถ)</span></div>';
   const js=MJ.slice().sort((a,b)=>((a.stops[0]||{}).at||'99')<((b.stops[0]||{}).at||'99')?-1:1);
   const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join(''),dash='<span class="m">—</span>';
   h+=frPanel()+pendHtml()+'<div class="sheet"><table class="jt mj"><thead><tr class="g1"><th colspan="10">งานห้าง '+esc(dateTH($('pdate').value))+'</th></tr><tr>'
     +['งาน','ขนาดรถ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','รถ (พี่ปุ๋ยแจ้ง)','คนขับ','สถานะ'].map((t,i)=>'<th'+(i>=4&&i<=6?' class="n"':'')+'>'+t+'</th>').join('')+'</tr></thead><tbody>';
   js.forEach(j=>{const S=j.stops,d=drvOf(j.driver),s=jst(j,dfx);
-    h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b>'+(j.lp?'<span class="lpb" title="'+esc(j.note)+'">📦 LP</span>':'')+'</td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
-      +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(jsN(x))+'">'+esc(jsN(x))+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+'</td>'
+    h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td>'+(frCan(j)?'<label class="frck" title="ติ๊กหลายงาน → ขอรถไร่ทีเดียว (การ์ดเดียว)"><input type="checkbox" data-frck="'+j.id+'"'+(FRSEL.has(j.id)?' checked':'')+' aria-label="เลือกงาน '+j.id+' เพื่อขอรถไร่"></label>':'')+'<b>'+j.id+'</b>'+(j.lp?'<span class="lpb" title="'+esc(j.note)+'">📦 LP</span>':'')+'</td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
+      +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(jsN(x))+'">'+esc(jsN(x))+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+(String(j.note||'').trim()?'<div class="jnote" title="หมายเหตุถึงคนขับ / คลัง">📝 '+esc(String(j.note).trim())+'</div>':'')+'</td>'
       +'<td>'+L(S,x=>esc(pvOf(x))||dash)+'</td><td class="n">'+L(S,x=>x.at?'<b class="tm">'+esc(x.at)+'</b>':dash)+'</td>'
       +'<td class="n">'+L(S,(x,i)=>poCell(x,'pal','j:'+j.id+':'+i))+'</td><td class="n">'+L(S,(x,i)=>poCell(x,'cs','j:'+j.id+':'+i))+'</td>'
       +'<td>'+(j.head?'<b>'+esc(plOf(j.head))+'</b><small class="m" style="display:block">'+esc([BRAND[j.head],VEH.find(v=>v.head===j.head).shape].filter(Boolean).join(' · '))+'</small>'
@@ -1210,7 +1270,9 @@ function renderMall(){frApply();
   $('v-plan').querySelectorAll('[data-fra]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frAsk(b.dataset.fra);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-frs]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frSim(b.dataset.frs);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-frx]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frCancel(b.dataset.frx);};b.onkeydown=e=>e.stopPropagation();});
-  $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=()=>openJob(r.dataset.j);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
+  $('v-plan').querySelectorAll('[data-frck]').forEach(c=>{c.onchange=()=>{if(c.checked)FRSEL.add(c.dataset.frck);else FRSEL.delete(c.dataset.frck);renderPlan();};c.onkeydown=e=>e.stopPropagation();});
+  if($('frmulti'))$('frmulti').onclick=frAskMulti;if($('frmclr'))$('frmclr').onclick=()=>{FRSEL.clear();renderPlan();};
+  $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=e=>{if(e.target.closest('.frck'))return;openJob(r.dataset.j);};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
   wireSub();pmChips(mallTodo(dfx));updBar();lpShow();}
 function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'พ่วง',stops:[],head:'',driver:'',note:'',isNew:1};
   JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
