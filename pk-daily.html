@@ -249,6 +249,11 @@ main{padding-block:14px 120px}
 .frc{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;background:#EAF4EC;color:#1B4332;border:1px solid #9CC8A8;white-space:nowrap}
 .frbox{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:8px;padding:8px 10px;border:1px dashed #9CC8A8;border-radius:10px;background:rgba(60,143,102,.1)}
 .frq{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;margin:8px 0}.frq label{display:flex;flex-direction:column;gap:2px}
+.frq.frq3{grid-template-columns:repeat(3,minmax(0,1fr))}.frnl{display:flex;flex-direction:column;gap:2px}
+.frt{width:100%;border-collapse:collapse;font-size:13px;min-width:560px}.frt th{text-align:left;font-size:11.5px;color:var(--muted);font-weight:600;padding:4px 4px;border-bottom:1px solid var(--line)}
+.frt td{padding:3px 4px;border-bottom:1px solid var(--line);vertical-align:middle}.frt td.frn{font-weight:600;max-width:190px}.frt .in{width:100%;min-width:0;padding:5px 7px}
+.frt td:nth-child(3){width:96px}.frt td:nth-child(4){width:70px}.frt td:nth-child(5){width:78px}
+@media(max-width:620px){.frq.frq3{grid-template-columns:1fr 1fr}}
 input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 .t24p{position:fixed;z-index:300;width:176px;background:var(--surface);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 40px -16px rgba(0,0,0,.45);padding:8px;color:var(--ink)}
 .t24h{display:grid;grid-template-columns:1fr 1fr;text-align:center;font-size:11.5px;color:var(--muted);padding:0 0 4px}
@@ -629,7 +634,7 @@ const VEH=[
 /* ยี่ห้อยังว่างในระบบ — ในเดโมเติมจากชีต Template ของแอดมิน (ของจริงกรอกครั้งเดียวในหน้าทะเบียนรถ) */
 const BRAND={'ผอ-67':'ISUZU 130','ยก-2438':'HINO 136','ผอ-68':'ISUZU 130','ยค-1054':'HINO 136','ยค 1055':'HINO 136','ยค-9996':'ISUZU 130','84-9041':'ISUZU 175','85-2783':'ISUZU 210','86-7722':'ISUZU 190','86-7723':'ISUZU 190','86-6715':'HINO 210','86-6716':'HINO 210','86-0018':'ISUZU 190','85-2718':'ISUZU 150','86-1317':'ISUZU 175','86-1319':'ISUZU 175','85-5282':'ISUZU 300','85-5280':'ISUZU 300','85-0753':'ISUZU 300','84-9948':'ISUZU 240','85-9293':'VOLVO 370','85-5281':'ISUZU 300','85-7269':'ISUZU 360','87-5214':'ISUZU 240','87-3274':'ISUZU 240','86-8454':'UD 390','86-7079':'UD 390','86-7081':'UD 390','86-7395':'FUSO 340','86-7401':'FUSO 279','86-7398':'FUSO 279','86-7397':'FUSO 279','84-9219':'VOLVO 400','84-8660':'FUSO 279'};
 const DRV=__D.drv.map(([code,name,head])=>({code,name,head}));
-const ST=[[281,'ลิ้มฮะกี่',20],[168,'ร้านนิตยา(หัวกุญแจ)',26],[204,'วิภา',27],[27,'เปี๊ยก',32],[258,'โชคดีปลวกแดง 2 อีซี่',33],[31,'ร้านวรรณมาบยางพร',38],[39,'โชคดีปลวกแดง 1',50],[313,'ร้านตะวันออกหมูหยอง',58],[52,'ร้านวัชราวรรณ',65],[56,'บ.ศรีธิคำมาร์เก็ตติ้ง (เจ๊นงค์ นาเกลือ) สำนักงานใหญ่',72],[60,'บริษัทซิมมี้ (จุรีภรณ์)',79],[65,'Makro บางนา',94],[293,'เซ็นทรัลฟูดส์โฮลเซลล์บางนา DC',97],[235,'เบอร์ลี่ยุคเกอร์',106],[74,'คลังสุขสมบูรณ์ (ประเวศ)',114],[338,'เอกภาพ กรชัย ท่าประชุม',118],[261,'แม็คโคร จันทบุรี',118],[86,'ร้านอมร วังน้ำเย็น',139],[298,'บริษัท ไทยฟู้ดส์กรุ๊ป จำกัด (มหาชน) โรงงานชำแหละไก่ ปราจีนบุรี',146],[203,'ส.ทวีกิจบิ๊กวัน',149],[370,'บิ๊กซี รัชดาภิเษก',153],[188,'แม็คโคร เอฟซี รังสิต',161],[192,'แม็คโคร วังน้อย',165],[366,'ร้านธิดาปังปัง',165],[102,'LOSCAM(THAILAND) LTD. (WANG NOI SUPER DEPOT)',172],[141,'ศูนย์กระจายสินค้า แม็คโคร วังน้อยCDC',174],[315,'เจพีโกเด้นเชฟ',182],[354,'สหกรณ์การเกษตรคลองหลวง จำกัด',241],[111,'ซีพีเอฟ',244],[312,'เฮอริเทจ (เอก) เพชรบุรี',251],[304,'ร้านเต๋าเครื่องเค้ก',256],[217,'ห้างซีเอสพาร์คสิงห์บุรี',258],[263,'แม็คโคร เอฟซี นครราชสีมา',265],[273,'หจก ป เจริญทรัพย์ คอนวีเนียท์สโตร์',292],[116,'ซีเจ บุรีรัมย์',353],[271,'เอส.อาร์ ซุปเปอร์มาร์ท สาขาเมือง',462],[121,'ซีเจ ขอนแก่น',486],[252,'อีคอนพิษณุโลก (บจก.อีคอนแวร์เฮ้าส์)',492],[230,'บิ๊กซี สุราษฎร์ธานี',764],[124,'โลตัสลำพูน',785],[107,'7-11 บางบัวทอง',186],[67,'7-11 สุวรรณภูมิ',98],[152,'7-11 มหาชัย',174],[158,'7-11 ชลบุรี',66],[172,'7-11 นครสวรรค์',383],[187,'7-11 บุรีรัมย์',382],[169,'7-11 ขอนแก่น',457],[231,'7-11 ลำพูน',786],[233,'7-11 สุราษฎร์ธานี',738],[241,'7-11 หาดใหญ่',1049]].map(([id,n,km])=>({id,n,km}));
+const ST=(__D.st||[]).map(([id,n,km,ty])=>({id,n,km,ty})); /* ร้าน Packing สดจาก central_distances ผ่าน Edge pk-daily (ชื่อตามหมุด DTC + ประเภท pk_type) */
 const LONG_KM=__D.longKm||300; /* app_config PK_LONG_KM */
 /* ค่ากลาง ร้าน↔ร้าน จาก DTC (dtc_s2s เที่ยววิ่งตรง 20 ก.ย. 68–8 พ.ย. 69 · กติกาเดียวกับ dtc-central: ตัด IQR → มัธยฐานขาไป/กลับ → เฉลี่ย · ต่าง >20% ใช้ขาสั้น) [ร้าน, ร้าน, กม., เที่ยว] */
 const PAIRS=__D.pairs; /* ตาราง dtc_pair_km (คิดทุกคืน 04:00) ผ่าน Edge pk-daily */
@@ -661,7 +666,9 @@ const TYPES=['ห้าง','ยี่ปั๊ว','อื่นๆ'];
 const TYC={'ห้าง':'#1E6FD9','ยี่ปั๊ว':'#D98E04','อื่นๆ':'#7A8A80'};
 const TY_OTHER=[60,74,298,102,315,354,111,235,252];
 const TY_MALL=[107,67,152,158,172,187,169,231,233,241,65,293,261,370,188,192,141,217,263,116,121,230,124,203,271];
-function tyOf(s){if(s&&s.ty)return s.ty;const id=s&&s.id;return TY_MALL.includes(id)?'ห้าง':TY_OTHER.includes(id)?'อื่นๆ':id?'ยี่ปั๊ว':'อื่นๆ';}
+/* 10 พ.ย.: เว็บจริง ST มาจาก Edge (central_distances สด) พร้อมประเภท pk_type → ใช้ก่อน · TY_MALL/TY_OTHER = สำรองของเดโม */
+let TYM=null;const tyLive=id=>{if(!TYM){TYM={};ST.forEach(x=>{if(x.ty)TYM[x.id]=x.ty;});}return TYM[id]||'';};
+function tyOf(s){if(s&&s.ty)return s.ty;const id=s&&s.id;if(tyLive(id))return tyLive(id);return TY_MALL.includes(id)?'ห้าง':TY_OTHER.includes(id)?'อื่นๆ':id?'ยี่ปั๊ว':'อื่นๆ';}
 /* ประเภทงาน "อื่นๆ" 10 ประเภท (ตาราง pk_other_job_types ← ไฟล์ จัดประเภทงาน_Packing.xlsx 9 พ.ย.) · ใช้นับสถิติ · ค่าแรงรอแอดมินกำหนด ระบบยังไม่คิด */
 let OT_TYPES=__D.otTypes||[]; /* ตาราง pk_other_job_types ผ่าน Edge pk-daily */
 let OT_EX=__D.otEx||[]; /* ตาราง pk_other_job_examples 200 แถว ผ่าน Edge pk-daily (มีชื่อคน ไม่ฝังในไฟล์) */
@@ -1003,38 +1010,61 @@ function openLog(){const L=MALL.log.slice().reverse();
     html:'<div class="rlog">'+L.map(e=>'<div class="re"><h5>'+(e.rev?'ฉบับแก้ไข Rev.'+e.rev:'แจกงานครั้งแรก Rev.0')+'</h5><div class="m">'+fmtAt(e.at)+' · โดย <b>'+esc(e.by)+'</b></div>'
       +(e.items.length?'<ul>'+e.items.map(x=>'<li>'+esc(x.pl)+' · '+esc(x.txt)+'</li>').join('')+'</ul>':'')+'<div class="note">แจ้งถึง: '+esc(e.to.join(' · '))+'</div></div>').join('')+'</div>'});}
 /* 🚜 ขอรถไร่ · j.fr={at,by,need,note} · เว็บจริง = การ์ด LINE ถึงแอดมินรถไร่ (ADMIN ไร่) → ไร่ตอบรับ ระบุรถ/คนขับ → ขึ้นในงานนี้ (เฟสถัดไป) */
-function frSum(j){let pl=0,kg=0;j.stops.forEach(s=>{pl+=n0(s.pal);kg+=n0(s.kg);});return {pl,kg};}
-function frCard(j,f){const S=frSum(j);
+/* 10 พ.ย. คุณน้อง: จำนวนกรอกเองรายร้าน (เวลา/พาเลท/ตัน/หมายเหตุ) + วันขึ้นสินค้า/วันงานห้าง · ส่งการ์ด LINE ถึงแอดมินไร่ (ADMIN) · ของเข้า pk_request_items */
+const frT=x=>(Math.round(n0(x)*100)/100).toLocaleString('en-US',{maximumFractionDigits:2});
+function frRows(j,f){return (f&&f.rows)||j.stops.map(s=>({n:s.n,at:s.at||'',pal:n0(s.pal),t:Math.round(n0(s.kg)/10)/100,note:''}));}
+function frSum(j,f){let pl=0,t=0;frRows(j,f).forEach(s=>{pl+=n0(s.pal);t+=n0(s.t);});return {pl,t};}
+function frCard(j,f){const R=frRows(j,f),S=frSum(j,f);
   return '<div class="lcard"><div class="lch">📦 งาน Packing ขอรถไร่ · '+esc(f.rid||'PKR-…')+'</div><div class="lcb">'
     +'<div class="lcr"><span>สถานะ</span><b style="color:#9A4A00">รอจัด</b> <small>(งาน '+esc(j.id)+')</small></div>'
-    +'<div class="lcw" style="color:#1B4332">'+esc(SZL[j.size])+' ×1 · '+esc(dateTH($('pdate').value))+'</div>'
+    +'<div class="lcw" style="color:#1B4332">'+esc(SZL[j.size])+' ×1 · งานห้าง '+esc(dateTH(f.dlv||$('pdate').value))+'</div>'
+    +(f.load?'<div class="lcr"><span>ขึ้นสินค้า</span><b style="color:#9A4A00">'+esc(dateTH(f.load))+'</b></div>':'')
     +(f.need?'<div class="lcr"><span>เข้าโหลด</span><b>'+esc(f.need)+' น. ที่ SSB</b></div>':'')
-    +j.stops.map((s,i)=>'<div class="lcr"><span>'+(i?'':'ส่ง')+'</span>'+esc(s.n)+(s.at?' <small>(ถึง '+esc(s.at)+')</small>':'')+'</div>').join('')
-    +(S.pl||S.kg?'<div class="lcr"><span>ของ</span>'+[S.pl?S.pl+' พาเลท':'',S.kg?comma(S.kg)+' กก.':''].filter(Boolean).join(' · ')+'</div>':'')
-    +(f.note?'<div class="lcr"><span>หมายเหตุ</span>'+esc(f.note)+'</div>':'')
+    +R.map((s,i)=>'<div class="lcr"><span>'+(i?'':'ส่ง')+'</span><span>'+(R.length>1?(i+1)+'. ':'')+esc(s.n)
+      +' <small>'+[s.at?'ถึง '+esc(s.at)+' น.':'',n0(s.pal)?n0(s.pal)+' พาเลท':'',n0(s.t)?frT(s.t)+' ตัน':''].filter(Boolean).join(' · ')+'</small>'
+      +(s.note?'<br><small style="color:#9A4A00">📝 '+esc(s.note)+'</small>':'')+'</span></div>').join('')
+    +(S.pl||S.t?'<div class="lcr"><span>รวม</span><b>'+[S.pl?S.pl+' พาเลท':'',S.t?frT(S.t)+' ตัน':''].filter(Boolean).join(' · ')+'</b></div>':'')
+    +(f.note?'<div class="lcr"><span>หมายเหตุ</span><b style="color:#B45309">'+esc(f.note)+'</b></div>':'')
     +'<div class="lcr"><span>ผู้ขอ</span>'+esc(f.by)+'</div></div>'
     +'<div class="lcf"><span class="ok">🚚 สร้างออเดอร์ + หาคนขับไร่</span></div></div>';}
 async function frAsk(id){let j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);if(!j)return;
   if(JE&&JE.j===j){syncJ();if(!j.stops.length){toast('ใส่ร้านอย่างน้อย 1 จุดก่อนขอรถไร่');return;}if(j.isNew){saveJob(true);j=JE.j;}}
-  const first0=(j.stops.map(s=>s.at).filter(Boolean).sort()[0])||'';FRV.need='';FRV.note='';
+  const first0=(j.stops.map(s=>s.at).filter(Boolean).sort()[0])||'',pd=$('pdate').value;
+  const ld=new Date(pd+'T00:00:00Z');ld.setUTCDate(ld.getUTCDate()-1);   /* งานห้าง: ขึ้นของวันก่อนวันส่ง (กติกา Loading Planner) — แก้ได้ */
+  Object.assign(FRV,{need:'',note:'',dlv:pd,load:isNaN(ld)?'':ld.toISOString().slice(0,10),j,rows:frRows(j).map(r=>Object.assign({},r))});
+  const fx=()=>({by:ME(),need:FRV.need,note:FRV.note,load:FRV.load,dlv:FRV.dlv,rows:FRV.rows});
   const ok=await askModal({icon:'🚜',title:'ขอรถไร่ · งาน '+j.id,ok:'ส่งคำขอ',cancel:'ยกเลิก',wide:1,
     html:'<p>ตกลงกับแอดมินไร่แล้ว (คุยกันก่อน) → ส่งงานนี้เข้า<b>แดชบอร์ด Packing ของแอดมินไร่</b> (คิว รอจัด) · แอดมินไร่กด <b>สร้างออเดอร์</b> แล้วหาคนขับไร่เอง</p>'
-      +'<div class="frq"><label class="note">รถต้องเข้าโหลดที่ SSB<input class="in" type="time" id="frNeed"></label>'
-      +'<label class="note">หมายเหตุถึงไร่<input class="in" id="frNote" placeholder="เช่น ต้องมีผ้าใบ / กลับวันเดียว"></label></div>'
+      +'<div class="frq frq3"><label class="note">ขึ้นสินค้าวันที่<input class="in" type="date" id="frLoad" value="'+esc(FRV.load)+'" max="'+esc(pd)+'"></label>'
+      +'<label class="note">งานห้างวันที่<input class="in" type="date" value="'+esc(pd)+'" disabled title="= วันที่แพลน (เปลี่ยนที่หัวหน้า)"></label>'
+      +'<label class="note">รถต้องเข้าโหลดที่ SSB<input class="in" type="time" id="frNeed"></label></div>'
+      +'<label class="note frnl">หมายเหตุถึงไร่ (ทั้งเที่ยว)<input class="in" id="frNote" placeholder="เช่น เก็บของเสียตามเอกสาร / ต้องมีผ้าใบ"></label>'
+      +'<div class="note" style="margin-top:8px">จำนวนรายร้าน (กรอก/แก้เองได้ · ตั้งต้นจากแพลน):</div>'
+      +'<div class="tw"><table class="frt"><thead><tr><th>#</th><th>ร้าน</th><th>เวลาถึง</th><th>พาเลท</th><th>นน. (ตัน)</th><th>หมายเหตุร้านนี้</th></tr></thead><tbody>'
+      +FRV.rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="frn">'+esc(r.n)+'</td>'
+        +'<td><input class="in" type="time" data-fr="at" data-i="'+i+'" value="'+esc(r.at)+'"></td>'
+        +'<td><input class="in" type="number" min="0" max="999" step="1" inputmode="numeric" data-fr="pal" data-i="'+i+'" value="'+(r.pal||'')+'"></td>'
+        +'<td><input class="in" type="number" min="0" max="60" step="0.01" inputmode="decimal" data-fr="t" data-i="'+i+'" value="'+(r.t||'')+'"></td>'
+        +'<td><input class="in" data-fr="note" data-i="'+i+'" maxlength="120" placeholder="เช่น เก็บของเสีย"></td></tr>').join('')+'</tbody></table></div>'
       +(first0?'<div class="note">จุดแรกต้องถึงหน้างาน '+esc(first0)+' น.</div>':'')
-      +'<div class="note" style="margin-top:8px">งานที่จะเข้าแดชบอร์ดของแอดมินไร่:</div><div id="frPrev">'+frCard(j,{by:ME(),need:'',note:''})+'</div>'
-      +(frLive()?'<p class="note">กด ส่งคำขอ = เข้าคิว <b>รอจัด</b> ของแอดมินไร่ทันที (เห็นในแดชบอร์ด Packing + ชิป 📦 หน้าติดตามออเดอร์ · ไม่ส่ง LINE) · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในงานนี้เอง (อัปเดตทุก 1 นาที)</p>'
-        :'<p class="note">เดโม: ยังไม่ส่งจริง · เว็บจริง = สร้างคำขอ PKR เข้าแดชบอร์ด Packing ของแอดมินไร่ · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในงานนี้ · สถานะ รอจัด → จัดแล้ว → กำลังขึ้นของ → ส่งแล้ว</p>')});
+      +'<div class="note" style="margin-top:8px">งานที่จะเข้าแดชบอร์ดของแอดมินไร่:</div><div id="frPrev">'+frCard(j,fx())+'</div>'
+      +(frLive()?'<p class="note">กด ส่งคำขอ = เข้าคิว <b>รอจัด</b> ของแอดมินไร่ทันที (แดชบอร์ด Packing + ชิป 📦 หน้าติดตามออเดอร์) + <b>ส่งการ์ด LINE ถึงแอดมินไร่</b> · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในงานนี้เอง (อัปเดตทุก 1 นาที)</p>'
+        :'<p class="note">เดโม: ยังไม่ส่งจริง · เว็บจริง = สร้างคำขอ PKR เข้าแดชบอร์ด Packing ของแอดมินไร่ + การ์ด LINE ถึงแอดมินไร่ · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในงานนี้ · สถานะ รอจัด → จัดแล้ว → กำลังขึ้นของ → ส่งแล้ว</p>')});
   if(!ok)return;
+  if(FRV.load&&FRV.load>pd){toast('⚠️ วันขึ้นสินค้าต้องไม่เกินวันงานห้าง ('+dateTH(pd)+')');return;}
   if(frLive()){if(FRB)return;if(!LPI.can){toast('⚠️ ขอรถไร่ได้เฉพาะแอดมินห้าง (ADMIN_PK)');return;}FRB=true;toast('กำลังส่งคำขอรถไร่…');
     {const o=MJ.find(x=>x.id===j.id);if(o&&o!==j&&!j.lp){frRef(o);j.uid=o.uid;}}   /* ลิ้นชักถือสำเนางาน → ใช้รหัสอ้างอิงเดียวกับงานในตาราง */
-    try{const x=await lpCall({action:'farmReq',ref:frRef(j),date:$('pdate').value,size:SZL[j.size]||j.size,label:j.id+' · '+(SZL[j.size]||j.size),need:FRV.need,note:FRV.note,
-        stops:j.stops.map(s=>({n:s.n,at:s.at||'',pal:n0(s.pal),cs:n0(s.cs),kg:n0(s.kg),po:s.po||[]}))});
-      FRL=x.farm||FRL;frApply();renderPlan();const f=j.fr||{rid:x.rid,by:ME(),need:FRV.need,note:FRV.note,at:frHm(new Date())};
-      askModal({icon:'📦',title:'ส่งงานให้แอดมินไร่แล้ว · '+x.rid,ok:'ปิด',html:'<p>เข้าคิว <b>รอจัด</b> ในแดชบอร์ด Packing ของแอดมินไร่ · งาน '+esc(j.id)+'</p>'+frCard(j,f)+'<p class="note">ระหว่างรอ งานนี้ขึ้นป้าย 🚜 รอไร่จัดคนขับ · ไร่สร้างออเดอร์+ได้คนขับแล้ว ทะเบียน/คนขับขึ้นเอง · ได้รถ Packing เองทีหลัง = เลือกรถ จะยกเลิกคำขอให้ (ถ้าไร่ยังไม่จัด)</p>'});}
+    const F=fx();
+    try{const x=await lpCall({action:'farmReq',ref:frRef(j),date:pd,size:SZL[j.size]||j.size,label:j.id+' · '+(SZL[j.size]||j.size),need:F.need,note:F.note,loadDate:F.load,dlvDate:F.dlv,
+        stops:j.stops.map((s,i)=>{const r=F.rows[i]||{};return {n:s.n,at:r.at||'',pal:n0(r.pal),cs:n0(s.cs),t:n0(r.t),note:r.note||'',po:s.po||[]};})});
+      FRL=x.farm||FRL;frApply();renderPlan();const f=Object.assign({rid:x.rid,at:frHm(new Date())},j.fr||{},F);
+      const ln=x.line||{},lt=ln.off?'⚠️ ปิดส่ง LINE ไว้ (PK_FARM_LINE=off)':ln.sent?'✅ ส่งการ์ด LINE ถึงแอดมินไร่แล้ว '+ln.sent+' คน':'⚠️ ส่ง LINE ไม่สำเร็จ'+(ln.error?' ('+ln.error+')':'')+' — โทรแจ้งแอดมินไร่';
+      askModal({icon:'📦',title:'ส่งงานให้แอดมินไร่แล้ว · '+x.rid,ok:'ปิด',html:'<p>เข้าคิว <b>รอจัด</b> ในแดชบอร์ด Packing ของแอดมินไร่ · งาน '+esc(j.id)+'</p><p><b>'+esc(lt)+'</b></p>'+frCard(j,f)
+        +(x.itemErr?'<p class="note" style="color:#B45309">⚠️ บันทึกจำนวนรายร้านไม่สำเร็จ (คำขอเข้าแล้ว) — แจ้ง DEV</p>':'')
+        +'<p class="note">ระหว่างรอ งานนี้ขึ้นป้าย 🚜 รอไร่จัดคนขับ · ไร่สร้างออเดอร์+ได้คนขับแล้ว ทะเบียน/คนขับขึ้นเอง · ได้รถ Packing เองทีหลัง = เลือกรถ จะยกเลิกคำขอให้ (ถ้าไร่ยังไม่จัด)</p>'});}
     catch(e){toast('❌ '+(e.message||e));}finally{FRB=false;frPull();}return;}
-  const now=new Date(),ymd=$('pdate').value.replace(/-/g,'').slice(2);FRN++;
-  const f={rid:'PKR-'+ymd+'-'+String(900+FRN),st:'Waiting',at:now.toTimeString().slice(0,5),by:ME(),need:FRV.need,note:FRV.note};frSet(j.id,f);
+  const now=new Date(),ymd=pd.replace(/-/g,'').slice(2);FRN++;
+  const f=Object.assign({rid:'PKR-'+ymd+'-'+String(900+FRN),st:'Waiting',at:now.toTimeString().slice(0,5)},fx());frSet(j.id,f);
   askModal({icon:'📦',title:'ส่งงานให้แอดมินไร่แล้ว',ok:'ปิด',html:'<p>เข้าคิว <b>รอจัด</b> ในแดชบอร์ด Packing ของแอดมินไร่ · งาน '+esc(j.id)+'</p>'+frCard(j,f)+'<p class="note">เดโม: ยังไม่ส่งจริง · ระหว่างรอ งานนี้ขึ้นป้าย 🚜 รอไร่จัดคนขับ · ได้รถ Packing เองทีหลัง = ยกเลิกงานที่ส่งไร่ให้</p>'});}
 let FRN=0;
 /* เว็บจริง: คำขอ PKR อยู่ใน pk_requests (mall_ref) · FRL = รายการจาก Edge (boot.farm / ?action=farm) */
@@ -1064,10 +1094,12 @@ document.addEventListener('click',async e=>{const b=e.target.closest&&e.target.c
   b.disabled=true;if(await frCancelLive(rid))renderPlan();else b.disabled=false;},true);
 /* เดโม: จำลองแอดมินไร่สร้างออเดอร์ + ได้คนขับไร่ (เว็บจริง = อ่านสถานะ/ทะเบียน/คนขับจาก pk_requests) */
 function frSim(id){const x=[MJ.find(y=>y.id===id),JE&&JE.j.id===id?JE.j:null];x.forEach(o=>{if(o&&o.fr){o.fr.st='Planned';o.fr.plate='(ทะเบียนรถไร่)';o.fr.drv='(คนขับไร่)';o.carrier='รถไร่';}});renderPlan();toast('จำลอง: แอดมินไร่สร้างออเดอร์ + ได้คนขับไร่แล้ว');}
-const FRV={need:'',note:''};
-document.addEventListener('input',e=>{if(e.target.id==='frNeed'||e.target.id==='frNote'){FRV.need=($('frNeed')||{}).value||'';FRV.note=(($('frNote')||{}).value||'').trim();
-  const p=$('frPrev'),jid=(document.querySelector('.mbox h3')||{}).textContent||'';const id=jid.split('งาน ').pop().trim(),j=(JE&&JE.j.id===id)?JE.j:MJ.find(x=>x.id===id);
-  if(p&&j)p.innerHTML=frCard(j,{by:ME(),need:FRV.need,note:FRV.note});}},true);
+const FRV={need:'',note:'',load:'',dlv:'',rows:[],j:null};
+document.addEventListener('input',e=>{const t=e.target,k=t.dataset&&t.dataset.fr;
+  if(!(k||t.id==='frNeed'||t.id==='frNote'||t.id==='frLoad'))return;
+  if(k){const r=FRV.rows[+t.dataset.i];if(r)r[k]=k==='pal'||k==='t'?n0(t.value):k==='note'?t.value.trim():t.value;}
+  else{FRV.need=($('frNeed')||{}).value||'';FRV.note=(($('frNote')||{}).value||'').trim();FRV.load=($('frLoad')||{}).value||'';}
+  const p=$('frPrev');if(p&&FRV.j)p.innerHTML=frCard(FRV.j,{by:ME(),need:FRV.need,note:FRV.note,load:FRV.load,dlv:FRV.dlv,rows:FRV.rows});},true);
 function frSet(id,f){[MJ.find(x=>x.id===id),JE&&JE.j.id===id?JE.j:null].forEach(x=>{if(!x)return;if(f)x.fr=Object.assign({},f);else delete x.fr;});renderPlan();}
 async function frCancel(id){const jj=(JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id))||{};
   if(frLive()&&jj.fr){if(jj.fr.st!=='Waiting'){toast('⚠️ ไร่จัดรถแล้ว — ยกเลิกต้องคุยกับแอดมินไร่ (ให้ไร่ยกเลิกออเดอร์ '+(jj.fr.ord||jj.fr.rid)+')');return;}
@@ -1216,7 +1248,8 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
        +(auto?'<label class="note" style="display:flex;flex-direction:column;gap:2px">กก.<input class="in auto" readonly tabindex="-1" value="'+comma(x.kg||0)+'"></label>':'');})()+'</div></div>'
     +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบจุดนี้">✕</button></div>'+(x.items&&x.items.length?'':mpBox(x,i))+'</div>';});
   h+='<input class="in" id="jsq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อห้าง" value="'+esc(JE.q)+'" autocomplete="off">';
-  if(JE.q){const nq=JE.q.replace(/\s/g,'').toLowerCase();const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&x.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,7);
+  if(JE.q){const sN=s=>String(s||'').replace(/\s/g,'').toLowerCase().replace(/เอฟซี/g,'fc').replace(/ดีซี/g,'dc').replace(/แมคโคร|makro/g,'แม็คโคร');   /* "FC" เจอ "เอฟซี" ด้วย */
+    const nq=sN(JE.q);const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&sN(x.n).includes(nq)).slice(0,12);
     h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
   h+='</div>'+mpSum(j)+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
     +'<label class="note">รถขนส่ง<input class="in" id="jcar" list="carL" value="'+esc(j.carrier||'SSB')+'"></label>'
