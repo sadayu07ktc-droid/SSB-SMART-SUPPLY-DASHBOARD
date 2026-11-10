@@ -94,6 +94,9 @@ main{padding-block:14px 120px}
 .ypa{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .ypa label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
 .ypb{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.tchip.ypk{background:var(--infobg);color:var(--info);border-color:color-mix(in srgb,var(--info) 35%,transparent);font-size:12px;vertical-align:2px}
+.yppk{font-size:13px;background:var(--infobg);color:var(--info);border-radius:8px;padding:7px 10px;line-height:1.6}
+.ypc details.ypalt>summary{margin-top:2px}
 .ypban{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:13px}
 @media(max-width:560px){.ypa{grid-template-columns:1fr}}
 .bar .sum{font-size:13px;color:var(--muted)}
@@ -2623,23 +2626,27 @@ async function ypMark(m,st,extra){m.st=st;if(m.sample||!ypLive())return;
 function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head].status==='ready').map(v=>{const p=PLAN[v.head],d=drvOf(p.driver),n=p.stops.length;
   return '<option value="'+esc(v.head)+'"'+(v.head===sel?' selected':'')+'>'+esc(plOf(v.head))+' · '+esc(v.g||'')+(d?' · '+esc(d.name.split(' ')[0]):' · ไม่มีคนขับ')+(n?' · มี '+n+' จุด':' · ว่าง')+'</option>';}).join('');}
 function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=ypMatch(p.shop),inP=ypInPlan(m.mid);
-  const chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">🚚 ส่ง '+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
-    '<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':''].join('');
-  let h='<div class="box ypc" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+esc(p.shop||'(ไม่มีชื่อร้าน)')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
+  const sumQ=its.reduce((a,i)=>a+(+i.q||0),0),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
+    '<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':'',
+    p.statedCs?'<span class="'+(p.statedCs===sumQ?'g':'w')+'" title="'+esc(p.statedTxt||'')+'">เซลส์สรุป '+comma(p.statedCs)+(p.statedCs===sumQ?' ✓ ตรง':' ≠ นับได้ '+comma(sumQ))+'</span>':''].join('');
+  let h='<div class="box ypc" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+esc(p.shop||'(ไม่มีชื่อร้าน)')+(p.pickup?' <span class="tchip ypk">🙋 รับเอง</span>':'')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
   h+='<table class="pol"><thead><tr><th>สินค้า</th><th class="n">ลัง</th><th class="n">แถมจริง</th><th class="n">ราคา/ลัง</th></tr></thead><tbody>'
     +its.map(i=>'<tr><td>'+esc(i.n)+'</td><td class="n">'+(i.q?comma(i.q):'')+'</td><td class="n">'+(i.f?'+'+comma(i.f):'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>').join('')
     +'<tr><td><b>รวมลงแพลน</b></td><td class="n" colspan="2"><b>'+comma(p.cs||0)+'</b> ลัง</td><td></td></tr></tbody></table>';
+  if(p.statedFree&&p.statedFree!==p.free)h+='<div class="warn">ℹ️ ข้อความแจ้ง “แถม '+comma(p.statedFree)+' ลัง” ในบรรทัดรวม · ยังไม่นับเข้าแพลน (ราคา /N เฉลี่ยลงแล้ว)</div>';
+  if(p.pickup){const k=p.pick||{};h+='<div class="yppk">🙋 <b>ลูกค้ารับเอง</b> ไม่ใช้รถเรา'+(k.plate?' · ทะเบียน <b>'+esc(k.plate)+'</b>':'')+(k.driver?' · คนขับ '+esc(k.driver):'')+(k.phone?' · โทร •••-•••-'+esc(String(k.phone).slice(-4)):'')+'</div>';}
   if((p.notes||[]).length)h+='<div class="note">📝 '+p.notes.map(esc).join(' · ')+'</div>';
   h+='<details><summary>ข้อความเดิมในกลุ่ม</summary><pre>'+esc(m.text||'')+'</pre></details>';
   const can=YP.canEdit||!ypLive();
-  if(st==='planned'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">✅ ลงแพลนแล้ว'+(inP?' · รถ '+esc(plOf(inP)):m.head?' · รถ '+esc(plOf(m.head)||m.head):'')+(m.planDate&&m.planDate!==pd?' · วันที่ '+esc(dateTH(m.planDate)):'')+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'
+  if(st==='planned'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">'+(m.head==='รับเอง'?'✅ ลูกค้ารับเอง (ไม่ใช้รถเรา)':'✅ ลงแพลนแล้ว')+(m.head==='รับเอง'?'':inP?' · รถ '+esc(plOf(inP)):m.head?' · รถ '+esc(plOf(m.head)||m.head):'')+(m.planDate&&m.planDate!==pd?' · วันที่ '+esc(dateTH(m.planDate)):'')+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'
       +(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
   else if(st==='ignored'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">🙈 ไม่ใช่ออเดอร์'+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'+(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
   else if(can){const sv=YP.sel[m.mid]||{};
+    if(p.pickup)h+='<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-yppick>✅ ลูกค้ารับเอง · ปิดรายการ</button></div><details class="ypalt"><summary>เปลี่ยนเป็นส่งด้วยรถเรา</summary>';
     h+='<div class="ypa"><label>จุดส่ง (ค่ากลาง)<input class="in" data-ypst list="ypStL" value="'+esc(sv.st!=null?sv.st:hit?hit.n:'')+'" placeholder="ไม่พบในรายชื่อ · พิมพ์ชื่อร้าน"></label>'
       +'<label>ลงรถ<select class="in" data-ypveh><option value="">— เลือกรถ —</option>'+ypVehOpts(sv.veh||'')+'</select></label></div>'
       +(hit||sv.st?'':'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ในรายชื่อจุดส่ง · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV เพิ่มร้านที่หน้าค่ากลาง)</div>')
-      +'<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-ypplan>➕ ลงแพลน '+comma(p.cs||0)+' ลัง</button></div>';}
+      +'<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-ypplan>➕ ลงแพลน '+comma(p.cs||0)+' ลัง</button></div>'+(p.pickup?'</details>':'');}
   else h+='<div class="note">ดูได้อย่างเดียว · ลงแพลนได้เฉพาะแอดมิน Packing</div>';
   return h+'</div>';}
 function ypDraw(){const H=$('drawerHost');if(!H)return;const c=ypCnt(),pd=$('pdate').value;
@@ -2664,6 +2671,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const c=ypCnt(),pd=$('pda
     if(i1)i1.oninput=()=>{sv.st=i1.value;};if(i2)i2.onchange=()=>{sv.veh=i2.value;};
     const bp=card.querySelector('[data-ypplan]');if(bp)bp.onclick=()=>ypPlan(m,card,bp);
     const bi=card.querySelector('[data-ypign]');if(bi)bi.onclick=()=>ypSet(m,'ignored',bi);
+    const bk=card.querySelector('[data-yppick]');if(bk)bk.onclick=()=>ypPick(m,bk);
     const bb=card.querySelector('[data-ypback]');if(bb)bb.onclick=()=>ypBack(m,bb);});}
 function ypOpen(){if(typeof ED!=='undefined'&&ED){toast('ปิดลิ้นชักแก้งานรถก่อน แล้วค่อยเปิด Pending ยี่ปั๊ว');return;}
   ypDraw();const x=document.querySelector('#ypDr .x');if(x)x.focus();if(ypLive())ypLoad();}
@@ -2683,6 +2691,8 @@ async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data
   catch(e){P.stops=P.stops.filter(y=>y!==stop);P.note=note0;toast('❌ '+(e.message||e));btn.disabled=false;return;}
   delete YP.sel[m.mid];if(PM!=='all')setPM('all');else renderAll();ypBadge();ypDraw();
   toast('✅ ลง '+(stop.n)+' '+comma(p.cs||0)+' ลัง เข้ารถ '+plOf(head)+' แล้ว · อย่าลืมกดบันทึกแพลน');}
+async function ypPick(m,btn){const old=m.head,oldD=m.planDate,d=(m.p&&m.p.dlv)||$('pdate').value;m.head='รับเอง';m.planDate=d;
+  if(!(await ypSet(m,'planned',btn,{planDate:d,head:'รับเอง'}))){m.head=old;m.planDate=oldD;return;}toast('✅ '+((m.p&&m.p.shop)||'')+' ลูกค้ารับเอง · ปิดรายการแล้ว');}
 async function ypBack(m,btn){const h=ypInPlan(m.mid);
   if(h&&!(await askModal({title:'คืนเป็น Pending',icon:'↩',html:'<p>จะเอาจุดส่งของออเดอร์นี้ออกจากรถ <b>'+esc(plOf(h))+'</b> ด้วย</p>',ok:'คืนเป็น Pending',cancel:'ยกเลิก',danger:true})))return;
   const keep={};VEH.forEach(v=>{const p=PLAN[v.head];if(p&&p.stops.some(x=>x.yp===m.mid)){keep[v.head]=[p.stops.slice(),p.note];p.stops=p.stops.filter(x=>x.yp!==m.mid);if(m.nAdd)p.note=String(p.note||'').replace(' · '+m.nAdd,'').replace(m.nAdd,'').trim();}});
