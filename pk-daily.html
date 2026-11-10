@@ -720,7 +720,8 @@ const tchip=t=>'<span class="tchip"><i style="background:'+TYC[t]+'"></i>'+t+'</
 /* งานขากลับ (รับของกลับ) = จุดในแพลนรวม มี s.rt={k,q,u} · s.tbd = ยังไม่รู้สถานที่ (แจ้งทีหลัง) */
 const RTK=[['พาเลทเปล่า','พาเลท'],['ลัง / ตะกร้าเปล่า','ใบ'],['สินค้าคืน / ของเสีย','ลัง'],['เอกสาร / บิล / เช็ค','ชุด'],['อื่นๆ','รายการ']];
 const rtU=k=>(RTK.find(x=>x[0]===k)||RTK[4])[1];
-const rtTxt=r=>'รับ'+r.k+(r.q?' '+r.q+' '+r.u:'');
+const rtTxt=r=>'รับ'+r.k+(r.q?' '+r.q+' '+r.u:'')+(r.d?' · '+r.d:'');   // r.d = ระบุงาน (10 พ.ย. คุณน้อง)
+const jsN=s=>s.rt?'↩ '+rtTxt(s.rt)+(s.tbd?'':' @ '+s.n):s.n;   // ชื่อจุดในใบแจ้งงาน/ขอรถไร่ (งานรับของกลับ)
 const stChip=s=>(s.rt?'<span class="tchip rtc">↩ ขากลับ</span>':tchip(tyOf(s)))+(s.tk?' <span class="tchip">🛢️ '+esc(s.tk)+' ถัง</span>':'')+(s.coa?' <span class="tchip coa" title="ขนถังต้องมีใบขนย้าย COA">📄 COA</span>':'');
 const TBD_N='รอแจ้งสถานที่';
 /* แจ้งคนขับเมื่อระบุ/เปลี่ยนสถานที่รับของกลับ · เว็บจริง = การ์ด LINE ถึงคนขับคันนั้น (สีเขียว + ปุ่มแผนที่/รับทราบ) · เดโมโชว์การ์ดที่จะส่ง */
@@ -750,7 +751,7 @@ function podStop(key){const a=String(key).split(':'),t0=a[0],id=a.slice(1,-1).jo
   if(t0==='j'){const j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);return j&&j.stops[i]?{s:j.stops[i],ctx:'งาน '+j.id+(j.head?' · รถ '+plOf(j.head):' · ยังไม่มีทะเบียน')}:null;}
   const p=ED&&ED.v.head===id?ED.p:PLAN[id],s=p&&p.stops[i];return s?{s,ctx:'รถ '+plOf(id)+(s.mj?' · งาน '+s.mj:'')}:null;}
 function openPoDrawer(key){const r=podStop(key);if(!r)return;const s=r.s,its=s.items||[],kg=its.reduce((a,x)=>a+(+x.kg||0),0)||n0(s.kg);
-  let h='<div class="scrim" data-pox></div><aside class="drawer pod" role="dialog" aria-modal="true" aria-label="รายละเอียด PO '+esc(s.n)+'"><div class="dh"><div><div class="stc"><span class="tchip">'+(its.length?'📄 รายละเอียด PO':mpHas(s)?'📦 รายการสินค้า':'📄 รายละเอียดจุดส่ง')+'</span></div><h3>'+esc(s.n)+'</h3><div class="m">'+esc(r.ctx)+(s.at?' · ต้องถึง '+esc(s.at):'')+(pvOf(s)?' · '+esc(pvOf(s)):'')+'</div></div><button class="x" data-pox aria-label="ปิด">✕</button></div><div class="db">';
+  let h='<div class="scrim" data-pox></div><aside class="drawer pod" role="dialog" aria-modal="true" aria-label="รายละเอียด PO '+esc(s.n)+'"><div class="dh"><div><div class="stc"><span class="tchip">'+(its.length?'📄 รายละเอียด PO':mpHas(s)?'📦 รายการสินค้า':'📄 รายละเอียดจุดส่ง')+'</span></div><h3>'+esc(s.n)+'</h3><div class="m">'+esc(r.ctx)+(s.at?' · ลงสินค้า '+esc(s.at):'')+(pvOf(s)?' · '+esc(pvOf(s)):'')+'</div></div><button class="x" data-pox aria-label="ปิด">✕</button></div><div class="db">';
   h+='<div class="pok">'+[['PO',its.length?its.length+' ใบ':'ไม่มี (ใส่เอง)'],['พาเลท',pnN(s.pal)],['ลัง',pnN(s.cs)],['น้ำหนัก',pnN(kg)+' กก.']].map(a=>'<div><small>'+a[0]+'</small><b>'+a[1]+'</b></div>').join('')+'</div>';
   its.forEach(x=>{const on=LP_POS.find(y=>y.po===x.po),P=on||(LPI.off||[]).find(y=>y.po===x.po),tot=P?(P.lines||[]).reduce((a,l)=>a+(+l.q||0),0):0;
     h+='<div class="box poc"><div class="poh"><b class="mono">PO '+esc(x.po)+'</b>'+(x.so?'<span class="note">SO '+esc(x.so)+'</span>':'')+(P&&P.rev>1?'<span class="rv w">Rev.'+P.rev+' (แก้จำนวนแล้ว)</span>':'')+(P&&!on?'<span class="rv w">🚫 ยกเลิกแล้ว</span>':'')+'</div>'
@@ -1008,7 +1009,7 @@ function mallDiff(){const cur=mallSnap(),old=MALL.snap,out=[],dn=c=>drvOf(c)?.na
     b.stops.forEach(s=>{const o=a.stops.find(y=>y.k===s.k);if(!o)return;
       const q=[];if((o.pal||'')!==(s.pal||''))q.push('พาเลท '+(o.pal||'0')+' → '+(s.pal||'0'));if((o.cs||'')!==(s.cs||''))q.push('ลัง '+(o.cs||'0')+' → '+(s.cs||'0'));
       if(q.length)add('all',s.n+': '+q.join(' · '),[b.driver]);
-      if((o.at||'')!==(s.at||''))add('drv',s.n+': เวลาถึง '+(o.at||'—')+' → '+(s.at||'—'),[b.driver]);});});
+      if((o.at||'')!==(s.at||''))add('drv',s.n+': เวลาลงสินค้า '+(o.at||'—')+' → '+(s.at||'—'),[b.driver]);});});
   return out;}
 function notifyOf(items){const dr=new Set(),all=items.some(x=>x.lvl==='all');items.forEach(x=>x.drv.forEach(d=>dr.add(d)));
   const t=[];if(dr.size)t.push('คนขับ '+[...dr].map(c=>first(drvOf(c)?.name||c)).join(', '));if(all)t.push('คลังสินค้า','บัญชี');return t;}
@@ -1028,7 +1029,7 @@ function openLog(){const L=MALL.log.slice().reverse();
 /* 🚜 ขอรถไร่ · j.fr={at,by,need,note} · เว็บจริง = การ์ด LINE ถึงแอดมินรถไร่ (ADMIN ไร่) → ไร่ตอบรับ ระบุรถ/คนขับ → ขึ้นในงานนี้ (เฟสถัดไป) */
 /* 10 พ.ย. คุณน้อง: จำนวนกรอกเองรายร้าน (เวลา/พาเลท/ตัน/หมายเหตุ) + วันขึ้นสินค้า/วันงานห้าง · ส่งการ์ด LINE ถึงแอดมินไร่ (ADMIN) · ของเข้า pk_request_items */
 const frT=x=>(Math.round(n0(x)*100)/100).toLocaleString('en-US',{maximumFractionDigits:2});
-function frRows(j,f){return (f&&f.rows)||j.stops.map(s=>({n:s.n,at:s.at||'',pal:n0(s.pal),t:Math.round(n0(s.kg)/10)/100,note:''}));}
+function frRows(j,f){return (f&&f.rows)||j.stops.map(s=>({n:jsN(s),at:s.at||'',pal:n0(s.pal),t:Math.round(n0(s.kg)/10)/100,note:''}));}
 function frSum(j,f){let pl=0,t=0;frRows(j,f).forEach(s=>{pl+=n0(s.pal);t+=n0(s.t);});return {pl,t};}
 function frCard(j,f){const R=frRows(j,f),S=frSum(j,f);
   return '<div class="lcard"><div class="lch">📦 งาน Packing ขอรถไร่ · '+esc(f.rid||'PKR-…')+'</div><div class="lcb">'
@@ -1037,7 +1038,7 @@ function frCard(j,f){const R=frRows(j,f),S=frSum(j,f);
     +(f.load?'<div class="lcr"><span>ขึ้นสินค้า</span><b style="color:#9A4A00">'+esc(dateTH(f.load))+'</b></div>':'')
     +(f.need?'<div class="lcr"><span>เข้าโหลด</span><b>'+esc(f.need)+' น. ที่ SSB</b></div>':'')
     +R.map((s,i)=>'<div class="lcr"><span>'+(i?'':'ส่ง')+'</span><span>'+(R.length>1?(i+1)+'. ':'')+esc(s.n)
-      +' <small>'+[s.at?'ถึง '+esc(s.at)+' น.':'',n0(s.pal)?n0(s.pal)+' พาเลท':'',n0(s.t)?frT(s.t)+' ตัน':''].filter(Boolean).join(' · ')+'</small>'
+      +' <small>'+[s.at?'ลงสินค้า '+esc(s.at)+' น.':'',n0(s.pal)?n0(s.pal)+' พาเลท':'',n0(s.t)?frT(s.t)+' ตัน':''].filter(Boolean).join(' · ')+'</small>'
       +(s.note?'<br><small style="color:#9A4A00">📝 '+esc(s.note)+'</small>':'')+'</span></div>').join('')
     +(S.pl||S.t?'<div class="lcr"><span>รวม</span><b>'+[S.pl?S.pl+' พาเลท':'',S.t?frT(S.t)+' ตัน':''].filter(Boolean).join(' · ')+'</b></div>':'')
     +(f.note?'<div class="lcr"><span>หมายเหตุ</span><b style="color:#B45309">'+esc(f.note)+'</b></div>':'')
@@ -1056,13 +1057,13 @@ async function frAsk(id){let j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);if(!j
       +'<label class="note">รถต้องเข้าโหลดที่ SSB<input class="in" type="time" id="frNeed"></label></div>'
       +'<label class="note frnl">หมายเหตุถึงไร่ (ทั้งเที่ยว)<input class="in" id="frNote" placeholder="เช่น เก็บของเสียตามเอกสาร / ต้องมีผ้าใบ"></label>'
       +'<div class="note" style="margin-top:8px">จำนวนรายร้าน (กรอก/แก้เองได้ · ตั้งต้นจากแพลน):</div>'
-      +'<div class="tw"><table class="frt"><thead><tr><th>#</th><th>ร้าน</th><th>เวลาถึง</th><th>พาเลท</th><th>นน. (ตัน)</th><th>หมายเหตุร้านนี้</th></tr></thead><tbody>'
+      +'<div class="tw"><table class="frt"><thead><tr><th>#</th><th>ร้าน</th><th>เวลาลงสินค้า</th><th>พาเลท</th><th>นน. (ตัน)</th><th>หมายเหตุร้านนี้</th></tr></thead><tbody>'
       +FRV.rows.map((r,i)=>'<tr><td>'+(i+1)+'</td><td class="frn">'+esc(r.n)+'</td>'
         +'<td><input class="in" type="time" data-fr="at" data-i="'+i+'" value="'+esc(r.at)+'"></td>'
         +'<td><input class="in" type="number" min="0" max="999" step="1" inputmode="numeric" data-fr="pal" data-i="'+i+'" value="'+(r.pal||'')+'"></td>'
         +'<td><input class="in" type="number" min="0" max="60" step="0.01" inputmode="decimal" data-fr="t" data-i="'+i+'" value="'+(r.t||'')+'"></td>'
         +'<td><input class="in" data-fr="note" data-i="'+i+'" maxlength="120" placeholder="เช่น เก็บของเสีย"></td></tr>').join('')+'</tbody></table></div>'
-      +(first0?'<div class="note">จุดแรกต้องถึงหน้างาน '+esc(first0)+' น.</div>':'')
+      +(first0?'<div class="note">เวลาลงสินค้าจุดแรก '+esc(first0)+' น.</div>':'')
       +'<div class="note" style="margin-top:8px">งานที่จะเข้าแดชบอร์ดของแอดมินไร่:</div><div id="frPrev">'+frCard(j,fx())+'</div>'
       +(frLive()?'<p class="note">กด ส่งคำขอ = เข้าคิว <b>รอจัด</b> ของแอดมินไร่ทันที (แดชบอร์ด Packing + ชิป 📦 หน้าติดตามออเดอร์) + <b>ส่งการ์ด LINE ถึงแอดมินไร่</b> · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในงานนี้เอง (อัปเดตทุก 1 นาที)</p>'
         :'<p class="note">เดโม: ยังไม่ส่งจริง · เว็บจริง = สร้างคำขอ PKR เข้าแดชบอร์ด Packing ของแอดมินไร่ + การ์ด LINE ถึงแอดมินไร่ · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในงานนี้ · สถานะ รอจัด → จัดแล้ว → กำลังขึ้นของ → ส่งแล้ว</p>')});
@@ -1072,7 +1073,7 @@ async function frAsk(id){let j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);if(!j
     {const o=MJ.find(x=>x.id===j.id);if(o&&o!==j&&!j.lp){frRef(o);j.uid=o.uid;}}   /* ลิ้นชักถือสำเนางาน → ใช้รหัสอ้างอิงเดียวกับงานในตาราง */
     const F=fx();
     try{const x=await lpCall({action:'farmReq',ref:frRef(j),date:pd,size:SZL[j.size]||j.size,label:j.id+' · '+(SZL[j.size]||j.size),need:F.need,note:F.note,loadDate:F.load,dlvDate:F.dlv,
-        stops:j.stops.map((s,i)=>{const r=F.rows[i]||{};return {n:s.n,at:r.at||'',pal:n0(r.pal),cs:n0(s.cs),t:n0(r.t),note:r.note||'',po:s.po||[]};})});
+        stops:j.stops.map((s,i)=>{const r=F.rows[i]||{};return {n:jsN(s),at:r.at||'',pal:n0(r.pal),cs:n0(s.cs),t:n0(r.t),note:r.note||'',po:s.po||[]};})});
       FRL=x.farm||FRL;frApply();renderPlan();const f=Object.assign({rid:x.rid,at:frHm(new Date())},j.fr||{},F);
       const ln=x.line||{},lt=ln.off?'⚠️ ปิดส่ง LINE ไว้ (PK_FARM_LINE=off)':ln.sent?'✅ ส่งการ์ด LINE ถึงแอดมินไร่แล้ว '+ln.sent+' คน':'⚠️ ส่ง LINE ไม่สำเร็จ'+(ln.error?' ('+ln.error+')':'')+' — โทรแจ้งแอดมินไร่';
       askModal({icon:'📦',title:'ส่งงานให้แอดมินไร่แล้ว · '+x.rid,ok:'ปิด',html:'<p>เข้าคิว <b>รอจัด</b> ในแดชบอร์ด Packing ของแอดมินไร่ · งาน '+esc(j.id)+'</p><p><b>'+esc(lt)+'</b></p>'+frCard(j,f)
@@ -1167,18 +1168,19 @@ function renderMall(){frApply();
     +['งาน','ขนาดรถ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','รถ (พี่ปุ๋ยแจ้ง)','คนขับ','สถานะ'].map((t,i)=>'<th'+(i>=4&&i<=6?' class="n"':'')+'>'+t+'</th>').join('')+'</tr></thead><tbody>';
   js.forEach(j=>{const S=j.stops,d=drvOf(j.driver),s=jst(j,dfx);
     h+='<tr class="vr2'+(JE&&JE.j.id===j.id?' sel':'')+'" tabindex="0" data-j="'+j.id+'"><td><b>'+j.id+'</b>'+(j.lp?'<span class="lpb" title="'+esc(j.note)+'">📦 LP</span>':'')+'</td><td><span class="szc">'+esc(SZL[j.size])+'</span></td>'
-      +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(x.n)+'">'+esc(x.n)+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+'</td>'
+      +'<td class="cu">'+(S.length?L(S,x=>'<span class="ell" title="'+esc(jsN(x))+'">'+esc(jsN(x))+'</span>'):'<span class="m">ยังไม่ใส่ร้าน</span>')+'</td>'
       +'<td>'+L(S,x=>esc(pvOf(x))||dash)+'</td><td class="n">'+L(S,x=>x.at?'<b class="tm">'+esc(x.at)+'</b>':dash)+'</td>'
       +'<td class="n">'+L(S,(x,i)=>poCell(x,'pal','j:'+j.id+':'+i))+'</td><td class="n">'+L(S,(x,i)=>poCell(x,'cs','j:'+j.id+':'+i))+'</td>'
       +'<td>'+(j.head?'<b>'+esc(plOf(j.head))+'</b><small class="m" style="display:block">'+esc([BRAND[j.head],VEH.find(v=>v.head===j.head).shape].filter(Boolean).join(' · '))+'</small>'
         :'<div class="frb"><button class="btn sm" data-jset="'+j.id+'">＋ ใส่รถ / คนขับ</button>'+(j.fr?(j.fr.st==='Waiting'?(frLive()?'':'<button class="btn sm frq2" data-frs="'+j.id+'" title="เดโม: จำลองแอดมินไร่จัดคนขับ">🧪 จำลอง: ไร่จัดแล้ว</button>'):'<span class="note">🚜 '+esc(j.fr.plate||'รถไร่')+(j.fr.drv?' · '+esc(j.fr.drv):'')+'</span>')+(j.fr.st==='Waiting'||!frLive()?'<button class="btn sm frx" data-frx="'+j.id+'" title="ยกเลิกงานที่ส่งให้ไร่">✕ ยกเลิกงานไร่</button>':''):'<button class="btn sm frq2" data-fra="'+j.id+'" title="รถ Packing ไม่พอ ขอยืมรถไร่">🚜 ขอรถไร่</button>')+'</div>')+'</td>'
-      +'<td>'+(d?esc(d.name):j.head?'<span class="or">ยังไม่ระบุ</span>':dash)+'</td><td><div class="stw">'+jstPill(j,dfx)+(MALL.snap[j.id]?'':'<button class="ib jdel" data-jdel="'+j.id+'" aria-label="ลบงาน '+j.id+'" title="ลบงานนี้ (ยังไม่แจก)">🗑</button>')+'</div></td></tr>';});
+      +'<td>'+(d?esc(d.name):j.head?'<span class="or">ยังไม่ระบุ</span>':dash)+'</td><td><div class="stw">'+jstPill(j,dfx)+'<button class="ib jdup" data-jdup="'+j.id+'" aria-label="ทำซ้ำงาน '+j.id+'" title="Duplicate · สร้างงานใหม่จากงานนี้">⧉</button>'+(MALL.snap[j.id]?'':'<button class="ib jdel" data-jdel="'+j.id+'" aria-label="ลบงาน '+j.id+'" title="ลบงานนี้ (ยังไม่แจก)">🗑</button>')+'</div></td></tr>';});
   if(!js.length)h+='<tr><td colspan="10" class="note" style="padding:18px">ยังไม่มีงานห้าง · กด ＋ เพิ่มงานห้าง</td></tr>';
   h+='</tbody></table></div><p class="note">งานที่ใส่รถแล้วจะโผล่ในแพลนรวมทันที แต่คนขับ/คลัง/บัญชี ยังไม่ได้รับจนกว่าจะกดแจกงาน</p>';
   const _sk=scSave();$('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="งานห้างที่เลือก / รายการรถ"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
   scLoad(_sk);if(JE)drawJob();else renderList();
   $('rlog').onclick=openLog;$('jadd').onclick=()=>openJob(null);$('jexp').onclick=openMallExport;if($('jdelall'))$('jdelall').onclick=askDelUnsent;
   $('v-plan').querySelectorAll('[data-jdel]').forEach(b=>{b.onclick=e=>{e.stopPropagation();askDelJob(b.dataset.jdel);};b.onkeydown=e=>e.stopPropagation();});
+  $('v-plan').querySelectorAll('[data-jdup]').forEach(b=>{b.onclick=e=>{e.stopPropagation();dupJob(b.dataset.jdup);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-jset]').forEach(b=>b.onclick=e=>{e.stopPropagation();openJob(b.dataset.jset);});
   $('v-plan').querySelectorAll('[data-fra]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frAsk(b.dataset.fra);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-frs]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frSim(b.dataset.frs);};b.onkeydown=e=>e.stopPropagation();});
@@ -1187,11 +1189,22 @@ function renderMall(){frApply();
   wireSub();pmChips(mallTodo(dfx));updBar();lpShow();}
 function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'พ่วง',stops:[],head:'',driver:'',note:'',isNew:1};
   JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
+/* ⧉ Duplicate (10 พ.ย. คุณน้อง) = ร่างงานใหม่ ร้าน/เวลา/จำนวนเหมือนเดิม · ไม่เอารถ/คนขับ/คำขอรถไร่ · จุดจาก PO ล้างจำนวน (กัน PO ซ้ำ 2 คัน) · ยังไม่บันทึกจนกด บันทึกงาน */
+function dupJob(id){const src=MJ.find(x=>x.id===id);if(!src)return;
+  const j=JSON.parse(JSON.stringify(src));['fr','lp','mj','v','dupOf'].forEach(k=>delete j[k]);j.head='';j.driver='';j.id='H'+(MJN+1);j.isNew=1;j.dupOf=src.id;
+  let po=0;j.stops.forEach(s=>{delete s.mj;if(s.rt){s.rt.id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);delete s.rt.sent;}
+    if((s.items&&s.items.length)||(s.po&&s.po.length&&!s.manual)){po++;delete s.items;s.po=[];s.pal='';s.cs='';s.kg=0;}});
+  HIDELP=false;JE={j,q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});
+  toast('⧉ ทำซ้ำจาก '+src.id+' · ใส่รถ/คนขับ แล้วกด บันทึกงาน'+(po?' · '+po+' จุดมาจาก PO ล้างจำนวนแล้ว ใส่ใหม่':''));}
 function closeJob(){JE=null;renderPlan();}
 function syncJ(){if(!JE)return;const j=JE.j;
   document.querySelectorAll('[data-jat]').forEach(i=>j.stops[+i.dataset.jat].at=i.value);
   document.querySelectorAll('[data-jpal]').forEach(i=>j.stops[+i.dataset.jpal].pal=i.value);
   document.querySelectorAll('[data-jcs]').forEach(i=>j.stops[+i.dataset.jcs].cs=i.value);
+  document.querySelectorAll('[data-jrtk]').forEach(i=>{const s=j.stops[+i.dataset.jrtk];if(s&&s.rt){s.rt.k=i.value;s.rt.u=rtU(i.value);}});
+  document.querySelectorAll('[data-jrtn]').forEach(i=>{const s=j.stops[+i.dataset.jrtn];if(s&&s.rt)s.rt.q=i.value.replace(/[^\d]/g,'');});
+  document.querySelectorAll('[data-jrtd]').forEach(i=>{const s=j.stops[+i.dataset.jrtd];if(s&&s.rt)s.rt.d=i.value.trim().slice(0,120);});
+  if($('jrtw')&&JE.rt){const R=JE.rt;R.at=$('jrtw').value;R.k=$('jrtk').value;R.n=$('jrtn').value;R.d=$('jrtd').value;}
   mpSyncDom(j.stops);
   if($('jnt'))j.note=$('jnt').value;if($('jcar'))j.carrier=$('jcar').value.trim();if($('junl'))j.unl=$('junl').value;}
 
@@ -1250,6 +1263,40 @@ function mpWire(D,stops,syncF,drawF){
   D.querySelectorAll('[data-mpq]').forEach(e=>e.oninput=()=>{const k=e.dataset.mpq,pos=e.selectionStart;syncF();drawF();const n=D.querySelector('[data-mpq="'+k+'"]');if(n){n.focus();try{n.setSelectionRange(pos,pos);}catch(_){}}});}
 function mpApply(x){if(!x.lines||!x.lines.some(l=>l.k&&n0(l.q)))return;const r=mpCalc(x.lines);x.cs=String(r.cs);x.pal=String(r.pal);x.kg=r.kg;
   x.po=x.po||[];x.manual=1;}
+/* ↩ รับของกลับในงานห้าง (10 พ.ย. คุณน้อง "ปุ่มรับของกลับอยู่ไหน ระบุงาน") · จุด s.rt={k,q,u,d} ต่อท้ายจุดส่ง · ty ห้าง = อยู่กับงานห้างนี้ (แพลนรวมล็อก แก้ที่แพลนห้าง) */
+const jRtLbl=t=>'<label class="note" style="display:flex;flex-direction:column;gap:2px">'+t;
+function jRtStop(j,x,i){return '<div class="stop rt'+(x.tbd?' tbd':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(x.n)+' '+stChip(x)+'</div><div class="note">'+legTxt(j.stops,i)+'</div>'
+  +'<div class="q">'+jRtLbl('ของที่รับกลับ')+'<select class="in" data-jrtk="'+i+'" style="width:150px">'+RTK.map(r=>'<option'+(x.rt.k===r[0]?' selected':'')+'>'+r[0]+'</option>').join('')+'</select></label>'
+  +jRtLbl('จำนวน ('+esc(x.rt.u)+')')+'<input class="in" data-jrtn="'+i+'" inputmode="numeric" placeholder="ไม่ทราบ" value="'+esc(x.rt.q)+'" style="width:86px"></label>'
+  +jRtLbl('เวลานัด (ถ้ามี)')+'<input class="in" type="time" data-jat="'+i+'" value="'+esc(x.at)+'" style="width:118px"></label></div>'
+  +jRtLbl('งานที่ต้องทำ')+'<input class="in" data-jrtd="'+i+'" maxlength="120" placeholder="เช่น รับพาเลทเปล่าคืน ลานหลังร้าน · เก็บของเสีย · รับเช็ค" value="'+esc(x.rt.d||'')+'"></label></div>'
+  +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบงานรับของกลับนี้">✕</button></div></div>';}
+function jRtBox(j){const opts=[...new Map(j.stops.filter(s=>!s.rt&&s.id!=null).map(s=>[s.id,s])).values()];
+  JE.rt=JE.rt||{at:opts.length?String(opts[opts.length-1].id):'tbd',k:RTK[0][0],n:'',d:'',q:'',pick:null};const R=JE.rt;
+  let h='<div class="box rtbox" style="margin-top:10px"><span class="lb">↩ รับของกลับ · ระบุงาน <span class="note">(ต่อท้ายจุดส่ง · ยังไม่รู้สถานที่ก็แอดไว้ก่อนได้)</span></span><div class="q">'
+   +jRtLbl('รับที่')+'<select class="in" id="jrtw" style="width:210px"><option value="tbd"'+(R.at==='tbd'?' selected':'')+'>📍 ยังไม่รู้ · แจ้งทีหลัง</option>'
+   +opts.map(s=>'<option value="'+s.id+'"'+(R.at===String(s.id)?' selected':'')+'>'+esc(s.n)+' (จุดส่งเดิม)</option>').join('')+'<option value="x"'+(R.at==='x'?' selected':'')+'>ร้าน / สถานที่อื่น…</option></select></label>'
+   +jRtLbl('ของที่รับกลับ')+'<select class="in" id="jrtk" style="width:150px">'+RTK.map(x=>'<option'+(R.k===x[0]?' selected':'')+'>'+x[0]+'</option>').join('')+'</select></label>'
+   +jRtLbl('จำนวน ('+esc(rtU(R.k))+')')+'<input class="in" id="jrtn" inputmode="numeric" placeholder="ไม่ทราบ" value="'+esc(R.n)+'" style="width:86px"></label></div>'
+   +jRtLbl('งานที่ต้องทำ')+'<input class="in" id="jrtd" maxlength="120" placeholder="เช่น รับพาเลทเปล่าคืน · เก็บของเสีย · วางบิล/รับเช็ค" value="'+esc(R.d||'')+'"></label>';
+  if(R.at==='x'){const pk=R.pick&&ST.find(x=>x.id===R.pick);
+    h+=pk?'<div class="note">สถานที่: <b>'+esc(pk.n)+'</b> <button type="button" class="btn sm ghost" id="jrtclr">เปลี่ยน</button></div>'
+      :'<input class="in" id="jrtq" placeholder="พิมพ์ชื่อร้าน / สถานที่ที่จะแวะรับ" value="'+esc(R.q)+'" autocomplete="off">'
+       +(R.q?(()=>{const nq=R.q.replace(/\s/g,'').toLowerCase(),r=ST.filter(x=>x.n.replace(/\s/g,'').toLowerCase().includes(nq)).slice(0,8);
+         return '<div class="res">'+(r.length?r.map(x=>'<button type="button" data-jrtpk="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||tyOf({id:x.id}))+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบ · ยังไม่มีในรายชื่อค่ากลาง (DEV เพิ่มที่หน้าค่ากลาง)</div>')+'</div>';})():'');}
+  return h+'<button type="button" class="btn sm pri" id="jrtadd" style="margin-top:8px">＋ เพิ่มงานรับของกลับ</button></div>';}
+function jRtWire(D,j){const R=JE.rt;
+  ['jrtw','jrtk'].forEach(k=>{if($(k))$(k).onchange=()=>{syncJ();if(k==='jrtw'&&R.at!=='x')R.pick=null;drawJob();};});
+  if($('jrtq'))$('jrtq').oninput=()=>{syncJ();R.q=$('jrtq').value;drawJob();const n=$('jrtq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};
+  D.querySelectorAll('[data-jrtpk]').forEach(b=>b.onclick=()=>{syncJ();R.pick=+b.dataset.jrtpk;R.q='';drawJob();});
+  if($('jrtclr'))$('jrtclr').onclick=()=>{syncJ();R.pick=null;drawJob();};
+  D.querySelectorAll('[data-jrtk]').forEach(e=>e.onchange=()=>{syncJ();drawJob();});
+  if($('jrtadd'))$('jrtadd').onclick=()=>{syncJ();
+    if(R.at==='x'&&!R.pick){toast('⚠️ เลือกร้าน/สถานที่จากรายการก่อน หรือเลือก “ยังไม่รู้ · แจ้งทีหลัง”');return;}
+    const rt={id:'r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5),k:R.k,q:String(R.n||'').replace(/[^\d]/g,''),u:rtU(R.k),d:String(R.d||'').trim().slice(0,120)};
+    if(R.at==='tbd')j.stops.push({id:null,n:TBD_N,km:null,pal:'',cs:'',at:'',ty:'ห้าง',tbd:1,rt});
+    else{const id=R.at==='x'?R.pick:+R.at,s0=ST.find(x=>x.id===id);if(!s0){toast('⚠️ ไม่พบสถานที่นี้');return;}j.stops.push({id:s0.id,n:s0.n,km:s0.km,pal:'',cs:'',at:'',ty:'ห้าง',rt});}
+    JE.rt={at:R.at==='x'?'tbd':R.at,k:R.k,n:'',d:'',q:'',pick:null};drawJob();toast('↩ เพิ่มงาน: '+rtTxt(rt)+(R.at==='tbd'?' · รอแจ้งสถานที่':'')+' · กดบันทึกงาน');};}
 function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   let h='<aside class="drawer" aria-label="งานห้าง '+esc(j.id)+'"><div class="dh"><div><div class="stc">'+(j.isNew?'<span class="rv w">งานใหม่</span>':jstPill(j))+'</div><h3>'+esc(j.id)+' · งานห้าง</h3><div class="m">'+esc(SZL[j.size])+(j.head?' · '+esc(plOf(j.head)):' · ยังไม่มีทะเบียน')+'</div></div><button class="x" id="jx" aria-label="ปิด">✕</button></div><div class="db">';
   h+='<div class="box"><span class="lb">① ขนาดรถ</span><div class="seg">'+SIZES.map(z=>'<button data-sz="'+z+'" class="'+(j.size===z?'on':'')+'">'+SZL[z]+'</button>').join('')+'</div>'
@@ -1267,9 +1314,9 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
         +DRV.filter(d=>!mine||d.code!==mine.code).map(d=>'<option value="'+d.code+'"'+(j.driver===d.code?' selected':'')+'>'+esc(d.name)+' (ประจำ '+esc(d.head)+')</option>').join('')+'</select>'
         +(j.driver&&dc[j.driver]&&dc[j.driver].some(x=>x!==j.head)?'<div class="warn">⚠ คนนี้มีงานรถ '+esc(dc[j.driver].filter(x=>x!==j.head).join(', '))+' วันเดียวกัน</div>':'');})()
     :'<div class="note">ใส่รถก่อน แล้วค่อยเลือกคนขับ</div>')+'</div>';
-  h+='<div class="box"><span class="lb">จุดส่ง (ห้าง) <span class="note">('+j.stops.length+' จุด · เวลาที่ต้องถึงหน้างาน)</span></span>';
-  j.stops.forEach((x,i)=>{h+='<div class="stop mallsrc"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(x.n)+'</div><div class="note">'+legTxt(j.stops,i)+'</div>'+(x.items&&x.items.length?'<button type="button" class="btn sm pob2" data-pod="j:'+esc(j.id)+':'+i+'">📄 รายละเอียด PO ('+x.items.length+' ใบ)</button>':'')
-    +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-jat="'+i+'" value="'+esc(x.at)+'" style="width:118px"></label>'
+  h+='<div class="box"><span class="lb">จุดส่ง (ห้าง) <span class="note">('+j.stops.length+' จุด · เวลาลงสินค้า)</span></span>';
+  j.stops.forEach((x,i)=>{if(x.rt){h+=jRtStop(j,x,i);return;}h+='<div class="stop mallsrc"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(x.n)+'</div><div class="note">'+legTxt(j.stops,i)+'</div>'+(x.items&&x.items.length?'<button type="button" class="btn sm pob2" data-pod="j:'+esc(j.id)+':'+i+'">📄 รายละเอียด PO ('+x.items.length+' ใบ)</button>':'')
+    +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">เวลาลงสินค้า<input class="in" type="time" data-jat="'+i+'" value="'+esc(x.at)+'" style="width:118px"></label>'
     +(()=>{const auto=x.lines&&x.lines.some(l=>l.k&&n0(l.q)),ro=auto?' readonly tabindex="-1" class="in auto" title="คิดจากสินค้า"':' class="in"';
       return '<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input'+ro+' data-jpal="'+i+'" placeholder="0" value="'+esc(x.pal)+'"></label>'
        +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input'+ro+' data-jcs="'+i+'" placeholder="0" value="'+esc(x.cs)+'"></label>'
@@ -1279,12 +1326,12 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   if(JE.q){const sN=s=>String(s||'').replace(/\s/g,'').toLowerCase().replace(/เอฟซี/g,'fc').replace(/ดีซี/g,'dc').replace(/แมคโคร|makro/g,'แม็คโคร');   /* "FC" เจอ "เอฟซี" ด้วย */
     const nq=sN(JE.q);const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&sN(x.n).includes(nq)).slice(0,12);
     h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
-  h+='</div>'+mpSum(Object.assign({},j,{v:j.head?VEH.find(x=>x.head===j.head):null}))+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
+  h+=jRtBox(j)+'</div>'+mpSum(Object.assign({},j,{v:j.head?VEH.find(x=>x.head===j.head):null}))+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
     +'<label class="note">รถขนส่ง<input class="in" id="jcar" list="carL" value="'+esc(j.carrier||'SSB')+'"></label>'
     +'<label class="note">เบิกค่าลงสินค้า<input class="in" id="junl" placeholder="'+esc(jUnlAuto(j)||'เช่น โอนค่าลงสินค้า 1500 บาท')+'" value="'+esc(j.unl||'')+'"></label></div>'
     +'<datalist id="carL"><option value="SSB"><option value="รถนอก"></datalist><div class="note">เว้นว่าง = คิดจากค่าลงของร้าน (ถ้ามีในระบบ)</div></div>';
   h+='<div class="box"><label for="jnt">หมายเหตุถึงคนขับ / คลัง</label><textarea class="in" id="jnt" rows="2" placeholder="เช่น วางบิล + เอกสาร CO/COA, นัดลงตามคิว">'+esc(j.note)+'</textarea></div>';
-  h+='</div><div class="df">'+(j.isNew?'':'<button class="btn ghost" id="jdel" style="color:var(--bad)">ลบงาน</button>')+'<button class="btn ghost" id="jc">ยกเลิก</button><button class="btn pri mallb" id="jsv">บันทึกงาน</button></div></aside>';
+  h+='</div><div class="df">'+(j.isNew?'':'<button class="btn ghost" id="jdel" style="color:var(--bad)">ลบงาน</button><button class="btn ghost" id="jdup" title="สร้างงานใหม่จากงานนี้">⧉ ทำซ้ำ</button>')+'<button class="btn ghost" id="jc">ยกเลิก</button><button class="btn pri mallb" id="jsv">บันทึกงาน</button></div></aside>';
   const D=$('lp');if(!D)return;const st=D.querySelector('.db')?D.querySelector('.db').scrollTop:0;
   D.innerHTML=h;D.classList.add('ed');if(D.querySelector('.db'))D.querySelector('.db').scrollTop=st;
   const re=()=>{syncJ();drawJob();};
@@ -1299,9 +1346,10 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   const sq=$('jsq');sq.oninput=()=>{syncJ();JE.q=sq.value;drawJob();const n=$('jsq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};
   D.querySelectorAll('[data-jadd]').forEach(b=>b.onclick=()=>{syncJ();const x=ST.find(y=>y.id===+b.dataset.jadd);j.stops.push({id:x.id,n:x.n,km:x.km,pal:'',cs:'',at:''});JE.q='';drawJob();});
   D.querySelectorAll('[data-jrm]').forEach(b=>b.onclick=()=>{syncJ();j.stops.splice(+b.dataset.jrm,1);drawJob();});
-  mpWire(D,()=>JE.j.stops,syncJ,drawJob);
+  mpWire(D,()=>JE.j.stops,syncJ,drawJob);jRtWire(D,j);
   D.querySelectorAll('[data-jup]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jup;[j.stops[i-1],j.stops[i]]=[j.stops[i],j.stops[i-1]];drawJob();});
   D.querySelectorAll('[data-jdn]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jdn;[j.stops[i+1],j.stops[i]]=[j.stops[i],j.stops[i+1]];drawJob();});
+  if($('jdup'))$('jdup').onclick=()=>{syncJ();if(JSON.stringify(JE.j)!==JSON.stringify(MJ.find(x=>x.id===j.id)))toast('⚠️ ที่แก้ในงาน '+j.id+' ยังไม่บันทึก · ทำซ้ำจากฉบับที่บันทึกแล้ว');dupJob(j.id);};
   if($('jdel'))$('jdel').onclick=async()=>{const sent=!!MALL.snap[j.id];
     if(!(await askModal({title:'ลบงาน '+j.id+'?',ok:'ลบงาน',cancel:'ไม่ลบ',icon:'🗑️',danger:1,html:'<p>'+(sent?'งานนี้แจกไปแล้ว ลบแล้วต้องกด "ส่งฉบับแก้ไข" เพื่อแจ้งคนขับ คลัง บัญชี ว่ายกเลิก':'งานนี้ยังไม่ได้แจก ลบได้เลย')+'</p>'})))return;
     MJ=MJ.filter(x=>x.id!==j.id);syncMall();JE=null;renderAll();toast('ลบงาน '+j.id+' แล้ว (เดโม)');};
@@ -1327,7 +1375,7 @@ function mallSheet(){const iso=$('pdate').value,d=new Date(iso+'T00:00:00'),ok=!
   const js=MJ.filter(j=>j.stops.length&&(MX.all||jReady(j))).slice().sort(jSort);
   const rows=js.map((j,i)=>{const dv=drvOf(j.driver);
     return {no:i+1,id:j.id,drv:dv?dv.name:'',plate:j.head?plOf(j.head).replace(' / ','/'):'',carrier:(j.carrier||'SSB').trim(),
-      stops:j.stops.map(s=>({n:s.n,pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs)})),unl:jUnl(j),note:String(j.note||'').trim()};});
+      stops:j.stops.map(s=>({n:jsN(s),pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs)})),unl:jUnl(j),note:String(j.note||'').trim()};});
   const sum=k=>rows.reduce((a,r)=>a+r.stops.reduce((b,s)=>b+s[k],0),0);
   const dd=ok?String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear():'';
   return {iso,dd,title:'แจ้งงานห้าง'+(ok?' วัน'+DOW[d.getDay()]+' ที่ '+dd:''),rows,pal:sum('pal'),cs:sum('cs'),
@@ -2213,7 +2261,7 @@ function renderList(){
   vs.sort((a,b)=>{const ka=kind(a),kb=kind(b);if(ka!==kb)return order[ka]-order[kb];
     const ta=(PLAN[a.head].stops[0]||{}).at||'99',tb=(PLAN[b.head].stops[0]||{}).at||'99';return ta<tb?-1:ta>tb?1:0;});
   const at=LIVE_AT?new Date(LIVE_AT).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'}):'';
-  let h='<div class="lh"><b>รถวันนี้ · สถานะสด GPS'+(at?'<small>อัปเดต '+at+' น. · รีเฟรชทุก 1 นาที · เรียงตามเวลาถึงหน้างาน</small>':'<small>เรียงตามเวลาถึงหน้างาน</small>')+'</b><span>'+vs.length+' คัน</span></div>';
+  let h='<div class="lh"><b>รถวันนี้ · สถานะสด GPS'+(at?'<small>อัปเดต '+at+' น. · รีเฟรชทุก 1 นาที · เรียงตามเวลาลงสินค้า</small>':'<small>เรียงตามเวลาลงสินค้า</small>')+'</b><span>'+vs.length+' คัน</span></div>';
   if(LIVE){const c={};Object.values(G).forEach(g=>c[g.k]=(c[g.k]||0)+1);
     h+='<div class="gbar">'+GLAB.filter(([k])=>c[k]||GF===k).map(([k,l])=>'<button type="button" class="gchip'+(GF===k?' on':'')+'" data-g="'+k+'"><span class="gd g-'+k+'"></span>'+l+' <b>'+(c[k]||0)+'</b></button>').join('')+'</div>';}
   h+='<div class="ll">';
@@ -2223,7 +2271,7 @@ function renderList(){
     if(grp!==lastK){const gn=vs.filter(x=>kind(x)===k).length;h+='<div class="lgh lg-'+k+'"><i></i>'+grp+'<b>'+gn+' คัน</b></div>';lastK=grp;}
     const name=v.tail?'หางสำรอง':d?d.name:'ยังไม่มีคนขับ';
     /* การ์ดแบบหน้า Command: ป้ายสถานะ GPS · ชื่อ · ทะเบียนหัว / กม.จากโรงงาน ~นาที / งานบรรทัดเดียว */
-    const job=k==='job'&&!s0?'🧭 '+otLabel(p):k==='job'?'📦 '+(s0.at||'--:--')+' ถึง '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):k==='rep'?'🔧 '+(p.reason||'ซ่อม'):k==='tail'?'หางสำรอง':k==='off'?'งดวิ่ง':'ยังไม่มีงาน';
+    const job=k==='job'&&!s0?'🧭 '+otLabel(p):k==='job'?'📦 '+(s0.at||'--:--')+' ลงสินค้า '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):k==='rep'?'🔧 '+(p.reason||'ซ่อม'):k==='tail'?'หางสำรอง':k==='off'?'งดวิ่ง':'ยังไม่มีงาน';
     const g=G[v.head],gd=g&&g.d;let pill,r2,ctx=job;
     if(LIVE&&!v.tail){
       const dir=gd?(gd.direction||(gd.distTrend==='out'?'out':gd.distTrend==='in'?'back':'none')):'none';
@@ -2239,7 +2287,7 @@ function renderList(){
         :km==null?'<span class="u">ยังไม่รู้ตำแหน่ง</span>'
         :'<span class="km">'+(km<100?Number(km).toFixed(1):Math.round(km))+'</span><span class="u">กม. จากโรงงาน</span>'+(eta!=null?'<span class="eta">~'+eta+' นาที</span>':'');
       if(sp)ctx+=' · '+sp+' km/h';
-    }else{pill=['pill '+KLAB[k][1],KLAB[k][0]];r2=k==='job'&&s0?'<span class="km">'+esc(s0.at||'--:--')+'</span><span class="u">ถึงหน้างานจุดแรก</span>':'<span class="u">'+esc([BRAND[v.head],v.shape].filter(Boolean).join(' · '))+'</span>';}
+    }else{pill=['pill '+KLAB[k][1],KLAB[k][0]];r2=k==='job'&&s0?'<span class="km">'+esc(s0.at||'--:--')+'</span><span class="u">เวลาลงสินค้าจุดแรก</span>':'<span class="u">'+esc([BRAND[v.head],v.shape].filter(Boolean).join(' · '))+'</span>';}
     h+='<button class="vc lt2" data-v="'+esc(v.head)+'"><div class="lt-top"><span class="'+(pill[0].startsWith('pill')?pill[0]:'lt-dir '+pill[0])+'">'+esc(pill[1])+'</span><span class="lt-name">'+esc(name)+'</span><span class="lt-plate">'+esc(v.head)+'</span></div>'
       +'<div class="lt-dist">'+r2+'</div><div class="lt-ctx'+(k==='rep'?' bad':'')+'">'+esc(ctx)+'</div></button>';});
   if(!vs.length)h+='<div class="note" style="padding:18px">ไม่มีรถตามตัวกรอง</div>';
@@ -2257,7 +2305,7 @@ function drawEditor(){
    +'<div><small>บรรทุกได้</small><b>'+pay+'</b></div><div><small>เด็กรถ</small><b>'+(p.helpers.map(x=>helpOf(x)?.nick||x).join(', ')||'-')+(p.out?' + นอก '+p.out:'')+'</b></div></div></div>';
   if(p.stops.length&&p.status==='ready'){
     h+='<div class="sec"><h4>ไทม์ไลน์งานวันนี้<span class="tchip">'+p.stops.length+' จุด</span></h4><div class="tl"><div class="ti fac"><b>ออกจากโรงงาน SSB</b><span class="m">โหลดสินค้า'+(p.note?' · '+esc(p.note):'')+'</span></div>'
-     +p.stops.map((s,i)=>'<div class="ti'+(s.rt?' rt':'')+'"><b>'+esc(s.n)+' '+stChip(s)+'</b><span class="m">'+(s.at?'<span class="at">ต้องถึง '+esc(s.at)+'</span> · ':s.rt?'':'<span class="warn">ยังไม่ใส่เวลา</span> · ')+(()=>{const l=legOf(p.stops,i);return l.tbd?'<span class="rtq">📍 รอแจ้งสถานที่</span>':l.km==null?'<span class="warn">ไม่มีค่ากลางช่วงนี้</span>':l.same?'ที่เดิม ไม่มีระยะเพิ่ม':(i?'จากจุดก่อน ':'จากโรงงาน ')+l.km+' กม.';})()
+     +p.stops.map((s,i)=>'<div class="ti'+(s.rt?' rt':'')+'"><b>'+esc(s.n)+' '+stChip(s)+'</b><span class="m">'+(s.at?'<span class="at">ลงสินค้า '+esc(s.at)+'</span> · ':s.rt?'':'<span class="warn">ยังไม่ใส่เวลา</span> · ')+(()=>{const l=legOf(p.stops,i);return l.tbd?'<span class="rtq">📍 รอแจ้งสถานที่</span>':l.km==null?'<span class="warn">ไม่มีค่ากลางช่วงนี้</span>':l.same?'ที่เดิม ไม่มีระยะเพิ่ม':(i?'จากจุดก่อน ':'จากโรงงาน ')+l.km+' กม.';})()
        +(s.rt?' · <b class="rtq">↩ '+esc(rtTxt(s.rt))+'</b>'+(s.rt.sent?' · <span class="rtsent">📲 แจ้งคนขับแล้ว '+esc(s.rt.sent)+'</span>':''):s.items&&s.items.length?' · <button type="button" class="pob" data-pod="v:'+esc(v.head)+':'+i+'">'+(s.pal?esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</button>':(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':''))+'</span></div>').join('')
      +(()=>{const r=routeKm(p.stops);return '<div class="ti fac"><b>กลับโรงงาน</b><span class="m">'+(r.back==null?'<span class="warn">ไม่มีค่ากลางขากลับ</span>':'ขากลับ '+r.back+' กม.')+' · '+(r.miss?'<span class="warn">ระยะรวมยังไม่ครบ (ขาด '+r.miss+' ช่วง)</span>':'ระยะรวมทั้งเที่ยว <b>'+r.tot+'</b> กม.')+'</span></div>';})()+'</div></div>';}
   h+='<div class="edl">แก้งานคันนี้</div>';
@@ -2276,7 +2324,7 @@ function drawEditor(){
      +(p.driver?(()=>{const s=drvStat(p.driver);return '<div class="note">สถิติ '+esc(drvOf(p.driver)?.name||'')+' เดือนนี้: ห้าง '+s.h+' · ยี่ปั๊ว '+s.y+' · อื่นๆ '+s.o+' · รวม <b>'+s.t+'</b> เที่ยว (รวมงานวันนี้)</div>';})():'')
      +'<div class="two"><label class="lb" style="display:flex;flex-direction:column;gap:4px">ประเภทงาน (นับสถิติ)<select class="in" id="jt" onchange="otSync()"><option value="">ตามร้านจุดแรก'+(p.stops[0]?' ('+tyOf(p.stops[0])+')':'')+'</option>'+TYPES.map(t=>'<option'+(p.jt===t?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'
      +'<label class="lb" style="display:flex;flex-direction:column;gap:4px">เวลานัดเด็กรถ<input class="in" id="ht" placeholder="เช่น 05:00 หรือ นัดเอง" value="'+esc(p.htime||'')+'"></label></div>'+otBox(p)+'</div>';
-    h+='<div class="box"><span class="lb">จุดส่ง / สถานที่ <span class="note">('+p.stops.length+' จุด · เรียงตามลำดับวิ่ง · ใส่เวลาที่ต้องถึงหน้างานแต่ละจุด)</span></span>';
+    h+='<div class="box"><span class="lb">จุดส่ง / สถานที่ <span class="note">('+p.stops.length+' จุด · เรียงตามลำดับวิ่ง · ใส่เวลาลงสินค้าแต่ละจุด)</span></span>';
     const lockS=s=>PM==='mall'?!isMall(s):isMall(s);
     p.stops.forEach((s,i)=>{if(lockS(s)){h+='<div class="stop lock'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+stChip(s)+'</div><div class="note">'+legTxt(p.stops,i)+(s.at?' · ถึง '+esc(s.at):'')+(s.rt?' · ↩ '+esc(rtTxt(s.rt)):'')+(s.pal?' · '+esc(s.pal)+' พาเลท':'')+(s.cs?' · '+esc(s.cs)+' ลัง':'')+'</div>'
         +'<div class="lockn">'+(isMall(s)?mallBadge(v.head)+' แก้ที่ <button type="button" data-gomall>แพลนห้าง</button>':'🔒 งานแพลนรวม · แก้ที่ <button type="button" data-goall>แพลนรวม</button>')+'</div></div><div class="ac"></div></div>';return;}
@@ -2291,7 +2339,7 @@ function drawEditor(){
             return '<div class="res">'+(r.length?r.map(x=>'<button type="button" data-rtset="'+i+':'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||tyOf({id:x.id}))+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบ · ยังไม่มีในรายชื่อค่ากลาง (DEV เพิ่มที่หน้าค่ากลาง)</div>')+'</div>';})():'')
           +'</div>':'<button type="button" class="btn sm ghost" data-rtfix="'+i+'">📍 เปลี่ยนสถานที่</button>')+'</div>'+ac+'</div>';return;}
       h+='<div class="stop'+(isMall(s)?' mallsrc':'')+'"><div class="n">'+(i+1)+'</div><div style="min-width:0"><div class="nm">'+esc(s.n)+' '+tchip(tyOf(s))+'</div><div class="note">'+legTxt(p.stops,i)+'</div>'
-      +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">ต้องถึงหน้างาน<input class="in" type="time" data-at="'+i+'" value="'+esc(s.at)+'" style="width:118px"></label>'
+      +'<div class="q"><label class="note" style="display:flex;flex-direction:column;gap:2px">เวลาลงสินค้า<input class="in" type="time" data-at="'+i+'" value="'+esc(s.at)+'" style="width:118px"></label>'
       +(()=>{const au=mpHas(s),ro=au?' readonly tabindex="-1" class="in auto" title="คิดจากสินค้า"':' class="in"';
         return '<label class="note" style="display:flex;flex-direction:column;gap:2px">พาเลท<input'+ro+' data-pal="'+i+'" placeholder="0" value="'+esc(s.pal)+'"></label>'
          +'<label class="note" style="display:flex;flex-direction:column;gap:2px">ลัง<input'+ro+' data-cs="'+i+'" placeholder="0" value="'+esc(s.cs)+'"></label>'
@@ -2479,7 +2527,7 @@ async function drawReport(){
       x.fillStyle=k==='rep'?'#B91C1C':k==='nod'?'#A16207':k==='tail'||k==='off'?'#6B7280':'#15803D';
       x.font=F('700',k==='rep'?16:18);fitText(x,stTxt(v,k,p),W-PAD-22,cy,W-PAD*2-660,'right');
       if(WITHJOB&&!v.tail&&k!=='rep'){const s0=p.stops[0];
-        const jt=(d?d.name:'ยังไม่มีคนขับ')+(s0?' · ถึง '+(s0.at||'--:--')+' '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):otOnly(p)?' · งานอื่นๆ '+otLabel(p):'');
+        const jt=(d?d.name:'ยังไม่มีคนขับ')+(s0?' · ลงสินค้า '+(s0.at||'--:--')+' '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):otOnly(p)?' · งานอื่นๆ '+otLabel(p):'');
         x.fillStyle='#5D6E63';x.font=F('500',15);fitText(x,jt,PAD+86,ry+RH/2+14,W-PAD*2-110,'left');}
       ry+=RH;brk.push(ry);});
     x.restore();
@@ -2496,7 +2544,7 @@ function fitText(x,t,cx,cy,max,align){align=align||'center';x.textAlign=align;le
   while(x.measureText(s).width>max&&s.length>4)s=s.slice(0,-2);if(s!==t)s=s.slice(0,-1)+'…';x.fillText(s,cx,cy);}
 async function renderReport(){
   const c=counts(),reps=VEH.filter(v=>kind(v)==='rep');
-  $('v-report').innerHTML='<div class="rgrid r1"><div><label class="opt"><input type="checkbox" id="wj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาถึงหน้างานใต้ทะเบียน</label>'
+  $('v-report').innerHTML='<div class="rgrid r1"><div><label class="opt"><input type="checkbox" id="wj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาลงสินค้าใต้ทะเบียน</label>'
    +'<div class="imgbox"><img id="rimg" alt="รูปสรุปสถานะรถ PK ประจำวัน"></div>'
    +'<div class="legend"><span><i style="background:#16A34A;border-radius:50%"></i>พร้อมใช้งาน มีคนขับ</span><span><i style="background:#EAB308;border-radius:50%"></i>พร้อม ไม่มีคนขับ</span><span><i style="background:#DC2626;border-radius:50%"></i>ซ่อม + สาเหตุ</span><span><i style="background:transparent;border:2px solid #9CA3AF;border-radius:50%"></i>หางสำรอง / งดวิ่ง</span></div>'
    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="dl">⬇ รายงาน (Excel / PDF / JPEG)</button></div>'
@@ -2508,7 +2556,7 @@ async function renderReport(){
 }
 
 /* ---------- รายงานสถานะรถ (Excel / PDF / JPEG) · ข้อมูลชุดเดียวกับรูป: รถทุกคันของวันที่เลือก แบ่งตามขนาดล้อ ---------- */
-const RSC=[['ลำดับ',6,'c'],['ทะเบียน',20,'c'],['ยี่ห้อ / รูปทรง',24,'l'],['สถานะ',20,'c'],['สาเหตุ / หมายเหตุ',26,'l'],['คนขับ',22,'l'],['จุดแรก',30,'l'],['เวลาถึง',10,'c'],['จุดส่ง',9,'c']];
+const RSC=[['ลำดับ',6,'c'],['ทะเบียน',20,'c'],['ยี่ห้อ / รูปทรง',24,'l'],['สถานะ',20,'c'],['สาเหตุ / หมายเหตุ',26,'l'],['คนขับ',22,'l'],['จุดแรก',30,'l'],['เวลาลงสินค้า',10,'c'],['จุดส่ง',9,'c']];
 const RS_ST={job:['พร้อม · ออกงาน','127A2E','E7F5EE'],wait:['พร้อม · รอมีงาน','127A2E','E7F5EE'],nod:['พร้อม · ไม่มีคนขับ','8A5A0B','FEF0D9'],
   rep:['ซ่อม','A32D2D','FCEDED'],tail:['หางสำรอง','5F5E5A','EFEFEF'],off:['งดวิ่ง','5F5E5A','EFEFEF']};
 function rsSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=!isNaN(dt),c=counts();
@@ -2578,7 +2626,7 @@ function openStatusExport(){const D=rsSheet(),c=D.c;
   const ov=document.createElement('div');ov.className='mov';
   ov.innerHTML='<div class="mbox mxbox" style="max-width:620px" role="dialog" aria-modal="true" aria-labelledby="rsh"><div class="mxhd"><div><h3 id="rsh">🚚 รายงานสถานะรถ PK</h3><div class="note">'
    +esc(dateTH(D.iso))+' · รถ '+D.total+' คัน · พร้อม '+(c.job+c.wait)+' · ไม่มีคนขับ '+c.nod+' · ซ่อม '+c.rep+'</div></div><button class="mxx" data-rs="close" aria-label="ปิด">✕</button></div>'
-   +'<div class="mbody"><label class="opt"><input type="checkbox" id="rswj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาถึงหน้างานใต้ทะเบียน <span class="note">(มีผลกับ PDF / JPEG · Excel มีคอลัมน์คนขับเสมอ)</span></label>'
+   +'<div class="mbody"><label class="opt"><input type="checkbox" id="rswj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาลงสินค้าใต้ทะเบียน <span class="note">(มีผลกับ PDF / JPEG · Excel มีคอลัมน์คนขับเสมอ)</span></label>'
    +'<p class="note">ข้อมูลชุดเดียวกับรูปบนหน้านี้ · รถทุกคันตามแพลนวันที่เลือก</p></div>'
    +'<div class="mxfmt"><button class="btn" data-rs="xlsx"><b>XLS</b> Excel<small>ตารางทุกคัน มีสีสถานะ กรองต่อได้</small></button>'
    +'<button class="btn" data-rs="pdf"><b>PDF</b> A4 แนวตั้ง<small>พร้อมพิมพ์</small></button>'
@@ -2674,7 +2722,15 @@ const ypDayLab=d=>{if(d==='none')return 'ไม่พบวัน';const x=d.spl
   const t0=new Date(Date.now()+7*3600e3).toISOString().slice(0,10),t1=new Date(Date.now()+31*3600e3).toISOString().slice(0,10);
   return (d===t0?'วันนี้ ':d===t1?'พรุ่งนี้ ':'')+w+' '+x[2]+'/'+x[1];};
 function ypSeeDay(d){const L=YP.msgs.filter(m=>!ypSt(m)&&(d===''||ypDayOf(m)===d));
-  L.forEach(m=>{if(ypIsNew(m)){YP.fresh.add(m.mid);YP.seen.add(m.mid);}});ypSeenSave();YP.day=d;ypBadge();ypDraw();}
+  L.forEach(m=>{if(ypIsNew(m)){YP.fresh.add(m.mid);YP.seen.add(m.mid);}});ypSeenSave();YP.day=d;
+  /* คุณน้อง 10 พ.ย. "มันควรเปลี่ยนให้เราอัตโนมัติ": กดชิปวันไหน = วันแพลนเปลี่ยนเป็นวันนั้นเลย (ทั้งหมด/ไม่พบวัน = คงเดิม) */
+  const pe=$('pdate');if(d&&/^\d{4}-\d{2}-\d{2}$/.test(d)&&pe&&pe.value!==d){pe.value=d;if(pe.onchange)pe.onchange();toast('📅 เปลี่ยนวันแพลนเป็น '+dateTH(d)+' แล้ว');}
+  ypBadge();ypDraw();}
+/* ไม่ให้เด้ง (คุณน้อง 10 พ.ย. "จิ้มดูแล้วชอบเด้ง ช่วงรีเฟรช"): โหลดใหม่ทุก 1 นาที → วาดใหม่เฉพาะเมื่อข้อมูลเปลี่ยนจริง ·
+   กำลังพิมพ์/เลือกรถอยู่ = รอให้เสร็จก่อนค่อยวาด · จำข้อความเดิมที่กางไว้ · ไม่เล่นแอนิเมชันเลื่อนเข้าซ้ำ */
+const ypSig=()=>JSON.stringify([YP.src,YP.canEdit,YP.err,YP.groups,YP.msgs.map(m=>[m.mid,m.st||'',m.stBy||'',m.p,m.plateHist||null])]);
+const ypTyping=()=>{const a=document.activeElement,d=$('ypDr');return !!(a&&d&&d.contains(a)&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));};
+const ypOpenD=new Set();
 /* ลูกค้ารับเองแต่เซลส์ยังไม่แจ้งทะเบียน → ทะเบียนที่ร้านนี้เคยมารับ ①②③ (ล่าสุดก่อน) ให้แอดมินเลือก / พิมพ์เอง */
 const ypPlk=x=>String(x||'').replace(/[\s\-.]/g,'');
 const ypDShort=iso=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateString('th-TH',{day:'numeric',month:'short',timeZone:'Asia/Bangkok'});};
@@ -2706,7 +2762,7 @@ function ypBadge(){const b=$('ypN');if(!b)return;if(!YP.loaded){b.textContent='�
   const n=ypCnt().p,nw=YP.msgs.filter(m=>!ypSt(m)&&ypIsNew(m)).length;b.textContent=n+(nw?' · ใหม่ '+nw:'');b.className=n&&YP.src==='db'?'on':'';
   b.title=nw?'มีออเดอร์ใหม่ '+nw+' รายการ · เปิดแล้วกดชิปวันที่เพื่อดู':'';}
 const ypTime=iso=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});};
-async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;
+async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;const sig0=YP.loaded?ypSig():'';
   try{const x=await fetch(ypUrl()+'?action=list&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());
     if(x.denied){YP.denied=1;const b=$('bYp');if(b)b.hidden=true;return;}
     if(!x.ok)throw new Error(x.error||'โหลดไม่ได้');
@@ -2714,7 +2770,10 @@ async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;
     YP.msgs=(x.msgs||[]).map(m=>m.sample&&keep[m.mid]?Object.assign(m,{st:keep[m.mid]}):m);YP.src=x.src;YP.groups=x.groups||[];YP.canEdit=!!x.canEdit;YP.err='';YP.loaded=1;ypSeenInit();}
   catch(e){YP.err=String(e.message||e);}
   finally{YP.busy=0;}
-  ypBadge();if($('ypDr'))ypDraw();}
+  ypBadge();if(!$('ypDr'))return;
+  if(sig0&&ypSig()===sig0&&!YP.pend)return;          /* ไม่มีอะไรเปลี่ยน = ไม่วาดใหม่ */
+  if(ypTyping()){YP.pend=1;return;}                   /* กำลังกรอก → วาดตอนออกจากช่อง */
+  ypDraw();}
 async function ypMark(m,st,extra){m.st=st;if(m.sample||!ypLive())return;
   const r=await fetch(ypUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action:'mark',userId:MY_UID,mid:m.mid,st},extra||{}))}).then(z=>z.json());
   if(!r.ok)throw new Error(r.error||'บันทึกสถานะไม่ได้');if(r.by)m.stBy=r.by;if(r.at)m.stAt=r.at;}
@@ -2740,13 +2799,13 @@ function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').valu
   else if(p.pickAt==='หนองใหญ่')h+='<div class="yppk">📨 <b>ขึ้นของโรงงานหนองใหญ่</b> · แจ้งบัญชี+เซลส์ <b>เปิดราคา</b> · แจ้งคลังโรงงาน <b>ปิดราคา</b></div>';
   else if(p.pickup)h+='<div class="warn">⚠ ไม่ระบุว่ารับที่ไหน (คลังบางนา / โรงงานหนองใหญ่) · ถามเซลส์ก่อนแจ้งคลัง</div>';
   if((p.notes||[]).length)h+='<div class="note">📝 '+p.notes.map(esc).join(' · ')+'</div>';
-  h+='<details><summary>ข้อความเดิมในกลุ่ม</summary><pre>'+esc(m.text||'')+'</pre></details>';
+  h+='<details data-ypdt="raw"'+(ypOpenD.has(m.mid+':raw')?' open':'')+'><summary>ข้อความเดิมในกลุ่ม</summary><pre>'+esc(m.text||'')+'</pre></details>';
   const can=YP.canEdit||!ypLive();
   if(st==='planned'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">'+(m.head==='รับเอง'?'✅ ลูกค้ารับเอง (ไม่ใช้รถเรา)':'✅ ลงแพลนแล้ว')+(m.head==='รับเอง'?(p.pick&&p.pick.plate?' · ทะเบียน '+esc(p.pick.plate):' · ยังไม่มีทะเบียน'):inP?' · รถ '+esc(plOf(inP)):m.head?' · รถ '+esc(plOf(m.head)||m.head):'')+(m.planDate&&m.planDate!==pd?' · วันที่ '+esc(dateTH(m.planDate)):'')+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'
       +(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
   else if(st==='ignored'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">🙈 ไม่ใช่ออเดอร์'+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'+(can?'<button class="btn sm" data-ypback>↩ คืนเป็น Pending</button>':'')+'</div>';}
   else if(can){const sv=YP.sel[m.mid]||{};
-    if(p.pickup)h+='<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-yppick>✅ ลูกค้ารับเอง · ปิดรายการ</button></div><details class="ypalt"><summary>เปลี่ยนเป็นส่งด้วยรถเรา</summary>';
+    if(p.pickup)h+='<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-yppick>✅ ลูกค้ารับเอง · ปิดรายการ</button></div><details class="ypalt" data-ypdt="alt"'+(ypOpenD.has(m.mid+':alt')?' open':'')+'><summary>เปลี่ยนเป็นส่งด้วยรถเรา</summary>';
     h+='<div class="ypa"><label>จุดส่ง (ค่ากลาง)<input class="in" data-ypst list="ypStL" value="'+esc(sv.st!=null?sv.st:hit?hit.n:'')+'" placeholder="ไม่พบในรายชื่อ · พิมพ์ชื่อร้าน"></label>'
       +'<label>ลงรถ<select class="in" data-ypveh><option value="">— เลือกรถ —</option>'+ypVehOpts(sv.veh||'')+'</select></label></div>'
       +(hit||sv.st?'':'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ในรายชื่อจุดส่ง · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV เพิ่มร้านที่หน้าค่ากลาง)</div>')
@@ -2757,7 +2816,8 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const c=ypCnt(),pd=$('pda
   const P0=YP.msgs.filter(m=>!ypSt(m)),days=[...new Set(P0.map(ypDayOf))].sort((a,b)=>a==='none'?1:b==='none'?-1:a.localeCompare(b));
   if(YP.day&&!days.includes(YP.day))YP.day='';
   const L=YP.msgs.filter(m=>(ypSt(m)||'p')===YP.tab&&(YP.tab!=='p'||!YP.day||ypDayOf(m)===YP.day)).sort((a,b)=>{const da=a.p&&a.p.dlv||'9',db=b.p&&b.p.dlv||'9';return YP.tab==='p'?(da<db?-1:da>db?1:String(b.at).localeCompare(String(a.at))):String(b.at).localeCompare(String(a.at));});
-  let h='<div class="scrim" data-ypx></div><aside class="drawer pod" id="ypDr" role="dialog" aria-modal="true" aria-label="Pending ยี่ปั๊ว"><div class="dh"><div><div class="stc"><span class="tchip">📋 ออเดอร์ยี่ปั๊วจากไลน์</span></div><h3>Pending ยี่ปั๊ว</h3><div class="m">'
+  const again=!!$('ypDr');YP.pend=0;
+  let h='<div class="scrim" data-ypx></div><aside class="drawer pod" id="ypDr"'+(again?' style="animation:none"':'')+' role="dialog" aria-modal="true" aria-label="Pending ยี่ปั๊ว"><div class="dh"><div><div class="stc"><span class="tchip">📋 ออเดอร์ยี่ปั๊วจากไลน์</span></div><h3>Pending ยี่ปั๊ว</h3><div class="m">'
     +(YP.groups.length?'กลุ่ม '+esc(YP.groups.join(', ')):'กลุ่ม เซลส์แอดมิน')+' · แพลนวันที่ '+esc(dateTH(pd))+'</div></div><button class="x" data-ypx aria-label="ปิด">✕</button></div><div class="db">';
   if(!ypLive())h+='<div class="ypban">หน้าเดโมนี้ไม่ได้ต่อระบบ · เปิดจากหน้าแพลนรถ Packing จริง จะเห็นออเดอร์จากกลุ่มไลน์ “เซลส์แอดมิน”</div>';
   else if(!YP.loaded)h+='<div class="note">'+(YP.err?'❌ '+esc(YP.err):'กำลังโหลด…')+'</div>';
@@ -2773,9 +2833,11 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const c=ypCnt(),pd=$('pda
     +'<datalist id="ypStL">'+ST.filter(x=>tyOf({id:x.id})!=='ห้าง').map(x=>'<option value="'+esc(x.n)+'">').join('')+'</datalist>';
   const sc=H.querySelector('#ypDr .db'),top=sc?sc.scrollTop:0;H.innerHTML=h;const nb=H.querySelector('#ypDr .db');if(nb&&top)nb.scrollTop=top;
   H.querySelectorAll('[data-ypx]').forEach(b=>b.onclick=closePoDrawer);
+  const dr=$('ypDr');if(dr)dr.addEventListener('focusout',()=>setTimeout(()=>{if(YP.pend&&$('ypDr')&&!ypTyping())ypDraw();},0));
+  H.querySelectorAll('[data-ypdt]').forEach(el=>el.addEventListener('toggle',()=>{const c=el.closest('.ypc');if(!c)return;const k=c.dataset.ypm+':'+el.dataset.ypdt;if(el.open)ypOpenD.add(k);else ypOpenD.delete(k);}));
   H.querySelectorAll('[data-yptab]').forEach(b=>b.onclick=()=>{YP.tab=b.dataset.yptab;YP.fresh.clear();ypDraw();});
   H.querySelectorAll('[data-ypday]').forEach(b=>b.onclick=()=>{YP.fresh.clear();ypSeeDay(b.dataset.ypday);});
-  const re=H.querySelector('[data-ypre]');if(re)re.onclick=()=>{YP.loaded=YP.loaded&&1;ypLoad();};
+  const re=H.querySelector('[data-ypre]');if(re)re.onclick=()=>{YP.pend=1;ypLoad();};
   H.querySelectorAll('.ypc').forEach(card=>{const m=YP.msgs.find(x=>x.mid===card.dataset.ypm);if(!m)return;
     const sv=YP.sel[m.mid]=YP.sel[m.mid]||{},i1=card.querySelector('[data-ypst]'),i2=card.querySelector('[data-ypveh]');
     if(i1)i1.oninput=()=>{sv.st=i1.value;};if(i2)i2.onchange=()=>{sv.veh=i2.value;};
