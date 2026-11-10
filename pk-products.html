@@ -1,0 +1,635 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ฐานข้อมูลสินค้า · SSB Packing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261014a"></script>
+<script src="ssb-pin-gate.js?v=20261009a"></script>
+<style>
+
+  :root{--bg:#eef1f4;--card:#fff;--card2:#f6f8fa;--line:#e2e6ea;--line2:#cfd5db;--txt:#1a2530;--txt2:#6b7785;--primary:#1f8a52;--accent:#0d6efd;--warn:#b8860b;--danger:#c8352f;--gold1:#a77b12;--gold2:#d4a72c}
+  @media(prefers-color-scheme:dark){:root{--bg:#0f1519;--card:#182028;--card2:#1f2830;--line:#2a343d;--line2:#3a4650;--txt:#e6ebf0;--txt2:#8a97a3;--primary:#2ea567;--accent:#4a9bff;--warn:#e0b84a;--danger:#e5645d}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:16px 12px 40px}
+  .wrap{max-width:1180px;margin:0 auto}
+  .bar{display:flex;align-items:center;gap:10px;padding:2px 2px 14px}
+  .logo{width:38px;height:38px;border-radius:10px;background:var(--primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+  h1{font-size:17px;margin:0}.sub{font-size:12px;color:var(--txt2)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:14px;box-shadow:0 1px 3px rgba(20,40,60,.05)}
+  .row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .grow{flex:1}
+  .btn{padding:10px 18px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .btn.gold{background:linear-gradient(135deg,var(--gold1),var(--gold2))}
+  .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt2);font-weight:500}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn:focus-visible,.chip:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid var(--line2);background:var(--card);color:var(--txt);font:inherit;font-size:13px;cursor:pointer}
+  .chip.on{background:var(--primary);border-color:var(--primary);color:#fff}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:10px 0 4px}
+  .kpi{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:8px 10px}
+  .kpi b{display:block;font-size:20px;font-variant-numeric:tabular-nums}.kpi span{font-size:11.5px;color:var(--txt2)}
+  .kpi.bad b{color:var(--danger)} .kpi.warn b{color:var(--warn)}
+  .tw{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
+  table{border-collapse:collapse;width:100%;font-size:12.5px}
+  th,td{padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+  th{background:var(--card2);font-size:11.5px;color:var(--txt2);font-weight:600;white-space:nowrap;position:sticky;top:0}
+  tr.skip td{opacity:.5} tr.del td{background:rgba(200,53,47,.07);text-decoration:line-through}
+  tr.add td:first-child{box-shadow:inset 3px 0 var(--primary)} tr.chg td:first-child{box-shadow:inset 3px 0 var(--warn)}
+  td.cf{background:rgba(184,134,11,.13)}
+  .how{font-size:10.5px;color:var(--txt2);display:block}
+  .st-Waiting{color:var(--warn);border-color:var(--warn)} .st-Planned,.st-Loading{color:var(--accent);border-color:var(--accent)} .st-Delivered{color:var(--primary);border-color:var(--primary)} .st-ยกเลิก{color:var(--danger);border-color:var(--danger)}
+  .dlg{position:fixed;inset:0;background:rgba(10,20,30,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
+  .dlg-in{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
+  .dlg-in.wide{max-width:760px;max-height:90vh;display:flex;flex-direction:column;padding:16px 16px 12px}
+  .dq-list{overflow:auto;margin-top:10px;display:flex;flex-direction:column;gap:8px;padding-right:2px}
+  .dq{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--card2)}
+  .dq-h{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+  .dq-h b{font-size:14px}
+  .k-free{color:var(--primary);border-color:var(--primary)} .k-busy{color:var(--accent);border-color:var(--accent)} .k-repair{color:var(--warn);border-color:var(--warn)} .k-leave{color:var(--danger);border-color:var(--danger)}
+  .dlg-in p{margin:8px 0 14px;font-size:13.5px;color:var(--txt2);white-space:pre-line}
+  .stop+.stop{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line)}
+  .store{font-size:11.5px;color:var(--txt);margin-top:3px} .store a{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap} .store a:hover{text-decoration:underline}
+  .miss{color:var(--danger);font-weight:600}
+  .tag{display:inline-block;white-space:nowrap;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--card2);border:1px solid var(--line);color:var(--txt2);margin:1px 2px 0 0}
+  .tag.out{color:var(--warn);border-color:var(--warn)} .tag.bad{color:var(--danger);border-color:var(--danger)} .tag.ok{color:var(--primary);border-color:var(--primary)}
+  select,input[list]{font:inherit;font-size:12.5px;padding:4px 6px;border:1px solid var(--line2);border-radius:7px;background:var(--card2);color:var(--txt);max-width:230px}
+  .note{font-size:12px;color:var(--txt2);line-height:1.7}
+  .msg{text-align:center;color:var(--txt2);padding:30px}
+  .toast{position:fixed;top:16px;left:50%;transform:translateX(-50%);background:var(--primary);color:#fff;padding:10px 20px;border-radius:999px;font-size:13.5px;font-weight:600;z-index:50;opacity:0;transition:.3s;pointer-events:none;max-width:92vw}
+  .toast.on{opacity:1}.toast.err{background:var(--danger)}
+  .sticky{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 0 0;margin-top:10px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  /* ───────── ธีมกระจกเขียว งานขนส่ง (ต้นแบบ glass sidebar ของแดชบอร์ดค่าไฟ · คุณน้อง 5 พ.ย. 69) ───────── */
+  :root{--bg:#e8f4ed;--card:#fff;--card2:#f1f8f4;--line:rgba(27,67,50,.12);--line2:rgba(27,67,50,.22);--txt:#12291e;--txt2:#587064;--primary:#1f7a4d;--accent:#0e7490;
+    --field:rgba(255,255,255,.78);--stick:rgba(255,255,255,.94);--road:#2d6a4f;
+    --glass:rgba(255,255,255,.58);--glass-2:rgba(255,255,255,.8);--glass-line:rgba(255,255,255,.88);--navtx:#2c4438;
+    --glass-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 18px 40px -22px rgba(20,83,55,.38),0 2px 6px -3px rgba(20,83,55,.14);
+    --blob1:#8fdcb2;--blob2:#c6e9a4;--blob3:#f3dc93}
+  @media(prefers-color-scheme:dark){:root{--bg:#07130e;--card:#12211a;--card2:#172a21;--line:rgba(125,215,170,.13);--line2:rgba(125,215,170,.25);--txt:#e4f1ea;--txt2:#90a99c;--primary:#45c285;--accent:#4fb6ce;
+    --field:rgba(20,38,30,.72);--stick:rgba(18,33,26,.96);--road:#5fbf8c;
+    --glass:rgba(16,34,26,.55);--glass-2:rgba(22,44,34,.78);--glass-line:rgba(150,225,190,.17);--navtx:#c5d9ce;
+    --glass-shadow:0 1px 0 rgba(255,255,255,.07) inset,0 20px 44px -24px rgba(0,0,0,.8);
+    --blob1:#0f6b43;--blob2:#14532d;--blob3:#5c4a10}}
+  /* ฟอนต์ชุดเดียวกับแดชบอร์ดค่าไฟ */
+  :root{--fhead:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif;--fbody:"IBM Plex Sans Thai","Noto Sans Thai",system-ui,sans-serif}
+  body{font-family:var(--fbody);-webkit-font-smoothing:antialiased}
+  h1,.btx b,.kpi b{font-family:var(--fhead)}
+  html{background:var(--bg)}
+  body{padding:0;background:var(--bg)}
+  body::before,body::after{content:'';position:fixed;z-index:-1;border-radius:50%;filter:blur(70px);opacity:.72;pointer-events:none}
+  body::before{width:46vw;height:46vw;left:-10vw;top:-12vw;background:radial-gradient(circle,var(--blob1),transparent 68%)}
+  body::after{width:52vw;height:52vw;right:-14vw;bottom:-18vw;background:radial-gradient(circle,var(--blob2),transparent 66%)}
+  .dash{position:relative;isolation:isolate;display:grid;grid-template-columns:250px minmax(0,1fr);min-height:100vh}
+  .dash::before{content:'';position:fixed;z-index:-1;width:30vw;height:30vw;right:16vw;top:-9vw;border-radius:50%;filter:blur(80px);opacity:.42;pointer-events:none;background:radial-gradient(circle,var(--blob3),transparent 70%)}
+  .dash.nav-collapsed{grid-template-columns:90px minmax(0,1fr)}   /* ห้าม transition คอลัมน์ grid ที่มี fr */
+  .main{min-width:0;padding:16px 22px 40px}
+  .wrap{max-width:1320px}
+  .bar{padding:2px 2px 10px}
+  .road{height:2px;margin:0 2px 14px;opacity:.5;background:repeating-linear-gradient(90deg,var(--road) 0 18px,transparent 18px 32px)}
+  /* แถบเมนูกระจกลอย */
+  .side{position:sticky;top:14px;z-index:20;margin:14px 0 14px 14px;height:calc(100vh - 28px);width:236px;border-radius:26px;padding:18px 14px 14px;display:flex;flex-direction:column;overflow:visible;
+    background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 4px 12px;white-space:nowrap}
+  .blogo{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(135deg,#54c28a,#1f7a4d 58%,#1b4332);box-shadow:0 6px 14px -6px rgba(31,122,77,.75),0 1px 0 rgba(255,255,255,.5) inset}
+  .blogo svg{width:19px;height:19px}
+  .btx b{display:block;font-size:15px;line-height:1.2}.btx small{display:block;font-size:11px;color:var(--txt2)}
+  .side nav{flex:1;min-height:0;overflow:auto;scrollbar-width:none;padding:2px 8px 10px;margin:0 -8px}
+  .side nav::-webkit-scrollbar{display:none}
+  .nsec{font-size:11px;font-weight:600;color:var(--txt2);letter-spacing:.02em;padding:10px 6px 6px;white-space:nowrap}
+  .nav-i{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;margin-bottom:5px;border:1px solid transparent;border-radius:14px;background:none;color:var(--navtx);font:inherit;font-size:13.5px;text-align:left;text-decoration:none;cursor:pointer;
+    transition:background .2s,color .2s,transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s}
+  .nav-i:hover{background:var(--glass-2);transform:translateX(3px);box-shadow:0 6px 16px -10px rgba(20,83,55,.5)}
+  .nav-i:focus-visible,.nav-toggle:focus-visible,.foot-out:focus-visible{outline:2px solid var(--primary);outline-offset:2px}
+  .nav-i.on{color:#fff;border-color:rgba(255,255,255,.35);background:linear-gradient(135deg,#3fae78,#1b6b45);box-shadow:0 10px 24px -8px rgba(27,107,69,.7),0 0 0 4px rgba(63,174,120,.15),0 1px 0 rgba(255,255,255,.4) inset}
+  .nav-i.on:hover{transform:none}
+  .nav-i .ic{flex:none;width:18px;height:18px;display:block}
+  .nav-tx{min-width:0;display:block}
+  .nav-tx b{display:flex;align-items:center;gap:6px;font-weight:600;line-height:1.3;white-space:nowrap}
+  .nav-tx small{display:block;font-size:11px;line-height:1.3;color:var(--txt2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .nw{font-style:normal;font-size:10px;font-weight:700;line-height:1;padding:3px 7px;border-radius:999px;background:#1f7a4d;color:#fff}
+  .nw.gold{background:linear-gradient(135deg,#e9b949,#d4a72c);color:#3f2f05}
+  /* ผู้ใช้ + ออกจากระบบ ล่างสุด */
+  .foot{flex:none;border-top:1px solid var(--line);padding-top:10px;margin-top:4px}
+  .foot[hidden]{display:none}
+  .foot-who{display:flex;align-items:center;gap:10px;padding:0 4px;white-space:nowrap}
+  .foot-av{flex:none;width:34px;height:34px;border-radius:50%;object-fit:cover;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:#fff;background:linear-gradient(135deg,#3fae78,#1b6b45)}
+  .foot-tx{min-width:0}.foot-tx b{display:block;font-size:13px;line-height:1.25;overflow:hidden;text-overflow:ellipsis;max-width:150px}.foot-tx small{display:block;font-size:11px;line-height:1.3;color:var(--txt2)}
+  .foot-out{display:flex;align-items:center;gap:10px;width:100%;margin-top:8px;padding:8px 12px;border:1px solid transparent;border-radius:12px;background:none;color:var(--danger);font:inherit;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .2s}
+  .foot-out:hover{background:rgba(200,53,47,.1)}
+  .foot-out svg{flex:none;width:18px;height:18px}
+  /* ปุ่มหุบเมนู: วงกลมลูกศรคร่อมขอบขวา ระดับเดียวกับโลโก้ */
+  .nav-toggle{position:absolute;right:-15px;top:20px;z-index:5;width:30px;height:30px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;background:#fff;color:#1b4332;border:1px solid rgba(15,50,35,.1);box-shadow:0 6px 16px -6px rgba(15,50,35,.5),0 1px 0 rgba(255,255,255,.9) inset;transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .2s}
+  .nav-toggle svg{transition:transform .3s cubic-bezier(.22,1,.36,1)}
+  .nav-toggle:hover{transform:scale(1.08);box-shadow:0 8px 20px -6px rgba(31,122,77,.6)}
+  .dash.nav-collapsed .nav-toggle svg{transform:rotate(180deg)}
+  @media(prefers-color-scheme:dark){.nav-toggle{background:#e4f1ea}}
+  @media(min-width:861px){   /* หุบ = เหลือไอคอน · ชี้แล้วกางทับเนื้อหาชั่วคราว (คอลัมน์ไม่ขยับ หน้าไม่กระตุก) */
+    .dash.nav-collapsed .side{width:76px;padding:18px 8px 14px;z-index:30;transition:width .28s cubic-bezier(.22,1,.36,1) .12s,box-shadow .2s,background .2s}
+    .dash.nav-collapsed .side:hover,.dash.nav-collapsed .side:focus-within{width:236px;background:var(--glass-2);box-shadow:var(--glass-shadow),0 24px 60px -20px rgba(20,83,55,.5)}
+    .dash.nav-collapsed .side:hover .nav-toggle svg,.dash.nav-collapsed .side:focus-within .nav-toggle svg{transform:none}
+    .dash.nav-collapsed .brand{padding-left:12px;overflow:hidden;padding-top:4px;padding-bottom:14px;margin:-4px 0 -2px}
+    .dash.nav-collapsed .foot-who{padding-left:12px;overflow:hidden}
+    .dash.nav-collapsed .nav-i{gap:10px;padding:10px 0 10px 20px;overflow:hidden;white-space:nowrap}
+    .dash.nav-collapsed .nav-i:hover{transform:none}
+    .dash.nav-collapsed .foot-out{padding-left:20px;overflow:hidden}
+    .dash.nav-collapsed .btx,.dash.nav-collapsed .nav-tx,.dash.nav-collapsed .nsec,.dash.nav-collapsed .foot-tx,.dash.nav-collapsed .foot-out span{opacity:0;transition:opacity .15s}
+    .dash.nav-collapsed .side:hover :is(.btx,.nav-tx,.nsec,.foot-tx,.foot-out span),.dash.nav-collapsed .side:focus-within :is(.btx,.nav-tx,.nsec,.foot-tx,.foot-out span){opacity:1;transition:opacity .2s .25s}
+  }
+  /* การ์ด/ปุ่มเข้าธีม */
+  .card{background:var(--glass);border-color:var(--glass-line);border-radius:20px;box-shadow:var(--glass-shadow);-webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
+  .kpi{background:var(--glass-2);border-color:var(--glass-line);border-radius:14px}
+  .tw{background:var(--stick);border-radius:12px}
+  .btn{background:linear-gradient(135deg,#2f9e68,#176b45);box-shadow:0 8px 18px -10px rgba(23,107,69,.7)}
+  .btn.ghost{background:var(--field);border-color:var(--line2);color:var(--txt2);box-shadow:none}
+  .btn.gold{background:linear-gradient(135deg,var(--gold1),var(--gold2))}
+  .chip{background:var(--field)}
+  .chip.on{background:linear-gradient(135deg,#2f9e68,#176b45);border-color:transparent;box-shadow:0 8px 18px -10px rgba(23,107,69,.7)}
+  .sticky{background:var(--stick);border-radius:0 0 12px 12px;padding-left:4px;padding-right:4px}
+  .toast{background:#176b45}.dlg{background:rgba(5,25,16,.48)}
+  /* มือถือ: เมนูเป็นแถบเลื่อนแนวนอนด้านบน · ผู้ใช้/ออกจากระบบอยู่มุมขวาของแถบ */
+  @media(max-width:860px){
+    .dash,.dash.nav-collapsed{grid-template-columns:minmax(0,1fr);min-height:0}
+    .side{position:static;width:auto;height:auto;margin:10px 10px 0;padding:10px 12px;border-radius:20px;flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
+    .brand{padding:0;flex:1;min-width:0}
+    .side nav{order:3;flex:0 0 100%;display:flex;gap:6px;padding:2px 2px 4px;margin:0}
+    .nsec,.nav-toggle,.nav-tx small,.foot-tx{display:none}
+    .nav-i{flex:none;width:auto;margin:0;padding:8px 12px;font-size:13px}
+    .nav-i:hover{transform:none}
+    .foot{order:2;border:0;padding:0;margin:0;display:flex;align-items:center;gap:4px}
+    .foot-who{padding:0}.foot-out{width:auto;margin:0;padding:8px}.foot-out span{display:none}
+    .main{padding:12px 10px 40px}
+  }
+  @media(prefers-reduced-motion:reduce){.nav-i,.nav-toggle,.nav-toggle svg,.dash.nav-collapsed .side{transition:none}.nav-i:hover,.nav-toggle:hover{transform:none}}
+
+  :root{--surface:var(--card);--ink:var(--txt);--muted:var(--txt2);--fline:var(--line2)}
+  #xrtPv .btn.ok{background:var(--primary)}
+
+  /* ───────── หน้าฐานข้อมูลสินค้า ───────── */
+  .tools{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .srch{flex:1 1 220px;min-width:0;font:inherit;font-size:14px;padding:9px 12px;border:1px solid var(--line2);border-radius:12px;background:var(--field);color:var(--txt)}
+  .srch::placeholder{color:var(--txt2);opacity:.7;font-size:13px}
+  .btn.xl{background:#1d6f42;box-shadow:0 8px 18px -10px rgba(29,111,66,.7)}
+  .btn.up{background:var(--field);color:var(--primary);border:1px solid var(--line2);box-shadow:none}
+  .btn.sm{padding:7px 12px;font-size:13px}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:none}.chip b{font-weight:700;font-size:11.5px;min-width:18px;text-align:center;padding:0 6px;border-radius:999px;background:var(--line)}
+  .chip.on b{background:rgba(255,255,255,.25)}
+  .chip.warnc b{background:rgba(184,134,11,.18);color:var(--warn)} .chip.on.warnc b{color:#fff}
+  .ptab{margin-top:10px;max-height:calc(100vh - 290px);min-height:260px;overflow:auto}
+  .ptab table{font-size:12.5px}
+  .ptab th{z-index:1;background:var(--card2)}
+  .ptab td{vertical-align:middle}
+  .ptab tbody tr{cursor:pointer;transition:background .15s}
+  .ptab tbody tr:hover td{background:rgba(31,122,77,.06)}
+  .ptab tbody tr:focus-visible{outline:2px solid var(--primary);outline-offset:-2px}
+  .ptab tr.off td{opacity:.5}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+  td.c,th.c{text-align:center}
+  .pn{font-weight:600;line-height:1.35}.pn small{display:block;font-weight:400;color:var(--txt2);font-size:11.5px}
+  .mono{font-family:ui-monospace,Consolas,monospace;font-size:12px}
+  .nv{color:var(--danger);font-size:11.5px;font-weight:600;white-space:nowrap}
+  .dim{white-space:nowrap;font-variant-numeric:tabular-nums}
+  .pal b{font-variant-numeric:tabular-nums}.pal small{display:block;font-size:11px;color:var(--txt2)}
+  /* ฟอร์มแก้ไข */
+  .frm{overflow:auto;margin-top:6px;padding-right:2px}
+  .fsec{font-size:12px;font-weight:700;color:var(--primary);margin:12px 0 6px;display:flex;align-items:center;gap:8px}
+  .fsec::after{content:'';flex:1;height:1px;background:var(--line)}
+  .fg{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px 10px}
+  .fg.w2>label.wide{grid-column:1/-1}
+  .fg label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--txt2);font-weight:600}
+  .fg label em{font-style:normal;color:var(--danger);font-weight:700}
+  .fg input,.fg select,.fg textarea{font:inherit;font-size:14px;font-weight:400;color:var(--txt);padding:8px 10px;border:1px solid var(--line2);border-radius:10px;background:var(--field);max-width:none;width:100%}
+  .fg textarea{min-height:56px;resize:vertical}
+  .fg input::placeholder,.fg textarea::placeholder{color:var(--txt2);opacity:.6;font-size:12.5px}
+  .fg input:focus,.fg select:focus,.fg textarea:focus{outline:2px solid color-mix(in srgb,var(--primary) 45%,transparent);outline-offset:0;border-color:var(--primary)}
+  .fg .bad{border-color:var(--danger)}
+  .calc{margin-top:10px;padding:9px 12px;border-radius:12px;background:var(--card2);border:1px solid var(--line);font-size:13px;line-height:1.7}
+  .calc b{font-variant-numeric:tabular-nums}
+  .ro{font-size:11.5px;color:var(--txt2);margin-top:8px}
+  .dlg-in.form{max-width:720px;max-height:92vh;display:flex;flex-direction:column}
+  .dlg-h{display:flex;align-items:flex-start;gap:10px}
+  .dlg-h b{font-size:16px;flex:1}
+  .xbtn{border:0;background:none;color:var(--txt2);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:8px}
+  .xbtn:hover{background:var(--card2)}
+  .dlg-f{display:flex;gap:8px;align-items:center;padding-top:12px;margin-top:8px;border-top:1px solid var(--line)}
+  @media(max-width:860px){.ptab{max-height:none}.hide-m{display:none}}
+</style>
+</head>
+<body>
+<div class="dash" id="dash">
+  <aside class="side" aria-label="เมนูหลัก">
+    <div class="brand"><span class="blogo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 17H3V7h11v10H9"/><path d="M14 10h4l3 3v4h-2"/><circle cx="7" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/></svg></span><span class="btx"><b>SSB Packing</b><small>งานขนส่ง</small></span></div>
+    <nav id="nav" aria-label="เมนู"></nav>
+    <div class="foot" id="foot" hidden>
+      <div class="foot-who" id="footWho"></div>
+      <button type="button" class="foot-out" onclick="navLogout()" title="ออกจากระบบ" aria-label="ออกจากระบบ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>ออกจากระบบ</span></button>
+    </div>
+  </aside>
+  <main class="main"><div class="wrap">
+    <div class="bar">
+      <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='pk-plan.html'" aria-label="กลับ">←</button>
+      <div><h1>ฐานข้อมูลสินค้า</h1><div class="sub">รหัส SAP · ขนาดลัง · น้ำหนัก · การเรียงพาเลท — ใช้คิดพาเลท/น้ำหนักตอนจัดรถ <span style="opacity:.6">· build 2026-11-10a</span></div></div>
+    </div>
+    <div class="road" aria-hidden="true"></div>
+    <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
+  </div></main>
+</div>
+<input type="file" id="xf" accept=".xlsx,.xls,.csv" hidden>
+<div class="toast" id="toast"></div>
+<script>
+const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-products';
+const LIFF_ID='2010274217-Ot7vGhri';
+let MY_UID='', R=null, F={q:'',c:'all'}, SAVING=false;
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(t,err){const e=$('toast');e.textContent=String(t);e.className='toast on'+(err||/ไม่สำเร็จ|ไม่ได้|❌/.test(String(t))?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>e.className='toast',3400);}
+function btnBusy(el,label){ if(!el||!el.tagName) return ()=>{}; const h=el.innerHTML,d=el.disabled; el.disabled=true; el.innerHTML=label||'…'; return ()=>{ el.innerHTML=h; el.disabled=d; }; }
+const nf=(v,dp)=>v==null||v===''||isNaN(+v)?'':Number(v).toLocaleString('en-US',{maximumFractionDigits:dp==null?2:dp});
+const has=v=>v!=null&&v!=='';
+function askYes(title,msg,ok,danger){ return new Promise(res=>{
+  const w=document.createElement("div"); w.className="dlg";
+  w.innerHTML='<div class="dlg-in" role="dialog" aria-label="'+esc(title)+'"><b style="font-size:16px">'+esc(title)+'</b><p>'+esc(msg)+'</p><div class="row"><button class="btn ghost" data-a="0">ไม่ใช่</button><span class="grow"></span><button class="btn" data-a="1"'+(danger?' style="background:var(--danger)"':"")+'>'+esc(ok||"ยืนยัน")+'</button></div></div>';
+  const done=v=>{ w.remove(); res(v); };
+  w.onclick=e=>{ const a=e.target&&e.target.getAttribute&&e.target.getAttribute("data-a"); if(a!=null) done(a==="1"); else if(e.target===w) done(false); };
+  document.body.appendChild(w);
+}); }
+
+/* ── คำนวณพาเลท: สูง = ชั้น × สูงลัง + ไม้พาเลท · หนัก = หน่วย/พาเลท × กก. + ไม้พาเลท ── */
+const PAL={h_cm:15,kg:35,maxH_cm:150};
+const perPal=r=>has(r.per_pallet)?+r.per_pallet:(has(r.per_layer)&&has(r.layers)?r.per_layer*r.layers:null);
+const palH=r=>has(r.layers)&&has(r.case_h_mm)?Math.round((r.layers*r.case_h_mm/10+PAL.h_cm)*10)/10:null;
+const palKg=r=>{const n=perPal(r);return n&&has(r.weight_per_unit)?Math.round((n*r.weight_per_unit+PAL.kg)*100)/100:null;};
+/* ข้อมูลที่ยังขาด (ใช้คิดพาเลทไม่ได้) */
+function gaps(r){const g=[];if(!has(r.sap_code))g.push('รหัส SAP');if(!(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)))g.push('ขนาดลัง');if(!has(r.weight_per_unit))g.push('น้ำหนัก');if(!(has(r.per_layer)&&has(r.layers)))g.push('การเรียงพาเลท');return g;}
+
+async function load(){
+  try{
+    const r=await fetch(EDGE+'?action=list&userId='+encodeURIComponent(MY_UID)).then(x=>x.json());
+    if(!r.ok){$('body').innerHTML='<div class="msg">'+(r.denied?'🔒 ':'❌ ')+esc(r.error||'โหลดไม่สำเร็จ')+'</div>';return;}
+    if(r.pal)Object.assign(PAL,r.pal);
+    R=r; render();
+  }catch(e){ if(!R) $('body').innerHTML='<div class="msg">โหลดไม่สำเร็จ: '+esc(e.message||e)+'<br><button class="btn" style="margin-top:12px" onclick="load()">↻ ลองใหม่</button></div>'; else toast('โหลดใหม่ไม่สำเร็จ',1); }
+}
+function list(){
+  const q=F.q.trim().toLowerCase(), rows=R.rows.slice();
+  return rows.filter(r=>{
+    const off=r.status==='Inactive';
+    if(F.c==='off'){ if(!off) return false; } else if(off) return false;
+    if(F.c==='gap'&&!gaps(r).length) return false;
+    if(F.c.startsWith('b:')&&(r.brand||'(ไม่ระบุยี่ห้อ)')!==F.c.slice(2)) return false;
+    if(F.c.startsWith('g:')&&(r.product_group||'(ไม่ระบุประเภท)')!==F.c.slice(2)) return false;
+    if(q&&![r.sap_code,r.name,r.brand,r.product_group,r.aliases,r.product_id,r.note].join(' ').toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a,b)=>String(a.brand||'ฮ').localeCompare(String(b.brand||'ฮ'),'th')||String(a.name).localeCompare(String(b.name),'th'));
+}
+function render(){
+  const act=R.rows.filter(r=>r.status!=='Inactive'), off=R.rows.length-act.length;
+  const nGap=act.filter(r=>gaps(r).length).length, nSap=act.filter(r=>!has(r.sap_code)).length;
+  const brands={},groups={}; act.forEach(r=>{const b=r.brand||'(ไม่ระบุยี่ห้อ)',g=r.product_group||'(ไม่ระบุประเภท)';brands[b]=(brands[b]||0)+1;groups[g]=(groups[g]||0)+1;});
+  const L=list(), ed=R.canEdit;
+  const chip=(k,t,n,cls)=>'<button type="button" class="chip'+(F.c===k?' on':'')+(cls?' '+cls:'')+'" data-c="'+esc(k)+'" aria-pressed="'+(F.c===k)+'">'+t+' <b>'+n+'</b></button>';
+  let h='<div class="card"><div class="kpis" style="margin-top:0">'
+    +'<div class="kpi"><b>'+act.length+'</b><span>สินค้าที่ใช้งาน</span></div>'
+    +'<div class="kpi'+(nGap?' warn':'')+'"><b>'+nGap+'</b><span>ข้อมูลยังไม่ครบ</span></div>'
+    +'<div class="kpi'+(nSap?' warn':'')+'"><b>'+nSap+'</b><span>ยังไม่มีรหัส SAP</span></div>'
+    +'<div class="kpi"><b>'+Object.keys(brands).length+'</b><span>ยี่ห้อ</span></div></div>'
+    +'<div class="tools" style="margin-top:12px"><input class="srch" id="q" type="search" placeholder="ค้นหา รหัส SAP / ชื่อสินค้า / ชื่อเรียกในไลน์…" value="'+esc(F.q)+'" aria-label="ค้นหาสินค้า">'
+    +(ed?'<button class="btn sm" id="bAdd">＋ เพิ่มสินค้า</button>':'')
+    +'<button class="btn sm xl" id="bDl">⬇ ดาวน์โหลด Excel</button>'
+    +(ed?'<button class="btn sm up" id="bUp">⬆ อัปโหลด</button>':'')+'</div>'
+    +'<div class="chips" role="group" aria-label="กรองสินค้า">'+chip('all','ทั้งหมด',act.length)+chip('gap','⚠ ข้อมูลไม่ครบ',nGap,'warnc')
+    +Object.keys(brands).sort((a,b)=>a.localeCompare(b,'th')).map(b=>chip('b:'+b,esc(b),brands[b])).join('')
+    +Object.keys(groups).sort((a,b)=>a.localeCompare(b,'th')).map(g=>chip('g:'+g,esc(g),groups[g])).join('')
+    +(off?chip('off','เลิกใช้',off):'')+'</div>';
+  h+='<div class="tw ptab"><table><thead><tr><th>รหัส SAP</th><th>ชื่อสินค้า</th><th class="c">หน่วย</th><th class="hide-m">ขนาดลัง ก×ย×ส (มม.)</th><th class="n">กก./หน่วย</th><th class="n">ต่อชั้น × ชั้น</th><th class="n">ต่อพาเลท</th><th class="n hide-m">พาเลทเต็ม</th><th class="hide-m">ใช้กับ</th></tr></thead><tbody>';
+  if(!L.length) h+='<tr><td colspan="9" class="msg">'+(F.q?'ไม่พบสินค้าที่ค้นหา':'ไม่มีรายการ')+'</td></tr>';
+  L.forEach(r=>{
+    const g=gaps(r), pp=perPal(r), ph=palH(r), pk=palKg(r), nv='<span class="nv">ยังไม่มี</span>';
+    h+='<tr tabindex="0" data-id="'+esc(r.product_id)+'" class="'+(r.status==='Inactive'?'off':'')+'">'
+      +'<td class="mono">'+(r.sap_code?esc(r.sap_code):nv)+'</td>'
+      +'<td><div class="pn">'+esc(r.name)+'<small>'+[r.brand,r.product_group].filter(Boolean).map(esc).join(' · ')+(r.aliases?' · ไลน์: '+esc(r.aliases):'')+(g.length?' <span class="tag out">ขาด '+esc(g.join(', '))+'</span>':'')+(r.caution?' <span class="tag bad">⚠ '+esc(r.caution)+'</span>':'')+'</small></div></td>'
+      +'<td class="c">'+esc(r.main_unit||'')+'</td>'
+      +'<td class="dim hide-m">'+(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)?nf(r.case_w_mm,0)+' × '+nf(r.case_l_mm,0)+' × '+nf(r.case_h_mm,0):nv)+'</td>'
+      +'<td class="n">'+(has(r.weight_per_unit)?nf(r.weight_per_unit,3):nv)+'</td>'
+      +'<td class="n">'+(has(r.per_layer)&&has(r.layers)?r.per_layer+' × '+r.layers:nv)+'</td>'
+      +'<td class="n"><b>'+(pp?nf(pp,0):'—')+'</b></td>'
+      +'<td class="n pal hide-m">'+(ph||pk?'<b'+(ph>PAL.maxH_cm?' style="color:var(--warn)" title="สูงเกิน '+PAL.maxH_cm+' ซม."':'')+'>'+(ph?(ph>PAL.maxH_cm?'⚠ ':'')+nf(ph,1)+' ซม.':'—')+'</b><small>'+(pk?nf(pk,1)+' กก.':'')+'</small>':'—')+'</td>'
+      +'<td class="hide-m">'+esc(r.channels||'')+'</td></tr>';
+  });
+  h+='</tbody></table></div><div class="note" style="margin-top:8px">พาเลทเต็ม = จำนวนชั้น × สูงลัง + ไม้พาเลท '+PAL.h_cm+' ซม. · น้ำหนัก = หน่วยต่อพาเลท × กก./หน่วย (QC) + ไม้พาเลท '+PAL.kg+' กก. · ขนาดลังเป็นมิลลิเมตร'+(ed?' · กดแถวเพื่อแก้ไข':' · ดูได้อย่างเดียว (แก้ได้เฉพาะแอดมิน Packing / DEV)')+'</div></div>';
+  const sc=document.querySelector('.ptab'),top=sc?sc.scrollTop:0, hadQ=document.activeElement&&document.activeElement.id==='q';
+  $('body').innerHTML=h;
+  const nsc=document.querySelector('.ptab'); if(nsc&&top) nsc.scrollTop=top;
+  const qi=$('q'); qi.oninput=()=>{F.q=qi.value;clearTimeout(render._t);render._t=setTimeout(()=>{render();},180);};
+  if(hadQ){qi.focus();qi.setSelectionRange(qi.value.length,qi.value.length);}
+  document.querySelectorAll('[data-c]').forEach(b=>b.onclick=()=>{F.c=F.c===b.dataset.c&&F.c!=='all'?'all':b.dataset.c;render();});
+  document.querySelectorAll('tbody tr[data-id]').forEach(tr=>{const go=()=>openForm(R.rows.find(x=>x.product_id===tr.dataset.id));tr.onclick=go;tr.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}};});
+  if($('bAdd'))$('bAdd').onclick=()=>openForm(null);
+  $('bDl').onclick=e=>xrtDownload(XSPEC(),e.currentTarget);
+  if($('bUp'))$('bUp').onclick=()=>$('xf').click();
+}
+
+/* ── ฟอร์มเพิ่ม/แก้ไข ── */
+const FF=[
+  ['หลัก',[['sap_code','รหัส SAP','เช่น 104884'],['name','ชื่อสินค้า','เช่น ขวด 1L*12 ทับทิม E',1,'wide'],['brand','ยี่ห้อ','ทับทิม / โบนัส / ไชโย…',0,0,'brands'],['product_group','ประเภท','ขวด / ถุง / ปี๊บ / ถัง',0,0,'groups'],['main_unit','หน่วย','ลัง / ปี๊บ / ถัง / กล่อง',0,0,'units'],['channels','ใช้กับ','7-11, ยี่ปั๊ว'],['aliases','ชื่อเรียกในกลุ่มไลน์','คั่นด้วย , เช่น ไชโย 1ลิตร, ไชโยถุง',0,'wide']]],
+  ['ขนาดลัง และน้ำหนัก',[['case_w_mm','กว้างลัง (มม.)','240','n'],['case_l_mm','ยาวลัง (มม.)','320','n'],['case_h_mm','สูงลัง (มม.)','293','n'],['weight_per_unit','กก./หน่วย (QC)','11.44','n'],['weight_stock','กก./หน่วย ชีตคลัง','11.52','n']]],
+  ['การเรียงบนพาเลท',[['per_layer','หน่วยต่อชั้น','14','n'],['layers','จำนวนชั้น','4','n'],['per_pallet','หน่วยต่อพาเลท','ว่าง = ต่อชั้น × ชั้น','n'],['stack_pallets','พาเลทเต็มซ้อนกันได้ (ชั้น)','เช่น 2','n'],['mix_ok','ผสมเศษกับสินค้าอื่นได้','',0,0,'mix']]],
+  ['อื่นๆ',[['caution','ข้อควรระวัง','เช่น ห้ามวางทับ',0,'wide'],['note','หมายเหตุ','',0,'wide'],['status','สถานะ','',0,0,'status']]]];
+function opts(kind,v){
+  const uniq=k=>[...new Set(R.rows.map(r=>r[k]).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'th'));
+  if(kind==='mix') return '<select data-k="mix_ok"><option value="">— ยังไม่ระบุ —</option>'+['ได้','ไม่ได้'].map(x=>'<option'+(v===x?' selected':'')+'>'+x+'</option>').join('')+'</select>';
+  if(kind==='status') return '<select data-k="status">'+[['Active','ใช้งาน'],['Inactive','เลิกใช้']].map(x=>'<option value="'+x[0]+'"'+((v||'Active')===x[0]?' selected':'')+'>'+x[1]+'</option>').join('')+'</select>';
+  const base={brands:uniq('brand'),groups:[...new Set(['ขวด','ถุง','ปี๊บ','ถัง','ถุง BIB'].concat(uniq('product_group')))],units:[...new Set(['ลัง','ปี๊บ','ถัง','กล่อง'].concat(uniq('main_unit')))]}[kind]||[];
+  return base.map(x=>'<option value="'+esc(x)+'">').join('');
+}
+let FORM=null;
+function openForm(r){
+  const ed=R.canEdit, isNew=!r; r=r||{status:'Active',main_unit:'ลัง'};
+  FORM={id:r.product_id||'',orig:r};
+  let h='<div class="dlg-in form" role="dialog" aria-modal="true" aria-label="'+(isNew?'เพิ่มสินค้า':'แก้ไขสินค้า')+'"><div class="dlg-h"><b>'+(isNew?'＋ เพิ่มสินค้าใหม่':(ed?'แก้ไข · ':'')+esc(r.name))+'<div class="sub">'+(isNew?'กรอกเท่าที่รู้ก่อน · ขนาดลังใส่เป็นมิลลิเมตร':esc(r.product_id)+(r.updated_by?' · แก้ล่าสุด '+esc(r.updated_by):''))+'</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="frm">';
+  FF.forEach(([sec,fs])=>{
+    h+='<div class="fsec">'+esc(sec)+'</div><div class="fg w2">';
+    fs.forEach(([k,lab,ph,flag,wide,kind])=>{
+      const v=r[k]==null?'':r[k], req=k==='name';
+      let inp;
+      if(kind==='mix'||kind==='status') inp=opts(kind,String(v));
+      else if(kind) inp='<input data-k="'+k+'" list="dl-'+kind+'" value="'+esc(v)+'" placeholder="'+esc(ph)+'"><datalist id="dl-'+kind+'">'+opts(kind)+'</datalist>';
+      else if(k==='note'||k==='caution') inp='<textarea data-k="'+k+'" placeholder="'+esc(ph)+'">'+esc(v)+'</textarea>';
+      else inp='<input data-k="'+k+'" value="'+esc(v)+'" placeholder="'+esc(ph)+'"'+(flag==='n'?' inputmode="decimal"':'')+'>';
+      h+='<label'+(wide?' class="wide"':'')+'>'+esc(lab)+(req?' <em>* จำเป็น</em>':'')+inp+'</label>';
+    });
+    h+='</div>';
+    if(sec==='การเรียงบนพาเลท') h+='<div class="calc" id="calc"></div>';
+  });
+  h+='</div><div class="dlg-f">'+(ed?'<button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="fSave">'+(isNew?'เพิ่มสินค้า':'บันทึก')+'</button>':'<span class="grow"></span><button class="btn" data-x>ปิด</button>')+'</div></div>';
+  const w=document.createElement('div'); w.className='dlg'; w.id='pform'; w.innerHTML=h; document.body.appendChild(w);
+  if(!ed) w.querySelectorAll('[data-k]').forEach(i=>i.disabled=true);
+  const close=()=>{w.remove();FORM=null;};
+  w.querySelectorAll('[data-x]').forEach(b=>b.onclick=close);
+  w.onclick=e=>{if(e.target===w)close();};
+  w.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+  w.querySelectorAll('[data-k]').forEach(i=>i.addEventListener('input',calc));
+  calc();
+  const s=$('fSave'); if(s) s.onclick=()=>saveForm(s);
+  const first=w.querySelector(isNew?'[data-k="sap_code"]':'[data-x]'); if(first) first.focus();
+}
+function formVals(){const o={};document.querySelectorAll('#pform [data-k]').forEach(i=>o[i.dataset.k]=i.value.trim());return o;}
+function calc(){
+  const v=formVals(), n=x=>x===''?null:Number(String(x).replace(/,/g,'')), r={case_h_mm:n(v.case_h_mm),layers:n(v.layers),per_layer:n(v.per_layer),per_pallet:n(v.per_pallet),weight_per_unit:n(v.weight_per_unit)};
+  const pp=perPal(r), ph=palH(r), pk=palKg(r), c=$('calc'); if(!c) return;
+  const warn=[];['case_w_mm','case_l_mm','case_h_mm'].forEach(k=>{const x=n(v[k]);if(x!=null&&(isNaN(x)||x<60))warn.push('ขนาดลังดูเหมือนใส่เป็นเซนติเมตร (ต้องเป็นมิลลิเมตร เช่น 240)');});
+  if(ph>PAL.maxH_cm) warn.push('พาเลทเต็มสูง '+nf(ph,1)+' ซม. เกิน '+PAL.maxH_cm+' ซม. — ตรวจจำนวนชั้น/สูงลังอีกครั้ง');
+  if(r.per_pallet&&r.per_layer&&r.layers&&r.per_pallet!==r.per_layer*r.layers) warn.push('หน่วยต่อพาเลท '+r.per_pallet+' ไม่เท่ากับ '+r.per_layer+' × '+r.layers+' = '+(r.per_layer*r.layers));
+  c.innerHTML='พาเลทเต็ม: <b>'+(pp?nf(pp,0)+' '+esc(v.main_unit||'หน่วย'):'—')+'</b> · สูง <b>'+(ph?nf(ph,1)+' ซม.':'—')+'</b> · หนัก <b>'+(pk?nf(pk,1)+' กก.':'—')+'</b>'
+    +'<div class="note">รวมไม้พาเลท '+PAL.h_cm+' ซม. / '+PAL.kg+' กก.</div>'+([...new Set(warn)].map(t=>'<div style="color:var(--warn);font-size:12.5px">⚠ '+esc(t)+'</div>').join(''));
+  document.querySelectorAll('#pform [data-k^="case_"]').forEach(i=>{const x=n(i.value);i.classList.toggle('bad',x!=null&&(isNaN(x)||x<60));});
+}
+async function saveForm(b){
+  if(SAVING) return; const v=formVals();
+  if(!v.name){toast('⚠️ กรุณาใส่ชื่อสินค้า',1);const i=document.querySelector('#pform [data-k="name"]');i.classList.add('bad');i.focus();return;}
+  /* หน่วยต่อพาเลทเว้นว่าง = คิด ต่อชั้น × ชั้น ให้ (ไม่ส่งค่าว่างไปลบ) */
+  if(!v.per_pallet&&+v.per_layer>0&&+v.layers>0) v.per_pallet=String(+v.per_layer*+v.layers);
+  SAVING=true; const done=btnBusy(b,'กำลังบันทึก…');
+  try{
+    const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',userId:MY_UID,row:Object.assign({product_id:FORM.id},v)})}).then(x=>x.json());
+    if(!r.ok) throw new Error(r.error||'บันทึกไม่สำเร็จ');
+    $('pform').remove(); FORM=null;
+    toast(r.same?'ไม่มีอะไรเปลี่ยน':r.added?'✅ เพิ่มสินค้าแล้ว':'✅ บันทึกแล้ว');
+    await load();
+  }catch(e){toast('❌ '+(e.message||e),1);}
+  finally{SAVING=false;done();}
+}
+
+/* ── Excel ดาวน์โหลด/อัปโหลด (skill webapp-excel-roundtrip) ── */
+function XSPEC(){return {
+  title:'ฐานข้อมูลสินค้า Packing', sheet:'สินค้า', file:'ฐานข้อมูลสินค้า', unit:'รายการ', key:'product_id',
+  offHint:'เลิกใช้ให้แก้คอลัมน์ สถานะ เป็น เลิกใช้',
+  rows:R.rows, sort:(a,b)=>String(a.product_id).localeCompare(String(b.product_id)),
+  cols:[
+    {k:'sap_code',h:'รหัส SAP',w:11,help:'ตัวเลขรหัส SAP · ไม่ซ้ำกัน · ไม่มีเว้นว่างได้'},
+    {k:'name',h:'ชื่อสินค้า',w:40,req:1},
+    {k:'brand',h:'ยี่ห้อ',w:11},{k:'product_group',h:'ประเภท',w:9,help:'ขวด / ถุง / ปี๊บ / ถัง / ถุง BIB'},{k:'main_unit',h:'หน่วย',w:7,help:'ลัง / ปี๊บ / ถัง / กล่อง'},
+    {k:'case_w_mm',h:'กว้างลัง (มม.)',w:10,help:'มิลลิเมตร เช่น 240 (ไม่ใช่ 24 ซม.)'},{k:'case_l_mm',h:'ยาวลัง (มม.)',w:10},{k:'case_h_mm',h:'สูงลัง (มม.)',w:10},
+    {k:'weight_per_unit',h:'กก./หน่วย (QC)',w:11,help:'น้ำหนักต่อหน่วยรวมบรรจุภัณฑ์ ใช้คิดน้ำหนักพาเลท'},{k:'weight_stock',h:'กก./หน่วย ชีตคลัง',w:11},
+    {k:'per_layer',h:'หน่วยต่อชั้น',w:9},{k:'layers',h:'จำนวนชั้น',w:8},{k:'per_pallet',h:'หน่วยต่อพาเลท',w:10,help:'เว้นว่าง = ระบบคิด หน่วยต่อชั้น × จำนวนชั้น ให้'},
+    {k:'stack_pallets',h:'พาเลทเต็มซ้อนกันได้ (ชั้น)',w:12},{k:'mix_ok',h:'ผสมเศษกับสินค้าอื่นได้',w:12,help:'ได้ / ไม่ได้'},
+    {k:'caution',h:'ข้อควรระวัง',w:22},{k:'channels',h:'ใช้กับ',w:12,help:'เช่น 7-11, ยี่ปั๊ว'},{k:'aliases',h:'ชื่อเรียกในไลน์',w:24,help:'ชื่อที่เซลส์พิมพ์ในกลุ่มไลน์ คั่นด้วย , (ใช้จับคู่ออเดอร์ยี่ปั๊ว)'},
+    {k:'note',h:'หมายเหตุ',w:30},
+    {k:'status',h:'สถานะ',w:9,get:r=>r.status==='Inactive'?'เลิกใช้':'ใช้งาน',help:'ใช้งาน / เลิกใช้'},
+    {k:'pal_h',h:'สูงพาเลทเต็ม (ซม.)',w:11,ro:1,get:r=>{const v=palH(r);return v==null?'':v;}},
+    {k:'pal_kg',h:'หนักพาเลทเต็ม (กก.)',w:11,ro:1,get:r=>{const v=palKg(r);return v==null?'':v;}}],
+  preview:rows=>post('import_preview',rows), apply:rows=>post('import_apply',rows), onDone:()=>load()};}
+async function post(action,rows){const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,userId:MY_UID,rows})}).then(x=>x.json());if(!r.ok)throw new Error(r.error||'ไม่สำเร็จ');return r;}
+$('xf').onchange=function(){xrtUpload(XSPEC(),this);};
+</script>
+<script>
+/* ===== Excel round-trip: ดาวน์โหลดแม่แบบ → แก้ใน Excel → อัปโหลด → ดูสรุปก่อนยืนยัน =====
+ * ยกแบบมาจาก "ทะเบียนพนักงาน" ของ MySSB Connect (empDownload / empUpload / empPreview / empImportGo)
+ * ไม่มี dependency นอกจาก xlsx-js-style (โหลดจาก CDN ตอนกดครั้งแรก) · ใช้ esc/toast/btnBusy ของหน้าเองถ้ามี
+ *
+ * ใช้:  xrtDownload(SPEC, btn)            ปุ่ม "ดาวน์โหลด"
+ *       <input type=file accept=".xlsx,.xls,.csv" onchange="xrtUpload(SPEC, this)">   ปุ่ม "อัปโหลด"
+ * SPEC ดูตัวอย่างใน SKILL.md
+ */
+function xrtLib(){
+  if (window.XLSX && window.XLSX.utils && window.XLSX.write) return Promise.resolve(window.XLSX);
+  return new Promise(function(ok, no){ var s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
+    s.onload = function(){ ok(window.XLSX); }; s.onerror = function(){ no(new Error('โหลดตัวสร้าง Excel ไม่ได้')); }; document.head.appendChild(s); });
+}
+function xrtSave(blob, name){   // LINE in-app browser: octet-stream กันมัน "เปิด" แทนดาวน์โหลด
+  var u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); }, 1500);
+}
+function xrtYmd(d){ var p = function(n){ return ('0' + n).slice(-2); }; return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()); }
+
+/* ---------- ดาวน์โหลด: แถว 1 = หัวไทย (กรมท่า) · แถว 2 = คีย์อังกฤษ (ห้ามแก้ ใช้จับคู่ตอนอัปโหลด) · คอลัมน์ key ซ่อนสีเทา ---------- */
+async function xrtDownload(S, b){
+  var done = btnBusy(b, 'กำลังสร้าง…');
+  try {
+    var X = await xrtLib(), NAVY = '1E293B', LN = 'CBD5E1';
+    var bd = { top: { style: 'thin', color: { rgb: LN } }, bottom: { style: 'thin', color: { rgb: LN } }, left: { style: 'thin', color: { rgb: LN } }, right: { style: 'thin', color: { rgb: LN } } };
+    var F = function(o){ return Object.assign({ name: 'Tahoma', sz: 10, color: { rgb: '1E293B' } }, o || {}); };
+    var sh = { font: F({ bold: true, color: { rgb: 'FFFFFF' } }), fill: { fgColor: { rgb: NAVY } }, border: bd, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } };
+    var sk = { font: F({ sz: 8, italic: true, color: { rgb: '94A3B8' } }), fill: { fgColor: { rgb: 'F1F5F9' } }, border: bd, alignment: { horizontal: 'center' } };
+    var sro = { font: F({ sz: 8, color: { rgb: '94A3B8' } }), fill: { fgColor: { rgb: 'F1F5F9' } }, border: bd };   // คอลัมน์ key / อ่านอย่างเดียว
+    var sd = { font: F(), border: bd }, sz = { font: F(), border: bd, fill: { fgColor: { rgb: 'F8FAFC' } } };
+    var cols = [{ k: S.key, h: S.key + ' (ห้ามแก้)', ro: true, w: 10 }].concat(S.cols);
+    var c = function(v, s){ return { v: v == null ? '' : String(v), t: 's', s: s }; };   // ทุกช่องเป็นข้อความ → เลข 0 นำหน้า/วันที่ไม่เพี้ยน
+    var aoa = [cols.map(function(x){ return c(x.h + (x.ro && x.k !== S.key ? ' (อ่านอย่างเดียว)' : ''), sh); }), cols.map(function(x){ return c(x.ro && x.k !== S.key ? '_' + x.k : x.k, sk); })];
+    var rows = S.rows.slice(); if (S.sort) rows.sort(S.sort);
+    rows.forEach(function(r, i){ var st = i % 2 ? sz : sd;
+      aoa.push(cols.map(function(x){ var v = x.get ? x.get(r) : r[x.k]; return c(v, x.ro ? sro : st); })); });
+    var ws = X.utils.aoa_to_sheet([[]]);
+    aoa.forEach(function(row, ri){ row.forEach(function(cell, ci){ ws[X.utils.encode_cell({ r: ri, c: ci })] = cell; }); });
+    ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: cols.length - 1 } });
+    ws['!cols'] = cols.map(function(x){ return { wch: x.w || 14 }; });
+    ws['!rows'] = [{ hpt: 28 }, { hpt: 14 }];
+    ws['!freeze'] = { xSplit: 0, ySplit: 2 };
+    var help = [['วิธีใช้ไฟล์ ' + S.title], [''],
+      ['1. แก้ข้อมูลในแผ่น "' + S.sheet + '" แล้วอัปโหลดกลับที่ปุ่ม อัปโหลด ในหน้าเดิม'],
+      ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์ภาษาอังกฤษ) และคอลัมน์ ' + S.key + ' — ระบบใช้จับคู่รายการเดิม'],
+      ['3. เพิ่มรายการใหม่: ต่อท้ายตาราง เว้น ' + S.key + ' ว่าง ใส่อย่างน้อย ' + S.cols.filter(function(x){ return x.req; }).map(function(x){ return x.h; }).join(' + ')],
+      ['4. ช่องที่เว้นว่าง = คงค่าเดิม · ลบแถวทิ้ง = ไม่ลบออกจากระบบ' + (S.offHint ? ' (' + S.offHint + ')' : '')],
+      ['5. ก่อนบันทึกจริง ระบบจะแสดงสรุป เพิ่มใหม่ / แก้ไข / ผิดพลาด ให้ตรวจแล้วค่อยกดยืนยัน'], [''], ['ค่าที่ใช้ได้']]
+      .concat(S.cols.filter(function(x){ return x.help; }).map(function(x){ return [x.h, x.help]; }));
+    var wh = X.utils.aoa_to_sheet(help); wh['!cols'] = [{ wch: 22 }, { wch: 90 }];
+    var wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, S.sheet); X.utils.book_append_sheet(wb, wh, 'วิธีใช้');
+    xrtSave(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/octet-stream' }), (S.file || S.sheet) + '_' + xrtYmd(new Date()) + '.xlsx');
+  } catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: ' + (e.message || e)); }
+  finally { done(); }
+}
+
+/* ---------- อัปโหลด: หาแถวหัว (คีย์อังกฤษก่อน / หัวไทยสำรอง) → แปลงเป็น object → ให้เซิร์ฟเวอร์ตรวจ → popup สรุป ---------- */
+var XRT_UP = null;
+async function xrtUpload(S, input){
+  var f = input.files && input.files[0]; input.value = ''; if (!f) return;
+  toast('กำลังอ่านไฟล์…');
+  try {
+    var X = await xrtLib();
+    var wb = X.read(await f.arrayBuffer(), { type: 'array', cellDates: true });
+    var ws = wb.Sheets[S.sheet] || wb.Sheets[wb.SheetNames[0]];
+    var aoa = X.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    var edit = S.cols.filter(function(x){ return !x.ro; }), known = [S.key].concat(edit.map(function(x){ return x.k; }));
+    var th = {}; edit.forEach(function(x){ th[x.h] = x.k; (x.alias || []).forEach(function(a){ th[a] = x.k; }); }); th[S.key + ' (ห้ามแก้)'] = S.key; th[S.key] = S.key;
+    // แถวหัว = มีคอลัมน์บังคับครบ และตรงกับคอลัมน์ที่แก้ได้อย่างน้อยครึ่งหนึ่ง (กันจับแถวหัวไทยผิดเมื่อไม่มีคอลัมน์บังคับ)
+    var need = S.cols.filter(function(x){ return x.req; }), half = Math.max(1, Math.ceil(edit.length / 2)), hi = -1, map = null;
+    var isEn = function(row){ return need.every(function(x){ return row.indexOf(x.k) >= 0; }) && edit.filter(function(x){ return row.indexOf(x.k) >= 0; }).length >= half; };
+    var isTh = function(row){ return need.every(function(x){ return row.indexOf(x.h) >= 0; }) && edit.filter(function(x){ return row.indexOf(x.h) >= 0 || (x.alias || []).some(function(a){ return row.indexOf(a) >= 0; }); }).length >= half; };
+    var trim = function(r){ return (r || []).map(function(v){ return String(v).trim(); }); };
+    for (var i = 0; i < Math.min(aoa.length, 10) && hi < 0; i++){
+      var row = trim(aoa[i]);
+      if (isEn(row)){ hi = i; map = row.map(function(v){ return known.indexOf(v) >= 0 ? v : ''; }); }
+      else if (isTh(row) && !isEn(trim(aoa[i + 1]))){ hi = i; map = row.map(function(v){ return th[v] || ''; }); }
+    }
+    if (hi < 0) return toast('ไม่พบหัวตาราง — ใช้ไฟล์ที่ดาวน์โหลดจากระบบเป็นแม่แบบ');
+    var p2 = function(n){ return ('0' + n).slice(-2); }, rows = [];
+    for (var r = hi + 1; r < aoa.length; r++){
+      var o = { _line: r + 1 }, any = false;
+      map.forEach(function(k, ci){ if (!k) return; var v = aoa[r][ci];
+        if (v instanceof Date) v = v.getFullYear() + '-' + p2(v.getMonth() + 1) + '-' + p2(v.getDate());
+        v = (v == null ? '' : String(v)).trim(); o[k] = v; if (v) any = true; });
+      if (any) rows.push(o);
+    }
+    if (!rows.length) return toast('ไฟล์ไม่มีข้อมูล');
+    if (rows.length > (S.maxRows || 3000)) return toast('ไฟล์ใหญ่เกิน ' + (S.maxRows || 3000) + ' แถว');
+    var pv = await S.preview(rows);   // เซิร์ฟเวอร์ตรวจ (ห้ามตรวจฝั่งหน้าเว็บอย่างเดียว)
+    XRT_UP = { S: S, rows: rows, name: f.name };
+    xrtPreview(pv);
+  } catch(e){ toast('อ่านไฟล์ไม่สำเร็จ: ' + (e.message || e)); }
+}
+function xrtPreview(pv){
+  var S = XRT_UP.S, u = S.unit || 'รายการ', m = document.getElementById('xrtPv');
+  if (!m){ m = document.createElement('div'); m.id = 'xrtPv';
+    m.style.cssText = 'display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:90;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(m); }
+  var n = pv.add.length + pv.change.length;
+  var sec = function(title, color, count, body){ return '<div style="margin-top:12px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:14px;color:' + color + '">' + title + '</b>' +
+    '<span style="font-size:12px;font-weight:700;color:' + color + '">' + count + '</span></div>' + (body ? '<div style="margin-top:4px">' + body + '</div>' : '') + '</div>'; };
+  var li = function(i, main, sub){ return '<div style="display:flex;gap:8px;padding:5px 0;border-bottom:1px solid var(--line,#e2e8f0);font-size:13px"><span style="flex:none;width:22px;color:var(--muted,#64748b);text-align:right">' + i + '.</span><div style="min-width:0;flex:1">' + main + (sub ? '<div style="font-size:12px;color:var(--muted,#64748b)">' + sub + '</div>' : '') + '</div></div>'; };
+  m.innerHTML = '<div style="background:var(--surface,#fff);color:var(--ink,#1e293b);width:100%;max-width:460px;max-height:86vh;display:flex;flex-direction:column;border-radius:18px;box-shadow:0 20px 50px rgba(0,0,0,.35)">' +
+    '<div style="padding:16px 16px 4px"><b style="font-size:16px">ตรวจไฟล์ก่อนนำเข้า</b><div style="font-size:12px;color:var(--muted,#64748b)">' + esc(XRT_UP.name) + ' · ' + XRT_UP.rows.length + ' แถว</div></div>' +
+    '<div style="overflow:auto;padding:0 16px 8px;flex:1">' +
+    sec('เพิ่มใหม่', '#127a2e', pv.add.length + ' ' + u, pv.add.map(function(a, i){ return li(i + 1, '<b>' + esc(a.name) + '</b>', esc(a.sub || '') + ' · แถว ' + a.line); }).join('')) +
+    sec('แก้ไข', '#185fa5', pv.change.length + ' ' + u, pv.change.map(function(c, i){
+      return li(i + 1, '<b>' + esc(c.name) + '</b> <span style="font-size:12px;color:var(--muted,#64748b)">· แถว ' + c.line + '</span>', c.fields.map(function(x){ return esc(x.label) + ': <s>' + esc(x.old || '(ว่าง)') + '</s> → <b style="color:var(--ink,#1e293b)">' + esc(x['new']) + '</b>'; }).join('<br>')); }).join('')) +
+    sec('ผิดพลาด (จะข้าม ไม่บันทึก)', '#a32d2d', pv.errors.length + ' แถว', pv.errors.map(function(e, i){ return li(i + 1, 'แถว ' + e.line + (e.name ? ' · ' + esc(e.name) : ''), '<span style="color:#a32d2d">' + esc(e.msg) + '</span>'); }).join('')) +
+    sec('ไม่เปลี่ยนแปลง', 'var(--muted,#64748b)', pv.same + ' ' + u, '') +
+    (pv.missing && pv.missing.length ? sec('ไม่อยู่ในไฟล์ (ข้อมูลเดิมคงอยู่ ไม่ถูกลบ)', 'var(--muted,#64748b)', pv.missing.length + ' ' + u, '<div style="font-size:12px;color:var(--muted,#64748b)">' + pv.missing.slice(0, 15).map(esc).join(', ') + (pv.missing.length > 15 ? ' และอีก ' + (pv.missing.length - 15) : '') + '</div>') : '') +
+    '</div><div style="display:flex;gap:9px;padding:12px 16px 16px;border-top:1px solid var(--line,#e2e8f0)">' +
+    '<button class="btn" style="margin:0;flex:1;background:var(--surface,#fff);color:var(--muted,#64748b);border:1px solid var(--fline,#cbd5e1)" onclick="document.getElementById(\'xrtPv\').style.display=\'none\'">ยกเลิก</button>' +
+    '<button class="btn ok" style="margin:0;flex:1' + (n ? '' : ';opacity:.5') + '" ' + (n ? '' : 'disabled ') + 'onclick="xrtApply(this)">' + (n ? 'ยืนยันนำเข้า ' + n + ' ' + u : 'ไม่มีอะไรต้องบันทึก') + '</button></div></div>';
+  m.style.display = 'flex';
+}
+var XRT_BUSY = false;
+async function xrtApply(b){
+  if (XRT_BUSY || !XRT_UP) return; XRT_BUSY = true; var done = btnBusy(b, 'กำลังบันทึก…');
+  try {
+    var r = await XRT_UP.S.apply(XRT_UP.rows);   // เซิร์ฟเวอร์ตรวจซ้ำทั้งไฟล์อีกรอบ แล้วบันทึกเฉพาะแถวที่ผ่าน
+    document.getElementById('xrtPv').style.display = 'none';
+    toast('นำเข้าแล้ว ✓ เพิ่ม ' + r.added + ' · แก้ไข ' + r.changed + (r.skipped ? ' · ข้าม ' + r.skipped + ' แถว' : ''));
+    var S = XRT_UP.S; XRT_UP = null; if (S.onDone) S.onDone(r);
+  } catch(e){ toast('นำเข้าไม่สำเร็จ: ' + (e.message || e)); }
+  finally { XRT_BUSY = false; done(); }
+}
+
+</script>
+<script>
+/* ── เมนูซ้าย (ชุดเดียวกับหน้าแจกงาน Packing) ── */
+const NAV_IC={db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+  users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
+  truck:'<path d="M5 17H3V7h11v10H9"/><path d="M14 10h4l3 3v4h-2"/><circle cx="7" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/>',
+  dash:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+  track:'<circle cx="6" cy="5" r="2"/><path d="M6 7v10"/><circle cx="6" cy="19" r="2"/><path d="M11 5h9M11 12h9M11 19h9"/><circle cx="6" cy="12" r="1"/>',
+  wage:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+  usercog:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a5 5 0 0 1 5-5h4"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13.7 14.5l1.7 1M20.6 18.5l1.7 1M13.7 19.5l1.7-1M20.6 15.5l1.7-1"/>'};
+const NAV=[{sec:'งาน Packing'},
+  {ic:'box',t:'แจกงาน Packing',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-plan.html'},
+  {ic:'dash',t:'แพลนรถประจำวัน',s:'เดโม · จัดงานในเว็บ',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-daily.html'},
+  {ic:'db',t:'ฐานข้อมูลสินค้า',s:'รหัส SAP · ขนาด · พาเลท',on:1,act:'navTop()'},
+  {sec:'ระบบขนส่ง'},
+  {ic:'dash',t:'Command Center',tag:'gold',url:'/ManageDrivers/'},
+  {ic:'track',t:'ติดตามสถานะ',s:'ไทม์ไลน์รายออเดอร์',url:'/Order_Status/'},
+  {ic:'wage',t:'รายงานค่าแรง',s:'รายเที่ยว · export Excel',url:'/SSB-SMART-SUPPLY-DASHBOARD/wage.html'},
+  {ic:'usercog',t:'ตั้งค่าผู้ใช้งาน',s:'คนขับ · ทะเบียนรถ',url:'/User_Management/'}];
+function navDraw(){
+  const uidQ=MY_UID?'?uid='+encodeURIComponent(MY_UID):'';
+  $('nav').innerHTML=NAV.map(n=>{
+    if(n.sec) return '<div class="nsec">'+esc(n.sec)+'</div>';
+    const inner='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAV_IC[n.ic]+'</svg><span class="nav-tx"><b>'+esc(n.t)+(n.tag?'<em class="nw'+(n.tag==='gold'?' gold':'')+'">ใหม่</em>':'')+'</b>'+(n.s?'<small>'+esc(n.s)+'</small>':'')+'</span>';
+    /* rel=opener: หน้าระบบเดียวกัน · แท็บใหม่ได้สำเนา sessionStorage ที่จำ PIN ไว้ ไม่ต้องใส่ซ้ำ */
+    return n.url?'<a class="nav-i" title="'+esc(n.t)+' (เปิดแท็บใหม่)" href="'+esc(n.url+uidQ+(uidQ?'&':'?')+'v='+Date.now().toString(36))+'" target="_blank" rel="opener">'+inner+'</a>'
+      :'<button type="button" class="nav-i'+(n.on?' on':'')+'" title="'+esc(n.t)+'"'+(n.on?' aria-current="page"':'')+' onclick="'+n.act+'">'+inner+'</button>';
+  }).join('');
+}
+const navSmooth=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth';
+function navTop(){ window.scrollTo({top:0,behavior:navSmooth()}); }
+let NAV_ME={name:'',pic:'',role:''};
+function navWho(p){
+  Object.assign(NAV_ME,p);
+  const n=NAV_ME.name||'ผู้ใช้', w=$('footWho');
+  w.innerHTML=(NAV_ME.pic?'<img class="foot-av" alt="" referrerpolicy="no-referrer" src="'+esc(NAV_ME.pic)+'">':'<span class="foot-av" aria-hidden="true">'+esc(n.slice(0,1))+'</span>')
+    +'<span class="foot-tx"><b title="'+esc(n)+'">'+esc(n)+'</b>'+(NAV_ME.role?'<small>'+esc(NAV_ME.role)+'</small>':'')+'</span>';
+  const im=w.querySelector('img'); if(im) im.onerror=()=>{ NAV_ME.pic=''; navWho({}); };
+  $('foot').hidden=false;
+}
+const NAV_ROLE={ADMIN_PK:'แอดมิน Packing',ADMIN:'แอดมิน',ADMIN_BULK:'แอดมิน Bulk',MANAGER:'ผู้จัดการ',EXECUTIVE:'ผู้บริหาร'};
+async function navLogout(){   // เหมือนแดชบอร์ด/Bulk: ล้างบัตร SSO + ออกจาก LINE → กลับหน้าแดชบอร์ด (ล็อกอินใหม่)
+  if(!(await askYes('ออกจากระบบ','ออกจากระบบ SSB Smart Supply?\nทุกหน้าของแดชบอร์ดจะออกด้วย','ออกจากระบบ',true))) return;
+  try{ window.ssbSession&&ssbSession.clear(); }catch(e){}
+  try{ if(window.liff&&liff.logout&&liff.isLoggedIn&&liff.isLoggedIn()) liff.logout(); }catch(e){}
+  try{ localStorage.removeItem('ssb_admin_pin_v1'); sessionStorage.clear(); }catch(e){}
+  location.href='/SSB-SMART-SUPPLY-DASHBOARD/';
+}
+(function(){   // ปุ่มหุบเมนู · จำสถานะ
+  const dash=$('dash'), btn=document.createElement('button');
+  btn.type='button'; btn.className='nav-toggle'; btn.title='ย่อ/ขยายเมนู'; btn.setAttribute('aria-label','ย่อ/ขยายเมนู');
+  btn.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+  document.querySelector('.side').appendChild(btn);
+  let col=false; try{ col=localStorage.getItem('pk_nav_collapsed')==='1'; }catch(e){}
+  const apply=()=>{ dash.classList.toggle('nav-collapsed',col); btn.setAttribute('aria-expanded',col?'false':'true'); };
+  btn.onclick=()=>{ col=!col; apply(); btn.blur(); try{ localStorage.setItem('pk_nav_collapsed',col?'1':'0'); }catch(e){} };
+  apply(); navDraw();
+})();
+
+(async function(){
+  try{
+    await liff.init({liffId:LIFF_ID});
+    if(!liff.isLoggedIn()){liff.login({redirectUri:location.href});return;}
+    const p=await liff.getProfile(); MY_UID=p.userId||'';
+    if(!MY_UID){$('body').innerHTML='<div class="msg">ไม่พบ LINE UID</div>';return;}
+    navDraw(); navWho({name:p.displayName||'',pic:p.pictureUrl||''});
+    let info=null; try{ info=await ssbAdminPinInfo(MY_UID); }catch(e){}
+    if(info) navWho({role:info.isDev?'DEV':(NAV_ROLE[info.adminType]||'')});
+    const ok = info&&info.isDev ? await ssbPinGate(MY_UID) : await ssbAdminPin(MY_UID,{info,text:'เข้าหน้าฐานข้อมูลสินค้า'});
+    if(ok) load(); else $('body').innerHTML='<div class="msg">🔐 ต้องใส่ PIN ก่อนเข้าหน้านี้<br><button class="btn" style="margin-top:12px" onclick="location.reload()">ใส่ PIN อีกครั้ง</button></div>';
+  }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+esc(e)+'</div>';}
+})();
+</script>
+</body>
+</html>

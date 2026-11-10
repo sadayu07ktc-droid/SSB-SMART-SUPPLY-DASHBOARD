@@ -556,7 +556,7 @@ async function load(date){
   if(!LK&&ME.canEdit){ get('lookups').then(x=>{ if(x.ok){LK=x; if(UP&&UP.pv) render();} }).catch(()=>{}); }
 }
 /* ── เมนูซ้าย + ผู้ใช้ด้านล่าง · ลิงก์ตามเมนูแดชบอร์ด (ส่ง uid ให้หน้าเราเองเหมือน index.html) ── */
-const NAV_IC={box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+const NAV_IC={db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
   users:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>',
   truck:'<path d="M5 17H3V7h11v10H9"/><path d="M14 10h4l3 3v4h-2"/><circle cx="7" cy="17.5" r="2"/><circle cx="17" cy="17.5" r="2"/>',
   dash:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
@@ -565,6 +565,7 @@ const NAV_IC={box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/>
   usercog:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a5 5 0 0 1 5-5h4"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13.7 14.5l1.7 1M20.6 18.5l1.7 1M13.7 19.5l1.7-1M20.6 15.5l1.7-1"/>'};
 const NAV=[{sec:'งาน Packing'},
   {ic:'box',t:'แจกงาน Packing',on:1,act:'navTop()'},{ic:'users',t:'คิวคนขับ',act:'navQueue()'},{ic:'truck',t:'คำขอรถไร่',act:'navTr()'},{ic:'dash',t:'แพลนรถประจำวัน',s:'เดโม · จัดงานในเว็บ',tag:'new',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-daily.html'},
+  {ic:'db',t:'ฐานข้อมูลสินค้า',s:'รหัส SAP · ขนาด · พาเลท',tag:'new',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-products.html'},
   {sec:'ระบบขนส่ง'},
   {ic:'dash',t:'Command Center',tag:'gold',url:'/ManageDrivers/'},
   {ic:'track',t:'ติดตามสถานะ',s:'ไทม์ไลน์รายออเดอร์',tag:'new',url:'/Order_Status/'},
