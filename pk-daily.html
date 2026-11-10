@@ -259,7 +259,8 @@ main{padding-block:14px 120px}
 .lpms{position:fixed;inset:0;z-index:80;background:rgba(12,24,18,.55)}
 .frb{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .btn.frq2{background:#EAF4EC;color:#1B4332;border-color:#9CC8A8}.btn.frq2:hover{background:#DCEEE0}
-.btn.frx{color:var(--bad,#DC2626)}.frpan{border:1px solid rgba(60,143,102,.35);background:rgba(60,143,102,.08);border-radius:12px;padding:10px 12px;margin:0 0 10px;display:flex;flex-direction:column;gap:6px}
+.btn.frx{color:var(--bad,#DC2626)}.frtag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d8f3dc;color:#1b4332;white-space:nowrap}tr.frv td{background:#f3faf5}
+.frpan{border:1px solid rgba(60,143,102,.35);background:rgba(60,143,102,.08);border-radius:12px;padding:10px 12px;margin:0 0 10px;display:flex;flex-direction:column;gap:6px}
 .frpan>b{font-size:13.5px}.frrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px}.frrow .ell{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .frc.ok{background:#1B4332;color:#fff;border-color:#1B4332}
 .frc{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;background:#EAF4EC;color:#1B4332;border:1px solid #9CC8A8;white-space:nowrap}
@@ -1102,8 +1103,29 @@ function frPanel(){const L=frOrphans();if(!L.length)return '';
   return '<div class="frpan"><b>🚜 งานห้างที่ส่งให้ไร่ ('+L.length+')</b><span class="note">คำขอที่ส่งไปแล้วแต่ไม่มีงานนี้ในหน้า (เปิดหน้าใหม่/ลบงาน) · สถานะอ่านจากแดชบอร์ดไร่</span>'
     +L.map(r=>{const f=frOf(r);return '<div class="frrow"><span class="frc'+(f.st!=='Waiting'?' ok':'')+'">🚜 '+esc(frLab(f))+'</span><b>'+esc(r.rid)+'</b><span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest)+'</span><span class="note">'+esc(r.vt)+(r.need?' · เข้าโหลด '+esc(r.need):'')+' · ส่ง '+esc(f.at)+' '+esc(r.by)+'</span>'
       +(f.st==='Waiting'?'<button class="btn sm frx" data-frxr="'+esc(r.rid)+'">✕ ยกเลิก</button>':'')+'</div>';}).join('')+'</div>';}
+/* 10 พ.ย. คุณน้อง: งานห้างที่ขอรถไร่ ได้รถ/คนขับแล้ว → ลงแพลนรวมด้วย ต่อท้ายตาราง ระบุ "รถไร่" (ข้อมูลจากคำขอ PKR + ออเดอร์ไร่ · แก้ที่แดชบอร์ดไร่) */
+function frPlanList(){if(!frLive())return [];const d=$('pdate').value;return FRL.filter(x=>x.date===d&&frAct(x)&&(x.drv||x.plate));}
+function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTER==='job'))return '';
+  const q=(Q||'').trim().toLowerCase(),dash='<span class="m">—</span>',ln=x=>'<div class="ln">'+x+'</div>';
+  const rows=L.map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),S=j&&j.stops&&j.stops.length?j.stops:null;return {r,S};})
+    .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord].concat(S?S.map(s=>s.n):[]).join(' ').toLowerCase().includes(q));
+  if(!rows.length)return '';
+  return '<tr class="gr"><td colspan="16"><b>🚜 รถไร่</b> <span>'+rows.length+' คัน · งานห้างที่ขอรถไร่ (แอดมินไร่จัดรถ/คนขับ · แก้ที่แดชบอร์ดไร่)</span></td></tr>'
+    +rows.map(({r,S})=>{const pl=String(r.plate||'').split(',').map(x=>x.trim()).filter(Boolean),f=frOf(r),done=/เสร็จ/.test(r.ost||'');
+      const cell=fn=>S?S.map(fn).map(ln).join(''):'';
+      return '<tr class="vr2 frv"><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
+        +'<td class="stk1">'+(r.drv?esc(r.drv):'<span class="or">รอคนขับไร่</span>')+'</td>'
+        +'<td class="cu">'+(S?S.map((s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+stChip(s)+(i?'':' <span class="frtag">🚜 รถไร่</span>')).map(ln).join(''):'<span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest||'—')+'</span> <span class="frtag">🚜 รถไร่</span>')+'</td>'
+        +'<td>'+cell(s=>esc(pvOf(s))||'<span class="m">—</span>')+'</td>'
+        +'<td class="n">'+cell(s=>s.at?'<b class="tm">'+esc(s.at)+'</b>':'<span class="m">—</span>')+'</td>'
+        +'<td class="n">'+cell(s=>esc(s.pal||'')||'<span class="m">—</span>')+'</td>'
+        +'<td class="n">'+cell(s=>esc(s.cs||'')||'<span class="m">—</span>')+'</td>'
+        +'<td class="n">'+dash+'</td>'
+        +'<td class="nt">'+esc(['ใบขอ '+r.rid,r.ord?r.ord+(r.ost?' · '+r.ost:''):'',r.need?'เข้าโหลด '+r.need:''].filter(Boolean).join(' · '))+'</td>'
+        +'<td class="hp"></td><td></td><td>'+tchip('ห้าง')+(done?' <small class="otn">ส่งแล้ว</small>':'')+'</td>'
+        +'<td class="n stc"></td><td class="n stc"></td><td class="n stc"></td><td class="n stc tt"></td></tr>';}).join('');}
 async function frPull(){if(!frLive()||FRB)return;try{const x=await fetch(PKD_URL+'?action=farm&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());
-  if(!x||!x.ok)return;const ch=JSON.stringify(x.farm)!==JSON.stringify(FRL);FRL=x.farm||[];if(ch&&PM==='mall'&&!(JE&&ED))renderPlan();}catch(e){}}
+  if(!x||!x.ok)return;const ch=JSON.stringify(x.farm)!==JSON.stringify(FRL);FRL=x.farm||[];if(ch&&(PM==='mall'?!(JE&&ED):!ED))renderPlan();}catch(e){}}
 if(frLive())setInterval(()=>{if(!document.hidden)frPull();},60000);
 function frLab(f){if(f.st==='Waiting')return FRST.Waiting;if(f.st==='Planned'&&!f.drv)return 'ไร่สร้างออเดอร์แล้ว · รอคนขับไร่';return FRST[f.st]||f.st;}
 async function frCancelLive(rid,silent){FRB=true;try{const x=await lpCall({action:'farmCancel',requestId:rid});FRL=x.farm||FRL;if(!silent)toast('✅ ยกเลิกคำขอ '+rid+' แล้ว (ออกจากคิวแอดมินไร่)');return true;}
@@ -2159,6 +2181,7 @@ function renderPlan(){
         +'<td class="n stc tt">'+(st?'<b>'+st.t+'</b><span class="mb"><span class="mbi" style="width:'+Math.round(st.t/mxT*100)+'%">'+[[st.h,'ห้าง'],[st.y,'ยี่ปั๊ว'],[st.o,'อื่นๆ']].filter(a=>a[0]).map(a=>'<i title="'+a[1]+' '+a[0]+'" style="flex:'+a[0]+';background:'+TYC[a[1]]+'"></i>').join('')+'</span></span>':'')+'</td></tr>';
     });
   });
+  h+=frPlanRows();
   h+='</tbody><tfoot><tr><td class="stk0" colspan="2">รวมทั้งเดือน (ทุกคนขับ)</td><td colspan="10"></td>'+[[tot.h,'ห้าง'],[tot.y,'ยี่ปั๊ว'],[tot.o,'อื่นๆ']].map(a=>'<td class="n stc"><b style="color:'+TYC[a[1]]+'">'+a[0]+'</b></td>').join('')+'<td class="n stc"><b>'+(tot.h+tot.y+tot.o)+'</b></td></tr></tfoot></table></div>';
   h+='<p class="note">สถิติเดือนนี้ = งานในแพลนวันนี้ · ประเภทงานนับตามร้านจุดแรก แก้ได้ในแผงซ้าย · จังหวัด/ค่าลงสินค้ามีเฉพาะร้านที่มีข้อมูล</p>';
   const _sk=scSave();$('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="รายการรถ / รายละเอียดคันที่เลือก"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
