@@ -214,7 +214,7 @@ main{padding-block:14px 120px}
 .lpms{position:fixed;inset:0;z-index:80;background:rgba(12,24,18,.55)}
 .frb{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .btn.frq2{background:#EAF4EC;color:#1B4332;border-color:#9CC8A8}.btn.frq2:hover{background:#DCEEE0}
-.btn.frx{color:var(--bad,#DC2626)}
+.btn.frx{color:var(--bad,#DC2626)}.frc.ok{background:#1B4332;color:#fff;border-color:#1B4332}
 .frc{display:inline-flex;align-items:center;font-size:11px;font-weight:700;border-radius:999px;padding:1px 8px;background:#EAF4EC;color:#1B4332;border:1px solid #9CC8A8;white-space:nowrap}
 .frbox{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:8px;padding:8px 10px;border:1px dashed #9CC8A8;border-radius:10px;background:rgba(60,143,102,.1)}
 .frq{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px;margin:8px 0}.frq label{display:flex;flex-direction:column;gap:2px}
@@ -951,10 +951,10 @@ function mallDiff(){const cur=mallSnap(),old=MALL.snap,out=[],dn=c=>drvOf(c)?.na
 function notifyOf(items){const dr=new Set(),all=items.some(x=>x.lvl==='all');items.forEach(x=>x.drv.forEach(d=>dr.add(d)));
   const t=[];if(dr.size)t.push('คนขับ '+[...dr].map(c=>first(drvOf(c)?.name||c)).join(', '));if(all)t.push('คลังสินค้า','บัญชี');return t;}
 /* สถานะงานห้าง: รอใส่รถ (ตามพี่ปุ๋ยแจ้ง) → ใส่รถแล้ว รอคนขับ → พร้อมแจก → แจกแล้ว (หรือ แก้ไข ยังไม่ส่ง) */
-function jst(j,dfx){if(!j.head)return 'draft';if(!j.driver)return 'nodrv';if(!MALL.snap[j.id])return 'ready';
+function jst(j,dfx){if(!j.head&&j.fr&&j.fr.st&&j.fr.st!=='Waiting')return 'farm';if(!j.head)return 'draft';if(!j.driver)return 'nodrv';if(!MALL.snap[j.id])return 'ready';
   return (dfx||mallDiff()).some(x=>x.id===j.id)?'chg':'sent';}
-const JST={draft:['รอใส่รถ (พี่ปุ๋ยแจ้ง)','rv w'],nodrv:['ใส่รถแล้ว · รอใส่คนขับ','rv w'],ready:['พร้อมแจก','rv'],chg:['แก้ไข · ยังไม่ส่ง','rv w'],sent:['แจกแล้ว','rv g']};
-const jstPill=(j,dfx)=>{const s=jst(j,dfx),l=JST[s];if(s==='draft'&&j.fr)return frChip(j);return '<span class="'+l[1]+'">'+l[0]+(s==='sent'?' Rev.'+MALL.rev:'')+'</span>'+(s==='sent'?' <span class="rv '+(MALL.ack.has(j.id)?'g">คนขับรับแล้ว':'w">รอคนขับรับ')+'</span>':'');};
+const JST={farm:['🚜 รถไร่รับงาน','rv g'],draft:['รอใส่รถ (พี่ปุ๋ยแจ้ง)','rv w'],nodrv:['ใส่รถแล้ว · รอใส่คนขับ','rv w'],ready:['พร้อมแจก','rv'],chg:['แก้ไข · ยังไม่ส่ง','rv w'],sent:['แจกแล้ว','rv g']};
+const jstPill=(j,dfx)=>{const s=jst(j,dfx),l=JST[s];if((s==='draft'||s==='farm')&&j.fr)return frChip(j);return '<span class="'+l[1]+'">'+l[0]+(s==='sent'?' Rev.'+MALL.rev:'')+'</span>'+(s==='sent'?' <span class="rv '+(MALL.ack.has(j.id)?'g">คนขับรับแล้ว':'w">รอคนขับรับ')+'</span>':'');};
 function mallBadge(h){const j=jobOfHead(h);if(!j)return '';if(!MALL.snap[j.id])return '<span class="rv w">รอแอดมินห้างแจก</span>';
   if(mallDiff().some(x=>x.id===j.id))return '<span class="rv w">แก้ไข · ยังไม่ส่ง</span>';
   return '<span class="rv">🔒 '+j.id+' Rev.'+MALL.rev+'</span>'+(MALL.ack.has(j.id)?' <span class="rv g">คนขับรับแล้ว</span>':' <span class="rv w">รอคนขับรับ</span>');}
@@ -966,33 +966,39 @@ function openLog(){const L=MALL.log.slice().reverse();
 /* 🚜 ขอรถไร่ · j.fr={at,by,need,note} · เว็บจริง = การ์ด LINE ถึงแอดมินรถไร่ (ADMIN ไร่) → ไร่ตอบรับ ระบุรถ/คนขับ → ขึ้นในงานนี้ (เฟสถัดไป) */
 function frSum(j){let pl=0,kg=0;j.stops.forEach(s=>{pl+=n0(s.pal);kg+=n0(s.kg);});return {pl,kg};}
 function frCard(j,f){const S=frSum(j);
-  return '<div class="lcard"><div class="lch">🚜 Packing ขอรถไร่ · '+esc(j.id)+'</div><div class="lcb">'
-    +'<div class="lcw" style="color:#1B4332">'+esc(SZL[j.size])+' · '+esc(dateTH($('pdate').value))+'</div>'
+  return '<div class="lcard"><div class="lch">📦 งาน Packing ขอรถไร่ · '+esc(f.rid||'PKR-…')+'</div><div class="lcb">'
+    +'<div class="lcr"><span>สถานะ</span><b style="color:#9A4A00">รอจัด</b> <small>(งาน '+esc(j.id)+')</small></div>'
+    +'<div class="lcw" style="color:#1B4332">'+esc(SZL[j.size])+' ×1 · '+esc(dateTH($('pdate').value))+'</div>'
     +(f.need?'<div class="lcr"><span>เข้าโหลด</span><b>'+esc(f.need)+' น. ที่ SSB</b></div>':'')
     +j.stops.map((s,i)=>'<div class="lcr"><span>'+(i?'':'ส่ง')+'</span>'+esc(s.n)+(s.at?' <small>(ถึง '+esc(s.at)+')</small>':'')+'</div>').join('')
     +(S.pl||S.kg?'<div class="lcr"><span>ของ</span>'+[S.pl?S.pl+' พาเลท':'',S.kg?comma(S.kg)+' กก.':''].filter(Boolean).join(' · ')+'</div>':'')
     +(f.note?'<div class="lcr"><span>หมายเหตุ</span>'+esc(f.note)+'</div>':'')
     +'<div class="lcr"><span>ผู้ขอ</span>'+esc(f.by)+'</div></div>'
-    +'<div class="lcf"><span>❌ ไม่มีรถว่าง</span><span class="ok">✅ ส่งรถให้</span></div></div>';}
+    +'<div class="lcf"><span class="ok">🚚 สร้างออเดอร์ + หาคนขับไร่</span></div></div>';}
 async function frAsk(id){let j=JE&&JE.j.id===id?JE.j:MJ.find(x=>x.id===id);if(!j)return;
   if(JE&&JE.j===j){syncJ();if(!j.stops.length){toast('ใส่ร้านอย่างน้อย 1 จุดก่อนขอรถไร่');return;}if(j.isNew){saveJob(true);j=JE.j;}}
   const first0=(j.stops.map(s=>s.at).filter(Boolean).sort()[0])||'';FRV.need='';FRV.note='';
   const ok=await askModal({icon:'🚜',title:'ขอรถไร่ · งาน '+j.id,ok:'ส่งคำขอ',cancel:'ยกเลิก',wide:1,
-    html:'<p>รถ Packing '+esc(SZL[j.size])+' ไม่พอ → ขอยืมรถไร่ ส่งถึง<b>แอดมินรถไร่</b> ให้เลือกรถ + คนขับไร่ที่ว่าง</p>'
+    html:'<p>ตกลงกับแอดมินไร่แล้ว (คุยกันก่อน) → ส่งงานนี้เข้า<b>แดชบอร์ด Packing ของแอดมินไร่</b> (คิว รอจัด) · แอดมินไร่กด <b>สร้างออเดอร์</b> แล้วหาคนขับไร่เอง</p>'
       +'<div class="frq"><label class="note">รถต้องเข้าโหลดที่ SSB<input class="in" type="time" id="frNeed"></label>'
       +'<label class="note">หมายเหตุถึงไร่<input class="in" id="frNote" placeholder="เช่น ต้องมีผ้าใบ / กลับวันเดียว"></label></div>'
       +(first0?'<div class="note">จุดแรกต้องถึงหน้างาน '+esc(first0)+' น.</div>':'')
-      +'<div class="note" style="margin-top:8px">ตัวอย่างการ์ดที่แอดมินไร่จะได้รับ:</div><div id="frPrev">'+frCard(j,{by:ME(),need:'',note:''})+'</div>'
-      +'<p class="note">เดโม: ยังไม่ส่งจริง · เว็บจริงส่งการ์ดนี้ทาง LINE · ไร่กด ✅ ส่งรถให้ แล้วระบุทะเบียน/คนขับ → ขึ้นในงานนี้อัตโนมัติ</p>'});
-  if(!ok)return;const f={at:new Date().toTimeString().slice(0,5),by:ME(),need:FRV.need,note:FRV.note};frSet(j.id,f);
-  askModal({icon:'📲',title:'ส่งคำขอรถไร่แล้ว',ok:'ปิด',html:'<p>ถึง <b>แอดมินรถไร่</b> · งาน '+esc(j.id)+'</p>'+frCard(j,f)+'<p class="note">เดโม: ยังไม่ส่งจริง · ระหว่างรอ งานนี้ขึ้นป้าย 🚜 รอไร่ตอบ · ใส่รถ Packing เองทีหลังได้ คำขอจะถูกยกเลิกให้</p>'});}
+      +'<div class="note" style="margin-top:8px">งานที่จะเข้าแดชบอร์ดของแอดมินไร่:</div><div id="frPrev">'+frCard(j,{by:ME(),need:'',note:''})+'</div>'
+      +'<p class="note">เดโม: ยังไม่ส่งจริง · เว็บจริง = สร้างคำขอ PKR เข้าแดชบอร์ด Packing + แจ้งแอดมินไร่ทาง LINE · ไร่จัดคนขับแล้ว ทะเบียน/คนขับขึ้นในงานนี้ · สถานะ รอจัด → จัดแล้ว → กำลังขึ้นของ → ส่งแล้ว</p>'});
+  if(!ok)return;const now=new Date(),ymd=$('pdate').value.replace(/-/g,'').slice(2);FRN++;
+  const f={rid:'PKR-'+ymd+'-'+String(900+FRN),st:'Waiting',at:now.toTimeString().slice(0,5),by:ME(),need:FRV.need,note:FRV.note};frSet(j.id,f);
+  askModal({icon:'📦',title:'ส่งงานให้แอดมินไร่แล้ว',ok:'ปิด',html:'<p>เข้าคิว <b>รอจัด</b> ในแดชบอร์ด Packing ของแอดมินไร่ · งาน '+esc(j.id)+'</p>'+frCard(j,f)+'<p class="note">เดโม: ยังไม่ส่งจริง · ระหว่างรอ งานนี้ขึ้นป้าย 🚜 รอไร่จัดคนขับ · ได้รถ Packing เองทีหลัง = ยกเลิกงานที่ส่งไร่ให้</p>'});}
+let FRN=0;
+/* เดโม: จำลองแอดมินไร่สร้างออเดอร์ + ได้คนขับไร่ (เว็บจริง = อ่านสถานะ/ทะเบียน/คนขับจาก pk_requests) */
+function frSim(id){const x=[MJ.find(y=>y.id===id),JE&&JE.j.id===id?JE.j:null];x.forEach(o=>{if(o&&o.fr){o.fr.st='Planned';o.fr.plate='(ทะเบียนรถไร่)';o.fr.drv='(คนขับไร่)';o.carrier='รถไร่';}});renderPlan();toast('จำลอง: แอดมินไร่สร้างออเดอร์ + ได้คนขับไร่แล้ว');}
 const FRV={need:'',note:''};
 document.addEventListener('input',e=>{if(e.target.id==='frNeed'||e.target.id==='frNote'){FRV.need=($('frNeed')||{}).value||'';FRV.note=(($('frNote')||{}).value||'').trim();
   const p=$('frPrev'),jid=(document.querySelector('.mbox h3')||{}).textContent||'';const id=jid.split('งาน ').pop().trim(),j=(JE&&JE.j.id===id)?JE.j:MJ.find(x=>x.id===id);
   if(p&&j)p.innerHTML=frCard(j,{by:ME(),need:FRV.need,note:FRV.note});}},true);
 function frSet(id,f){[MJ.find(x=>x.id===id),JE&&JE.j.id===id?JE.j:null].forEach(x=>{if(!x)return;if(f)x.fr=Object.assign({},f);else delete x.fr;});renderPlan();}
-async function frCancel(id){if(!(await askModal({icon:'🚜',title:'ยกเลิกคำขอรถไร่ '+id+'?',ok:'ยกเลิกคำขอ',cancel:'ไม่ยกเลิก',danger:1,html:'<p>เว็บจริงจะแจ้งแอดมินไร่ว่ายกเลิกแล้ว</p>'})))return;frSet(id,null);toast('ยกเลิกคำขอรถไร่ '+id+' แล้ว (เดโม)');}
-const frChip=j=>j.fr?'<span class="frc" title="'+esc('ขอเมื่อ '+j.fr.at+' โดย '+j.fr.by+(j.fr.need?' · เข้าโหลด '+j.fr.need:''))+'">🚜 ขอรถไร่แล้ว '+esc(j.fr.at)+' · รอไร่ตอบ</span>':'';
+async function frCancel(id){if(!(await askModal({icon:'🚜',title:'ยกเลิกงานที่ส่งให้ไร่ ('+id+')?',ok:'ยกเลิกงานไร่',cancel:'ไม่ยกเลิก',danger:1,html:'<p>เว็บจริง: คำขอ PKR ในแดชบอร์ดไร่ถูกยกเลิก + แจ้งแอดมินไร่'+((MJ.find(x=>x.id===id)||{}).fr?.st==='Planned'?' · <b>ไร่จัดคนขับไปแล้ว</b> ต้องแจ้งคนขับไร่ด้วย':'')+'</p>'})))return;const o=MJ.find(x=>x.id===id);if(o&&o.carrier==='รถไร่')o.carrier='';frSet(id,null);toast('ยกเลิกงานไร่ของ '+id+' แล้ว (เดโม)');}
+const FRST={Waiting:'รอไร่จัดคนขับ',Planned:'ไร่จัดรถแล้ว',Loading:'กำลังขึ้นของ',Delivered:'ส่งแล้ว'};
+const frChip=j=>j.fr?'<span class="frc'+(j.fr.st&&j.fr.st!=='Waiting'?' ok':'')+'" title="'+esc((j.fr.rid||'')+' · ส่งเมื่อ '+j.fr.at+' โดย '+j.fr.by+(j.fr.need?' · เข้าโหลด '+j.fr.need:''))+'">🚜 '+esc(FRST[j.fr.st||'Waiting'])+(j.fr.st&&j.fr.st!=='Waiting'&&j.fr.plate?' · '+esc(j.fr.plate):' · ส่ง '+esc(j.fr.at))+'</span>':'';
 /* รถว่างตามขนาด (คันที่ยังไม่ถูกใส่ในงานห้างอื่น · คันงานน้อยขึ้นก่อน) */
 function freeTrucks(size,except){const used=new Set(MJ.filter(j=>j.head&&j.id!==except).map(j=>j.head));
   return VEH.filter(v=>szFits(v,size)&&!v.tail&&PLAN[v.head].status==='ready'&&!used.has(v.head))
@@ -1040,7 +1046,7 @@ function renderMall(){
       +'<td>'+L(S,x=>esc(pvOf(x))||dash)+'</td><td class="n">'+L(S,x=>x.at?'<b class="tm">'+esc(x.at)+'</b>':dash)+'</td>'
       +'<td class="n">'+L(S,(x,i)=>poCell(x,'pal','j:'+j.id+':'+i))+'</td><td class="n">'+L(S,(x,i)=>poCell(x,'cs','j:'+j.id+':'+i))+'</td>'
       +'<td>'+(j.head?'<b>'+esc(plOf(j.head))+'</b><small class="m" style="display:block">'+esc([BRAND[j.head],VEH.find(v=>v.head===j.head).shape].filter(Boolean).join(' · '))+'</small>'
-        :'<div class="frb"><button class="btn sm" data-jset="'+j.id+'">＋ ใส่รถ / คนขับ</button>'+(j.fr?'<button class="btn sm frx" data-frx="'+j.id+'" title="ยกเลิกคำขอรถไร่">✕ ยกเลิกขอรถไร่</button>':'<button class="btn sm frq2" data-fra="'+j.id+'" title="รถ Packing ไม่พอ ขอยืมรถไร่">🚜 ขอรถไร่</button>')+'</div>')+'</td>'
+        :'<div class="frb"><button class="btn sm" data-jset="'+j.id+'">＋ ใส่รถ / คนขับ</button>'+(j.fr?(j.fr.st==='Waiting'?'<button class="btn sm frq2" data-frs="'+j.id+'" title="เดโม: จำลองแอดมินไร่จัดคนขับ">🧪 จำลอง: ไร่จัดแล้ว</button>':'<span class="note">🚜 '+esc(j.fr.plate||'รถไร่')+' · '+esc(j.fr.drv||'')+'</span>')+'<button class="btn sm frx" data-frx="'+j.id+'" title="ยกเลิกงานที่ส่งให้ไร่">✕ ยกเลิกงานไร่</button>':'<button class="btn sm frq2" data-fra="'+j.id+'" title="รถ Packing ไม่พอ ขอยืมรถไร่">🚜 ขอรถไร่</button>')+'</div>')+'</td>'
       +'<td>'+(d?esc(d.name):j.head?'<span class="or">ยังไม่ระบุ</span>':dash)+'</td><td><div class="stw">'+jstPill(j,dfx)+(MALL.snap[j.id]?'':'<button class="ib jdel" data-jdel="'+j.id+'" aria-label="ลบงาน '+j.id+'" title="ลบงานนี้ (ยังไม่แจก)">🗑</button>')+'</div></td></tr>';});
   if(!js.length)h+='<tr><td colspan="10" class="note" style="padding:18px">ยังไม่มีงานห้าง · กด ＋ เพิ่มงานห้าง</td></tr>';
   h+='</tbody></table></div><p class="note">งานที่ใส่รถแล้วจะโผล่ในแพลนรวมทันที แต่คนขับ/คลัง/บัญชี ยังไม่ได้รับจนกว่าจะกดแจกงาน</p>';
@@ -1050,6 +1056,7 @@ function renderMall(){
   $('v-plan').querySelectorAll('[data-jdel]').forEach(b=>{b.onclick=e=>{e.stopPropagation();askDelJob(b.dataset.jdel);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-jset]').forEach(b=>b.onclick=e=>{e.stopPropagation();openJob(b.dataset.jset);});
   $('v-plan').querySelectorAll('[data-fra]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frAsk(b.dataset.fra);};b.onkeydown=e=>e.stopPropagation();});
+  $('v-plan').querySelectorAll('[data-frs]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frSim(b.dataset.frs);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-frx]').forEach(b=>{b.onclick=e=>{e.stopPropagation();frCancel(b.dataset.frx);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=()=>openJob(r.dataset.j);r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
   wireSub();pmChips(mallTodo(dfx));updBar();lpShow();}
@@ -1114,7 +1121,8 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   h+='<div class="box"><label for="jveh">② รถ <span class="note">(ตามที่พี่ปุ๋ยแจ้ง)</span></label><select class="in" id="jveh"><option value="">— ยังไม่ได้รับแจ้ง —</option>'
     +fr.map(v=>'<option value="'+v.head+'"'+(j.head===v.head?' selected':'')+'>'+esc(j.size==='10 ล้อ'?v.head+' (หัว)':v.plate.replace(',',' / '))+' · '+esc([BRAND[v.head],v.shape].filter(Boolean).join(' '))+'</option>').join('')+'</select>'
     +(fr.length?'':'<div class="warn">ไม่มีรถ '+esc(SZL[j.size])+' ว่างในแพลนวันนี้</div>')
-    +(j.head?'':j.fr?'<div class="frbox">'+frChip(j)+'<button type="button" class="btn sm frx" id="jfrx">✕ ยกเลิกคำขอ</button><div class="note">ไร่ตอบรับแล้ว รถ/คนขับไร่จะขึ้นในงานนี้ · ได้รถ Packing ก่อน เลือกด้านบนได้เลย คำขอจะถูกยกเลิก</div></div>'
+    +(j.head?'':j.fr?'<div class="frbox">'+frChip(j)+(j.fr.st==='Waiting'?'<button type="button" class="btn sm frq2" id="jfrs">🧪 จำลอง: ไร่จัดแล้ว</button>':'')+'<button type="button" class="btn sm frx" id="jfrx">✕ ยกเลิกงานไร่</button>'
+        +'<div class="note">'+(j.fr.st==='Waiting'?esc(j.fr.rid||'')+' อยู่คิว รอจัด ของแอดมินไร่ · ไร่สร้างออเดอร์ + ได้คนขับแล้ว ทะเบียน/คนขับขึ้นตรงนี้ · ได้รถ Packing เอง เลือกด้านบน = ยกเลิกงานไร่ให้':'🚜 รถไร่ '+esc(j.fr.plate||'')+' · '+esc(j.fr.drv||'')+' · แอดมินไร่แจกงานให้คนขับไร่เอง ไม่ต้องกดแจกจากหน้านี้')+'</div></div>'
       :'<div class="frbox"><button type="button" class="btn sm frq2" id="jfra">🚜 ขอรถไร่</button><span class="note">รถ Packing ไม่พอ → ขอยืมรถไร่ (แจ้งแอดมินไร่ทาง LINE)</span></div>')
     +(j.head?'':'<div class="note">เลือกรถแล้ว ระบบใส่คนขับประจำคันให้ เปลี่ยนได้</div>')+'</div>';}
   h+='<div class="box"><label for="jdrv">③ คนขับ</label>'+(j.head?(()=>{const mine=DRV.find(d=>d.head===j.head);
@@ -1144,9 +1152,9 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   const re=()=>{syncJ();drawJob();};
   $('jx').onclick=$('jc').onclick=closeJob;
   D.querySelectorAll('[data-sz]').forEach(b=>b.onclick=()=>{syncJ();if(j.size===b.dataset.sz)return;j.size=b.dataset.sz;if(j.head){j.head='';j.driver='';toast('เปลี่ยนขนาดรถแล้ว ต้องใส่รถใหม่');}drawJob();});
-  const jv=$('jveh');if(jv)jv.onchange=()=>{syncJ();j.head=jv.value;if(j.head&&j.fr){delete j.fr;toast('ได้รถ Packing แล้ว · ยกเลิกคำขอรถไร่ให้ (เว็บจริงแจ้งไร่)');}const m=DRV.find(d=>d.head===j.head);j.driver=j.head?(m?m.code:''):'';drawJob();};
+  const jv=$('jveh');if(jv)jv.onchange=()=>{syncJ();j.head=jv.value;if(j.head&&j.fr){delete j.fr;if(j.carrier==='รถไร่')j.carrier='';toast('ได้รถ Packing แล้ว · ยกเลิกงานที่ส่งไร่ให้ (เว็บจริงแจ้งไร่)');}const m=DRV.find(d=>d.head===j.head);j.driver=j.head?(m?m.code:''):'';drawJob();};
   const dr=$('jdrv');if(dr)dr.onchange=()=>{syncJ();j.driver=dr.value;drawJob();};
-  if($('jfra'))$('jfra').onclick=()=>frAsk(j.id);if($('jfrx'))$('jfrx').onclick=()=>frCancel(j.id);
+  if($('jfra'))$('jfra').onclick=()=>frAsk(j.id);if($('jfrx'))$('jfrx').onclick=()=>frCancel(j.id);if($('jfrs'))$('jfrs').onclick=()=>{syncJ();frSim(j.id);};
   const sq=$('jsq');sq.oninput=()=>{syncJ();JE.q=sq.value;drawJob();const n=$('jsq');n.focus();n.setSelectionRange(n.value.length,n.value.length);};
   D.querySelectorAll('[data-jadd]').forEach(b=>b.onclick=()=>{syncJ();const x=ST.find(y=>y.id===+b.dataset.jadd);j.stops.push({id:x.id,n:x.n,km:x.km,pal:'',cs:'',at:''});JE.q='';drawJob();});
   D.querySelectorAll('[data-jrm]').forEach(b=>b.onclick=()=>{syncJ();j.stops.splice(+b.dataset.jrm,1);drawJob();});
