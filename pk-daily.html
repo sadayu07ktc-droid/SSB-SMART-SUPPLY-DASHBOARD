@@ -632,7 +632,8 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
         <h1>แพลนรถ Packing ประจำวัน</h1>
         <div class="sub">แอดมิน Packing จัดงานในเว็บแทนการอัปโหลดใบงาน</div>
       </div></div>
-      <label class="datebox">วันที่แพลน <input type="date" id="pdate" value="2026-11-10"> <span id="pday"></span></label>
+      <label class="datebox">วันที่แพลน <input type="date" id="pdate" value=""> <span id="pday"></span></label>
+      <script>/* 11 พ.ย. คุณน้อง: เปิดหน้ามา = วันนี้ (เวลาไทย) · เดิมฝังตายเป็น 10 พ.ย. */document.getElementById('pdate').value=new Date(Date.now()+7*3600e3).toISOString().slice(0,10);</script>
     </div>
     <nav class="tabs" aria-label="หน้า">
       <a href="#plan" data-t="plan">แพลนประจำวัน</a>
