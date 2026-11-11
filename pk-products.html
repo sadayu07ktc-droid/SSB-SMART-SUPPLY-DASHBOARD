@@ -177,6 +177,7 @@
   .btn.up{background:var(--field);color:var(--primary);border:1px solid var(--line2);box-shadow:none}
   .btn.sm{padding:7px 12px;font-size:13px}
   .chips{display:flex;gap:6px;overflow-x:auto;padding:10px 0 2px;scrollbar-width:none}
+  @media(min-width:861px){.chips{flex-wrap:wrap;overflow:visible}}   /* คอม: ชิปเยอะ ขึ้นบรรทัดใหม่ (เมาส์เลื่อนแนวนอนไม่ได้) · มือถือ: ปัดซ้ายขวา */
   .chips::-webkit-scrollbar{display:none}
   .chip{flex:none}.chip b{font-weight:700;font-size:11.5px;min-width:18px;text-align:center;padding:0 6px;border-radius:999px;background:var(--line)}
   .chip.on b{background:rgba(255,255,255,.25)}
