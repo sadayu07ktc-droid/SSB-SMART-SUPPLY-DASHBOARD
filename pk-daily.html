@@ -118,6 +118,9 @@ main{padding-block:14px 120px}
 .yppl.ok{background:var(--infobg);color:var(--info)}
 .yplh{display:flex;gap:6px;flex-wrap:wrap}.yplh .btn{font-weight:600}.yplh .btn.on{outline:2px solid var(--good);outline-offset:1px}
 .yplin{display:flex;gap:6px}.yplin .in{flex:1;min-width:0}
+.ypinf{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px 8px;align-items:end}
+.ypinf label{display:flex;flex-direction:column;gap:2px;font-size:12px;font-weight:600;color:var(--ink)}.ypinf label small{font-weight:400;color:var(--muted)}
+.ypinf .in{width:100%;min-width:0}.ypinf .in:disabled{opacity:.7}.ypinb{display:flex;gap:6px}
 .bar .sum{font-size:13px;color:var(--muted)}
 .bar .sum b{color:var(--ink);font-variant-numeric:tabular-nums}
 .btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600}
@@ -2878,7 +2881,20 @@ const ypOpenD=new Set();
 /* ลูกค้ารับเองแต่เซลส์ยังไม่แจ้งทะเบียน → ทะเบียนที่ร้านนี้เคยมารับ ①②③ (ล่าสุดก่อน) ให้แอดมินเลือก / พิมพ์เอง */
 const ypPlk=x=>String(x||'').replace(/[\s\-.]/g,'');
 const ypDShort=iso=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleDateString('th-TH',{day:'numeric',month:'short',timeZone:'Asia/Bangkok'});};
+/* pk-yp v12 (คุณน้อง 11 พ.ย. "แยกช่อง ชื่อคนขับ | ทะเบียน | หมายเหตุ เลข SO") → 3 ช่อง ไปลงคอลัมน์ ชื่อคนขับรถ / ทะเบียนรถ / หมายเหตุ ในเมล FM-MK
+   ลูกค้ารับเอง = 3 ช่อง · รถเรา = เลข SO อย่างเดียว (ทะเบียน/คนขับมาจากรถที่ลงแพลน) · ทะเบียนที่เซลส์พิมพ์มาแล้ว = ล็อก */
+function ypInfoBox(m){const p=m.p||{},k=p.pick||{},pick=!!p.pickup,can=YP.canEdit||!ypLive(),sv=YP.sel[m.mid]||{};
+  const msgPl=!!(k.plate&&!k.plateBy),saved=!!(k.plateBy&&k.plateBy!=='ประวัติ'||k.driverBy||p.soBy);
+  const v=(d,x)=>esc(d!=null?d:(x||''));
+  let h=pick?ypPlateBox(m,k):'<div class="yppl'+(p.so?' ok':'')+'"><div>📝 <b>หมายเหตุ · เลข SO</b> · ขึ้นในคอลัมน์ “หมายเหตุ” ของเมลแผนการส่งมอบ'+(p.so?' · ตอนนี้ <b>'+esc(p.so)+'</b>'+(p.soBy?' ('+esc(p.soBy)+')':''):'')+'</div>';
+  if(can)h+='<div class="ypinf">'
+    +(pick?'<label>ชื่อคนขับ<input class="in" data-ypdrv placeholder="เช่น นายสมภพ" value="'+v(sv.drv,k.driver)+'" autocomplete="off"></label>'
+      +'<label>ทะเบียน'+(msgPl?' <small>(เซลส์แจ้งมา)</small>':'')+'<input class="in" data-ypplin placeholder="เช่น 80-6588 / ฒท 7632" value="'+v(msgPl?null:sv.plt,k.plate)+'"'+(msgPl?' disabled':'')+' autocomplete="off"></label>':'')
+    +'<label>หมายเหตุ · เลข SO<input class="in" data-ypso placeholder="P2/…" value="'+v(sv.so,p.so)+'" autocomplete="off"></label>'
+    +'<div class="ypinb"><button class="btn sm" data-ypplsave>บันทึก</button>'+(saved?'<button class="btn sm ghost" data-ypplclr>ล้าง</button>':'')+'</div></div>';
+  return h+'</div>';}
 function ypPlateBox(m,k){const hist=m.plateHist||[],can=YP.canEdit||!ypLive(),cur=k.plateBy?k.plate:'',sv=YP.sel[m.mid]||{};
+  if(k.plate&&!k.plateBy)return '<div class="yppl ok"><div>🚗 ทะเบียน <b>'+esc(k.plate)+'</b> · เซลส์แจ้งในข้อความ'+(k.driver?' · คนขับ <b>'+esc(k.driver)+'</b>'+(k.driverBy?' ('+esc(k.driverBy)+')':''):'')+'</div>';
   /* pk-yp v11: เซลส์แจ้ง "ทะเบียนเดิม" → มีประวัติ = ระบบใส่ทะเบียนล่าสุดให้ (plateAuto) · ไม่มีประวัติ = พิมพ์ครั้งนี้ ครั้งหน้าระบบดึงให้ */
   const same=!!k.samePlate,msg=cur?(k.plateAuto?'ทะเบียน <b>'+esc(cur)+'</b> · เซลส์แจ้ง “ทะเบียนเดิม” → ใช้ทะเบียนล่าสุดที่ร้านนี้เคยมารับ'+(k.plateAt?' ('+esc(ypDShort(k.plateAt))+')':'')+' · ไม่ใช่คันนี้ เลือก/พิมพ์ใหม่ได้'
       :'ทะเบียน <b>'+esc(cur)+'</b> · แอดมินใส่เอง ('+esc(k.plateBy)+')'+(same?' · เซลส์แจ้ง “ทะเบียนเดิม”':' · เซลส์ยังไม่แจ้ง'))
@@ -2886,16 +2902,23 @@ function ypPlateBox(m,k){const hist=m.plateHist||[],can=YP.canEdit||!ypLive(),cu
     :'<b>เซลส์ยังไม่แจ้งทะเบียน</b> · '+(hist.length?'เลือกทะเบียนที่ร้านนี้เคยมารับ (บนสุด = ล่าสุด) หรือพิมพ์เอง':'ร้านนี้ยังไม่มีประวัติทะเบียน · พิมพ์เองได้ หรือรอเซลส์แจ้ง');
   let h='<div class="yppl'+(cur?' ok':'')+'"><div>🚗 '+msg+'</div>';
   if(hist.length)h+='<div class="yplh">'+hist.map((x,i)=>'<button class="btn sm'+(cur&&ypPlk(cur)===ypPlk(x.plate)?' on':'')+'" data-ypplt="'+esc(x.plate)+'"'+(can?'':' disabled')+' title="มารับ '+(x.n||1)+' ครั้ง · ล่าสุด '+esc(ypDShort(x.at))+'">'+(i+1)+'. '+esc(x.plate)+' <span class="note">'+(i?'':'ล่าสุด · ')+esc(ypDShort(x.at))+(x.n>1?' · '+x.n+' ครั้ง':'')+'</span></button>').join('')+'</div>';
-  if(can)h+='<div class="yplin"><input class="in" data-ypplin placeholder="พิมพ์ทะเบียน เช่น ฒท 7632" value="'+esc(sv.plt||'')+'" autocomplete="off"><button class="btn sm" data-ypplsave>บันทึก</button>'+(cur?'<button class="btn sm" data-ypplclr>ล้าง</button>':'')+'</div>';
-  return h+'</div>';}
-async function ypPlate(m,plate,btn){plate=String(plate||'').replace(/\s+/g,' ').trim().slice(0,40);
-  if(plate&&!/\d/.test(plate)){toast('⚠️ ทะเบียนต้องมีตัวเลข เช่น ฒท 7632');return;}
+  return h;}   /* ปิด div ที่ ypInfoBox (ต่อช่องกรอก 3 ช่อง) */
+/* บันทึก 3 ช่อง (ว่างทั้งหมด = ล้าง) · ทะเบียนเซลส์แจ้งมา = ไม่ส่ง · ปุ่มประวัติ = เปลี่ยนเฉพาะทะเบียน คงคนขับ/SO ที่พิมพ์อยู่ */
+async function ypPlate(m,o,btn){const p=m.p||{},k=(p.pick=p.pick||{}),pick=!!p.pickup,msgPl=!!(k.plate&&!k.plateBy);
+  const one=(x,n)=>String(x||'').replace(/\s+/g,' ').trim().slice(0,n);
+  const plate=pick&&!msgPl?one(o.plate,40):'',driver=pick?one(o.driver,60):'',so=one(o.so,80);
+  if(plate&&!/\d/.test(plate)){toast('⚠️ ทะเบียนต้องมีตัวเลข เช่น 80-6588 / ฒท 7632');return;}
+  if(plate&&/^[ก-๙a-z.]{4,}\s/i.test(plate)){toast('⚠️ ช่องทะเบียนมีชื่อคนปนอยู่ · ใส่ชื่อในช่อง “ชื่อคนขับ”');return;}
   if(btn)btn.disabled=true;
   try{let by='แอดมิน';
-    if(!m.sample&&ypLive()){const r=await fetch(ypUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'plate',userId:MY_UID,mid:m.mid,plate})}).then(z=>z.json());
-      if(!r.ok)throw new Error(r.error||'บันทึกทะเบียนไม่ได้');by=r.by||by;}
-    const k=(m.p.pick=m.p.pick||{});delete k.plateAuto;if(plate){k.plate=plate;k.plateBy=by;}else{delete k.plate;delete k.plateBy;}
-    if(YP.sel[m.mid])YP.sel[m.mid].plt='';ypDraw();toast(plate?'✅ ใส่ทะเบียน '+plate+' แล้ว (ขึ้นในแผนการส่งมอบ)':'ล้างทะเบียนแล้ว');}
+    if(!m.sample&&ypLive()){const r=await fetch(ypUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'plate',userId:MY_UID,mid:m.mid,plate,driver,so})}).then(z=>z.json());
+      if(!r.ok)throw new Error(r.error||'บันทึกไม่ได้');by=r.by||by;}
+    delete k.plateAuto;
+    if(!msgPl){if(plate){k.plate=plate;k.plateBy=by;}else{delete k.plate;delete k.plateBy;}}
+    if(pick){if(driver){k.driver=driver;k.driverBy=by;}else if(k.driverBy){delete k.driver;delete k.driverBy;}}
+    if(so){p.so=so;p.soBy=by;}else{delete p.so;delete p.soBy;}
+    const sv=YP.sel[m.mid];if(sv){delete sv.plt;delete sv.drv;delete sv.so;}ypDraw();
+    toast(plate||driver||so?'✅ บันทึกแล้ว · '+[driver&&'คนขับ '+driver,plate&&'ทะเบียน '+plate,so&&'SO '+so].filter(Boolean).join(' · ')+' (ขึ้นในแผนการส่งมอบ)':'ล้างแล้ว');}
   catch(e){toast('❌ '+(e.message||e));if(btn)btn.disabled=false;}}
 const ypLive=()=>typeof PKD_URL!=='undefined'&&typeof MY_UID!=='undefined'&&!!MY_UID;
 const ypUrl=()=>String(PKD_URL).replace(/pk-daily(?=[^\/]*$)/,'pk-yp');
@@ -2945,8 +2968,8 @@ function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').valu
   if(p.dlvFrom){const f=p.dlvFrom;h+='<div class="yppk">📅 <b>วันเข้ารับ '+esc(dateTH(p.dlv))+'</b> · จากข้อความที่เซลส์แจ้งตามมา'+(f.by?' ('+esc(f.by)+')':'')+' · '+esc(ypTime(f.at))+'<div class="note">“'+esc(String(f.text||'').replace(/\s+/g,' ').slice(0,120))+'”</div></div>';}
   else if(p.waitDate)h+='<div class="yppk">⏳ <b>รอเซลส์แจ้งวันเข้ารับ</b> · พอเซลส์พิมพ์ในกลุ่ม เช่น “'+esc(String(p.shop||'ชื่อร้าน').slice(0,30))+' เข้ารับ 14/11” ระบบใส่วันให้การ์ดนี้เอง</div>';
   if(p.statedFree&&p.statedFree!==p.free)h+='<div class="warn">ℹ️ ข้อความแจ้ง “แถม '+comma(p.statedFree)+' ลัง” ในบรรทัดรวม · ยังไม่นับเข้าแพลน (ราคา /N เฉลี่ยลงแล้ว)</div>';
-  if(p.pickup){const k=p.pick||{};h+='<div class="yppk">🙋 <b>ลูกค้ารับเอง</b> ไม่ใช้รถเรา'+(k.plate&&!k.plateBy?' · ทะเบียน <b>'+esc(k.plate)+'</b>':'')+(k.driver?' · ผู้รับ '+esc(k.driver):'')+(k.phone?' · โทร •••-•••-'+esc(String(k.phone).slice(-4)):'')+'</div>';
-    if(!k.plate||k.plateBy)h+=ypPlateBox(m,k);}
+  if(p.pickup){const k=p.pick||{};h+='<div class="yppk">🙋 <b>ลูกค้ารับเอง</b> ไม่ใช้รถเรา'+(k.phone?' · โทร •••-•••-'+esc(String(k.phone).slice(-4)):'')+'</div>';}
+  if(st!=='ignored')h+=ypInfoBox(m);
   /* ต้องแจ้งใคร (คุณน้อง 10 พ.ย.): ขึ้นของคลังบางนา = แจ้งคลังบางนา เมลเปิดราคา (บางนาเปิดบิล) · ขึ้นของโรงงานหนองใหญ่ = บัญชี+เซลส์ เปิดราคา (FM-MK-15) + คลังโรงงาน ปิดราคา (FM-MK-14) */
   if(p.pickAt==='บางนา')h+='<div class="yppk">📨 <b>ต้องแจ้งคลังบางนา</b> · ใช้เมล <b>เปิดราคา</b> (คลังบางนาเปิดบิล)</div>';
   else if(p.pickAt==='หนองใหญ่')h+='<div class="yppk">📨 <b>ขึ้นของโรงงานหนองใหญ่</b> · แจ้งบัญชี+เซลส์ <b>เปิดราคา</b> · แจ้งคลังโรงงาน <b>ปิดราคา</b></div>';
@@ -3001,11 +3024,12 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const c=ypCnt(),pd=$('pda
     const bk=card.querySelector('[data-yppick]');if(bk)bk.onclick=()=>ypPick(m,bk);
     const bb=card.querySelector('[data-ypback]');if(bb)bb.onclick=()=>ypBack(m,bb);
     const bm=card.querySelector('[data-ypmail]');if(bm)bm.onclick=()=>ypMailOpen(m,false);
-    card.querySelectorAll('[data-ypplt]').forEach(b=>b.onclick=()=>ypPlate(m,b.dataset.ypplt,b));
-    const pin=card.querySelector('[data-ypplin]'),ps=card.querySelector('[data-ypplsave]'),pc=card.querySelector('[data-ypplclr]');
-    if(pin){pin.oninput=()=>{sv.plt=pin.value;};pin.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ps.click();}};}
-    if(ps)ps.onclick=()=>{if(!pin.value.trim()){toast('⚠️ พิมพ์ทะเบียนก่อน');pin.focus();return;}ypPlate(m,pin.value,ps);};
-    if(pc)pc.onclick=()=>ypPlate(m,'',pc);});}
+    const pin=card.querySelector('[data-ypplin]'),pdv=card.querySelector('[data-ypdrv]'),pso=card.querySelector('[data-ypso]'),ps=card.querySelector('[data-ypplsave]'),pc=card.querySelector('[data-ypplclr]');
+    const vals=pl=>({plate:pl!=null?pl:(pin&&!pin.disabled?pin.value:''),driver:pdv?pdv.value:'',so:pso?pso.value:''});
+    card.querySelectorAll('[data-ypplt]').forEach(b=>b.onclick=()=>ypPlate(m,vals(b.dataset.ypplt),b));
+    [[pin,'plt'],[pdv,'drv'],[pso,'so']].forEach(([el,key])=>{if(!el)return;el.oninput=()=>{sv[key]=el.value;};el.onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();ps.click();}};});
+    if(ps)ps.onclick=()=>{const o=vals();if(!String(o.plate+o.driver+o.so).trim()){toast('⚠️ กรอกอย่างน้อย 1 ช่อง');(pdv||pso).focus();return;}ypPlate(m,o,ps);};
+    if(pc)pc.onclick=()=>ypPlate(m,{plate:'',driver:'',so:''},pc);});}
 function ypOpen(){if(typeof ED!=='undefined'&&ED){toast('ปิดลิ้นชักแก้งานรถก่อน แล้วค่อยเปิด Pending ยี่ปั๊ว');return;}
   YP.fresh.clear();YP.day='';ypDraw();const x=document.querySelector('#ypDr .x');if(x)x.focus();if(ypLive())ypLoad();}
 async function ypSet(m,st,btn,extra){const old=m.st;if(btn)btn.disabled=true;
@@ -3058,7 +3082,7 @@ function ypMkRow(m,d){const p=m.p||{},k=p.pick||{},dl=p.dlv||'',pick=ypPickup(m)
   const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
   const head=pick?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+ypPlace(p);
   const P=!pick&&m.head?PLAN[m.head]:null,dv=P?drvOf(P.driver):null;
-  return {src:'line',mid:m.mid,shop:p.shop||'',loadAt:p.pickAt||'หนองใหญ่',trans:[head].concat(fl).join(' + ')+((dl||d)?' '+ypDm(dl||d):''),empty:'',so:'',
+  return {src:'line',mid:m.mid,shop:p.shop||'',loadAt:p.pickAt||'หนองใหญ่',trans:[head].concat(fl).join(' + ')+((dl||d)?' '+ypDm(dl||d):''),empty:'',so:p.so||'',
     plate:pick?(k.plate||''):(m.head?plOf(m.head):''),driver:pick?(k.driver||''):(dv?dv.name:''),
     wh:pick?(dl?'ลูกค้ารับ '+ypDm(dl):''):'ขึ้นของ '+ypDm(d)+(dl&&dl!==d?' ส่ง '+ypDm(dl):''),red:'',items};}
 async function mkGet(d){const r=await fetch(mkUrl()+'?action=get&userId='+encodeURIComponent(MY_UID)+'&date='+d+'&t='+Date.now()).then(z=>z.json());if(!r.ok)throw new Error(r.error||'โหลดฟอร์มไม่ได้');return r;}
@@ -3074,7 +3098,10 @@ async function ypMailOpen(m,fresh){if(m.sample||!ypLive()){toast('หน้า�
   const fail=e=>{ov.querySelector('.mbody').innerHTML='<div class="warn">❌ '+esc(e.message||e)+'</div><div class="mact"><button class="btn ghost" data-x>ปิด</button></div>';ov.querySelector('[data-x]').onclick=close;};
   try{let g=await mkGet(d);const old=g.doc&&(g.doc.rows||[]).find(o=>o.mid===m.mid);
     if(fresh||!old){const a=await mkPost({action:'addRows',date:d,rows:[old&&!fresh?old:ypMkRow(m,d)]});g=await mkGet(d);}
-    S.mode=g.mailMode||'test';ypMkSync(S,g,m);if(!S.row)throw new Error('ไม่พบร้านนี้ในฟอร์มวันที่ '+dateTH(d));}
+    S.mode=g.mailMode||'test';ypMkSync(S,g,m);if(!S.row)throw new Error('ไม่พบร้านนี้ในฟอร์มวันที่ '+dateTH(d));
+    /* ช่องในการ์ด (คนขับ/ทะเบียน/เลข SO) ที่กรอกทีหลัง → เติมลงแถวฟอร์มเดิม (บันทึกฉบับใหม่ตอนกดพรีวิว/ส่ง) */
+    const p0=m.p||{},k0=p0.pick||{},card={so:p0.so||'',plate:ypPickup(m)?k0.plate||'':'',driver:ypPickup(m)?k0.driver||'':''};
+    Object.keys(card).forEach(f=>{if(card[f]&&card[f]!==(S.row[f]||'')){S.row[f]=card[f];S.dirty=1;}});}
   catch(e){fail(e);return;}
   const draw=()=>{const r=S.row,G=YPG[S.g],sent=ypSentOf(S,m.mid);
     const it=r.items.map((x,i)=>'<tr><td><input class="in" data-it="'+i+'" data-k="n" value="'+esc(x.n)+'" aria-label="สินค้า"></td><td><input class="in r" data-it="'+i+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td><input class="in c" data-it="'+i+'" data-k="u" value="'+esc(x.u)+'" aria-label="หน่วย"></td><td><input class="in r" data-it="'+i+'" data-k="price" value="'+esc(x.price)+'" aria-label="ราคา"></td><td><button class="ib" data-itx="'+i+'" aria-label="ลบบรรทัด" title="ลบบรรทัด">✕</button></td></tr>').join('');

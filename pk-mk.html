@@ -397,7 +397,7 @@ function fromMsg(m){ const p=m.p||{}, k=p.pick||{}, d=p.dlv||m.planDate||'';
   const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
   const head=p.pickup?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+placeOf(p);
   return {src:'line',mid:m.mid,shop:p.shop||'',loadAt:p.pickAt||'หนองใหญ่',trans:[head].concat(fl).join(' + ')+(d?' '+dm(d):''),
-    empty:'',so:'',plate:p.pickup?(k.plate||''):'',driver:p.pickup?(k.driver||''):'',wh:p.pickup?(d?'ลูกค้ารับ '+dm(d):''):(d?'ส่ง '+dm(d):''),red:'',items};
+    empty:'',so:p.so||'',plate:p.pickup?(k.plate||''):'',driver:p.pickup?(k.driver||''):'',wh:p.pickup?(d?'ลูกค้ารับ '+dm(d):''):(d?'ส่ง '+dm(d):''),red:'',items};
 }
 async function post(o){ const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({userId:MY_UID},o))}).then(x=>x.json()); if(!r.ok) throw new Error(r.error||'ไม่สำเร็จ'); return r; }
 async function save(b,send){
