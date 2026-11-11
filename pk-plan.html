@@ -385,7 +385,7 @@ function render(){
 }
 /* ── 🚜 ขอรถไร่ → pk_requests (Waiting) → ไปโผล่ที่งานไร่: หน้าติดตามออเดอร์ ชิป "📦 Packing ค้างจัดรถ" → แอดมินไร่สร้างออเดอร์ + หาคนขับ ── */
 let TR=null;
-const TR_LABEL={Waiting:'รอแอดมินไร่จัดรถ',Planned:'จัดรถแล้ว',Loading:'กำลังขึ้นของ',Delivered:'ส่งแล้ว','ยกเลิก':'ยกเลิก'};
+const TR_LABEL={Waiting:'รอแอดมินไร่จัดรถ',Planned:'จัดรถแล้ว',Loading:'วิ่งงานแล้ว',Delivered:'ส่งแล้ว','ยกเลิก':'ยกเลิก'};
 async function trLoad(){ try{ const d=await get('truckReqs'); if(d.ok){ TR=d; render(); } }catch(e){} }
 function trCard(){
   if(!TR) return '';
