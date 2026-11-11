@@ -234,7 +234,7 @@
   <main class="main"><div class="wrap">
     <div class="bar">
       <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='pk-plan.html'" aria-label="กลับ">←</button>
-      <div><h1>ฐานข้อมูลสินค้า</h1><div class="sub">รหัส SAP · ขนาดลัง · น้ำหนัก · การเรียงพาเลท — ใช้คิดพาเลท/น้ำหนักตอนจัดรถ <span style="opacity:.6">· build 2026-11-10a</span></div></div>
+      <div><h1>ฐานข้อมูลสินค้า</h1><div class="sub">รหัส 7-11 · ขนาดลัง · น้ำหนัก · การเรียงพาเลท — ใช้คิดพาเลท/น้ำหนักตอนจัดรถ <span style="opacity:.6">· build 2026-11-10a</span></div></div>
     </div>
     <div class="road" aria-hidden="true"></div>
     <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
@@ -266,7 +266,7 @@ const perPal=r=>has(r.per_pallet)?+r.per_pallet:(has(r.per_layer)&&has(r.layers)
 const palH=r=>has(r.layers)&&has(r.case_h_mm)?Math.round((r.layers*r.case_h_mm/10+PAL.h_cm)*10)/10:null;
 const palKg=r=>{const n=perPal(r);return n&&has(r.weight_per_unit)?Math.round((n*r.weight_per_unit+PAL.kg)*100)/100:null;};
 /* ข้อมูลที่ยังขาด (ใช้คิดพาเลทไม่ได้) */
-function gaps(r){const g=[];if(!has(r.sap_code))g.push('รหัส SAP');if(!(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)))g.push('ขนาดลัง');if(!has(r.weight_per_unit))g.push('น้ำหนัก');if(!(has(r.per_layer)&&has(r.layers)))g.push('การเรียงพาเลท');return g;}
+function gaps(r){const g=[];if(!has(r.sap_code))g.push('รหัส 7-11');if(!(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)))g.push('ขนาดลัง');if(!has(r.weight_per_unit))g.push('น้ำหนัก');if(!(has(r.per_layer)&&has(r.layers)))g.push('การเรียงพาเลท');return g;}
 
 async function load(){
   try{
@@ -297,9 +297,9 @@ function render(){
   let h='<div class="card"><div class="kpis" style="margin-top:0">'
     +'<div class="kpi"><b>'+act.length+'</b><span>สินค้าที่ใช้งาน</span></div>'
     +'<div class="kpi'+(nGap?' warn':'')+'"><b>'+nGap+'</b><span>ข้อมูลยังไม่ครบ</span></div>'
-    +'<div class="kpi'+(nSap?' warn':'')+'"><b>'+nSap+'</b><span>ยังไม่มีรหัส SAP</span></div>'
+    +'<div class="kpi'+(nSap?' warn':'')+'"><b>'+nSap+'</b><span>ยังไม่มีรหัส 7-11</span></div>'
     +'<div class="kpi"><b>'+Object.keys(brands).length+'</b><span>ยี่ห้อ</span></div></div>'
-    +'<div class="tools" style="margin-top:12px"><input class="srch" id="q" type="search" placeholder="ค้นหา รหัส SAP / ชื่อสินค้า / ชื่อเรียกในไลน์…" value="'+esc(F.q)+'" aria-label="ค้นหาสินค้า">'
+    +'<div class="tools" style="margin-top:12px"><input class="srch" id="q" type="search" placeholder="ค้นหา รหัส 7-11 / ชื่อสินค้า / ชื่อเรียกในไลน์…" value="'+esc(F.q)+'" aria-label="ค้นหาสินค้า">'
     +(ed?'<button class="btn sm" id="bAdd">＋ เพิ่มสินค้า</button>':'')
     +'<button class="btn sm xl" id="bDl">⬇ ดาวน์โหลด Excel</button>'
     +(ed?'<button class="btn sm up" id="bUp">⬆ อัปโหลด</button>':'')+'</div>'
@@ -307,7 +307,7 @@ function render(){
     +Object.keys(brands).sort((a,b)=>a.localeCompare(b,'th')).map(b=>chip('b:'+b,esc(b),brands[b])).join('')
     +Object.keys(groups).sort((a,b)=>a.localeCompare(b,'th')).map(g=>chip('g:'+g,esc(g),groups[g])).join('')
     +(off?chip('off','เลิกใช้',off):'')+'</div>';
-  h+='<div class="tw ptab"><table><thead><tr><th>รหัส SAP</th><th>ชื่อสินค้า</th><th class="c">หน่วย</th><th class="hide-m">ขนาดลัง ก×ย×ส (มม.)</th><th class="n">กก./หน่วย</th><th class="n">ต่อชั้น × ชั้น</th><th class="n">ต่อพาเลท</th><th class="n hide-m">พาเลทเต็ม</th><th class="hide-m">ใช้กับ</th></tr></thead><tbody>';
+  h+='<div class="tw ptab"><table><thead><tr><th>รหัส 7-11</th><th>ชื่อสินค้า</th><th class="c">หน่วย</th><th class="hide-m">ขนาดลัง ก×ย×ส (มม.)</th><th class="n">กก./หน่วย</th><th class="n">ต่อชั้น × ชั้น</th><th class="n">ต่อพาเลท</th><th class="n hide-m">พาเลทเต็ม</th><th class="hide-m">ใช้กับ</th></tr></thead><tbody>';
   if(!L.length) h+='<tr><td colspan="9" class="msg">'+(F.q?'ไม่พบสินค้าที่ค้นหา':'ไม่มีรายการ')+'</td></tr>';
   L.forEach(r=>{
     const g=gaps(r), pp=perPal(r), ph=palH(r), pk=palKg(r), nv='<span class="nv">ยังไม่มี</span>';
@@ -337,7 +337,7 @@ function render(){
 
 /* ── ฟอร์มเพิ่ม/แก้ไข ── */
 const FF=[
-  ['หลัก',[['sap_code','รหัส SAP','เช่น 104884'],['name','ชื่อสินค้า','เช่น ขวด 1L*12 ทับทิม E',1,'wide'],['brand','ยี่ห้อ','ทับทิม / โบนัส / ไชโย…',0,0,'brands'],['product_group','ประเภท','ขวด / ถุง / ปี๊บ / ถัง',0,0,'groups'],['main_unit','หน่วย','ลัง / ปี๊บ / ถัง / กล่อง',0,0,'units'],['channels','ใช้กับ','7-11, ยี่ปั๊ว'],['aliases','ชื่อเรียกในกลุ่มไลน์','คั่นด้วย , เช่น ไชโย 1ลิตร, ไชโยถุง',0,'wide']]],
+  ['หลัก',[['sap_code','รหัส 7-11','เช่น 104884'],['name','ชื่อสินค้า','เช่น ขวด 1L*12 ทับทิม E',1,'wide'],['brand','ยี่ห้อ','ทับทิม / โบนัส / ไชโย…',0,0,'brands'],['product_group','ประเภท','ขวด / ถุง / ปี๊บ / ถัง',0,0,'groups'],['main_unit','หน่วย','ลัง / ปี๊บ / ถัง / กล่อง',0,0,'units'],['channels','ใช้กับ','7-11, ยี่ปั๊ว'],['aliases','ชื่อเรียกในกลุ่มไลน์','คั่นด้วย , เช่น ไชโย 1ลิตร, ไชโยถุง',0,'wide']]],
   ['ขนาดลัง และน้ำหนัก',[['case_w_mm','กว้างลัง (มม.)','240','n'],['case_l_mm','ยาวลัง (มม.)','320','n'],['case_h_mm','สูงลัง (มม.)','293','n'],['weight_per_unit','กก./หน่วย (QC)','11.44','n'],['weight_stock','กก./หน่วย ชีตคลัง','11.52','n']]],
   ['การเรียงบนพาเลท',[['per_layer','หน่วยต่อชั้น','14','n'],['layers','จำนวนชั้น','4','n'],['per_pallet','หน่วยต่อพาเลท','ว่าง = ต่อชั้น × ชั้น','n'],['stack_pallets','พาเลทเต็มซ้อนกันได้ (ชั้น)','เช่น 2','n'],['mix_ok','ผสมเศษกับสินค้าอื่นได้','',0,0,'mix']]],
   ['อื่นๆ',[['caution','ข้อควรระวัง','เช่น ห้ามวางทับ',0,'wide'],['note','หมายเหตุ','',0,'wide'],['status','สถานะ','',0,0,'status']]]];
@@ -412,7 +412,7 @@ function XSPEC(){return {
   offHint:'เลิกใช้ให้แก้คอลัมน์ สถานะ เป็น เลิกใช้',
   rows:R.rows, sort:(a,b)=>String(a.product_id).localeCompare(String(b.product_id)),
   cols:[
-    {k:'sap_code',h:'รหัส SAP',w:11,help:'ตัวเลขรหัส SAP · ไม่ซ้ำกัน · ไม่มีเว้นว่างได้'},
+    {k:'sap_code',h:'รหัส 7-11',alias:['รหัส SAP'],w:11,help:'รหัสสินค้าของ 7-11 · ไม่ซ้ำกัน · ไม่มีเว้นว่างได้'},
     {k:'name',h:'ชื่อสินค้า',w:40,req:1},
     {k:'brand',h:'ยี่ห้อ',w:11},{k:'product_group',h:'ประเภท',w:9,help:'ขวด / ถุง / ปี๊บ / ถัง / ถุง BIB'},{k:'main_unit',h:'หน่วย',w:7,help:'ลัง / ปี๊บ / ถัง / กล่อง'},
     {k:'case_w_mm',h:'กว้างลัง (มม.)',w:10,help:'มิลลิเมตร เช่น 240 (ไม่ใช่ 24 ซม.)'},{k:'case_l_mm',h:'ยาวลัง (มม.)',w:10},{k:'case_h_mm',h:'สูงลัง (มม.)',w:10},
@@ -572,7 +572,7 @@ const NAV_IC={db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 
 const NAV=[{sec:'งาน Packing'},
   {ic:'box',t:'แจกงาน Packing',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-plan.html'},
   {ic:'dash',t:'แพลนรถประจำวัน',s:'เดโม · จัดงานในเว็บ',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-daily.html'},
-  {ic:'db',t:'ฐานข้อมูลสินค้า',s:'รหัส SAP · ขนาด · พาเลท',on:1,act:'navTop()'},
+  {ic:'db',t:'ฐานข้อมูลสินค้า',s:'รหัส 7-11 · ขนาด · พาเลท',on:1,act:'navTop()'},
   {ic:'doc',t:'แผนการส่งมอบสินค้า',s:'ยี่ปั๊ว + ห้าง · FM-MK-14/15',tag:'new',url:'/SSB-SMART-SUPPLY-DASHBOARD/pk-mk.html'},
   {sec:'ระบบขนส่ง'},
   {ic:'dash',t:'Command Center',tag:'gold',url:'/ManageDrivers/'},
