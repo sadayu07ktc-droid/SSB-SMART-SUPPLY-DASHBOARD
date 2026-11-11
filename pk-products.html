@@ -318,7 +318,7 @@ function render(){
   L.forEach(r=>{
     const g=gaps(r), pp=perPal(r), ph=palH(r), pk=palKg(r), nv='<span class="nv">ยังไม่มี</span>';
     h+='<tr tabindex="0" data-id="'+esc(r.product_id)+'" class="'+(r.status==='Inactive'?'off':'')+'">'
-      +'<td class="mono">'+(r.sap_code?esc(r.sap_code):nv)+'</td>'
+      +'<td class="mono">'+(r.sap_code?esc(r.sap_code):is711(r)?nv:'')+'</td>'
       +'<td class="mono hide-m">'+(r.item_code?esc(r.item_code):nv)+'</td>'
       +'<td><div class="pn">'+esc(r.name)+'<small>'+[r.brand,r.product_group].filter(Boolean).map(esc).join(' · ')+(r.aliases?' · ไลน์: '+esc(r.aliases):'')+(g.length?' <span class="tag out">ขาด '+esc(g.join(', '))+'</span>':'')+(r.caution?' <span class="tag bad">⚠ '+esc(r.caution)+'</span>':'')+'</small></div></td>'
       +'<td class="c">'+esc(r.main_unit||'')+'</td>'
