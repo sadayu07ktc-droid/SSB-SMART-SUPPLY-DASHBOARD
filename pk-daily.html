@@ -137,7 +137,7 @@ main{padding-block:14px 120px}
 .dh .m{opacity:.8;font-size:13px}
 .dh .x{background:rgba(255,255,255,.12);border:0;color:var(--head-ink);border-radius:9px;width:34px;height:34px;cursor:pointer;font-size:17px;flex:none}
 .db{flex:1;overflow:auto;padding:16px 18px 24px;display:flex;flex-direction:column;gap:14px}
-.df{border-top:1px solid var(--line);padding:12px 18px;display:flex;gap:10px;justify-content:flex-end;background:var(--surface)}
+.df{border-top:1px solid var(--line);padding:12px 18px;display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;background:var(--surface)}
 .box{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
 .box > label,.lb{font-weight:600;font-size:13.5px}
 .seg{flex-wrap:wrap;display:flex;gap:6px;flex-wrap:wrap}
@@ -1421,7 +1421,8 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
     +'<label class="note">เบิกค่าลงสินค้า<input class="in" id="junl" placeholder="'+esc(jUnlAuto(j)||'เช่น โอนค่าลงสินค้า 1500 บาท')+'" value="'+esc(j.unl||'')+'"></label></div>'
     +'<datalist id="carL"><option value="SSB"><option value="รถนอก"></datalist><div class="note">เว้นว่าง = คิดจากค่าลงของร้าน (ถ้ามีในระบบ)</div></div>';
   h+='<div class="box"><label for="jnt">หมายเหตุถึงคนขับ / คลัง</label><textarea class="in" id="jnt" rows="2" placeholder="เช่น วางบิล + เอกสาร CO/COA, นัดลงตามคิว">'+esc(j.note)+'</textarea></div>';
-  h+='</div><div class="df">'+(j.isNew?'':'<button class="btn ghost" id="jdel" style="color:var(--bad)">ลบงาน</button><button class="btn ghost" id="jdup" title="สร้างงานใหม่จากงานนี้">⧉ ทำซ้ำ</button>')+'<button class="btn ghost" id="jc">ยกเลิก</button><button class="btn pri mallb" id="jsv">บันทึกงาน</button></div></aside>';
+  h+='</div><div class="df">'+(j.isNew?'':'<button class="btn ghost" id="jdel" style="color:var(--bad)">ลบงาน</button><button class="btn ghost" id="jdup" title="สร้างงานใหม่จากงานนี้">⧉ ทำซ้ำ</button>'
+    +(j.lp?'':'<button class="btn ghost" id="jmv" title="ย้ายงานนี้ไปแพลนวันส่งอื่น (คำขอรถไร่ + ออเดอร์ไร่ย้ายตาม)">📅 ย้ายวัน</button>'))+'<button class="btn ghost" id="jc">ยกเลิก</button><button class="btn pri mallb" id="jsv">บันทึกงาน</button></div></aside>';
   const D=$('lp');if(!D)return;const st=D.querySelector('.db')?D.querySelector('.db').scrollTop:0;
   D.innerHTML=h;D.classList.add('ed');if(D.querySelector('.db'))D.querySelector('.db').scrollTop=st;
   const re=()=>{syncJ();drawJob();};
@@ -1440,6 +1441,7 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   D.querySelectorAll('[data-jup]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jup;[j.stops[i-1],j.stops[i]]=[j.stops[i],j.stops[i-1]];drawJob();});
   D.querySelectorAll('[data-jdn]').forEach(b=>b.onclick=()=>{syncJ();const i=+b.dataset.jdn;[j.stops[i+1],j.stops[i]]=[j.stops[i],j.stops[i+1]];drawJob();});
   if($('jdup'))$('jdup').onclick=()=>{syncJ();if(JSON.stringify(JE.j)!==JSON.stringify(MJ.find(x=>x.id===j.id)))toast('⚠️ ที่แก้ในงาน '+j.id+' ยังไม่บันทึก · ทำซ้ำจากฉบับที่บันทึกแล้ว');dupJob(j.id);};
+  if($('jmv'))$('jmv').onclick=()=>moveJob(j.id);
   if($('jdel'))$('jdel').onclick=async()=>{const sent=!!MALL.snap[j.id];
     if(!(await askModal({title:'ลบงาน '+j.id+'?',ok:'ลบงาน',cancel:'ไม่ลบ',icon:'🗑️',danger:1,html:'<p>'+(sent?'งานนี้แจกไปแล้ว ลบแล้วต้องกด "ส่งฉบับแก้ไข" เพื่อแจ้งคนขับ คลัง บัญชี ว่ายกเลิก':'งานนี้ยังไม่ได้แจก ลบได้เลย')+'</p>'})))return;
     MJ=MJ.filter(x=>x.id!==j.id);syncMall();JE=null;renderAll();toast('ลบงาน '+j.id+' แล้ว (เดโม)');};
@@ -1447,6 +1449,62 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   document.onkeydown=e=>{if(e.key==='Escape'&&JE)closeJob();};}
 function saveJob(keepOpen){const j=JE.j;if(j.isNew){delete j.isNew;MJN++;j.id='H'+MJN;MJ.push(j);}else MJ[MJ.findIndex(x=>x.id===j.id)]=j;
   syncMall();if(keepOpen){JE={j:JSON.parse(JSON.stringify(j)),q:''};renderAll();}else{JE=null;renderAll();toast('บันทึก '+j.id+' แล้ว (เดโม)'+(jReady(j)?'':' · ยังแจกไม่ได้จนกว่าจะได้รถและคนขับ'));}}
+/* 📅 11 พ.ย. คุณน้อง "ขึ้นของ 11 ส่ง 12 แต่ทำแพลนไว้วันที่ 11" → ย้ายงานห้างไปแพลนวันส่งใหม่
+ *   ลำดับ (กันงานหาย): ตรวจกับ Edge ก่อน (dryRun) → ใส่งานในแพลนวันใหม่ (pk-draft) → ย้ายคำขอไร่+ออเดอร์ไร่ (pk-daily farmMove) → ถอดจากวันเดิม
+ *   ย้ายคำขอไร่ไม่สำเร็จ = ถอนงานออกจากวันใหม่คืน · คนขับไร่เริ่มงานแล้ว = ย้ายไม่ได้ · งาน 📦 LP ใช้วันส่งตาม PO = ไม่มีปุ่ม · ไม่ส่ง LINE */
+const MV={d:'',l:'',lt:0};
+const ymdAdd=(d,n)=>{const x=new Date(d+'T00:00:00Z');x.setUTCDate(x.getUTCDate()+n);return isNaN(x)?'':x.toISOString().slice(0,10);};
+document.addEventListener('input',e=>{const t=e.target;if(t.id==='mvL'){MV.l=t.value;MV.lt=1;return;}if(t.id!=='mvD')return;MV.d=t.value;
+  const l=$('mvL');if(l){l.max=MV.d;if(!MV.lt){MV.l=ymdAdd(MV.d,-1);l.value=MV.l;}}},true);
+async function fmCall(body){if(typeof PKD_URL==='undefined'||!MY_UID)throw new Error('หน้าเดโมนี้ไม่ได้ต่อระบบ');   /* Edge pk-farm-move (แยกจาก pk-daily) */
+  const r=await fetch(PKD_URL.replace(/pk-daily$/,'pk-farm-move'),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,userId:MY_UID,name:window.MY_NAME||''})});
+  let j=null;try{j=await r.json();}catch(e){}if(!j)throw new Error('ระบบตอบกลับไม่ถูกต้อง ('+r.status+')');if(!j.ok)throw new Error(j.error||'ไม่สำเร็จ');return j;}
+async function dsPut(d,fn){for(let i=0;i<3;i++){   /* แก้แพลนวันอื่น (ไม่ใช่วันที่เปิดอยู่) · ver ชนกัน = โหลดใหม่แล้วลองอีก */
+  const x=await fetch(DS_URL+'?action=get&userId='+encodeURIComponent(MY_UID)+'&date='+d+'&t='+Date.now()).then(r=>r.json());
+  if(!x||!x.ok)throw new Error((x&&x.error)||'โหลดแพลน '+dateTH(d)+' ไม่สำเร็จ');
+  const data=x.data||{v:1,plan:{},mj:[],mjn:0,mall:{rev:-1,snap:{},log:[],ack:[]}};const out=fn(data);
+  const y=await fetch(DS_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'save',userId:MY_UID,date:d,data,ver:x.ver||0})}).then(r=>r.json());
+  if(y&&y.ok)return out;if(!(y&&y.conflict))throw new Error((y&&y.error)||'บันทึกแพลน '+dateTH(d)+' ไม่สำเร็จ');}
+  throw new Error('แพลน '+dateTH(d)+' มีคนแก้อยู่พร้อมกัน ลองใหม่อีกครั้ง');}
+async function moveJob(id){
+  if(JE&&JE.j.id===id&&!JE.j.isNew){syncJ();if(!JE.j.stops.length){toast('ใส่ร้านอย่างน้อย 1 จุด');return;}saveJob(true);}   /* ลิ้นชักเปิดอยู่ = บันทึกที่แก้ก่อน แล้วย้ายฉบับนั้น */
+  const j0=MJ.find(x=>x.id===id);if(!j0)return;
+  if(j0.lp){toast('งาน 📦 LP ใช้วันส่งตาม PO 7-11 — แก้ที่ PO แล้วส่งจาก Loading Planner ใหม่');return;}
+  const live=frLive();if(live&&(!DS.ready||!DS.edit)){toast(DS.ready?'บัญชีนี้ดูอย่างเดียว ย้ายวันไม่ได้':'⏳ รอโหลดแพลนก่อน');return;}
+  const pd=$('pdate').value,fr=j0.fr||null,sent=!!MALL.snap[id],today=new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
+  if(fr&&fr.st==='Delivered'){toast('งานนี้ไร่ส่งของแล้ว ย้ายวันไม่ได้');return;}
+  Object.assign(MV,{d:ymdAdd(pd,1),lt:0});MV.l=ymdAdd(MV.d,-1);
+  const nm=j0.stops.map(s=>jsN(s)).join(' + ');
+  const ok=await askModal({icon:'📅',title:'ย้ายงาน '+id+' ไปวันส่งอื่น',ok:'ย้ายวัน',cancel:'ไม่ย้าย',
+    html:'<p><b>'+esc(nm||id)+'</b><br><span class="note">ตอนนี้อยู่ในแพลนส่ง '+esc(dateTH(pd))+'</span></p>'
+      +'<div class="frq frq3"><label class="note">วันส่งใหม่<input class="in" type="date" id="mvD" value="'+MV.d+'" min="'+today+'"></label>'
+      +(fr?'<label class="note">ขึ้นสินค้าวันที่<input class="in" type="date" id="mvL" value="'+MV.l+'" max="'+MV.d+'"></label>':'')+'</div>'
+      +(fr?'<p class="note">🚜 คำขอรถไร่ <b>'+esc(fr.rid)+'</b>'+(fr.ord?' + ออเดอร์ไร่ <b>'+esc(fr.ord)+'</b>':'')+' ย้ายวันตามให้ (ได้ถ้าคนขับไร่ยังไม่เริ่มงาน) · หมายเหตุคนขับเปลี่ยนเป็นวันขึ้นสินค้าใหม่'
+        +'<br><b style="color:#B45309">ระบบไม่ส่ง LINE — โทรแจ้งแอดมินไร่'+(fr.drv?' / คนขับ '+esc(fr.drv):'')+'</b></p>':'')
+      +(sent?'<p class="note" style="color:#B45309">งานนี้แจกไปแล้ว: วันเดิมกด <b>ส่งฉบับแก้ไข</b> (แจ้งว่างานย้ายออก) · วันใหม่กด <b>แจกงานห้าง</b></p>':'')});
+  if(!ok)return;
+  const nd=MV.d,ld=fr?MV.l:'';
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(nd)){toast('⚠️ เลือกวันส่งใหม่');return;}
+  if(nd===pd){toast('วันส่งใหม่ต้องไม่ใช่วันเดิม');return;}
+  if(nd<today){toast('⚠️ ย้ายไปวันที่ผ่านมาแล้วไม่ได้');return;}
+  if(ld&&ld>nd){toast('⚠️ วันขึ้นสินค้าต้องไม่เกินวันส่ง ('+dateTH(nd)+')');return;}
+  if(!live){MJ=MJ.filter(x=>x.id!==id);syncMall();JE=null;renderAll();toast('ย้าย '+id+' ไปส่ง '+dateTH(nd)+' แล้ว (เดโม · เว็บจริงงานไปอยู่ในแพลนวันนั้น)');return;}
+  if(FRB)return;FRB=true;toast('กำลังย้ายงาน '+id+'…');let nid='',uid0='';
+  try{
+    if(fr)await fmCall({action:'farmMove',requestId:fr.rid,date:nd,loadDate:ld,dryRun:true});
+    const cp=JSON.parse(JSON.stringify(j0));['fr','isNew','dupOf'].forEach(k=>delete cp[k]);frRef(cp);uid0=cp.uid||'';
+    nid=await dsPut(nd,data=>{const mj=Array.isArray(data.mj)?data.mj:(data.mj=[]);
+      const n=Math.max(+data.mjn||0,mj.reduce((a,x)=>Math.max(a,+(String(x.id).replace(/\D/g,''))||0),0))+1;
+      cp.id='H'+n;cp.movedFrom=pd;mj.push(cp);data.mjn=n;return cp.id;});
+    if(fr){try{const x=await fmCall({action:'farmMove',requestId:fr.rid,date:nd,loadDate:ld});FRL=x.farm||FRL;}
+      catch(e){await dsPut(nd,data=>{data.mj=(data.mj||[]).filter(x=>!(x.id===nid&&(x.uid||'')===uid0));}).catch(()=>{});throw e;}}
+    MJ=MJ.filter(x=>x.id!==id);FRSEL.delete(id);syncMall();JE=null;renderAll();await dsSave(1);
+    askModal({icon:'📅',title:'ย้ายงานแล้ว',ok:'ปิด',html:'<p>งาน <b>'+esc(id)+'</b> → แพลนส่ง <b>'+esc(dateTH(nd))+'</b> เป็นงาน <b>'+esc(nid)+'</b></p>'
+      +(fr?'<p>🚜 คำขอ '+esc(fr.rid)+(fr.ord?' + ออเดอร์ '+esc(fr.ord):'')+' ย้ายวันส่งแล้ว'+(ld?' · ขึ้นสินค้า '+esc(dateTH(ld)):'')+'</p><p><b style="color:#B45309">โทรแจ้งแอดมินไร่'+(fr.drv?' / คนขับ '+esc(fr.drv):'')+' ว่าเปลี่ยนวัน</b></p>':'')
+      +(sent?'<p class="note">แจกไปแล้ว: วันนี้กด ส่งฉบับแก้ไข · วัน '+esc(dateTH(nd))+' กด แจกงานห้าง</p>':'')
+      +'<p class="note">เปลี่ยนวันที่มุมขวาบนเป็น '+esc(dateTH(nd))+' เพื่อดูงาน</p>'});}
+  catch(e){toast('❌ ย้ายไม่สำเร็จ: '+(e.message||e));}
+  finally{FRB=false;frPull();}}
 
 /* ---------- ใบแจ้งงานห้าง (รูป JPEG · PDF · Excel) · หน้าตาตามชีต "แจ้งงานห้าง" ของแอดมิน ---------- */
 /* ข้อความท้ายใบ (เบอร์ติดต่อ) = ข้อมูลบุคคล → มาจาก Edge pk-daily (app_config PK_MALL_FOOT) ไม่ฝังในไฟล์ · แก้ในหน้าต่างนี้ได้ จำไว้ในเครื่องนั้น */
