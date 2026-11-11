@@ -267,7 +267,9 @@ const perPal=r=>has(r.per_pallet)?+r.per_pallet:(has(r.per_layer)&&has(r.layers)
 const palH=r=>has(r.layers)&&has(r.case_h_mm)?Math.round((r.layers*r.case_h_mm/10+PAL.h_cm)*10)/10:null;
 const palKg=r=>{const n=perPal(r);return n&&has(r.weight_per_unit)?Math.round((n*r.weight_per_unit+PAL.kg)*100)/100:null;};
 /* ข้อมูลที่ยังขาด (ใช้คิดพาเลทไม่ได้) */
-function gaps(r){const g=[];if(!has(r.sap_code))g.push('รหัส 7-11');if(!(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)))g.push('ขนาดลัง');if(!has(r.weight_per_unit))g.push('น้ำหนัก');if(!(has(r.per_layer)&&has(r.layers)))g.push('การเรียงพาเลท');return g;}
+/* รหัส 7-11 จำเป็นเฉพาะสินค้าที่ขาย 7-11 (ช่อง ใช้กับ) · ขายยี่ปั๊วอย่างเดียวไม่ต้องมี */
+const is711=r=>/7-11|เซเว่น|seven/i.test(r.channels||'');
+function gaps(r){const g=[];if(is711(r)&&!has(r.sap_code))g.push('รหัส 7-11');if(!(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)))g.push('ขนาดลัง');if(!has(r.weight_per_unit))g.push('น้ำหนัก');if(!(has(r.per_layer)&&has(r.layers)))g.push('การเรียงพาเลท');return g;}
 
 async function load(){
   try{
@@ -284,6 +286,7 @@ function list(){
     if(F.c==='off'){ if(!off) return false; } else if(off) return false;
     if(F.c==='gap'&&!gaps(r).length) return false;
     if(F.c.startsWith('b:')&&(r.brand||'(ไม่ระบุยี่ห้อ)')!==F.c.slice(2)) return false;
+    if(F.c.startsWith('ch:')&&!String(r.channels||'').split(/[,/]+/).map(x=>x.trim()).includes(F.c.slice(3))) return false;
     if(F.c.startsWith('g:')&&(r.product_group||'(ไม่ระบุประเภท)')!==F.c.slice(2)) return false;
     if(q&&![r.sap_code,r.item_code,r.name,r.brand,r.product_group,r.aliases,r.product_id,r.note].join(' ').toLowerCase().includes(q)) return false;
     return true;
@@ -291,7 +294,8 @@ function list(){
 }
 function render(){
   const act=R.rows.filter(r=>r.status!=='Inactive'), off=R.rows.length-act.length;
-  const nGap=act.filter(r=>gaps(r).length).length, nSap=act.filter(r=>!has(r.sap_code)).length;
+  const nGap=act.filter(r=>gaps(r).length).length, nSap=act.filter(r=>is711(r)&&!has(r.sap_code)).length;
+  const chs={};act.forEach(r=>String(r.channels||'').split(/[,/]+/).map(x=>x.trim()).filter(Boolean).forEach(c=>chs[c]=(chs[c]||0)+1));
   const brands={},groups={}; act.forEach(r=>{const b=r.brand||'(ไม่ระบุยี่ห้อ)',g=r.product_group||'(ไม่ระบุประเภท)';brands[b]=(brands[b]||0)+1;groups[g]=(groups[g]||0)+1;});
   const L=list(), ed=R.canEdit;
   const chip=(k,t,n,cls)=>'<button type="button" class="chip'+(F.c===k?' on':'')+(cls?' '+cls:'')+'" data-c="'+esc(k)+'" aria-pressed="'+(F.c===k)+'">'+t+' <b>'+n+'</b></button>';
@@ -305,6 +309,7 @@ function render(){
     +'<button class="btn sm xl" id="bDl">⬇ ดาวน์โหลด Excel</button>'
     +(ed?'<button class="btn sm up" id="bUp">⬆ อัปโหลด</button>':'')+'</div>'
     +'<div class="chips" role="group" aria-label="กรองสินค้า">'+chip('all','ทั้งหมด',act.length)+chip('gap','⚠ ข้อมูลไม่ครบ',nGap,'warnc')
+    +Object.keys(chs).sort((a,b)=>a.localeCompare(b,'th')).map(c=>chip('ch:'+c,'🏷 '+esc(c),chs[c])).join('')
     +Object.keys(brands).sort((a,b)=>a.localeCompare(b,'th')).map(b=>chip('b:'+b,esc(b),brands[b])).join('')
     +Object.keys(groups).sort((a,b)=>a.localeCompare(b,'th')).map(g=>chip('g:'+g,esc(g),groups[g])).join('')
     +(off?chip('off','เลิกใช้',off):'')+'</div>';
