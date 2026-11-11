@@ -169,6 +169,23 @@
   #gate h2{font-size:18px;font-weight:700;margin-bottom:6px}#gate p{font-size:13.5px;color:var(--ink-soft)}
   #gate .deny{font-size:38px;margin-bottom:10px}
   #toast.err{background:#A91F12}
+  /* ⏳ คำขอยกเลิกจากคนขับ (2026-11-11) */
+  .tab.wait{border-color:var(--gold);color:var(--gold);font-weight:700}
+  .tab.wait.late{border-color:var(--red);color:var(--red);background:var(--red-bg)}
+  .tab.wait.on{background:var(--gold);border-color:var(--gold);color:#fff}
+  .tab.wait.late.on{background:var(--red);border-color:var(--red);color:#fff}
+  .cxbox{margin-top:8px;background:#FDF6E7;border:1px solid #F0D9A4;border-left:3px solid var(--gold);border-radius:9px;padding:8px 11px;font-size:12px;line-height:1.7;color:var(--ink)}
+  .cxbox.late{background:var(--red-bg);border-color:transparent;border-left-color:var(--red)}
+  .cxbox b{font-weight:700}
+  .cxage{display:inline-block;font-family:var(--mono);font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:#F2D28C;color:#5B4210}
+  .cxbox.late .cxage{background:var(--red);color:#fff}
+  .cxbtns{display:flex;gap:6px;margin-top:7px;flex-wrap:wrap}
+  .mini.ok{background:var(--red);border-color:var(--red);color:#fff}
+  .mini.ok:hover{color:#fff;filter:brightness(1.08)}
+  .mini.no{border-color:var(--pine);color:var(--pine)}
+  .mini:disabled{opacity:.45;cursor:wait}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cxbox:not(.late){background:#2A2414;border-color:#4A3C1A}}
+  :root[data-theme="dark"] .cxbox:not(.late){background:#2A2414;border-color:#4A3C1A}
 </style>
 
 <header><div class="bar">
@@ -179,8 +196,8 @@
 
 <main>
   <div class="hint"><span style="font-size:15px">🧹</span>
-    <div><b>ออเดอร์ค้างที่ไม่มีคนขับกดรับ</b> เลือกแล้วลบทิ้งได้ที่นี่ — ลบแล้วหายจากระบบจริง<br>
-    <b>ออเดอร์ที่เสร็จงานแล้วลบไม่ได้</b> ระบบล็อกไว้ให้อัตโนมัติ</div></div>
+    <div><b>ลบได้เฉพาะออเดอร์ที่ยังไม่มีคนขับรับ</b> — ลบแล้วหายจากระบบจริง · มีคนขับแล้วให้ใช้ปุ่ม <b>ยกเลิก</b><br>
+    <b>ออเดอร์ที่เสร็จงานแล้วลบไม่ได้</b> · <b>คำขอยกเลิกจากคนขับ</b> ต้องกด อนุมัติยกเลิก / ปฏิเสธ ในแท็บ ⏳</div></div>
 
   <div class="tabs" id="tabs"></div>
   <div class="search"><input id="q" placeholder="ค้นหา เลขที่ออเดอร์ · สวน · จุดรับ · คนขับ" oninput="render()"></div>
@@ -220,7 +237,8 @@ function fmtDT(v){ const d=parseTH(v); if(!d) return String(v||'—');
 const ST_COLOR={'รอยืนยัน':['#B7892A','#FBEED3'],'ยืนยันแล้ว':['#0E7490','#DEF2F6'],
   'รับงานแล้ว':['#1D4ED8','#E2EBFD'],'เริ่มงานแล้ว':['#4F46E5','#EEF0FE'],
   'ถึงลูกค้า':['#0E7C66','#DCF3E3'],'ออกจากลูกค้า':['#157A40','#DCF3E3'],
-  'เสร็จงาน':['#157A40','#DCF3E3'],'ยกเลิก':['#6B7A70','#EEF1EE']};
+  'เสร็จงาน':['#157A40','#DCF3E3'],'ยกเลิก':['#6B7A70','#EEF1EE'],
+  'รออนุมัติยกเลิก':['#A91F12','#FBE4E1'],'แจ้งเตือนแอดมิน':['#B7892A','#FBEED3']};
 const stBadge=s=>{const c=ST_COLOR[s]||['#6B7A70','#EEF1EE'];
   return `<span class="sbadge" style="color:${c[0]};background:${c[1]}">${esc(s)}</span>`;};
 
@@ -244,9 +262,18 @@ async function load(){
   COUNTS={}; ORDERS.forEach(o=>{COUNTS[o.status]=(COUNTS[o.status]||0)+1;}); SEL.clear(); render();
 }
 
+/* ⏳ คำขอยกเลิกจากคนขับ (2026-11-11) · ค้างเกิน CX_LATE_H ชม. = แดง · เวลาขอมาจาก Edge (order_pending · คำขอก่อน 11 พ.ย. ไม่มี) */
+const CX_TAB='__cancelwait', CX_LATE_H=1;
+const cxHours=o=>{ const t=Date.parse(o.cancelAt||''); return isNaN(t)?null:Math.max(0,(Date.now()-t)/3600000); };
+const cxLate=o=>{ const h=cxHours(o); return h!=null&&h>=CX_LATE_H; };
+function cxAge(h){ if(h==null) return 'ไม่ทราบเวลาขอ'; if(h<1) return 'ค้าง '+Math.max(1,Math.round(h*60))+' นาที';
+  return 'ค้าง '+(h<10?h.toFixed(1).replace(/\.0$/,''):Math.round(h))+' ชม.'; }
+function fmtIsoTH(s){ const t=Date.parse(s||''); if(isNaN(t)) return '—'; const d=new Date(t);
+  return `${d.getDate()} ${TH_M[d.getMonth()]} ${String((d.getFullYear()+543)%100).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`; }
+
 function visible(){
   const kw=($('#q').value||'').trim().toLowerCase();
-  return ORDERS.filter(o=>(!FILTER||o.status===FILTER) &&
+  return ORDERS.filter(o=>(!FILTER||(FILTER===CX_TAB?o.cancelWait:o.status===FILTER)) &&
     (!kw || (o.id+' '+o.garden+' '+o.pickup+' '+o.driver+' '+o.plate).toLowerCase().includes(kw)));
 }
 
@@ -255,13 +282,17 @@ function render(){
   $('#cnt').textContent=`${rows.length} / ${ORDERS.length} ออเดอร์`;
   // แท็บสถานะ
   const order=['รอยืนยัน','ยืนยันแล้ว','รับงานแล้ว','เริ่มงานแล้ว','ถึงลูกค้า','ออกจากลูกค้า','เสร็จงาน','ยกเลิก'];
+  const cxAll=ORDERS.filter(o=>o.cancelWait), cxLateN=cxAll.filter(cxLate).length;
   $('#tabs').innerHTML=`<button class="tab ${FILTER===''?'on':''}" onclick="setF('')">ทั้งหมด <span class="n">${ORDERS.length}</span></button>`+
+    `<button class="tab wait ${cxLateN?'late':''} ${FILTER===CX_TAB?'on':''}" onclick="setF('${CX_TAB}')" title="${cxLateN?cxLateN+' รายการค้างเกิน '+CX_LATE_H+' ชม.':'คำขอยกเลิกจากคนขับที่รอแอดมินตัดสิน'}">⏳ รออนุมัติยกเลิก <span class="n">${cxAll.length}</span>${cxLateN?' ⚠️':''}</button>`+
     order.filter(s=>COUNTS[s]).map(s=>`<button class="tab ${FILTER===s?'on':''}" onclick="setF('${s}')">${esc(s)} <span class="n">${COUNTS[s]}</span></button>`).join('');
 
   $('#list').innerHTML = rows.length ? `<div class="otbl">${rows.map(o=>{
-    const del=o.canDelete;
+    const del=o.canDelete, wt=!!o.cancelWait;
+    const noDelWhy=wt?'มีคำขอยกเลิกรอตัดสิน':o.status==='เสร็จงาน'?'ออเดอร์เสร็จงานแล้ว ลบไม่ได้':o.driver?'มีคนขับรับงานแล้ว ลบไม่ได้ — ใช้ปุ่มยกเลิก':'ลบไม่ได้';
+    const h=wt?cxHours(o):null, late=wt&&cxLate(o);
     return `<div class="orow ${del?'':'locked'}">
-      <input type="checkbox" class="ck" ${del?'':'disabled title="ออเดอร์เสร็จงานแล้ว ลบไม่ได้"'}
+      <input type="checkbox" class="ck" ${del?'':`disabled title="${esc(noDelWhy)}"`}
         ${SEL.has(o.id)?'checked':''} onchange="pick('${esc(o.id)}',this.checked)">
       <div class="ob">
         <div class="oid">${esc(o.id)}</div>
@@ -275,13 +306,20 @@ function render(){
             ?'<span class="wtag done">✓ ชั่งครบ จบงาน</span>'
             :(o.hasWeight?'<span class="wtag" title="มีใบชั่งจริง (สุทธิ/รูปใบชั่ง) แล้ว แต่ออเดอร์ยังไม่เสร็จงาน — ปาล์มจะขึ้นก็ต่อเมื่อแวะชั่งที่ลานขากลับ">⚖️ ชั่งแล้ว · ยังไม่จบงาน</span>':'')}
         </div>
+        ${wt?`<div class="cxbox ${late?'late':''}">
+          ⏳ <b>คนขับขอยกเลิก</b> · ผู้ขอ <b>${esc(o.driver||'—')}</b> · ขอเมื่อ <b>${esc(fmtIsoTH(o.cancelAt))}</b> <span class="cxage">${esc(cxAge(h))}</span><br>
+          📝 เหตุผล: <b>${esc(o.cancelRequest||'—')}</b>
+          <div class="cxbtns">
+            <button class="mini ok" onclick="decideCx('${esc(o.id)}','approve',this)">✓ อนุมัติยกเลิก</button>
+            <button class="mini no" onclick="decideCx('${esc(o.id)}','reject',this)">✕ ปฏิเสธ (ให้วิ่งต่อ)</button>
+          </div></div>`:''}
       </div>
       <div class="oact">
         ${stBadge(o.status)}
-        <div style="display:flex;gap:5px">
+        ${wt?'':`<div style="display:flex;gap:5px">
           <button class="mini" onclick="doCancel('${esc(o.id)}')" ${o.canCancel?'':'disabled'}>ยกเลิก</button>
-          <button class="mini del" onclick="doDelete('${esc(o.id)}')" ${del?'':'disabled title="เสร็จงานแล้ว ลบไม่ได้"'}>ลบ</button>
-        </div>
+          <button class="mini del" onclick="doDelete('${esc(o.id)}')" ${del?'':`disabled title="${esc(noDelWhy)}"`}>ลบ</button>
+        </div>`}
       </div></div>`;}).join('')}</div>`
     : '<div class="empty">ไม่พบออเดอร์ตามเงื่อนไข</div>';
 
@@ -318,6 +356,35 @@ async function doDelete(id){
     warn:warns.join('\n'), okText:'ลบถาวร', cancelText:'ไม่ลบ', danger:true}))) return;
   const d=await post({action:'deleteOrder',orderId:id});
   if(d.ok){ toast('ลบ '+id+' แล้ว'); SEL.delete(id); load(); } else toast('❌ '+(d.error||''),true);
+}
+/* ⏳ ตัดสินคำขอยกเลิก → Edge admin-decide (decideCancel) · สิทธิ์ DEV + แอดมินกลุ่มงานนั้น (เซิร์ฟเวอร์เช็ค)
+   อนุมัติ = งานกลับไปหาคนขับใหม่ (กระจาย LINE) · ปฏิเสธ = คืนสถานะเดิมให้คนขับวิ่งต่อ + แจ้งคนขับ (เหตุผลไม่บังคับ) */
+const DECIDE_URL='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/admin-decide';
+let CX_BUSY=false;
+async function decideCx(id,decision,btn){
+  if(CX_BUSY) return;
+  const o=ORDERS.find(x=>x.id===id); if(!o) return;
+  const head=(o.garden||'')+(o.pickup?' · '+o.pickup:'')+'\nคนขับ: '+(o.driver||'—')+'\nเหตุผลที่ขอ: '+(o.cancelRequest||'—');
+  let rejectReason='';
+  if(decision==='approve'){
+    if(!(await ssbConfirm({title:'อนุมัติยกเลิก '+id+'?', msg:head, warn:'คนขับคนนี้จะหลุดจากงาน และระบบจะส่งงานหาคนขับใหม่ทาง LINE ทันที',
+      okText:'อนุมัติยกเลิก', cancelText:'ไม่ใช่', danger:true}))) return;
+  }else{
+    const r=await ssbPrompt({title:'ปฏิเสธคำขอยกเลิก '+id, msg:head+'\n\nคนขับจะได้ข้อความให้วิ่งงานต่อ',
+      placeholder:'เหตุผลถึงคนขับ (ไม่ใส่ก็ได้)', okText:'ปฏิเสธ · ให้วิ่งต่อ', cancelText:'กลับ'});
+    if(r===null) return; rejectReason=String(r||'').trim();
+  }
+  CX_BUSY=true; const btns=btn&&btn.parentNode?[...btn.parentNode.querySelectorAll('button')]:[]; btns.forEach(b=>b.disabled=true);
+  const old=btn?btn.textContent:''; if(btn) btn.textContent='กำลังบันทึก…';
+  try{
+    const res=await fetch(DECIDE_URL,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify({action:'decideCancel',userId:MY_UID,orderId:id,decision,rejectReason})});
+    const d=await res.json().catch(()=>null);
+    if(d&&d.success){ toast(decision==='approve'?'✅ อนุมัติยกเลิก '+id+' แล้ว · ส่งงานหาคนขับใหม่':'✅ ปฏิเสธแล้ว · '+id+' กลับเป็น "'+(d.status||'')+'"'); CX_BUSY=false; load(); return; }
+    toast('❌ '+((d&&d.error)||'บันทึกไม่สำเร็จ'),true);
+    if(d&&d.code==='NO_PENDING') load();   // มีคนตัดสินไปแล้ว → โหลดใหม่
+  }catch(e){ toast('❌ เชื่อมต่อไม่ได้: '+(e.message||e),true); }
+  CX_BUSY=false; btns.forEach(b=>b.disabled=false); if(btn) btn.textContent=old;
 }
 async function bulkDelete(){
   const ids=[...SEL]; if(!ids.length) return;
