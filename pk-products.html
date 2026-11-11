@@ -284,7 +284,7 @@ function list(){
     if(F.c==='gap'&&!gaps(r).length) return false;
     if(F.c.startsWith('b:')&&(r.brand||'(ไม่ระบุยี่ห้อ)')!==F.c.slice(2)) return false;
     if(F.c.startsWith('g:')&&(r.product_group||'(ไม่ระบุประเภท)')!==F.c.slice(2)) return false;
-    if(q&&![r.sap_code,r.name,r.brand,r.product_group,r.aliases,r.product_id,r.note].join(' ').toLowerCase().includes(q)) return false;
+    if(q&&![r.sap_code,r.item_code,r.name,r.brand,r.product_group,r.aliases,r.product_id,r.note].join(' ').toLowerCase().includes(q)) return false;
     return true;
   }).sort((a,b)=>String(a.brand||'ฮ').localeCompare(String(b.brand||'ฮ'),'th')||String(a.name).localeCompare(String(b.name),'th'));
 }
@@ -299,7 +299,7 @@ function render(){
     +'<div class="kpi'+(nGap?' warn':'')+'"><b>'+nGap+'</b><span>ข้อมูลยังไม่ครบ</span></div>'
     +'<div class="kpi'+(nSap?' warn':'')+'"><b>'+nSap+'</b><span>ยังไม่มีรหัส 7-11</span></div>'
     +'<div class="kpi"><b>'+Object.keys(brands).length+'</b><span>ยี่ห้อ</span></div></div>'
-    +'<div class="tools" style="margin-top:12px"><input class="srch" id="q" type="search" placeholder="ค้นหา รหัส 7-11 / ชื่อสินค้า / ชื่อเรียกในไลน์…" value="'+esc(F.q)+'" aria-label="ค้นหาสินค้า">'
+    +'<div class="tools" style="margin-top:12px"><input class="srch" id="q" type="search" placeholder="ค้นหา รหัส 7-11 / รหัสสินค้า / ชื่อสินค้า / ชื่อเรียกในไลน์…" value="'+esc(F.q)+'" aria-label="ค้นหาสินค้า">'
     +(ed?'<button class="btn sm" id="bAdd">＋ เพิ่มสินค้า</button>':'')
     +'<button class="btn sm xl" id="bDl">⬇ ดาวน์โหลด Excel</button>'
     +(ed?'<button class="btn sm up" id="bUp">⬆ อัปโหลด</button>':'')+'</div>'
@@ -307,12 +307,13 @@ function render(){
     +Object.keys(brands).sort((a,b)=>a.localeCompare(b,'th')).map(b=>chip('b:'+b,esc(b),brands[b])).join('')
     +Object.keys(groups).sort((a,b)=>a.localeCompare(b,'th')).map(g=>chip('g:'+g,esc(g),groups[g])).join('')
     +(off?chip('off','เลิกใช้',off):'')+'</div>';
-  h+='<div class="tw ptab"><table><thead><tr><th>รหัส 7-11</th><th>ชื่อสินค้า</th><th class="c">หน่วย</th><th class="hide-m">ขนาดลัง ก×ย×ส (มม.)</th><th class="n">กก./หน่วย</th><th class="n">ต่อชั้น × ชั้น</th><th class="n">ต่อพาเลท</th><th class="n hide-m">พาเลทเต็ม</th><th class="hide-m">ใช้กับ</th></tr></thead><tbody>';
-  if(!L.length) h+='<tr><td colspan="9" class="msg">'+(F.q?'ไม่พบสินค้าที่ค้นหา':'ไม่มีรายการ')+'</td></tr>';
+  h+='<div class="tw ptab"><table><thead><tr><th>รหัส 7-11</th><th class="hide-m">รหัสสินค้า</th><th>ชื่อสินค้า</th><th class="c">หน่วย</th><th class="hide-m">ขนาดลัง ก×ย×ส (มม.)</th><th class="n">กก./หน่วย</th><th class="n">ต่อชั้น × ชั้น</th><th class="n">ต่อพาเลท</th><th class="n hide-m">พาเลทเต็ม</th><th class="hide-m">ใช้กับ</th></tr></thead><tbody>';
+  if(!L.length) h+='<tr><td colspan="10" class="msg">'+(F.q?'ไม่พบสินค้าที่ค้นหา':'ไม่มีรายการ')+'</td></tr>';
   L.forEach(r=>{
     const g=gaps(r), pp=perPal(r), ph=palH(r), pk=palKg(r), nv='<span class="nv">ยังไม่มี</span>';
     h+='<tr tabindex="0" data-id="'+esc(r.product_id)+'" class="'+(r.status==='Inactive'?'off':'')+'">'
       +'<td class="mono">'+(r.sap_code?esc(r.sap_code):nv)+'</td>'
+      +'<td class="mono hide-m">'+(r.item_code?esc(r.item_code):nv)+'</td>'
       +'<td><div class="pn">'+esc(r.name)+'<small>'+[r.brand,r.product_group].filter(Boolean).map(esc).join(' · ')+(r.aliases?' · ไลน์: '+esc(r.aliases):'')+(g.length?' <span class="tag out">ขาด '+esc(g.join(', '))+'</span>':'')+(r.caution?' <span class="tag bad">⚠ '+esc(r.caution)+'</span>':'')+'</small></div></td>'
       +'<td class="c">'+esc(r.main_unit||'')+'</td>'
       +'<td class="dim hide-m">'+(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)?nf(r.case_w_mm,0)+' × '+nf(r.case_l_mm,0)+' × '+nf(r.case_h_mm,0):nv)+'</td>'
@@ -337,7 +338,7 @@ function render(){
 
 /* ── ฟอร์มเพิ่ม/แก้ไข ── */
 const FF=[
-  ['หลัก',[['sap_code','รหัส 7-11','เช่น 104884'],['name','ชื่อสินค้า','เช่น ขวด 1L*12 ทับทิม E',1,'wide'],['brand','ยี่ห้อ','ทับทิม / โบนัส / ไชโย…',0,0,'brands'],['product_group','ประเภท','ขวด / ถุง / ปี๊บ / ถัง',0,0,'groups'],['main_unit','หน่วย','ลัง / ปี๊บ / ถัง / กล่อง',0,0,'units'],['channels','ใช้กับ','7-11, ยี่ปั๊ว'],['aliases','ชื่อเรียกในกลุ่มไลน์','คั่นด้วย , เช่น ไชโย 1ลิตร, ไชโยถุง',0,'wide']]],
+  ['หลัก',[['sap_code','รหัส 7-11','เช่น 104884'],['item_code','รหัสสินค้า','เช่น F5PK22-0100-012-2-0'],['name','ชื่อสินค้า','เช่น ขวด 1L*12 ทับทิม E',1,'wide'],['brand','ยี่ห้อ','ทับทิม / โบนัส / ไชโย…',0,0,'brands'],['product_group','ประเภท','ขวด / ถุง / ปี๊บ / ถัง',0,0,'groups'],['main_unit','หน่วย','ลัง / ปี๊บ / ถัง / กล่อง',0,0,'units'],['channels','ใช้กับ','7-11, ยี่ปั๊ว'],['aliases','ชื่อเรียกในกลุ่มไลน์','คั่นด้วย , เช่น ไชโย 1ลิตร, ไชโยถุง',0,'wide']]],
   ['ขนาดลัง และน้ำหนัก',[['case_w_mm','กว้างลัง (มม.)','240','n'],['case_l_mm','ยาวลัง (มม.)','320','n'],['case_h_mm','สูงลัง (มม.)','293','n'],['weight_per_unit','กก./หน่วย (QC)','11.44','n'],['weight_stock','กก./หน่วย ชีตคลัง','11.52','n']]],
   ['การเรียงบนพาเลท',[['per_layer','หน่วยต่อชั้น','14','n'],['layers','จำนวนชั้น','4','n'],['per_pallet','หน่วยต่อพาเลท','ว่าง = ต่อชั้น × ชั้น','n'],['stack_pallets','พาเลทเต็มซ้อนกันได้ (ชั้น)','เช่น 2','n'],['mix_ok','ผสมเศษกับสินค้าอื่นได้','',0,0,'mix']]],
   ['อื่นๆ',[['caution','ข้อควรระวัง','เช่น ห้ามวางทับ',0,'wide'],['note','หมายเหตุ','',0,'wide'],['status','สถานะ','',0,0,'status']]]];
@@ -413,6 +414,7 @@ function XSPEC(){return {
   rows:R.rows, sort:(a,b)=>String(a.product_id).localeCompare(String(b.product_id)),
   cols:[
     {k:'sap_code',h:'รหัส 7-11',alias:['รหัส SAP'],w:11,help:'รหัสสินค้าของ 7-11 · ไม่ซ้ำกัน · ไม่มีเว้นว่างได้'},
+    {k:'item_code',h:'รหัสสินค้า',w:22,help:'รหัสสินค้า เช่น F5PK22-0100-012-2-0 (ตามไฟล์รายชื่อสินค้า)'},
     {k:'name',h:'ชื่อสินค้า',w:40,req:1},
     {k:'brand',h:'ยี่ห้อ',w:11},{k:'product_group',h:'ประเภท',w:9,help:'ขวด / ถุง / ปี๊บ / ถัง / ถุง BIB'},{k:'main_unit',h:'หน่วย',w:7,help:'ลัง / ปี๊บ / ถัง / กล่อง'},
     {k:'case_w_mm',h:'กว้างลัง (มม.)',w:10,help:'มิลลิเมตร เช่น 240 (ไม่ใช่ 24 ซม.)'},{k:'case_l_mm',h:'ยาวลัง (มม.)',w:10},{k:'case_h_mm',h:'สูงลัง (มม.)',w:10},
