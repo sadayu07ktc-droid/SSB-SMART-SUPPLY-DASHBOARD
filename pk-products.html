@@ -217,6 +217,7 @@
   .dlg-h b{font-size:16px;flex:1}
   .xbtn{border:0;background:none;color:var(--txt2);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:8px}
   .xbtn:hover{background:var(--card2)}
+  .btn.offb{background:transparent;border:1px solid var(--danger);color:var(--danger);box-shadow:none;font-weight:600}.btn.onb{background:transparent;border:1px solid var(--primary);color:var(--primary);box-shadow:none;font-weight:600}
   .dlg-f{display:flex;gap:8px;align-items:center;padding-top:12px;margin-top:8px;border-top:1px solid var(--line)}
   @media(max-width:860px){.ptab{max-height:none}.hide-m{display:none}}
 </style>
@@ -368,7 +369,7 @@ function openForm(r){
     h+='</div>';
     if(sec==='การเรียงบนพาเลท') h+='<div class="calc" id="calc"></div>';
   });
-  h+='</div><div class="dlg-f">'+(ed?'<button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="fSave">'+(isNew?'เพิ่มสินค้า':'บันทึก')+'</button>':'<span class="grow"></span><button class="btn" data-x>ปิด</button>')+'</div></div>';
+  h+='</div><div class="dlg-f">'+(ed?'<button class="btn ghost" data-x>ยกเลิก</button>'+(isNew?'':(r.status==='Inactive'?'<button class="btn onb" id="fOff">↩ กลับมาขาย</button>':'<button class="btn offb" id="fOff">🚫 เลิกขาย</button>'))+'<span class="grow"></span><button class="btn" id="fSave">'+(isNew?'เพิ่มสินค้า':'บันทึก')+'</button>':'<span class="grow"></span><button class="btn" data-x>ปิด</button>')+'</div></div>';
   const w=document.createElement('div'); w.className='dlg'; w.id='pform'; w.innerHTML=h; document.body.appendChild(w);
   if(!ed) w.querySelectorAll('[data-k]').forEach(i=>i.disabled=true);
   const close=()=>{w.remove();FORM=null;};
@@ -378,6 +379,7 @@ function openForm(r){
   w.querySelectorAll('[data-k]').forEach(i=>i.addEventListener('input',calc));
   calc();
   const s=$('fSave'); if(s) s.onclick=()=>saveForm(s);
+  const o=$('fOff'); if(o) o.onclick=()=>setStatus(r,o);
   const first=w.querySelector(isNew?'[data-k="sap_code"]':'[data-x]'); if(first) first.focus();
 }
 function formVals(){const o={};document.querySelectorAll('#pform [data-k]').forEach(i=>o[i.dataset.k]=i.value.trim());return o;}
@@ -390,6 +392,27 @@ function calc(){
   c.innerHTML='พาเลทเต็ม: <b>'+(pp?nf(pp,0)+' '+esc(v.main_unit||'หน่วย'):'—')+'</b> · สูง <b>'+(ph?nf(ph,1)+' ซม.':'—')+'</b> · หนัก <b>'+(pk?nf(pk,1)+' กก.':'—')+'</b>'
     +'<div class="note">รวมไม้พาเลท '+PAL.h_cm+' ซม. / '+PAL.kg+' กก.</div>'+([...new Set(warn)].map(t=>'<div style="color:var(--warn);font-size:12.5px">⚠ '+esc(t)+'</div>').join(''));
   document.querySelectorAll('#pform [data-k^="case_"]').forEach(i=>{const x=n(i.value);i.classList.toggle('bad',x!=null&&(isNaN(x)||x<60));});
+}
+/* ปุ่ม เลิกขาย / กลับมาขาย — เปลี่ยนสถานะอย่างเดียว ไม่ลบข้อมูล */
+function askBox(o){return new Promise(res=>{const w=document.createElement('div');w.className='dlg';w.style.zIndex=60;
+  w.innerHTML='<div class="dlg-in" role="alertdialog" aria-modal="true"><div style="font-size:30px;line-height:1">'+o.icon+'</div><b style="display:block;font-size:16px;margin:8px 0 6px">'+esc(o.title)+'</b><div style="color:var(--txt2);font-size:13.5px;line-height:1.55">'+o.msg+'</div><div class="dlg-f"><span class="grow"></span><button class="btn ghost" data-a="0">ยกเลิก</button><button class="btn" data-a="1"'+(o.danger?' style="background:var(--danger)"':'')+'>'+esc(o.ok)+'</button></div></div>';
+  const end=v=>{w.remove();res(v);};w.onclick=e=>{if(e.target===w)end(false);};w.querySelectorAll('[data-a]').forEach(b=>b.onclick=()=>end(b.dataset.a==='1'));
+  w.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();end(false);}});document.body.appendChild(w);w.querySelector('[data-a="1"]').focus();});}
+async function setStatus(r,b){
+  if(SAVING) return; const off=r.status!=='Inactive';
+  const ok=await askBox(off?{icon:'🚫',title:'เลิกขายสินค้านี้?',msg:'<b>'+esc(r.name)+'</b><br>จะหายจากรายการหลัก แต่ข้อมูลยังเก็บไว้ · ดูได้ที่ชิป "เลิกใช้" และกดกลับมาขายได้ทุกเมื่อ',ok:'เลิกขาย',danger:1}
+    :{icon:'↩',title:'กลับมาขายสินค้านี้?',msg:'<b>'+esc(r.name)+'</b><br>จะกลับไปอยู่ในรายการหลัก',ok:'กลับมาขาย'});
+  if(!ok) return;
+  SAVING=true; const done=btnBusy(b,'กำลังบันทึก…');
+  try{
+    const x=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',userId:MY_UID,row:{product_id:r.product_id,status:off?'Inactive':'Active'}})}).then(y=>y.json());
+    if(!x.ok) throw new Error(x.error||'บันทึกไม่สำเร็จ');
+    $('pform').remove(); FORM=null;
+    toast(off?'✅ เลิกขายแล้ว (ดูได้ที่ชิป เลิกใช้)':'✅ กลับมาขายแล้ว');
+    if(!off&&F.c==='off') F.c='all';
+    await load();
+  }catch(e){toast('❌ '+(e.message||e),1);}
+  finally{SAVING=false;done();}
 }
 async function saveForm(b){
   if(SAVING) return; const v=formVals();
