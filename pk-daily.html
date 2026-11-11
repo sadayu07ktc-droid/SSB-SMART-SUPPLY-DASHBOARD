@@ -263,7 +263,11 @@ main{padding-block:14px 120px}
 .frb{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .btn.frq2{background:#EAF4EC;color:#1B4332;border-color:#9CC8A8}.btn.frq2:hover{background:#DCEEE0}
 .btn.frx{color:var(--bad,#DC2626)}.dsst{font-size:12px;font-weight:600;color:var(--muted,#6b7280);white-space:nowrap;align-self:center}.dsst.w{color:#b45309}.dsst.e{color:#b91c1c}
-.frtag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d8f3dc;color:#1b4332;white-space:nowrap}tr.frv td{box-shadow:inset 0 0 0 999px rgba(64,145,108,.12)}
+.frtag{display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d8f3dc;color:#1b4332;white-space:nowrap}tr.frv td{box-shadow:inset 0 0 0 999px rgba(64,145,108,.12)}tr.frv[data-frd]{cursor:pointer}tr.frv[data-frd]:hover td{box-shadow:inset 0 0 0 999px rgba(64,145,108,.22)}
+/* 11 พ.ย. กดแถวรถไร่ → drawer คนขับ (หน้าจัดการคนขับ ?embed=1 ใน iframe) */
+#mdHost{position:fixed;inset:0;z-index:90;display:none}#mdHost.show{display:block}
+#mdHost .sc{position:absolute;inset:0;background:rgba(15,30,24,.42)}
+#mdHost iframe{position:absolute;top:0;right:0;height:100%;width:min(440px,100vw);border:0;background:#fff;box-shadow:-12px 0 40px rgba(15,30,24,.18)}
 .frpan{border:1px solid rgba(60,143,102,.35);background:rgba(60,143,102,.08);border-radius:12px;padding:10px 12px;margin:0 0 10px;display:flex;flex-direction:column;gap:6px}
 .frpan>b{font-size:13.5px}.frrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13px}.frrow .ell{max-width:340px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .frc.ok{background:#1B4332;color:#fff;border-color:#1B4332}
@@ -1116,6 +1120,20 @@ function frPanel(){const L=frOrphans();if(!L.length)return '';
     +L.map(r=>{const f=frOf(r);return '<div class="frrow"><span class="frc'+(f.st!=='Waiting'?' ok':'')+'">🚜 '+esc(frLab(f))+'</span><b>'+esc(r.rid)+'</b><span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest)+'</span><span class="note">'+esc(r.vt)+(r.need?' · เข้าโหลด '+esc(r.need):'')+' · ส่ง '+esc(f.at)+' '+esc(r.by)+'</span>'
       +(f.st==='Waiting'?'<button class="btn sm frx" data-frxr="'+esc(r.rid)+'">✕ ยกเลิก</button>':'')+'</div>';}).join('')+'</div>';}
 /* 10 พ.ย. คุณน้อง: งานห้างที่ขอรถไร่ ได้รถ/คนขับแล้ว → ลงแพลนรวมด้วย ต่อท้ายตาราง ระบุ "รถไร่" (ข้อมูลจากคำขอ PKR + ออเดอร์ไร่ · แก้ที่แดชบอร์ดไร่) */
+/* 11 พ.ย. คุณน้อง: กดแถวรถไร่ → drawer คนขับตัวเดียวกับหน้า จัดการคนขับ (ManageDrivers ?embed=1 · ไม่ทำซ้ำ)
+ * iframe โดเมนเดียวกัน · uid + คนที่จะเปิด ส่งผ่าน window.__mdEmbed (ไม่ใส่ใน URL) · ปิดแล้วเก็บ iframe ไว้ เปิดคนถัดไปเร็ว */
+let MD_T=null;
+window.__mdEmbed={uid:()=>(typeof MY_UID!=='undefined'?MY_UID:''),target:()=>MD_T,close:()=>mdClose()};
+function mdShow(t){MD_T=t;let H=$('mdHost');
+  if(!H){H=document.createElement('div');H.id='mdHost';H.innerHTML='<div class="sc"></div>';H.querySelector('.sc').onclick=mdClose;document.body.appendChild(H);}
+  let F=H.querySelector('iframe'),w=F&&F.contentWindow;H.classList.add('show');
+  if(w&&typeof w.mdOpen==='function'){try{w.mdOpen(t);return;}catch(e){}}
+  if(F)F.remove();F=document.createElement('iframe');F.title='ข้อมูลคนขับ';F.src='/ManageDrivers/?embed=1';H.appendChild(F);}
+function mdClose(){const H=$('mdHost');if(!H)return;H.classList.remove('show');
+  try{const d=H.querySelector('iframe').contentWindow.document;d.getElementById('drawer').classList.remove('show');}catch(e){}}
+document.addEventListener('click',e=>{const tr=e.target.closest&&e.target.closest('tr[data-frd]');if(!tr||e.target.closest('button,a,input,select'))return;
+  mdShow({plate:tr.dataset.pl||'',name:tr.dataset.dn||'',ord:tr.dataset.or||''});});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mdHost')&&$('mdHost').classList.contains('show')){e.stopPropagation();mdClose();}},true);
 function frPlanList(){if(!frLive())return [];const d=$('pdate').value;return FRL.filter(x=>x.date===d&&frAct(x)&&(x.drv||x.plate));}
 function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTER==='job'))return '';
   const q=(Q||'').trim().toLowerCase(),dash='<span class="m">—</span>',ln=x=>'<div class="ln">'+x+'</div>';
@@ -1126,7 +1144,7 @@ function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTE
   return '<tr class="gr"><td colspan="16"><b>🚜 รถไร่</b> <span>'+rows.length+' คัน · งานห้างที่ขอรถไร่ (แอดมินไร่จัดรถ/คนขับ · แก้ที่แดชบอร์ดไร่)</span></td></tr>'
     +rows.map(({r,S,JS,jn})=>{const pl=String(r.plate||'').split(',').map(x=>x.trim()).filter(Boolean),f=frOf(r),done=/เสร็จ/.test(r.ost||'');
       const cell=fn=>S?S.map(fn).map(ln).join(''):'';
-      return '<tr class="vr2 frv"><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
+      return '<tr class="vr2 frv"'+(r.drv||pl.length?' data-frd="1" data-pl="'+esc(pl.join(','))+'" data-dn="'+esc(r.drv||'')+'" data-or="'+esc(r.ord||'')+'" title="กดดูข้อมูลคนขับ (เหมือนหน้าจัดการคนขับ)"':'')+'><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
         +'<td class="stk1">'+(r.drv?esc(r.drv):'<span class="or">รอคนขับไร่</span>')+'</td>'
         +'<td class="cu">'+(S?S.map((s,i)=>{const nm=s.n||jsN(s);return '<span class="ell" title="'+esc(nm)+'">'+esc(nm)+'</span> '+(JS?stChip(s):'')+(i?'':' <span class="frtag">🚜 รถไร่</span>');}).map(ln).join(''):'<span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest||'—')+'</span> <span class="frtag">🚜 รถไร่</span>')+(jn?'<div class="jnote">📝 '+esc(jn)+'</div>':'')+'</td>'
         +'<td>'+cell(s=>esc(pvOf(s))||'<span class="m">—</span>')+'</td>'
@@ -2325,7 +2343,7 @@ function renderPlan(){
   pmChips(mallTodo(dfx));
   $('v-plan').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{FILTER=b.dataset.f;renderPlan();});
   const q=$('q');q.oninput=()=>{Q=q.value;const pos=q.selectionStart;renderPlan();const n=$('q');n.focus();n.setSelectionRange(pos,pos);};
-  $('v-plan').querySelectorAll('.vr2').forEach(r=>{r.onclick=()=>{if(HIDELP){HIDELP=false;}openEditor(r.dataset.v);};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();HIDELP=false;openEditor(r.dataset.v);}};});
+  $('v-plan').querySelectorAll('.vr2:not(.frv)').forEach(r=>{r.onclick=()=>{if(HIDELP){HIDELP=false;}openEditor(r.dataset.v);};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();HIDELP=false;openEditor(r.dataset.v);}};});
   updBar();
 }
 function updBar(){const c=counts();const nd=new Set(VEH.filter(v=>kind(v)==='job').map(v=>PLAN[v.head].driver)).size;
