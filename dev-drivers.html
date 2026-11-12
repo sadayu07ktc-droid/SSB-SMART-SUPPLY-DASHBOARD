@@ -238,6 +238,9 @@ const gLabel=g=>g==='Packing'?'PK':g==='Bulk'?'Bulk':'ไร่';
 const FLOW=[['รับงานแล้ว','claimed_at','เวลารับงาน'],['เริ่มงานแล้ว','started_at','เวลาเริ่มงาน'],['ถึงลานวางกระบะ','ramp_place_at','เวลาถึงลานวางกระบะ'],
   ['ถึงลูกค้า','arrived_at','เวลาถึงลูกค้า'],['ออกจากลูกค้า','left_customer_at','เวลาออกจากลูกค้า'],['ถึงลานขากลับ','ramp_return_at','เวลาถึงลานขากลับ'],['เสร็จงาน','done_at','เวลาเสร็จงาน']];
 const ACTIVE=FLOW.slice(0,-1).map(x=>x[0]);
+// ช่องที่กรอก → สถานะที่ผ่านขั้นนั้นแล้ว (ไม่รวม done_at/mile_dest — ปิดงานเลือกเอง) · ⚠️ ตรงกับ Edge dev-drivers AUTO_ST
+const AUTO_ST={started_at:'เริ่มงานแล้ว',ramp_place_at:'ถึงลานวางกระบะ',mile_ramp_place:'ถึงลานวางกระบะ',arrived_at:'ถึงลูกค้า',
+  left_customer_at:'ออกจากลูกค้า',mile_customer:'ออกจากลูกค้า',ramp_return_at:'ถึงลานขากลับ',mile_ramp_return:'ถึงลานขากลับ'};
 const pillCls=s=>s==='เสร็จงาน'?'done':s==='ยกเลิก'?'cx':s==='รับงานแล้ว'?'':'run';
 /* ── ช่อง log_weight (ตรงกับรายการอนุญาตใน Edge dev-drivers) ── */
 const PTS=[['start','🚀 เริ่มงาน'],['ramp_place','🏭 ลานวางกระบะ'],['customer','🌴 ลูกค้า/จุดรับ'],['ramp_return','🏭 ลานขากลับ'],['dest','🏁 ปลายทาง']];
@@ -259,6 +262,22 @@ const lbl=k=>JOB_LBL[k]||LABEL[k]||k;
 const SLOT_TIME={rampDrop:'ramp_place_at',client:'left_customer_at',ramp:'ramp_return_at'};
 const SLOT_PT={rampDrop:'ramp_place',client:'customer',ramp:'ramp_return'};
 const SLOT_TH={rampDrop:'ลานวางกระบะ',client:'ลูกค้า',ramp:'ลานขากลับ'};
+/* ── ชื่อสถานะงาน PK (12 พ.ย. คุณน้อง: "งาน packing ไม่มีลานขากลับ") ──
+   ค่าในฐานข้อมูลยังเป็นชื่อเดิม (ใช้ช่องร่วมกับงานไร่) · โชว์ตามฟอร์มคนขับ: ออกจาก SSB → จุด 1..N → กลับถึง SSB */
+const isPkO=o=>!!o&&(/^ORD-PK-/.test(o.order_id||'')||o.job_type==='Packing');
+const pkSlotsN=n=>n<=1?['client']:n===2?['client','ramp']:['rampDrop','client','ramp'];
+const ST_SLOT={'ถึงลานวางกระบะ':'rampDrop','ออกจากลูกค้า':'client','ถึงลานขากลับ':'ramp','ถึงลาน':'ramp'};
+function stTh(st,o,n){
+  if(!isPkO(o)) return st;
+  n=n||String(o.pickup_point||'').split(/\s*\+\s*/).filter(Boolean).length||1;   // หน้ารายการ: นับจาก "ส่งที่" (A + B)
+  if(st==='เริ่มงานแล้ว') return 'ออกจาก SSB แล้ว';
+  if(st==='ถึงลูกค้า') return 'เช็คอินถึงร้านแล้ว';
+  const sl=ST_SLOT[st]; if(!sl) return st;
+  const ss=pkSlotsN(n), i=ss.indexOf(sl); if(i<0) return st+' (ไม่ใช้กับงาน '+n+' จุด)';
+  const upto=i===ss.length-1?n:i+1;
+  return upto>=n?`ส่งครบ ${n} จุด`:`ส่งจุด ${upto} แล้ว`;
+}
+const stJ=st=>stTh(st,JOB&&JOB.order,(JOB&&JOB.pk&&JOB.pk.plan&&JOB.pk.plan.length)||0);
 function jobLayout(){
   const o=JOB.order, lw=JOB.lw||{}, L={hideTime:new Set(),hidePt:new Set(),hideW:new Set(),tLabel:{},ptLabel:{}};
   const plan=JOB.pk&&JOB.pk.plan;
@@ -314,7 +333,7 @@ function arrivalsSec(){
       : oc&&oc.seq===s.seq?`<span>${srcChip(oc.src)} <span class="mini">เวลาถึง ${esc(oc.at)}</span></span>`
       : !s.pin?'<span class="src no">⚠️ ไม่มีหมุด DTC — จับเวลาถึงไม่ได้</span>'
       : '<span class="mini">ยังไม่มีเวลาถึงจาก GPS</span>';
-    return `<div class="arow"><span class="sq">${s.seq}</span><div class="nm"><div><b>${esc(s.name)}</b> <span class="mini">· ช่อง${SLOT_TH[s.slot]||s.slot}</span></div>${arrive}
+    return `<div class="arow"><span class="sq">${s.seq}</span><div class="nm"><div><b>${esc(s.name)}</b></div>${arrive}
       ${l?`<span class="mini">📝 คนขับบันทึกจุดนี้ ${thShort(l.created_at)}</span>`:''}
       ${!a&&l?`<button class="btn ghost sm" data-at="${esc(l.created_at)}" data-seq="${s.seq}" onclick="gpsCheck(this)">📍 ดูพิกัดรถตอนบันทึก</button>`:''}<div class="gpsres"></div></div></div>`; }).join('');
   return `<div class="sec"><h3>📍 เวลาถึงแต่ละจุด<span class="r">รถเข้ารัศมีหมุด DTC = จดเวลาถึงให้เอง</span></h3>${rows}
@@ -378,7 +397,7 @@ async function openDriver(uid){
 function drawJobs(){
   const act=JOBS.filter(j=>ACTIVE.includes(j.status)), rest=JOBS.filter(j=>!ACTIVE.includes(j.status));
   const one=j=>`<button class="job" onclick="openJob('${esc(j.order_id)}')">
-      <div class="r1"><span class="oid">${esc(j.order_id)}</span><span class="pill ${pillCls(j.status)}">${esc(j.status)}</span>
+      <div class="r1"><span class="oid">${esc(j.order_id)}</span><span class="pill ${pillCls(j.status)}" title="${esc(j.status)}">${esc(stTh(j.status,j))}</span>
         ${j.locked?'<span class="pill lock">🔒 ค่าแรงล็อก</span>':''}<span style="margin-left:auto;font-size:11.5px;color:var(--ink-faint)">${esc(j.job_type||'')}</span></div>
       <div class="r2">${esc(j.garden_name||'—')}${j.pickup_point&&j.pickup_point!==j.garden_name?' · 📍 '+esc(j.pickup_point):''}${j.extra_pickup?' · +ลาน '+esc(j.extra_pickup):''}</div>
       <div class="r3"><span>📅 ${esc(j.want_date||'—')} ${esc(j.want_time||'')}</span><span>🚚 ${esc(j.plate||'—')}</span>
@@ -409,12 +428,12 @@ function drawPhone(){
   const src=`/Driver_form/?asDriver=${encodeURIComponent(o.driver_uid)}&order=${encodeURIComponent(o.order_id)}${stub}&t=${Date.now()}`;
   $('#phone').innerHTML=`<div class="ph-bar">📱 จอคนขับจริง (ดูอย่างเดียว)<span class="spacer"></span>${live?'<button class="ib" title="โหลดใหม่" onclick="drawPhone()">↻</button>':''}</div>`
     +(live?`<iframe src="${src}" title="ฟอร์มคนขับ"></iframe>`
-          :`<div class="off">${o.status==='เสร็จงาน'?'✅ งานนี้ <b>เสร็จแล้ว</b>':'⛔ งานนี้ <b>'+esc(o.status)+'</b>'}<br>ฟอร์มคนขับไม่โชว์งานที่จบ/ยกเลิกแล้ว<br>ดูค่าที่บันทึกในแผงขวา</div>`);
+          :`<div class="off">${o.status==='เสร็จงาน'?'✅ งานนี้ <b>เสร็จแล้ว</b>':'⛔ งานนี้ <b>'+esc(stJ(o.status))+'</b>'}<br>ฟอร์มคนขับไม่โชว์งานที่จบ/ยกเลิกแล้ว<br>ดูค่าที่บันทึกในแผงขวา</div>`);
 }
 const vNum=v=>v==null||v===''?'':String(v);
 function fld(key,label,val,opt){   // opt: {num, sel:[...], area, ph}
   opt=opt||{}; const id='f_'+key.replace('.','__');
-  const input=opt.sel ? `<select id="${id}" data-k="${key}" onchange="mark(this)">${opt.sel.map(x=>`<option value="${esc(x)}"${String(val??'')===x?' selected':''}>${x||'—'}</option>`).join('')}</select>`
+  const input=opt.sel ? `<select id="${id}" data-k="${key}" onchange="mark(this)">${opt.sel.map(x=>`<option value="${esc(x)}"${String(val??'')===x?' selected':''}>${esc(opt.selLbl?opt.selLbl(x):x)||'—'}</option>`).join('')}</select>`
     : opt.area ? `<textarea id="${id}" data-k="${key}" rows="2" oninput="mark(this)">${esc(val??'')}</textarea>`
     : `<input id="${id}" data-k="${key}" class="${opt.num?'num':''}" ${opt.num?'inputmode="decimal"':''} value="${esc(vNum(val))}" placeholder="${esc(opt.ph||'')}" oninput="mark(this)">`;
   return `<div class="f" data-orig="${esc(vNum(val))}"><label for="${id}">${esc(label)}</label>${input}<span class="was"></span></div>`;
@@ -426,7 +445,7 @@ function drawPanel(){
   if(locked) h+=`<div class="warnbox">🔒<div><b>${lw.wage_paid_at?'จ่ายค่าแรงใบนี้แล้ว':'ค่าแรงใบนี้ถูกล็อก'}</b> — ดูได้อย่างเดียว แก้ไม่ได้</div></div>`;
   if(cx) h+=`<div class="warnbox">⛔<div><b>งานนี้ถูกยกเลิกแล้ว</b> — ดูได้อย่างเดียว</div></div>`;
   h+=`<div class="sec"><h3>📋 งาน<span class="r">${esc(o.job_type||'')} · ${esc(o.garden_name||'—')}${o.pickup_point?' · 📍 '+esc(o.pickup_point):''} · 📅 ${esc(o.want_date||'')} ${esc(o.want_time||'')}</span></h3>
-    <div class="grid">${fld('order.status','สถานะ',o.status,{sel:FLOW.map(x=>x[0]).concat(FLOW.some(x=>x[0]===o.status)?[]:[o.status])})}
+    <div class="grid">${fld('order.status','สถานะ',o.status,{sel:FLOW.map(x=>x[0]).filter(s=>s===o.status||!/\(ไม่ใช้กับงาน/.test(stJ(s))).concat(FLOW.some(x=>x[0]===o.status)?[]:[o.status]),selLbl:stJ})}
       ${fld('order.plate','ทะเบียน',o.plate)}
       ${(o.job_type||'ปาล์ม')!=='Packing'&&o.job_type!=='Bulk'?fld('order.extra_pickup','จุดรับเพิ่ม (ลาน) · ว่าง = ไม่แวะลาน',o.extra_pickup):''}</div>
     <label class="ck" style="margin-top:9px"><input type="checkbox" id="clrLater" checked> ถอยสถานะ → ล้างเวลาของขั้นที่อยู่หลังสถานะใหม่ให้ด้วย</label></div>`;
@@ -540,10 +559,16 @@ async function save(){
   if(!ch.length && !stCh) return toast('ยังไม่มีการแก้');
   const why=$('#why').value.trim(); if(!why){ $('#why').focus(); return toast('กรุณาใส่เหตุผลที่แก้',true); }
   const warn=[];
-  if(iNew>=0 && stNew!==o.status){ const k=FLOW[iNew][1], el=$('#f_order__'+k); if(el && !el.value.trim()) warn.push(`สถานะ "${stNew}" ยังไม่มี${FLOW[iNew][2]}`); }
+  if(iNew>=0 && stNew!==o.status){ const k=FLOW[iNew][1], el=$('#f_order__'+k); if(el && !el.value.trim()) warn.push(`สถานะ "${stJ(stNew)}" ยังไม่มี${lbl(k)}`); }
   if(iNew<iOld && iNew>=0) warn.push('ถอยสถานะ — ฟอร์มคนขับจะกลับไปขั้นก่อนหน้า');
-  const lines=ch.map(c=>`• ${lbl(c.k.split('.')[1])}: ${c.from||'—'} → ${c.to||'(ว่าง)'}`);
+  const lines=ch.map(c=>c.k==='order.status'?`• สถานะ: ${stJ(c.from)||'—'} → ${stJ(c.to)}`:`• ${lbl(c.k.split('.')[1])}: ${c.from||'—'} → ${c.to||'(ว่าง)'}`);
   if(stCh) lines.push(`• จุดส่ง: ${STOPS.map(s=>s.name).join(' › ')}`);
+  // 🆕 12 พ.ย. ไม่ได้เลือกสถานะเอง + กรอกช่องของขั้นถัดไป → เซิร์ฟเวอร์เลื่อนสถานะให้ (ฟอร์มคนขับปิดขั้นนั้น) · ⚠️ ตรงกับ Edge dev-drivers AUTO_ST
+  if(stNew===o.status && iOld>=0){
+    let iTo=iOld;
+    ch.forEach(c=>{ const st=AUTO_ST[c.k.split('.')[1]]; if(st && String(c.to||'').trim()) iTo=Math.max(iTo,FLOW.findIndex(x=>x[0]===st)); });
+    if(iTo>iOld) lines.push(`• สถานะ: ${stJ(o.status)} → ${stJ(FLOW[iTo][0])} (เลื่อนอัตโนมัติ · ฟอร์มคนขับจะปิดขั้นนี้)`);
+  }
   if(!(await ssbConfirm({icon:'🛠️',title:`ยืนยันแก้ ${o.order_id}`,msg:lines.join('\n')+'\n\nเหตุผล: '+why,warn:warn.join(' · ')||undefined,okText:'บันทึก'}))) return;
   if(!(await ensurePin())) return;
   const body={action:'save',pin:PIN,orderId:o.order_id,reason:why,order:{},lw:{}};
@@ -554,7 +579,7 @@ async function save(){
     const d=await apiPost(body);
     if(d&&d.ok){
       const w=d.wage||{};
-      await ssbAlert({icon:'✅',title:'บันทึกแล้ว',msg:`แก้ ${d.changed.order.length+d.changed.lw.length}${d.changed.stops?' ช่อง + จุดส่ง':' ช่อง'}\nค่าแรง: ${d.wageBefore??'—'} → ${d.wageAfter??'—'}`
+      await ssbAlert({icon:'✅',title:'บันทึกแล้ว',msg:`แก้ ${d.changed.order.length+d.changed.lw.length}${d.changed.stops?' ช่อง + จุดส่ง':' ช่อง'}`+(d.autoStatus?`\nสถานะเลื่อนเป็น "${stJ(d.autoStatus)}" อัตโนมัติ`:'')+`\nค่าแรง: ${d.wageBefore??'—'} → ${d.wageAfter??'—'}`
         +(w.skipped?`\n(${w.reason||'ไม่ได้คิดค่าแรงใหม่'})`:w.ok===false?`\n⚠️ คิดค่าแรงไม่สำเร็จ: ${w.error||''}`:'')});
       BUSY=false; return openJob(o.order_id);
     }
