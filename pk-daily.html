@@ -3123,7 +3123,7 @@ async function ypMark(m,st,extra){m.st=st;if(m.sample||!ypLive())return;
 function ypQty(p){return [p.cs||!p.tk?comma(p.cs||0)+' ลัง':'',p.tk?comma(p.tk)+' ถัง':''].filter(Boolean).join(' + ');}
 function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head].status==='ready').map(v=>{const p=PLAN[v.head],d=drvOf(p.driver),n=p.stops.length;
   return '<option value="'+esc(v.head)+'"'+(v.head===sel?' selected':'')+'>'+esc(plOf(v.head))+' · '+esc(v.g||'')+(d?' · '+esc(d.name.split(' ')[0]):' · ไม่มีคนขับ')+(n?' · มี '+n+' จุด':' · ว่าง')+'</option>';}).join('');}
-function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=ypMatch(p.shop),inP=ypInPlan(m.mid);
+function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=ypMatch(p.shop),inP=ypInPlan(m.mid);
   const sumQ=its.reduce((a,i)=>a+(i.u==='ถัง'?0:(+i.q||0)),0),qT=ypQty(p),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+(p.dlvFrom?' · แจ้งตามมา':'')+'</span>':p.waitDate?'<span class="w">⏳ '+(p.po?'รอเซลส์นัดส่ง/รับ':'รอแจ้งวันเข้ารับ')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
     (p.cs||!p.tk?'<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>':''),(p.tk?'<span class="i">🛢️ '+comma(p.tk)+' ถัง'+(p.tkFree?' (แถมจริง '+comma(p.tkFree)+')':'')+'</span>':''),p.coa?'<span class="r">📄 ต้องมี COA</span>':'',p.receipt?'<span class="w">📃 ใบเสร็จ</span>':'',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':'',p.prepay?'<span class="w">💳 โอนเงินก่อน</span>':'',
     p.pickAt?'<span class="i">'+(p.pickAt==='บางนา'?'🏬 ขึ้นของ คลังบางนา':'🏭 ขึ้นของ โรงงานหนองใหญ่')+'</span>':'',
@@ -3144,7 +3144,7 @@ function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').valu
   else if(p.waitDate)h+='<div class="yppk">⏳ <b>รอเซลส์แจ้งวันเข้ารับ</b> · พอเซลส์พิมพ์ในกลุ่ม เช่น “'+esc(String(p.shop||'ชื่อร้าน').slice(0,30))+' เข้ารับ 14/11” ระบบใส่วันให้การ์ดนี้เอง</div>';
   if(p.statedFree&&p.statedFree!==p.free)h+='<div class="warn">ℹ️ ข้อความแจ้ง “แถม '+comma(p.statedFree)+' ลัง” ในบรรทัดรวม · ยังไม่นับเข้าแพลน (ราคา /N เฉลี่ยลงแล้ว)</div>';
   if(p.pickup){const k=p.pick||{};h+='<div class="yppk">🙋 <b>ลูกค้ารับเอง</b> ไม่ใช้รถเรา'+(k.phone?' · โทร •••-•••-'+esc(String(k.phone).slice(-4)):'')+'</div>';}
-  if(st!=='ignored')h+=ypInfoBox(m);
+  if(st!=='ignored'&&!ro)h+=ypInfoBox(m);
   /* ต้องแจ้งใคร (คุณน้อง 10 พ.ย.): ขึ้นของคลังบางนา = แจ้งคลังบางนา เมลเปิดราคา (บางนาเปิดบิล) · ขึ้นของโรงงานหนองใหญ่ = บัญชี+เซลส์ เปิดราคา (FM-MK-15) + คลังโรงงาน ปิดราคา (FM-MK-14) */
   if(p.pickAt==='บางนา')h+='<div class="yppk">📨 <b>ต้องแจ้งคลังบางนา</b> · ใช้เมล <b>เปิดราคา</b> (คลังบางนาเปิดบิล)</div>';
   else if(p.pickAt==='หนองใหญ่')h+='<div class="yppk">📨 <b>ขึ้นของโรงงานหนองใหญ่</b> · แจ้งบัญชี+เซลส์ <b>เปิดราคา</b> · แจ้งคลังโรงงาน <b>ปิดราคา</b></div>';
@@ -3152,6 +3152,7 @@ function ypCard(m){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').valu
   if((p.notes||[]).length)h+='<div class="note">📝 '+p.notes.map(esc).join(' · ')+'</div>';
   /* เซลส์ unsend / ส่งข้อความแก้ใหม่ (pk-yp v9): ซ่อนเอง · ถ้าลงแพลนไปแล้ว = เตือนให้เอาออกจากรถ */
   if(m.autoNote)h+='<div class="warn">'+(m.auto==='unsent'?'🗑️ ':'✏️ ')+esc(m.autoNote)+(st==='planned'?' · <b>ลงแพลนไปแล้ว ตรวจแล้วกด “คืนเป็น Pending” เพื่อเอาออกจากรถ</b>':m.auto==='replaced'?' · ใช้ข้อความใหม่แทน (อันนี้ซ่อนให้อัตโนมัติ)':'')+'</div>';
+  if(ro)return h+'</div>';   /* หน้า PO: PO ที่ไป Pending ยี่ปั๊วแล้ว = ดูอย่างเดียว (กรอก SO/ลงแพลน/ส่งเมลที่หน้ายี่ปั๊ว · คุณน้อง 12 พ.ย.) */
   h+='<details data-ypdt="raw"'+(ypOpenD.has(m.mid+':raw')?' open':'')+'><summary>ข้อความเดิมในกลุ่ม</summary><pre>'+esc(m.text||'')+'</pre></details>';
   const can=YP.canEdit||!ypLive();
   if(st==='planned'){h+='<div class="ypb" style="justify-content:space-between;align-items:center"><span class="note">'+(m.head==='รับเอง'?'✅ ลูกค้ารับเอง (ไม่ใช้รถเรา)':'✅ ลงแพลนแล้ว')+(m.head==='รับเอง'?(p.pick&&p.pick.plate?' · ทะเบียน '+esc(p.pick.plate):' · ยังไม่มีทะเบียน'):inP?' · รถ '+esc(plOf(inP)):m.head?' · รถ '+esc(plOf(m.head)||m.head):'')+(m.planDate&&m.planDate!==pd?' · วันที่ '+esc(dateTH(m.planDate)):'')+(m.stBy?' · โดย '+esc(m.stBy):'')+'</span>'
@@ -3179,7 +3180,7 @@ function poRow(m){const p=m.p||{},o=p.po||{},d=p.dlv,s=poSt(m),t0=new Date(Date.
   const top=s==='q'?'<div class="pojump"><span>📤 <b>เข้าระบบรอจัดส่งแล้ว</b> · เซลส์แจ้ง'+esc(dl)+' · รายการนี้อยู่ใน <b>Pending ยี่ปั๊ว</b> (ลงแพลน/ส่งเมลที่นั่น)</span><button class="btn sm pri" type="button" data-pojump="'+esc(m.mid)+'">ไปที่ Pending ยี่ปั๊ว →</button></div>'
     :s==='wait'?'<div class="pojump w"><span>⏳ <b>รอเซลส์นัดวันส่ง/วันเข้ารับ</b> · พอเซลส์แจ้งในกลุ่มว่า PO นี้ส่ง/รับวันไหน รายการนี้ย้ายไป Pending ยี่ปั๊วเอง</span></div>':'';
   return '<details class="porow" data-pomid="'+esc(m.mid)+'"'+(ypOpenD.has('po:'+m.mid)?' open':'')+'><summary><span class="pn">'+(nw?'<span class="tchip nw">🆕</span> ':'')+esc(p.shop||'(ไม่มีชื่อร้าน)')+'</span><span class="pd '+cls+'">'+esc(lab)+'</span>'
-    +'<span class="ps">🧾 '+esc(o.no||'-')+(s==='wait'&&o.due?' · กำหนดตาม PO '+esc(dateTH(o.due)):'')+(p.pickup?' · 🙋 รับเอง':'')+'</span><span class="pq">'+ypQty(p)+'</span></summary>'+top+ypCard(m)+'</details>';}
+    +'<span class="ps">🧾 '+esc(o.no||'-')+(s==='wait'&&o.due?' · กำหนดตาม PO '+esc(dateTH(o.due)):'')+(p.pickup?' · 🙋 รับเอง':'')+'</span><span class="pq">'+ypQty(p)+'</span></summary>'+top+ypCard(m,s!=='wait')+'</details>';}
 function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP.msgs.filter(ypIsPo):YP.msgs.filter(ypInYp),c=ypCnt(MS),pd=$('pdate').value;
   const P0=MS.filter(m=>!ypSt(m)),days=[...new Set(P0.map(ypDayOf))].sort((a,b)=>a==='none'?1:b==='none'?-1:a.localeCompare(b));
   if(YP.day&&!days.includes(YP.day))YP.day='';
@@ -3194,14 +3195,14 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP
   else if(!YP.loaded)h+='<div class="note">'+(YP.err?'❌ '+esc(YP.err):'กำลังโหลด…')+'</div>';
   if(YP.src==='nogroup')h+='<div class="ypban">ยังไม่ได้เชิญ LINE OA เข้ากลุ่ม “เซลส์แอดมิน” · ข้างล่างเป็น<b>ตัวอย่าง</b> '+YP.msgs.length+' ข้อความ (ลองลงแพลนได้ · สถานะไม่บันทึก)</div>';
   if(YP.err&&YP.loaded)h+='<div class="warn">โหลดล่าสุดไม่สำเร็จ: '+esc(YP.err)+'</div>';
-  if(ypLive()||YP.msgs.length){h+='<div class="yptab" role="tablist">'+(PO?[['all','ทั้งหมด',pc.all],['wait','⏳ รอนัด',pc.wait],['q','📤 รอจัดส่ง',pc.q],['planned','✅ ลงแพลนแล้ว',pc.planned],['ignored','🙈 ซ่อน',pc.ignored]]
+  if(ypLive()||YP.msgs.length){h+='<div class="yptab" role="tablist">'+(PO?[['wait','⏳ รอนัด',pc.wait],['all','ทั้งหมด',pc.all],['q','📤 รอจัดส่ง',pc.q],['planned','✅ ลงแพลนแล้ว',pc.planned],['ignored','🙈 ซ่อน',pc.ignored]]
       :[['p','⏳ Pending',c.p],['planned','✅ ลงแพลนแล้ว',c.planned],['ignored','🙈 ซ่อน',c.ignored]]).map(([k,l,n])=>'<button role="tab" data-yptab="'+k+'" aria-selected="'+(YP.tab===k)+'" class="'+(YP.tab===k?'on':'')+'">'+l+'<b>'+(n||0)+'</b></button>').join('')+'</div>';
     if(!PO&&YP.tab==='p'&&P0.length){const nwOf=d=>P0.filter(m=>(d===''||ypDayOf(m)===d)&&ypIsNew(m)).length,nwI=k=>k?'<i class="ypnw">ใหม่ '+k+'</i>':'';
       h+='<div class="ypdc" role="group" aria-label="วันรับ/วันส่ง">'+[['','ทั้งหมด',P0.length]].concat(days.map(d=>[d,ypDayLab(d),P0.filter(m=>ypDayOf(m)===d).length]))
         .map(([d,l,c])=>'<button type="button" data-ypday="'+esc(d)+'" class="'+(YP.day===d?'on':'')+'" aria-pressed="'+(YP.day===d)+'">'+(d?'📅 ':'')+esc(l)+' · '+c+nwI(nwOf(d))+'</button>').join('')+'</div>';}
     if(PO&&L.length){const t0=new Date(Date.now()+7*3600e3).toISOString().slice(0,10),late=L.filter(m=>poSt(m)==='q'&&m.p.dlv<t0).length;
       h+='<div class="note" style="margin-top:8px">ลูกค้า '+L.length+' ราย · เรียงตามคิวส่ง (ใกล้สุดอยู่บน)'+(late?' · <b style="color:var(--bad)">เลยวันนัด '+late+'</b>':'')+' · กดชื่อเพื่อดูรายการสินค้า</div>';}
-    h+=L.length?L.map(PO?poRow:ypCard).join(''):(YP.loaded?'<div class="note" style="text-align:center;padding:24px 0">'+(PO?(YP.tab==='all'||YP.tab==='wait'||YP.tab==='q'?'ไม่มี PO รอส่ง 🎉':'ไม่มีรายการ'):YP.tab==='p'?'ไม่มีออเดอร์ค้าง 🎉':'ไม่มีรายการ')+'</div>':'');
+    h+=L.length?L.map(m=>PO?poRow(m):ypCard(m)).join(''):(YP.loaded?'<div class="note" style="text-align:center;padding:24px 0">'+(PO?(YP.tab==='all'||YP.tab==='wait'||YP.tab==='q'?'ไม่มี PO รอส่ง 🎉':'ไม่มีรายการ'):YP.tab==='p'?'ไม่มีออเดอร์ค้าง 🎉':'ไม่มีรายการ')+'</div>':'');
     if(PO)h+='<div class="note">ระบบอ่านรูป/PDF PO ที่เซลส์ส่งในกลุ่มอัตโนมัติ (ทุก 5 นาที · ย้อน 60 วัน) · ⏳ รอนัด = ยังอยู่หน้านี้ · เซลส์แจ้งวัน เช่น “ร้าน… PO… นัดส่ง 14/11” → 📤 รอจัดส่ง ย้ายไป Pending ยี่ปั๊วเอง · ลงแพลนแล้ว = ✅</div>';
     else h+='<div class="note">อ่านจากข้อความ 14 วันล่าสุด · ลังรวม = จำนวน + แถมจริง (+N / แถม N ลัง) · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง · ถัง นับแยก + ต้องมี COA · ข้อความคุยทั่วไปไม่แสดง</div>';}
   h+='</div><div class="df"><button class="btn sm" data-ypre'+(ypLive()?'':' disabled')+'>↻ โหลดใหม่</button><button class="btn pri" data-ypx>ปิด</button></div></aside>'
@@ -3244,7 +3245,7 @@ async function ypPoImg(m,btn){const o=(m.p&&m.p.po)||{};if(!ypLive()||!o.mid){to
   catch(e){if(w)try{w.close();}catch(x){}toast('❌ '+(e.message||e));}
   finally{btn.disabled=false;}}
 function ypOpen(mode){if(typeof ED!=='undefined'&&ED){toast('ปิดลิ้นชักแก้งานรถก่อน แล้วค่อยเปิด '+(mode==='po'?'PO รอส่ง':'Pending ยี่ปั๊ว'));return;}
-  const pm=mode==='po'?1:0;if(pm!==YP.po){YP.po=pm;YP.tab=pm?'all':'p';}
+  const pm=mode==='po'?1:0;if(pm!==YP.po){YP.po=pm;YP.tab=pm?'wait':'p';}
   YP.fresh.clear();YP.day='';ypDraw();const x=document.querySelector('#ypDr .x');if(x)x.focus();if(ypLive())ypLoad();}
 async function ypSet(m,st,btn,extra){const old=m.st;if(btn)btn.disabled=true;
   try{await ypMark(m,st,extra);ypBadge();ypDraw();return true;}catch(e){m.st=old;toast('❌ '+(e.message||e));if(btn)btn.disabled=false;return false;}}
