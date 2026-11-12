@@ -486,15 +486,15 @@ function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[
  *   ① ค่าที่บันทึกไว้ + ต้นทุนบริษัท + ข้อมูลดิบ จาก Supabase (wage-stored · <1 วิ) → ครบทั้งลิ้นชัก
  *   ② "เทียบกับตั้งค่าปัจจุบัน" = GAS getWageMonitor คิดสด (15-60 วิ) → กดปุ่มเมื่อต้องการ (ไม่ยิงทุกครั้งที่เปิด = ประหยัดโควต้า GAS)
  *   ยังไม่เคยบันทึกค่าแรง / Supabase ไม่ตอบ → คิดสดที่ GAS อัตโนมัติแบบเดิม */
-let DR_SEQ=0, DR_ZONES=null, DR_DEST=null, DR_GPS=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท · DR_DEST = ปลายทาง+ประวัติแก้หมุด · DR_GPS = จุดจอดจาก GPS (Promise/ผล)
+let DR_SEQ=0, DR_ZONES=null, DR_DEST=null, DR_GPS=null, DR_BILL=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท · DR_DEST = ปลายทาง+ประวัติแก้หมุด · DR_GPS = จุดจอดจาก GPS (Promise/ผล) · DR_BILL = เลขบิลน้ำมันที่ระบบอ่านจากรูป (12 พ.ย.)
 async function openDetail(orderId){
-  const seq=++DR_SEQ; DR_ZONES=null; DR_DEST=null; DR_GPS=null;
+  const seq=++DR_SEQ; DR_ZONES=null; DR_DEST=null; DR_GPS=null; DR_BILL=null;
   $('ov').classList.add('on');$('dr').classList.add('on');
   $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังโหลดค่าเที่ยว</span></div>';
   try{
     const q=await api({action:'getWageStored',userId:MY_UID,orderId});
     if(seq!==DR_SEQ)return;
-    DR_DEST=q&&q.destInfo||null;
+    DR_DEST=q&&q.destInfo||null; DR_BILL=q&&q.fuelBill||null;
     if(q&&q.ok&&q.stored&&q.stored.snapshot){
       DR_ZONES=q.zones||null; q.stored.settingsAt=q.settingsAt||'';
       renderDetail(orderId,{wage:q.info||{},stored:q.stored,cost:q.cost||null,raw:q.raw},true); return;
@@ -734,8 +734,21 @@ function renderRaw(raw,row){
   const rest=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k]));
   if(rest.length){h+='<div class="sec" style="color:var(--txt2)">📝 อื่นๆ</div>';rest.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});}
   const photos=Object.keys(raw).filter(k=>!SKIP[k]&&isUrl(raw[k]));
-  if(photos.length){h+='<div class="sec" style="color:var(--txt2)">📷 รูปถ่าย</div>';photos.forEach(k=>h+=`<div class="drow"><span class="l">${k}</span><a href="${raw[k]}" target="_blank" style="color:var(--primary);font-weight:600">เปิดรูป ↗</a></div>`);}
+  if(photos.length){h+='<div class="sec" style="color:var(--txt2)">📷 รูปถ่าย</div>';photos.forEach(k=>h+=`<div class="drow"><span class="l">${k}</span><a href="${raw[k]}" target="_blank" style="color:var(--primary);font-weight:600">เปิดรูป ↗</a></div>`+(k==='รูปน้ำมัน(โรงงาน)'?fuelBillRow():''));}
   return h;
+}
+/* 🧾 เลขบิลน้ำมัน (โรงงาน) — เครื่องในออฟฟิศให้ Claude อ่านจากรูปหลังคนขับส่ง (Edge fuel-bill · ทุก 5 นาที 05–22 น.) */
+function fuelBillRow(){
+  const b=DR_BILL; if(!b)return '';
+  const e=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  let v;
+  if(b.pending){
+    const seen=b.runnerSeen?new Date(b.runnerSeen):null, off=!seen||Date.now()-seen>30*60000;
+    v='<span style="color:var(--txt2)">⏳ รอระบบอ่านเลขบิล'+(off?' · เครื่องอ่านบิลออฟไลน์':'')+'</span>';
+  }else if(b.no){
+    v='<b style="font-family:ui-monospace,monospace;letter-spacing:.04em;color:var(--txt)">'+e(b.no)+'</b>'+(b.note?' <span style="color:var(--txt2);font-size:11px">('+e(b.note)+')</span>':'');
+  }else v='<span style="color:#b45309">อ่านเลขบิลไม่ได้'+(b.note?' · '+e(b.note):'')+'</span>';
+  return `<div class="drow" title="ระบบอ่านจากรูปอัตโนมัติ${b.at?' · '+e(new Date(b.at).toLocaleString('th-TH')):''}"><span class="l">🧾 เลขบิลน้ำมัน (โรงงาน)</span><span>${v}</span></div>`;
 }
 function closeDr(){$('ov').classList.remove('on');$('dr').classList.remove('on');if(WA_BACK){WA_BACK=false;waOpen();}}
 $('ov').onclick=closeDr;
