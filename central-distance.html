@@ -195,6 +195,12 @@
   .poisum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 6px}
   .poisum div{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:7px 4px;text-align:center;font-size:11px;color:var(--txt2)}
   .poisum b{display:block;font-size:18px;color:var(--txt);font-variant-numeric:tabular-nums}
+  .poirec{margin-top:16px;border-top:2px solid var(--line);padding-top:4px}
+  .poirec details{border:1px solid var(--line);border-radius:10px;margin-top:8px;background:var(--card2)}
+  .poirec summary{cursor:pointer;padding:9px 12px;font-size:13px;font-weight:700;list-style-position:inside}
+  .poirec summary span{font-weight:500;color:var(--txt2);font-size:12px}
+  .poirec summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:10px}
+  .poirec .poir{padding:8px 12px}
   @media(max-width:620px){.dr-poi .l{display:none}.dr-poi .s{display:inline}}
   @media(max-width:620px){.dtcbtn .lb{display:none}.dr-row{grid-template-columns:minmax(0,1fr) 70px 76px}}
 </style>
@@ -1566,7 +1572,7 @@ function dtcPoiHtml(d){
   const idTx=x=>' <span class="id">'+esc(x.id)+'</span>';
   let h='<div class="note">ดึงเมื่อ '+poiWhen(d.at)+' · หมุดใน DTC '+nf(d.total,0)+' จุด · เทียบกับรอบก่อน '+poiWhen(d.prevSync)+'</div>'
     +'<div class="poisum"><div><b>'+A.length+'</b>เพิ่มใหม่</div><div><b>'+R.length+'</b>เปลี่ยนชื่อ</div><div><b>'+M.length+'</b>ย้ายพิกัด</div><div><b>'+G.length+'</b>หายจาก DTC</div></div>';
-  if(!A.length&&!R.length&&!M.length&&!G.length)h+='<div class="msg" style="padding:18px 6px">✅ ไม่มีหมุดเพิ่มหรือเปลี่ยนจากรอบก่อน</div>';
+  if(!A.length&&!R.length&&!M.length&&!G.length)h+='<div class="msg" style="padding:16px 6px;line-height:1.7">✅ ระบบดึงหมุดจาก DTC เองทุกคืนตี 2 แล้ว<br>รอบนี้ไม่มีอะไรเปลี่ยนเพิ่มจากรอบ '+poiWhen(d.prevSync)+'<br><small>ดูที่เปลี่ยนช่วง '+((d.recent&&d.recent.days)||7)+' วันล่าสุดด้านล่าง</small></div>';
   if(A.length)h+='<div class="poisec">🆕 หมุดใหม่ <span>'+A.length+' จุด</span></div>'+A.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+'<br><small>'+(x.kind?esc(x.kind)+' · ':'')+poiMap(x.loc)+'</small></div>').join('');
   if(R.length)h+='<div class="poisec">✏️ เปลี่ยนชื่อ <span>'+R.length+' จุด</span></div>'+R.map(x=>'<div class="poir"><s style="color:var(--txt2)">'+esc(x.old)+'</s> → <b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)
     +(x.movedM?'<br><span class="poitag w" style="margin-left:0">ย้ายพิกัดด้วย '+poiDist(x.movedM)+'</span> <small>ระบบไม่เปลี่ยนชื่อในค่ากลางให้อัตโนมัติ — DEV ตรวจเอง</small>':'')+'</div>').join('');
@@ -1575,7 +1581,37 @@ function dtcPoiHtml(d){
   if(G.length)h+='<div class="poisec">❌ หายจาก DTC <span>'+G.length+' จุด</span></div>'+G.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)+'<br><small>DTC ไม่ส่งหมุดนี้มารอบนี้ (ถูกลบหรือปิดใน DTC) · ระบบยังเก็บพิกัดเดิมไว้</small></div>').join('');
   if(d.goneOld)h+='<div class="note" style="margin-top:8px">อีก '+d.goneOld+' หมุดหายจาก DTC ไปก่อนหน้านี้แล้ว (ไม่นับรอบนี้)</div>';
   if(R.length||d.renamePending)h+='<div class="note" style="margin-top:10px">🔁 ชื่อที่เปลี่ยน ระบบจะเปลี่ยนตามในค่ากลาง / คู่ปลายทาง / ออเดอร์ / แพลน PK ให้เองตอน <b>02:10 น.</b>'+(d.renamePending?' (รออยู่ '+d.renamePending+' รายการ)':'')+'</div>';
-  return h;
+  return h+dtcPoiRecent(d.recent);
+}
+/* 🗓️ ที่เปลี่ยนช่วง 7 วันล่าสุด (คุณน้อง 12 พ.ย.: รอบตี 2 ดึงไปแล้ว กดปุ่มเลยไม่เจออะไร) · Edge dtc-poi recent
+ * new = dtc_poi.first_seen · ren = dtc_poi_renames (src ผูกหมุด… = DEV ผูกเอง · ที่เหลือ = DTC เปลี่ยนชื่อ) · moved = loc_changes dtc_moved · จัดกลุ่มตามวัน (เวลาไทย) */
+function dtcPoiRecent(rc){
+  const I=(rc&&rc.items)||[], days=(rc&&rc.days)||7;
+  let h='<div class="poirec"><div class="poisec">🗓️ ที่เปลี่ยนช่วง '+days+' วันล่าสุด <span>'+I.length+' รายการ</span></div>';
+  if(rc&&rc.error)return h+'<div class="errbox">โหลดประวัติไม่ได้ — '+esc(rc.error)+'</div></div>';
+  if(!I.length)return h+'<div class="note">ไม่มีหมุดเพิ่ม เปลี่ยนชื่อ หรือย้ายพิกัดในช่วงนี้</div></div>';
+  const by={}, order=[];
+  I.forEach(x=>{if(!by[x.day]){by[x.day]=[];order.push(x.day);}by[x.day].push(x);});
+  order.sort((a,b)=>a<b?1:-1);
+  const dTx=k=>new Date(k+'T00:00:00').toLocaleDateString('th-TH',{weekday:'short',day:'numeric',month:'short',year:'2-digit'});
+  const tm=t=>t?new Date(t).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'})+' น.':'';
+  const st=x=>x.status==='done'?'<span class="poitag c">เปลี่ยนในระบบแล้ว'+(x.central?' · ค่ากลาง '+x.central:'')+'</span>'
+    :x.status==='skip'?'<span class="poitag w" title="'+esc(x.skip)+'">ข้าม</span> <small>'+esc(x.skip)+'</small>':'<span class="poitag w">รอ 02:10 น.</span>';
+  const row=x=>{
+    if(x.type==='new')return '<div class="poir">🆕 <b>'+esc(x.name)+'</b> <span class="id">'+esc(x.id)+'</span><br><small>'+(x.kind?esc(x.kind)+' · ':'')+poiMap(x.loc)+' · '+tm(x.at)+'</small></div>';
+    if(x.type==='moved')return '<div class="poir">📍 <b>'+esc(x.name)+'</b> <span class="id">'+esc(x.id)+'</span> <span class="poitag '+(x.movedM>=1000?'b':'w')+'">ย้าย '+poiDist(x.movedM)+'</span><br><small>เดิม '+poiMap(x.from)+' → ใหม่ '+poiMap(x.to)+' · '+tm(x.at)+'</small></div>';
+    const bind=/ผูกหมุด/.test(x.src||'');
+    return '<div class="poir">✏️ <s style="color:var(--txt2)">'+esc(x.old)+'</s> → <b>'+esc(x.name)+'</b> <span class="id">'+esc(x.id)+'</span>'
+      +(bind?' <span class="poitag c" style="background:var(--card);border:1px solid var(--line);color:var(--txt2)">DEV ผูกหมุด</span>':'')
+      +(x.movedM?' <span class="poitag w">ย้ายด้วย '+poiDist(x.movedM)+'</span>':'')+'<br>'+st(x)+' <small>'+tm(x.at)+'</small></div>';
+  };
+  order.forEach((k,i)=>{
+    const L=by[k], c=t=>L.filter(x=>x.type===t).length, parts=[];
+    if(c('new'))parts.push('ใหม่ '+c('new'));if(c('ren'))parts.push('เปลี่ยนชื่อ '+c('ren'));if(c('moved'))parts.push('ย้าย '+c('moved'));
+    h+='<details'+(i===0?' open':'')+'><summary>'+dTx(k)+' <span>· '+parts.join(' · ')+'</span></summary>'
+      +['new','ren','moved'].map(t=>L.filter(x=>x.type===t).map(row).join('')).join('')+'</details>';
+  });
+  return h+'</div>';
 }
 async function dtcXPost(action,rows,kind){
   const r=await fetch(DTC_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,userId:MY_UID,days:DTC_DAYS,rows,kind:kind||''})});
