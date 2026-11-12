@@ -125,6 +125,21 @@ function km(a1, o1, a2, o2) { const R = 6371, r = (x) => x * Math.PI / 180, dA =
 const loader = (t) => `<div class="ldr"><i></i><span class="sub" style="color:var(--muted)">${esc(t)}</span></div>`;
 
 let UID = '', D = null, P = [], CUM = [], T = 0, playing = false, lastTs = 0, curTrip = '';
+/* 📦 12 พ.ย. คุณน้อง "งาน packing ไม่มีลานขากลับ": สถานะ/ขั้น PK ใช้ช่องร่วมกับงานไร่ → โชว์ตามฟอร์มคนขับ · ⚠️ ตรงกับ Order_Status pkStatusLabel */
+const isPkO = (o) => !!o && (o.jobType === 'Packing' || /^ORD-PK-/.test(o.orderId || ''));
+const pkN = (o) => String(o.pickup || '').split(/\s*\+\s*/).filter(Boolean).length || 0;
+function pkStLbl(st, n) {
+  if (st === 'เริ่มงานแล้ว') return 'ออกจาก SSB แล้ว';
+  if (st === 'ถึงลูกค้า') return 'เช็คอินถึงร้านแล้ว';
+  const sl = { 'ถึงลานวางกระบะ': 'rampDrop', 'ออกจากลูกค้า': 'client', 'ถึงลานขากลับ': 'ramp', 'ถึงลาน': 'ramp' }[st]; if (!sl) return '';
+  if (!n) return sl === 'ramp' ? 'ส่งครบทุกจุด' : sl === 'rampDrop' ? 'ส่งจุด 1 แล้ว' : 'ส่งของแล้ว';
+  const ss = n <= 1 ? ['client'] : n === 2 ? ['client', 'ramp'] : ['rampDrop', 'client', 'ramp'], i = ss.indexOf(sl);
+  if (i < 0) return sl === 'ramp' ? 'ส่งครบทุกจุด' : sl === 'rampDrop' ? 'ส่งจุด 1 แล้ว' : 'ส่งของแล้ว';
+  const upto = i === ss.length - 1 ? n : i + 1; return upto >= n ? `ส่งครบ ${n} จุด` : `ส่งจุด ${upto} แล้ว`;
+}
+const PK_STEP = { started_at: () => 'ออกจาก SSB', arrived_at: () => 'เช็คอินถึงร้าน', done_at: () => 'กลับถึง SSB',
+  ramp_place_at: (n) => pkStLbl('ถึงลานวางกระบะ', n).replace(' แล้ว', ''), left_customer_at: (n) => pkStLbl('ออกจากลูกค้า', n).replace(' แล้ว', ''),
+  ramp_return_at: (n) => pkStLbl('ถึงลานขากลับ', n).replace(' แล้ว', '') };
 let map, L_full, L_done, mk, layerG;
 
 async function api(params) {
@@ -159,7 +174,7 @@ function renderTrips() {
   const range = TDAYS === 1 ? 'วันที่เลือก' : 'ช่วง ' + TDAYS + ' วัน';
   $('trips').innerHTML = (q ? `<div class="sub" style="color:var(--muted);font-size:12.5px;padding:2px 4px">พบ ${list.length} จาก ${TRIPS.length} เที่ยว</div>` : '') +
     (list.length ? list.map((t) => `<button class="trip" data-id="${esc(t.orderId)}" aria-pressed="${t.orderId === curTrip}">
-      <div class="row" style="justify-content:space-between"><b>${hl(t.driver || '—', q)}</b><span class="chip ${t.done ? 'done' : 'run'}">${esc(t.status)}</span></div>
+      <div class="row" style="justify-content:space-between"><b>${hl(t.driver || '—', q)}</b><span class="chip ${t.done ? 'done' : 'run'}">${esc((isPkO(t) && pkStLbl(t.status, pkN(t))) || t.status)}</span></div>
       <small>${hl(t.plate, q)} · ${esc(t.garden || t.pickup)} · ${esc(t.jobType)}</small>
       <small class="num">${hl(t.orderId, q)} · เริ่ม ${multi ? esc(t.started.split(' ')[0]) + ' ' : ''}${esc(t.started.slice(-8, -3))}${t.done ? ' · เสร็จ ' + esc(t.done.slice(-8, -3)) : ''}</small></button>`).join('')
     : `<div class="msg">${q ? 'ไม่พบ "' + esc($('q').value) + '" ใน' + range : 'ไม่มีเที่ยวที่เริ่มงาน' + range}${q && TDAYS < 30 ? `<div style="margin-top:8px"><button class="btn sec" id="wider">ค้นย้อนหลัง 30 วัน</button></div>` : ''}</div>`);
@@ -176,6 +191,11 @@ async function openTrip(id) {
   if (curTrip !== id) return;
   if (!d.ok) { $('info').innerHTML = `<div class="warn b">${esc(d.error || (d.denied ? 'ไม่มีสิทธิ์' : 'ดึงเส้นทางไม่ได้'))}</div>`; return; }
   D = d; P = d.points || [];
+  if (isPkO(D)) {   // 📦 งาน PK ไม่มีลาน → ชื่อขั้นตามฟอร์มคนขับ (ช่องเวลาใช้ร่วมกับงานไร่)
+    const n = pkN(D);
+    (D.steps || []).forEach((s) => { const l = PK_STEP[s.key] ? PK_STEP[s.key](n) : ''; if (l) s.label = l; });
+    D.statusTh = pkStLbl(D.status, n) || D.status;
+  }
   CUM = [0]; for (let i = 1; i < P.length; i++) CUM[i] = CUM[i - 1] + km(P[i - 1][1], P[i - 1][2], P[i][1], P[i][2]);
   drawMap(); renderInfo(); renderTimeline();
   if (P.length) { $('player').hidden = false; $('seek').min = P[0][0]; $('seek').max = P[P.length - 1][0]; seek(P[0][0]); renderTicks(); }
@@ -248,7 +268,7 @@ function renderInfo() {
     if (best > 1) w.push(`<div class="warn">รถไม่เคยเข้าใกล้หมุดปลายทางเกิน <b>${nf(best, 1)} กม.</b> · หมุดสวน/จุดรับในระบบอาจผิด (แก้ได้ที่หน้าสวน)</div>`);
   }
   if (!D.dest) w.push('<div class="warn">ปลายทางยังไม่มีพิกัดในระบบ</div>');
-  $('info').innerHTML = `<div class="row" style="justify-content:space-between"><b>${esc(D.driver)} · ${esc(D.plate.split(',')[0])}</b><span class="chip ${D.status === 'เสร็จงาน' ? 'done' : 'run'}">${esc(D.status)}</span></div>
+  $('info').innerHTML = `<div class="row" style="justify-content:space-between"><b>${esc(D.driver)} · ${esc(D.plate.split(',')[0])}</b><span class="chip ${D.status === 'เสร็จงาน' ? 'done' : 'run'}">${esc(D.statusTh || D.status)}</span></div>
     <div class="sub" style="color:var(--muted);font-size:12.5px">${esc(D.orderId)} · ${esc(D.garden)}${D.pickup && D.pickup !== D.garden ? ' · ' + esc(D.pickup) : ''}</div>
     <div class="sum" style="margin-top:8px"><div><b class="num">${D.km != null ? nf(D.km, 1) : nf(CUM[CUM.length - 1] || 0, 1)}</b>กม.${D.km != null ? ' (เลขไมล์)' : ''}</div><div><b class="num">${Math.floor(durMin / 60)}:${String(Math.round(durMin % 60)).padStart(2, '0')}</b>ชม. ทั้งเที่ยว</div><div><b class="num">${Math.floor(runMin / 60)}:${String(Math.round(runMin % 60)).padStart(2, '0')}</b>ชม. วิ่ง</div><div><b class="num">${(D.stops || []).length}</b>จุดจอด ≥5 น.</div></div>
     ${w.join('')}`;

@@ -201,6 +201,25 @@ function stInfo(s){
   return {c:'--st-wait',bg:'--st-wait-bg',g:'wait',lbl:s||'รอยืนยัน'};
 }
 const isActive=s=>{const g=stInfo(s).g;return g!=='cancel';};
+/* 📦 12 พ.ย. คุณน้อง "งาน packing ไม่มีลานขากลับ": สถานะ PK ใช้ช่องร่วมกับงานไร่ → โชว์ตามฟอร์มคนขับ (ค่าใน DB เดิม)
+   ช่องตามจำนวนจุด: 1 = ลูกค้า · 2 = ลูกค้า→ลานขากลับ · 3+ = ลานวางกระบะ→ลูกค้า→ลานขากลับ · ⚠️ ตรงกับ Order_Status pkStatusLabel / dev-drivers stTh */
+const isPkO=o=>!!o&&(o.jobType==='Packing'||/^ORD-PK-/.test(o.orderId||''));
+const pkN=o=>{ const ps=[o.dest,o.pickup].map(x=>String(x||'').split(/\s*\+\s*/).filter(Boolean).length); return Math.max(...ps)||0; };   // 0 = ไม่รู้จำนวนจุด
+function pkStLbl(st,n){
+  if(st==='เริ่มงานแล้ว') return 'ออกจาก SSB แล้ว';
+  if(st==='ถึงลูกค้า') return 'เช็คอินถึงร้านแล้ว';
+  const sl={'ถึงลานวางกระบะ':'rampDrop','ออกจากลูกค้า':'client','ถึงลานขากลับ':'ramp','ถึงลาน':'ramp'}[st]; if(!sl) return '';
+  if(!n) return sl==='ramp'?'ส่งครบทุกจุด':sl==='rampDrop'?'ส่งจุด 1 แล้ว':'ส่งของแล้ว';
+  const ss=n<=1?['client']:n===2?['client','ramp']:['rampDrop','client','ramp'], i=ss.indexOf(sl);
+  if(i<0) return sl==='ramp'?'ส่งครบทุกจุด':sl==='rampDrop'?'ส่งจุด 1 แล้ว':'ส่งของแล้ว';   // จำนวนจุดไม่ตรง/ไม่รู้
+  const upto=i===ss.length-1?n:i+1; return upto>=n?`ส่งครบ ${n} จุด`:`ส่งจุด ${upto} แล้ว`;
+}
+// ชื่อขั้นในไทม์ไลน์ drawer งาน PK (ช่องเวลา → จุดส่ง)
+function pkStepLbl(key,n){
+  if(key==='start') return 'ออกจาก SSB'; if(key==='arrive') return 'เช็คอินถึงร้าน'; if(key==='done') return 'กลับถึง SSB';
+  const st={dropBin:'ถึงลานวางกระบะ',leave:'ออกจากลูกค้า',returnBin:'ถึงลานขากลับ'}[key];
+  const l=st&&pkStLbl(st,n); return l?l.replace(' แล้ว',''):null;
+}
 
 function rangeFor(){
   if(VIEW==='day'){const d=new Date(ANCHOR);d.setHours(0,0,0,0);return {from:d,to:d,days:[d]};}
@@ -409,6 +428,8 @@ function openJob(id){
     ['returnBin','ถึงลานขากลับ',null],
     ['done','เสร็จงาน', o.heavyKm>0?('🏋️ ขากลับหนัก '+fmt(o.heavyKm,1)+' กม.'):null]
   ].filter(s=>T[s[0]]);
+  const pk=isPkO(o), n=pk?pkN(o):0;
+  if(pk) steps.forEach(s=>{ const l=pkStepLbl(s[0],n); if(l) s[1]=l; });
   let timeline='';
   if(steps.length){
     timeline='<div class="tlsec"><div class="tlh">ไทม์ไลน์งาน</div><div class="tl">'+
@@ -451,7 +472,7 @@ function openJob(id){
 
   $('#dr').innerHTML=`<div class="drh"><button class="x" onclick="closeDr()">✕</button>
       <div style="font-size:11.5px;opacity:.85">${o.orderId}</div><h3>${o.dest||o.pickup||'งาน'}</h3>
-      <div style="margin-top:8px;display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="stpill" style="background:rgba(255,255,255,.16);color:#fff">● ${st.lbl}</span>${wageChip}</div></div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:7px;flex-wrap:wrap"><span class="stpill" style="background:rgba(255,255,255,.16);color:#fff">● ${(pk&&pkStLbl(String(o.status||'').trim(),n))||st.lbl}</span>${wageChip}</div></div>
     <div class="drb">
       <div class="kv"><span class="k">คนขับ</span><span class="v">${o.driverName||dr&&dr.name||'— ยังไม่มอบหมาย'}</span></div>
       <div class="kv"><span class="k">ทะเบียน</span><span class="v num">${o.plate||dr&&dr.plate||'—'}</span></div>

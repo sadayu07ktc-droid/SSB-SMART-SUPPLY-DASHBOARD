@@ -239,8 +239,23 @@ const ST_COLOR={'รอยืนยัน':['#B7892A','#FBEED3'],'ยืนย�
   'ถึงลูกค้า':['#0E7C66','#DCF3E3'],'ออกจากลูกค้า':['#157A40','#DCF3E3'],
   'เสร็จงาน':['#157A40','#DCF3E3'],'ยกเลิก':['#6B7A70','#EEF1EE'],
   'รออนุมัติยกเลิก':['#A91F12','#FBE4E1'],'แจ้งเตือนแอดมิน':['#B7892A','#FBEED3']};
-const stBadge=s=>{const c=ST_COLOR[s]||['#6B7A70','#EEF1EE'];
-  return `<span class="sbadge" style="color:${c[0]};background:${c[1]}">${esc(s)}</span>`;};
+/* 📦 12 พ.ย. คุณน้อง "งาน packing ไม่มีลานขากลับ": สถานะ PK ใช้ช่องร่วมกับงานไร่ → โชว์ตามฟอร์มคนขับ (ค่าใน DB เดิม)
+   ⚠️ ตรงกับ Order_Status pkStatusLabel / schedule.html pkStLbl / dev-drivers stTh */
+const isPkO=o=>!!o&&(o.jobType==='Packing'||/^ORD-PK-/.test(o.id||''));
+function pkStLbl(st,n){
+  if(st==='เริ่มงานแล้ว') return 'ออกจาก SSB แล้ว';
+  if(st==='ถึงลูกค้า') return 'เช็คอินถึงร้านแล้ว';
+  const sl={'ถึงลานวางกระบะ':'rampDrop','ออกจากลูกค้า':'client','ถึงลานขากลับ':'ramp','ถึงลาน':'ramp'}[st]; if(!sl) return '';
+  if(!n) return sl==='ramp'?'ส่งครบทุกจุด':sl==='rampDrop'?'ส่งจุด 1 แล้ว':'ส่งของแล้ว';
+  const ss=n<=1?['client']:n===2?['client','ramp']:['rampDrop','client','ramp'], i=ss.indexOf(sl);
+  if(i<0) return sl==='ramp'?'ส่งครบทุกจุด':sl==='rampDrop'?'ส่งจุด 1 แล้ว':'ส่งของแล้ว';
+  const upto=i===ss.length-1?n:i+1; return upto>=n?`ส่งครบ ${n} จุด`:`ส่งจุด ${upto} แล้ว`;
+}
+const RAMP_LBL={'ถึงลานวางกระบะ':'แวะวางกระบะ','ถึงลานขากลับ':'รับปาล์มกลับ'};   // งานไร่แวะลาน
+const stLabel=(s,o)=>(isPkO(o)&&pkStLbl(s,String(o.pickup||'').split(/\s*\+\s*/).filter(Boolean).length))||RAMP_LBL[s]||s;
+const stBadge=(s,o)=>{const c=ST_COLOR[s]||(ST_SLOT_RUN[s]?ST_COLOR['เริ่มงานแล้ว']:['#6B7A70','#EEF1EE']);
+  return `<span class="sbadge" style="color:${c[0]};background:${c[1]}" title="${esc(s)}">${esc(stLabel(s,o))}</span>`;};
+const ST_SLOT_RUN={'ถึงลานวางกระบะ':1,'ถึงลานขากลับ':1,'ถึงลาน':1};
 
 async function api(p){ const u=GAS_URL+'?'+Object.entries(p).map(([k,v])=>k+'='+encodeURIComponent(v)).join('&');
   const r=await fetch(u); return r.json(); }
@@ -304,7 +319,7 @@ function render(){
           ${o.bins?`<span>${esc(o.bins)} กระบะ</span>`:''}
           ${o.status==='เสร็จงาน'
             ?'<span class="wtag done">✓ ชั่งครบ จบงาน</span>'
-            :(o.hasWeight?'<span class="wtag" title="มีใบชั่งจริง (สุทธิ/รูปใบชั่ง) แล้ว แต่ออเดอร์ยังไม่เสร็จงาน — ปาล์มจะขึ้นก็ต่อเมื่อแวะชั่งที่ลานขากลับ">⚖️ ชั่งแล้ว · ยังไม่จบงาน</span>':'')}
+            :(o.hasWeight?`<span class="wtag" title="${isPkO(o)?'มีใบชั่งแล้ว แต่คนขับยังไม่กดกลับถึง SSB':'มีใบชั่งจริง (สุทธิ/รูปใบชั่ง) แล้ว แต่ออเดอร์ยังไม่เสร็จงาน — ปาล์มจะขึ้นก็ต่อเมื่อแวะชั่งที่ลานขากลับ'}">⚖️ ชั่งแล้ว · ยังไม่จบงาน</span>`:'')}
         </div>
         ${wt?`<div class="cxbox ${late?'late':''}">
           ⏳ <b>คนขับขอยกเลิก</b> · ผู้ขอ <b>${esc(o.driver||'—')}</b> · ขอเมื่อ <b>${esc(fmtIsoTH(o.cancelAt))}</b> <span class="cxage">${esc(cxAge(h))}</span><br>
@@ -315,7 +330,7 @@ function render(){
           </div></div>`:''}
       </div>
       <div class="oact">
-        ${stBadge(o.status)}
+        ${stBadge(o.status,o)}
         ${wt?'':`<div style="display:flex;gap:5px">
           <button class="mini" onclick="doCancel('${esc(o.id)}')" ${o.canCancel?'':'disabled'}>ยกเลิก</button>
           <button class="mini del" onclick="doDelete('${esc(o.id)}')" ${del?'':`disabled title="${esc(noDelWhy)}"`}>ลบ</button>
