@@ -2425,12 +2425,13 @@ addEventListener('resize',t24Close);document.addEventListener('scroll',e=>{const
 function lpmHost(){let h=$('lpmHost');if(!h){h=document.createElement('aside');h.id='lpmHost';h.className='lp ed lpm';h.setAttribute('role','dialog');h.setAttribute('aria-modal','true');document.body.appendChild(h);}return h;}
 function closeEditor(){const sc=$('lpmScrim');if(sc)sc.remove();const hm=$('lpmHost');if(hm)hm.remove();ED=null;if($('lp'))$('lp').innerHTML='';renderPlan();}
 /* ---------- สถานะรถสด GPS (เหมือนหน้า Command Center · Edge manage-drivers getDrivers ทุก 1 นาที) ----------
- * จับคู่ด้วยทะเบียน (หัว/หาง) ของคนขับในระบบ · รถที่ไม่มีคนขับผูก = ยังไม่รู้ตำแหน่ง · เปิดนอกเว็บ (artifact) = ไม่มีสถานะสด */
+ * จับคู่ด้วยทะเบียน (หัว/หาง) ของคนขับในระบบ · รถที่ไม่มีคนขับผูก = จับจากชื่อรถใน DTC (fleet) · เปิดนอกเว็บ (artifact) = ไม่มีสถานะสด */
 let LIVE=null,LIVE_AT=0,GF='';
 const npl=s=>String(s||'').replace(/[\s\-]/g,'');
 async function loadLive(){if(typeof MY_UID==='undefined'||!MY_UID)return;
   try{const r=await fetch('https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/manage-drivers?action=getDrivers&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(x=>x.json());
     if(!r||!r.ok)return;const m={};(r.drivers||[]).forEach(d=>String(d.plates||d.plate||'').split(',').forEach(p=>{const k=npl(p);if(k&&!m[k])m[k]=d;}));
+    (r.fleet||[]).forEach(f=>{const k=npl(f.k);if(k&&!m[k])m[k]=f;});   /* รถใน GPS ที่ยังไม่มีคนขับผูก (manage-drivers v7) */
     LIVE=m;LIVE_AT=Date.now();if(!JE&&(!ED||ED.modal))renderList();}catch(e){}}
 function liveOf(v){if(!LIVE)return null;for(const p of v.plate.split(',')){const d=LIVE[npl(p)];if(d)return d;}return null;}
 /* สถานะเดียวกับหน้า Command: อยู่ที่โรงงาน (≤2 กม.) · วิ่งออกไป/วิ่งกลับ · จอดไม่ดับเครื่อง · จอดดับเครื่อง · ออฟไลน์ */
