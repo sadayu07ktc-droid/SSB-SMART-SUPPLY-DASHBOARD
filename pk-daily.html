@@ -1106,11 +1106,24 @@ let FRN=0;
 /* เว็บจริง: คำขอ PKR อยู่ใน pk_requests (mall_ref) · FRL = รายการจาก Edge (boot.farm / ?action=farm) */
 const frLive=()=>typeof PKD_URL!=='undefined'&&typeof MY_UID!=='undefined'&&!!MY_UID;
 let FRL=(window.__D&&window.__D.farm)||[],FRB=false;
+let FRX=new Set();   /* ref คำขอที่แอดมินลบงานทิ้งเอง → ไม่ดึงกลับ (เก็บในแพลนวันนั้น · fra) */
 const frRef=j=>j.lp?'lp:'+j.lp:'job:'+(j.uid||(j.uid=Math.random().toString(36).slice(2,10)));
 const frHm=s=>{const d=new Date(s);return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
 const frOf=r=>({rid:r.rid,st:r.ord&&/เสร็จ/.test(r.ost)?'Delivered':r.st,at:frHm(r.at),by:r.by,need:r.need,note:r.note,plate:r.plate,drv:r.drv,ord:r.ord,ref:r.ref,live:1});
 const frAct=r=>r&&r.st!=='ยกเลิก';
-function frApply(){if(!frLive())return;const d=$('pdate').value;
+/* 12 พ.ย. คุณน้อง "ทำไมต้องแยกข้างบน แยกข้างล่าง": คำขอรถไร่ของวันนี้ที่ไม่มีงานในหน้า (ส่งก่อนมีบันทึกแพลนอัตโนมัติ 10 พ.ย.)
+ * → สร้างงานห้างคืนจากคำขอ (ร้าน/เวลา/พาเลท/ลัง/ขนาดรถ จาก pk_request_items) ให้อยู่ในตารางเดียวกัน + แพลนรวมได้ชิปเหมือนงานอื่น
+ * ทำเฉพาะตอนโหลดแพลนวันนั้นแล้ว + บัญชีแก้ได้ · ref แบบ job: เท่านั้น (lp: ผูก PO อยู่ ปล่อยไว้ในกล่องเดิม) · ลบงานเองแล้ว = ไม่ดึงกลับ */
+function frStop(x){const nm=String(x.n||'').trim(),m=nm.match(/^↩\s*รับ(.+?)\s*@\s*(.+)$/),key=v=>String(v||'').replace(/\s+/g,'');
+  const n=m?m[2].trim():nm,b=ST.find(t=>t.n===n)||ST.find(t=>key(t.n)===key(n));
+  const o={id:b?b.id:null,n:b?b.n:n,km:b?b.km:null,at:m?'':(x.at||''),pal:m||!+x.pal?'':String(x.pal),cs:m||!+x.cs?'':String(x.cs)};
+  if(!m&&+x.kg)o.kg=+x.kg;if(m){o.rt={d:'',k:m[1].trim(),q:'',u:'ลัง',id:Math.random().toString(36).slice(2,14)};o.ty='ห้าง';}else if(!b)o.ty='ห้าง';return o;}
+function frAdopt(){if(typeof DS==='undefined'||!DS.on||!DS.ready||!DS.edit)return;const d=$('pdate').value;if(DS.date!==d)return;
+  const refs=new Set(MJ.map(frRef)),add=FRL.filter(r=>r.date===d&&frAct(r)&&/^job:\w+$/.test(r.ref)&&!refs.has(r.ref)&&!FRX.has(r.ref));
+  add.forEach(r=>{refs.add(r.ref);const src=r.stops&&r.stops.length?r.stops:String(r.dest||'').split(' + ').filter(Boolean).map(n=>({n}));
+    MJ.push({id:'H'+(++MJN),uid:r.ref.slice(4),unl:'',head:'',note:'',size:SZL[r.vt]?r.vt:'พ่วง',stops:src.map(frStop),driver:'',carrier:'',fra:r.rid});});
+  if(add.length){syncMall();toast('🚜 ดึงงานห้างที่ขอรถไร่กลับเข้าตาราง '+add.length+' งาน ('+add.map(r=>r.rid).join(', ')+')');}}
+function frApply(){if(!frLive())return;frAdopt();const d=$('pdate').value;
   MJ.concat(JE&&JE.j?[JE.j]:[]).forEach(j=>{const r=FRL.filter(x=>x.ref===frRef(j)&&x.date===d&&frAct(x)).pop();
     if(r){j.fr=frOf(r);if(!j.head&&r.st!=='Waiting')j.carrier='รถไร่';}else if(j.fr&&j.fr.live){delete j.fr;if(j.carrier==='รถไร่')j.carrier='';}});}
 /* คำขอวันนี้ที่ไม่ผูกกับงานในหน้า (เปิดหน้าใหม่ / ลบงานไปแล้ว) → แผง 🚜 ส่งให้ไร่ */
@@ -1134,6 +1147,8 @@ function mdClose(){const H=$('mdHost');if(!H)return;H.classList.remove('show');
 document.addEventListener('click',e=>{const tr=e.target.closest&&e.target.closest('tr[data-frd]');if(!tr||e.target.closest('button,a,input,select'))return;
   mdShow({plate:tr.dataset.pl||'',name:tr.dataset.dn||'',ord:tr.dataset.or||''});});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mdHost')&&$('mdHost').classList.contains('show')){e.stopPropagation();mdClose();}},true);
+/* 12 พ.ย. คุณน้อง "ทำไม 2 บรรทัดแรกไม่มีชิปห้าง": แถวที่งานห้างไม่อยู่ในหน้า (ใช้ร้านจากคำขอ PKR) เดิมไม่ใส่ชิปเลย → ขอรถไร่ = งานห้างเสมอ · จุดรับของคืน/ของเสีย = ↩ ขากลับ */
+const frStChip=n=>/↩|รับสินค้าคืน|ของเสีย/.test(n)?'<span class="tchip rtc">↩ ขากลับ</span>':tchip('ห้าง');
 function frPlanList(){if(!frLive())return [];const d=$('pdate').value;return FRL.filter(x=>x.date===d&&frAct(x)&&(x.drv||x.plate));}
 function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTER==='job'))return '';
   const q=(Q||'').trim().toLowerCase(),dash='<span class="m">—</span>',ln=x=>'<div class="ln">'+x+'</div>';
@@ -1146,7 +1161,7 @@ function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTE
       const cell=fn=>S?S.map(fn).map(ln).join(''):'';
       return '<tr class="vr2 frv"'+(r.drv||pl.length?' data-frd="1" data-pl="'+esc(pl.join(','))+'" data-dn="'+esc(r.drv||'')+'" data-or="'+esc(r.ord||'')+'" title="กดดูข้อมูลคนขับ (เหมือนหน้าจัดการคนขับ)"':'')+'><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
         +'<td class="stk1">'+(r.drv?esc(r.drv):'<span class="or">รอคนขับไร่</span>')+'</td>'
-        +'<td class="cu">'+(S?S.map((s,i)=>{const nm=s.n||jsN(s);return '<span class="ell" title="'+esc(nm)+'">'+esc(nm)+'</span> '+(JS?stChip(s):'')+(i?'':' <span class="frtag">🚜 รถไร่</span>');}).map(ln).join(''):'<span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest||'—')+'</span> <span class="frtag">🚜 รถไร่</span>')+(jn?'<div class="jnote">📝 '+esc(jn)+'</div>':'')+'</td>'
+        +'<td class="cu">'+(S?S.map((s,i)=>{const nm=s.n||jsN(s);return '<span class="ell" title="'+esc(nm)+'">'+esc(nm)+'</span> '+(JS?stChip(s):frStChip(nm))+(i?'':' <span class="frtag">🚜 รถไร่</span>');}).map(ln).join(''):'<span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest||'—')+'</span> <span class="frtag">🚜 รถไร่</span>')+(jn?'<div class="jnote">📝 '+esc(jn)+'</div>':'')+'</td>'
         +'<td>'+cell(s=>esc(pvOf(s))||'<span class="m">—</span>')+'</td>'
         +'<td class="n">'+cell(s=>s.at?'<b class="tm">'+esc(s.at)+'</b>':'<span class="m">—</span>')+'</td>'
         +'<td class="n">'+cell(s=>esc(s.pal||'')||'<span class="m">—</span>')+'</td>'
@@ -1983,7 +1998,7 @@ function openPlanExport(){
 /* ---------- ลบงานห้างที่ยังไม่แจก (แจกแล้ว = ลบในลิ้นชัก แล้วส่งฉบับแก้ไข) ---------- */
 const unsent=()=>MJ.filter(j=>!MALL.snap[j.id]);
 const jobLine=j=>j.id+' · '+SZL[j.size]+' · '+(j.stops.map(s=>(s.at?s.at+' ':'')+s.n).join(' → ')||'ยังไม่ใส่ร้าน')+(j.head?' · '+plOf(j.head):'');
-function delMall(ids){if(!ids.length)return;MJ=MJ.filter(j=>!ids.includes(j.id));if(JE&&ids.includes(JE.j.id))JE=null;syncMall();renderAll();toast('ลบ '+ids.length+' งานแล้ว (เดโม) · '+ids.join(', '));}
+function delMall(ids){if(!ids.length)return;MJ.forEach(j=>{if(ids.includes(j.id)&&j.fr)FRX.add(frRef(j));});MJ=MJ.filter(j=>!ids.includes(j.id));if(JE&&ids.includes(JE.j.id))JE=null;syncMall();renderAll();toast('ลบ '+ids.length+' งานแล้ว (เดโม) · '+ids.join(', '));}
 const lpNote=L=>L.some(j=>j.lp)?'<p class="note">งาน 📦 LP: ถ้ากด "ส่งเข้าแพลนห้าง" จาก Loading Planner อีกครั้ง งานของวันนั้นจะกลับมา</p>':'';
 async function askDelJob(id){const j=MJ.find(x=>x.id===id);if(!j||MALL.snap[id])return;
   if(!(await askModal({title:'ลบงาน '+id+'?',ok:'ลบงาน',cancel:'ไม่ลบ',icon:'🗑️',danger:1,html:'<p><b>'+esc(jobLine(j))+'</b></p><p class="note">งานนี้ยังไม่ได้แจก ลบแล้วไม่มีใครได้รับแจ้ง</p>'+lpNote([j])})))return;delMall([id]);}
@@ -2276,6 +2291,7 @@ async function drGo(type,kind,b,close){if(drGo.busy)return;drGo.busy=1;const t0=
 let HIDELP=false;
 function renderPlan(){
   lpShow();if(PM==='mall'){renderMall();return;}
+  if(frLive())frAdopt();   /* 12 พ.ย. คำขอรถไร่ที่ไม่มีงานในหน้า → ดึงกลับเป็นงานห้าง (แพลนรวมได้ชิปห้าง/ขากลับเหมือนงานอื่น) */
   if(ED)sync();
   const c=counts(),{dc,hc}=busy();
   const d0=new Date($('pdate').value+'T00:00:00'),mon=isNaN(d0)?'':MON[d0.getMonth()],today=isNaN(d0)?'':d0.getDate();
@@ -2847,9 +2863,10 @@ $('bClr').onclick=clearAll;
 const DS={on:frLive(),date:'',ver:0,last:'',ready:false,t:null,busy:false,err:0,edit:true,at:null,by:''};
 const DS_URL=typeof PKD_URL!=='undefined'?PKD_URL.replace(/pk-daily$/,'pk-draft'):'';
 const DS_BASE=JSON.stringify(PLAN);
-function dsSnap(){return JSON.stringify({v:1,plan:PLAN,mj:MJ,mjn:MJN,mall:{rev:MALL.rev,snap:MALL.snap,log:MALL.log,ack:[...MALL.ack]}});}
+function dsSnap(){return JSON.stringify({v:1,plan:PLAN,mj:MJ,mjn:MJN,fra:[...FRX],mall:{rev:MALL.rev,snap:MALL.snap,log:MALL.log,ack:[...MALL.ack]}});}
 function dsApply(d){const base=JSON.parse(DS_BASE),pl=d&&d.plan||{};
   VEH.forEach(v=>{PLAN[v.head]=pl[v.head]?Object.assign(base[v.head]||{},pl[v.head]):(base[v.head]||PLAN[v.head]);});
+  FRX=new Set(Array.isArray(d&&d.fra)?d.fra:[]);
   MJ=Array.isArray(d&&d.mj)?d.mj:[];MJN=d&&+d.mjn||MJ.reduce((a,j)=>Math.max(a,+(String(j.id).replace(/\D/g,''))||0),0);
   const m=d&&d.mall||{};MALL.rev=m.rev!=null?m.rev:-1;MALL.snap=m.snap||{};MALL.log=m.log||[];MALL.ack.clear();(m.ack||[]).forEach(x=>MALL.ack.add(x));
   if(ED)closeEditor();JE=null;}
