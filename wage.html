@@ -49,6 +49,21 @@
   th{font-size:11.5px;color:var(--txt2);font-weight:600}
   td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
   tr.row{cursor:pointer}tr.row:hover{background:var(--card2)}
+  /* 📦 12 พ.ย. งาน Packing ที่ใช้รถไร่ (ใบขอรถ PKR) = แถวม่วงอมชมพู (สีเดียวกับชิป Packing หน้าสถานะ) · หน้า Packing: ค่าแรงจ่ายที่ไร่ = แถวเทา */
+  tr.row.pkr{background:linear-gradient(90deg,rgba(139,92,246,.13),rgba(217,70,239,.07))}
+  tr.row.pkr>td:first-child{box-shadow:inset 4px 0 0 #a855f7}
+  tr.row.pkr:hover{background:linear-gradient(90deg,rgba(139,92,246,.2),rgba(217,70,239,.12))}
+  tr.row.paidby{background:var(--card2)}
+  tr.row.paidby>td:first-child{box-shadow:inset 4px 0 0 var(--line2)}
+  tr.row.paidby:hover{background:var(--line)}
+  .pkchip{display:inline-block;white-space:nowrap;font-size:10px;font-weight:700;color:#fff;background:linear-gradient(90deg,#8b5cf6,#d946ef);border-radius:999px;padding:1px 8px;margin-top:3px}
+  .farmchip{display:inline-block;white-space:nowrap;font-size:10px;font-weight:700;color:#1f6b3a;background:#dff3e6;border:1px solid #b9e2c7;border-radius:999px;padding:0 7px;margin-top:3px}
+  .sumcard.pkr{border-color:#d8b4fe;background:linear-gradient(90deg,rgba(139,92,246,.10),rgba(217,70,239,.05))}
+  .sumcard.pkr .sumcode{background:linear-gradient(90deg,#8b5cf6,#d946ef);color:#fff;border-color:transparent}
+  #drBody.ro #recalcOne{display:none}
+  .expc{font-size:10.5px;color:var(--txt2);line-height:1.35;white-space:nowrap}
+  .expn{font-size:10.5px;color:var(--txt2);max-width:170px;white-space:normal;line-height:1.3}
+  @media(prefers-color-scheme:dark){.farmchip{color:#9be3b3;background:#173524;border-color:#245a3a}.sumcard.pkr{border-color:#6d3fa8}}
   .pill{font-size:10px;padding:2px 7px;border-radius:999px;background:var(--card2);color:var(--txt2)}
   .pill.lock{background:var(--primary);color:#fff}
   .msg{text-align:center;color:var(--txt2);padding:30px;font-size:13.5px}
@@ -279,12 +294,13 @@ function applyView(){
   const searchRows=ROWS.filter(hit);
   VIEW=ACTIVE_DEST?searchRows.filter(r=>_gkey(r)===ACTIVE_DEST):searchRows;
   renderTable(VIEW);
-  const tot=VIEW.reduce((s,r)=>s+(r.wage||0),0);
+  const pay=VIEW.filter(r=>!r.paidBy);   // 📦 เที่ยวที่ค่าแรงจ่ายกลุ่มอื่น (PKR ใช้รถไร่) ไม่นับรวมค่าแรงหน้านี้
+  const tot=pay.reduce((s,r)=>s+(r.wage||0),0);
   const totDist=VIEW.reduce((s,r)=>s+(Number(r.distActual)||0),0);
   const totFuel=VIEW.reduce((s,r)=>s+(Number(r.liters)||0),0);
-  $('kTrips').textContent=VIEW.length;
+  $('kTrips').textContent=VIEW.length+(pay.length<VIEW.length?' ('+(VIEW.length-pay.length)+' จ่ายที่ไร่)':'');
   $('kWage').textContent=money(tot)+' บ.';
-  $('kAvg').textContent=(VIEW.length?money(tot/VIEW.length):0)+' บ.';
+  $('kAvg').textContent=(pay.length?money(tot/pay.length):0)+' บ.';
   $('kDist').textContent=totDist.toLocaleString('th-TH',{maximumFractionDigits:1})+' กม.';
   $('kFuel').textContent=totFuel.toLocaleString('th-TH',{maximumFractionDigits:1})+' ล.';
   renderSummary(searchRows);
@@ -305,17 +321,37 @@ function centralCell(r){
     +(used?USEDCHIP:'')
     +(a>0?`<div style="font-size:10.5px;color:${Math.abs(d)>c*0.1?'var(--danger)':'var(--txt2)'}">จริง${d>=0?'+':''}${d.toLocaleString('th-TH',{maximumFractionDigits:1})}</div>`:'');
 }
+/* 💸 ค่าใช้จ่ายในเที่ยว (หน้า Packing · คุณน้อง 12 พ.ย.) — รวม + แยกรายการ · หมายเหตุใต้ */
+const EXP_ITEMS=[['toll','ทางด่วน'],['unload','ค่าลงของ'],['helper','เด็กลงนอก'],['fuelRoad','น้ำมันระหว่างทาง'],['repair','ซ่อมนอก']];
+let SHOW_EXP=false;
+const expTotal=e=>e?EXP_ITEMS.reduce((s,[k])=>s+(+e[k]||0),0):0;
+function expCell(e){
+  const tot=expTotal(e), note=e&&e.note?String(e.note).replace(/^"+|"+$/g,''):'';
+  if(!tot&&!note)return '<span style="color:var(--txt2)">—</span>';
+  return (tot?'<b>'+money(tot)+'</b>':'')
+    +EXP_ITEMS.filter(([k])=>+e[k]>0).map(([k,l])=>'<div class="expc">'+l+' '+money(+e[k])+'</div>').join('')
+    +(note?'<div class="expn" title="หมายเหตุค่าใช้จ่าย">📝 '+_escS(note)+'</div>':'');
+}
 function renderTable(rows){
+  SHOW_EXP=window.WAGE_GROUP==='Packing';
   if(!rows.length){$('tbl').innerHTML='<div class="msg">'+((SEARCH||ACTIVE_DEST)?'ไม่มีเที่ยวที่ตรงเงื่อนไข':'ไม่มีเที่ยวในช่วงที่เลือก')+'</div>';return;}
   const n1=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{maximumFractionDigits:1}):'—';};
   const n2=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';};
-  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ชนิดรถ</th><th>สวน / ปลายทาง</th><th class="num" title="จากเลขไมล์ที่คนขับกรอก">ระยะจริง (กม.)</th><th class="num" title="ค่ากลางไป-กลับ (หน้า 📍 ค่ากลาง × 2) · ป้าย ใช้คิด = เที่ยวนี้คิดค่าแรงด้วยค่ากลาง · จริง± = ระยะจริงต่างจากค่ากลาง (แดง = ต่างเกิน 10%)">ระยะกลาง (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">กม./ล.</th><th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ชนิดรถ</th><th>สวน / ปลายทาง</th><th class="num" title="จากเลขไมล์ที่คนขับกรอก">ระยะจริง (กม.)</th><th class="num" title="ค่ากลางไป-กลับ (หน้า 📍 ค่ากลาง × 2) · ป้าย ใช้คิด = เที่ยวนี้คิดค่าแรงด้วยค่ากลาง · จริง± = ระยะจริงต่างจากค่ากลาง (แดง = ต่างเกิน 10%)">ระยะกลาง (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">กม./ล.</th>'+(SHOW_EXP?'<th class="num" title="ค่าใช้จ่ายที่คนขับกรอกในเที่ยว: ทางด่วน · ค่าลงของ · เด็กลงสินค้านอก · น้ำมันเติมระหว่างทาง · ซ่อมนอก">ค่าใช้จ่าย (บ.)</th>':'')+'<th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
   rows.forEach((r,i)=>{
     const place=placeOf(r.garden,r.dest)||'—';
     const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Number(r.distActual)/Number(r.liters)):0;
     const vtMain=r.model?('รุ่น '+r.model):(r.vehicleType||'—');
     const vtSub=(r.model&&r.vehicleType)?`<div style="font-size:10px;color:var(--txt2)">${r.vehicleType}</div>`:'';
-    h+=`<tr class="row" data-i="${i}"><td style="white-space:nowrap">${fmtD(r.date)}</td><td style="white-space:nowrap">${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div></td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}${(!usedCentral(r)&&+r.distActual>0)?USEDCHIP:''}</td><td class="num">${centralCell(r)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td><td class="num"><b${Number(r.wage)<0?' style="color:var(--danger)"':''}>${money(r.wage)}</b></td><td><label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label></td></tr>`;
+    const cls=r.paidBy?' paidby':(r.pkr?' pkr':'');
+    const tag=r.paidBy?`<div><span class="farmchip">🌴 จ่ายที่${_escS(r.paidBy)}</span></div>`:(r.pkr?'<div><span class="pkchip">📦 Packing</span></div>':'');
+    const wageCell=r.paidBy
+      ? `<span style="color:var(--txt2)" title="ค่าแรงเที่ยวนี้จ่ายที่กลุ่ม${_escS(r.paidBy)} · ไม่นับรวมหน้านี้">${money(r.wage)}</span>`
+      : `<b${Number(r.wage)<0?' style="color:var(--danger)"':''}>${money(r.wage)}</b>`;
+    const paidCell=r.paidBy
+      ? `<span style="font-size:11px;color:var(--txt2)">จ่ายที่${_escS(r.paidBy)}${r.locked?' 🔒':''}</span>`
+      : `<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label>`;
+    h+=`<tr class="row${cls}" data-i="${i}"><td style="white-space:nowrap">${fmtD(r.date)}</td><td style="white-space:nowrap">${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div>${tag}</td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}${(!usedCentral(r)&&+r.distActual>0)?USEDCHIP:''}</td><td class="num">${centralCell(r)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td>${SHOW_EXP?'<td class="num">'+expCell(r.exp)+'</td>':''}<td class="num">${wageCell}</td><td>${paidCell}</td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i].orderId));
@@ -343,7 +379,8 @@ function renderSummary(rows){
     const label=(dd&&gg&&placeOf(gg,dd)!==gg&&placeOf(gg,dd)!==dd)   // ชื่อซ้ำ (เช่น ลานคลองหาด/ลานคลองหาด) = ชื่อเดียว
       ? chip(r0.gardenCode)+_escS(gg)+' · '+chip(r0.pickupCode)+_escS(dd)
       : chip(r0.rampCode||r0.gardenCode||r0.pickupCode)+_escS(dd||gg||'—');
-    h+=`<div class="sumcard ${on?'on':''}" data-dest="${_escS(gr.name)}">
+    const pk=window.WAGE_GROUP!=='Packing'&&gr.rows.some(r=>r.pkr);   // 📦 ปลายทางงาน Packing (ใช้รถไร่) = การ์ดม่วง
+    h+=`<div class="sumcard ${on?'on':''}${pk?' pkr':''}" data-dest="${_escS(gr.name)}">
       <div class="sumtitle"><span>${label}</span><span class="sumn">${gr.rows.length} เที่ยว</span></div>
       ${on?`<div class="sumdetail">
         ${_sline('ค่าเที่ยว',_stat(gr.rows,r=>r.wage),'บ.',0)}
@@ -621,14 +658,19 @@ function renderDetail(orderId,res,pending){
   if(w.distHeavy==null&&w.legs){w.distHeavy=(w.legs||[]).filter(l=>l.weight==='หนัก').reduce((a,l)=>a+(+l.distKm||0),0);w.distLight=w.distTotal-w.distHeavy;}
   function row(l,v,cl){return `<div class="drow"><span class="l">${l}</span><span${cl?' style="'+cl+'"':''}>${v}</span></div>`;}
   const place=placeOf(w.garden,w.dest);
+  const rr=ROWS.find(x=>x.orderId===orderId)||{}, ro=!!rr.paidBy;   // 📦 ค่าแรงจ่ายที่กลุ่มอื่น = ดูอย่างเดียว (ไม่คิดใหม่/ไม่แก้)
+  $('drBody').classList.toggle('ro',ro);
   let h=`<div style="font-size:12px;color:var(--txt2);margin-bottom:6px">${orderId} · ${w.driver||''} · ${w.plate||''} · ${w.vehType||(live.vehType||'')} · ${w.distTotal} กม. ${w.distMode==='central'?'(ระยะกลาง)':'(ระยะจริง)'}</div>`;
+  if(ro)h+=`<div style="background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:8px 11px;margin-bottom:8px;font-size:12.5px">🌴 งาน Packing ใช้รถ${_escS(rr.paidBy)} — <b>ค่าแรงจ่ายที่หน้าค่าแรง${_escS(rr.paidBy)}</b> หน้านี้ดูค่าใช้จ่ายอย่างเดียว</div>`;
+  if(rr.pkr&&!ro)h+=`<div style="margin-bottom:8px"><span class="pkchip">📦 งาน Packing ใช้รถไร่ (ใบขอรถ)</span></div>`;
+  if(rr.exp&&(expTotal(rr.exp)||rr.exp.note))h+='<div class="sec">💸 ค่าใช้จ่ายในเที่ยว</div><div style="margin-bottom:6px">'+EXP_ITEMS.filter(([k])=>+rr.exp[k]>0).map(([k,l])=>row(l,money(+rr.exp[k])+' บ.')).join('')+(expTotal(rr.exp)?row('<b>รวม</b>','<b>'+money(expTotal(rr.exp))+' บ.</b>'):'')+(rr.exp.note?row('หมายเหตุ',_escS(String(rr.exp.note).replace(/^"+|"+$/g,''))):'')+'</div>';
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
-  h+=destBlock(orderId,st);
+  if(!ro)h+=destBlock(orderId,st);
   h+='<div id="calcSt">'+calcStatus(orderId,w,live,st,isStored,pending)+'</div>';
   h+='<div class="sec">👷 ค่าแรงคนขับ</div>';
   // 🆕 2026-11-05 รูทหลายจุด: โชว์ชื่อช่วง + ชนิดรถรายขา (เดี่ยว = 10 ล้อ)
   (w.legs||[]).forEach(l=>h+=row((l.name?`<b>${_escS(l.name)}</b>${l.veh?` <span style="color:var(--txt2);font-size:11px">${l.veh==='เดี่ยว'?'10 ล้อ':_escS(l.veh)}</span>`:''}<br>`:'')+`${l.weight} ${l.distKm} กม. × ${l.pct}% ÷ 50`,money(l.runWage)+' บ.'));
-  h+=loadEditBlock(orderId,w,res.raw,st);
+  if(!ro)h+=loadEditBlock(orderId,w,res.raw,st);
   h+=row('ขึ้น-ลงของ',money(w.loadWage)+' บ.');
   if(w.tarp>0)h+=row('ค่าคลุมผ้าใบ',money(w.tarp)+' บ.');
   const via=!!(w.snapshot&&w.snapshot.toggles&&w.snapshot.toggles.viaLiters);
@@ -779,7 +821,7 @@ function exportCsv(){
 // คิดค่าแรงใหม่ตามเงื่อนไขปัจจุบัน — เฉพาะเที่ยวที่ยังไม่จ่าย (ล็อกแล้วข้าม)
 //   ⚠️ แบ่งส่งเป็นก้อน (chunk) กัน request เดียวนานเกินจน Google คืนหน้า HTML error
 async function recomputeUnpaid(){
-  const ids=VIEW.filter(r=>!r.locked).map(r=>r.orderId);   // เฉพาะที่แสดงอยู่ (ตามค้นหา/กรอง)
+  const ids=VIEW.filter(r=>!r.locked&&!r.paidBy).map(r=>r.orderId);   // เฉพาะที่แสดงอยู่ (ตามค้นหา/กรอง) · จ่ายที่กลุ่มอื่น = กลุ่มนั้นคิด
   if(!ids.length){uiAlert('ไม่มีเที่ยวที่ยังไม่จ่ายให้คิดใหม่ (ที่จ่ายแล้วจะไม่ถูกแตะ)');return;}
   if(!(await uiConfirm({title:'คำนวณค่าแรงใหม่ '+ids.length+' เที่ยว?',msg:'เฉพาะที่ยังไม่จ่าย · คิดตามตั้งค่าปัจจุบัน\nเที่ยวที่จ่ายแล้วจะไม่เปลี่ยน',okText:'คำนวณใหม่',icon:'🔄'})))return;
   const b=$('recalc');b.disabled=true;
@@ -861,19 +903,21 @@ async function togglePaid(orderId,checked,el){
 function updatePaidAllBtn(){
   waChip();
   const b=$('paidAll'); if(!b)return;
-  const allLocked=VIEW.length>0&&VIEW.every(r=>r.locked);
+  const mine=VIEW.filter(r=>!r.paidBy);   // 📦 จ่ายที่กลุ่มอื่น = ไม่แตะ
+  const allLocked=mine.length>0&&mine.every(r=>r.locked);
   b.textContent=allLocked?'☐ ยกเลิกจ่ายทั้งหมด':'☑️ จ่ายแล้วทั้งหมด';
-  b.disabled=!VIEW.length;
+  b.disabled=!mine.length;
 }
 async function togglePaidAll(){
-  if(!VIEW.length)return;
-  const paid=!VIEW.every(r=>r.locked);   // ยังไม่ครบ → จ่ายทั้งหมด · ครบแล้ว → ยกเลิกทั้งหมด
-  const ids=VIEW.map(r=>r.orderId);
+  const mine=VIEW.filter(r=>!r.paidBy);
+  if(!mine.length)return;
+  const paid=!mine.every(r=>r.locked);   // ยังไม่ครบ → จ่ายทั้งหมด · ครบแล้ว → ยกเลิกทั้งหมด
+  const ids=mine.map(r=>r.orderId);
   if(!(await uiConfirm({title:(paid?'ทำเครื่องหมาย "จ่ายแล้ว" ':'ยกเลิก "จ่ายแล้ว" ')+ids.length+' เที่ยว?',msg:paid?'เที่ยวที่จ่ายแล้วจะถูกล็อก ไม่ถูกคิดใหม่':'เที่ยวจะกลับไปคิดใหม่ได้',okText:paid?'จ่ายแล้ว':'ยกเลิกจ่าย',icon:paid?'☑️':'↩️',danger:!paid})))return;
   const b=$('paidAll');b.textContent='กำลังบันทึก…';b.disabled=true;
   try{
     const d=await adminWrite({action:'setWagePaidBulk',userId:MY_UID,orderIds:ids,paid});
-    if(d.ok){ VIEW.forEach(r=>r.locked=paid); applyView(); }
+    if(d.ok){ mine.forEach(r=>r.locked=paid); applyView(); }
     else uiAlert('❌ '+(d.error||(d.denied?'ไม่มีสิทธิ์':'ผิดพลาด')));
   }catch(e){uiAlert('❌ '+e);}
   b.disabled=false;
