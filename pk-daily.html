@@ -48,7 +48,7 @@ button,input,select,textarea{font:inherit;color:inherit}
 .tabs a.on{background:var(--bg);color:var(--ink);opacity:1}
 .tabs a:hover{opacity:1}
 .demo{margin:14px 0 0;background:var(--warnbg);color:var(--warn);border-radius:10px;padding:8px 12px;font-size:13px}
-main{padding-block:14px 120px}
+main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั๊ว ไม่ทับแถวสุดท้าย */
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
 .chip{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:6px 12px;cursor:pointer;font-size:13.5px;display:inline-flex;gap:7px;align-items:center}
 .chip b{font-variant-numeric:tabular-nums}
@@ -82,6 +82,24 @@ main{padding-block:14px 120px}
 .btn.yp{background:color-mix(in srgb,var(--gold) 14%,var(--surface));border-color:color-mix(in srgb,var(--gold) 55%,var(--line));color:var(--ink);white-space:nowrap}
 .btn.yp b{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:10px;background:var(--line);font-size:12px;text-align:center;font-variant-numeric:tabular-nums}
 .btn.yp b.on{background:var(--bad);color:#fff}
+/* 📋 FAB Pending ยี่ปั๊ว (skill webapp-button-fab · extended) — ลอยขวาล่าง เหนือแถบปุ่ม (--barh วัดจริงด้วย JS) + แถบเลื่อน #hsb 18px
+ * z 30 = เหนือแถบล่าง (20) ใต้ฉากคลุมลิ้นชัก (40) → เปิดลิ้นชักแล้วโดนคลุมเอง */
+@keyframes fabIn{from{opacity:0;transform:scale(.5) translateY(14px)}to{opacity:1;transform:none}}
+.fab{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(var(--barh,64px) + 30px);z-index:30;
+  display:flex;align-items:center;gap:9px;height:52px;padding:0 18px 0 16px;border:none;border-radius:26px;cursor:pointer;
+  font:inherit;font-size:14.5px;font-weight:700;color:#fff;white-space:nowrap;
+  background:linear-gradient(135deg,var(--head),var(--brand));box-shadow:0 10px 24px -6px rgba(27,67,50,.55),inset 0 0 0 1.5px color-mix(in srgb,var(--gold) 70%,transparent);
+  transition:transform .2s cubic-bezier(.34,1.4,.5,1),box-shadow .2s;animation:fabIn .4s cubic-bezier(.2,.9,.3,1.3) .3s backwards}
+.fab:hover{transform:translateY(-3px);box-shadow:0 14px 30px -6px rgba(27,67,50,.6),inset 0 0 0 1.5px var(--gold)}
+.fab:active{transform:scale(.95)}
+.fab:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.fab svg{display:block;flex:none;color:var(--gold)}
+.fab b{display:inline-block;min-width:22px;padding:2px 7px;border-radius:11px;background:rgba(255,255,255,.18);font-size:12.5px;text-align:center;font-variant-numeric:tabular-nums}
+.fab b.on{background:var(--bad);color:#fff;box-shadow:0 0 0 2px var(--head)}
+.fab[hidden]{display:none}
+@media (max-width:520px){.fab{width:56px;height:56px;padding:0;justify-content:center;border-radius:50%}.fab .fl{display:none}
+  .fab b{position:absolute;top:-6px;right:-6px;padding:2px 6px;font-size:11.5px}.fab b:empty,.fab b:not(.on){display:none}}
+@media print{.fab{display:none!important}}
 .yptab{display:flex;gap:6px;flex-wrap:wrap}
 .yptab button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink)}
 .yptab button.on{background:var(--head);color:var(--head-ink);border-color:var(--head)}
@@ -658,13 +676,20 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 </main>
 
 <div class="bar" id="bar"><div class="wrap">
-  <div class="barl"><button class="btn yp" id="bYp" type="button" title="ออเดอร์ยี่ปั๊วที่เซลส์พิมพ์ในกลุ่มไลน์ เซลส์แอดมิน · ยังไม่ลงแพลน">📋 Pending ยี่ปั๊ว<b id="ypN">·</b></button><div class="sum" id="barsum"></div></div>
+  <div class="barl"><div class="sum" id="barsum"></div></div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
     <button class="btn ghost" id="bClr" title="ล้างงานในหน้านี้ทั้งหมด เริ่มจากว่าง (เดโม · ไม่ลบในระบบ)">🧹 ล้างงานทั้งหมด</button>
     <span class="dsst" id="dsSt" hidden></span><button class="btn" id="bSave">บันทึกแพลน</button>
     <button class="btn pri" id="bSend">📲 แจกงานทั้งวัน</button>
   </div>
 </div></div>
+<button class="fab" id="bYp" type="button" aria-label="Pending ยี่ปั๊ว · ออเดอร์จากกลุ่มไลน์ที่ยังไม่ลงแพลน" title="ออเดอร์ยี่ปั๊วที่เซลส์พิมพ์ในกลุ่มไลน์ เซลส์แอดมิน · ยังไม่ลงแพลน">
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><line x1="9" y1="10" x2="15" y2="10"/><line x1="9" y1="14" x2="15" y2="14"/><line x1="9" y1="18" x2="12" y2="18"/></svg>
+  <span class="fl">Pending ยี่ปั๊ว</span><b id="ypN">·</b>
+</button>
+<script>/* FAB ลอยเหนือแถบปุ่มล่าง: วัดความสูงจริง (มือถือแถบขึ้น 2 บรรทัด) */
+(function(){const b=document.getElementById('bar');if(!b)return;const set=()=>document.documentElement.style.setProperty('--barh',b.offsetHeight+'px');
+  set();if(window.ResizeObserver)new ResizeObserver(set).observe(b);addEventListener('resize',set);})();</script>
 
 <div id="drawerHost"></div>
 <div id="toastHost"></div>
