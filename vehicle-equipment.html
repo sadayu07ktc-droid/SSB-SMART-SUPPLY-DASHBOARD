@@ -106,6 +106,29 @@ a.lk{color:var(--green2);font-weight:600}
 .ldr{display:flex;align-items:center;gap:10px;justify-content:center;padding:30px;color:var(--muted)}
 .ldr i{width:20px;height:20px;border:3px solid #CFE0D5;border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+/* 🔍 ฟอร์มสุ่มตรวจ แบบมือถือ (ปุ่มใหญ่เหมือนฟอร์มคนขับ) */
+.af{padding:12px 14px;margin-bottom:8px}.af.af-ok{border-left:5px solid var(--ok)}.af.af-bad{border-left:5px solid var(--bad);background:#FFF9F9}
+.af-h{display:flex;align-items:center;gap:8px;font-size:16px}.af-h b{flex:1;min-width:0}
+.mr-n{flex:none;min-width:28px;height:28px;border-radius:8px;background:#E3EEE7;color:var(--green);font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px}
+.af-u{font-size:12px;color:var(--muted)}.af-tick{color:var(--ok);font-weight:800;font-size:20px}.af-res{font-size:14px;white-space:nowrap}
+.af-info{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:13px;color:var(--muted);margin:4px 0 8px 36px}.af-info b{color:var(--ink)}
+.af-st{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.af-b{width:52px;height:52px;border-radius:14px;border:2px solid var(--line);background:#fff;font-size:28px;font-weight:700;color:var(--green);cursor:pointer;touch-action:manipulation}
+.af-b:active{background:#E3EEE7}.af-b:disabled{opacity:.35}
+.af-num{min-width:48px;text-align:center;font-size:28px;font-weight:800}.af-num.em{color:var(--faint)}
+.af-q{display:flex;gap:6px;margin-left:auto}
+.af-eq{min-height:40px;padding:0 12px;border-radius:12px;border:1.5px solid var(--line);background:var(--sunken);font-weight:700;font-size:14px;cursor:pointer;touch-action:manipulation}
+.af-eq.on{background:var(--green);border-color:var(--green);color:#fff}
+.af-cd{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.af-sc{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.af-c{min-height:44px;border-radius:12px;border:1.5px solid var(--line);background:#fff;font-weight:700;font-size:15px;cursor:pointer;touch-action:manipulation}
+.af-c.on{background:var(--green);border-color:var(--green);color:#fff}.af-c.on.c-ชำรุด{background:var(--warn);border-color:var(--warn)}.af-c.on.c-หาย{background:var(--bad);border-color:var(--bad)}
+.af-note,.af-odo{width:100%;min-height:46px;border-radius:12px;border:2px solid var(--line);padding:0 12px;font-size:16px;margin-top:8px;background:#fff}
+.af-odo{font-size:20px;font-weight:700;margin-top:4px}
+.af-bar{position:sticky;bottom:0;z-index:5;background:#fff;border:1px solid var(--line);border-radius:14px 14px 0 0;padding:8px 14px calc(10px + env(safe-area-inset-bottom));box-shadow:0 -8px 20px rgba(0,0,0,.08)}
+.af-prog{height:6px;border-radius:9px;background:var(--sunken);overflow:hidden;margin-bottom:8px}.af-prog i{display:block;height:100%;background:var(--ok);transition:width .2s}
+.af-bt{display:flex;align-items:center;gap:8px}.af-bt span{flex:1;font-size:14px}.af-bt .btn{min-height:44px;padding:0 16px;font-size:15px}
+@media (max-width:620px){ .wrap{padding:8px 8px 24px} .top{padding:8px 12px} .af-info{margin-left:0} .af-q{margin-left:0;width:100%} .af-q .af-eq{flex:1} .vw button{padding:6px 8px} }
 /* 📊 ปุ่มรายงาน + popup 3 ขั้น */
 .rbtn{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.35);background:rgba(201,162,39,.18);color:#fff;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:700}
 .rbtn:hover{background:rgba(201,162,39,.32)} .rbtn svg{color:var(--gold)}
@@ -422,18 +445,57 @@ function renderAF() {
     '<div class="kp"><div class="' + (m ? 'ok' : '') + '"><b>' + (m ? '✅' : '–') + '</b><span>คนขับส่งรายเดือน' + (m ? ' ' + dTxt(m.date) : ' (ยังไม่ส่ง)') + '</span></div>' +
     (a ? '<div class="' + (a.mismatch ? 'bad' : 'ok') + '"><b>' + (a.mismatch ? '🚩' : '✅') + '</b><span>สุ่มตรวจ ' + dTxt(a.date) + ' · ' + esc(a.by) + '</span></div>' : '') + '</div>' +
     (!m && !a ? '<div class="note" style="margin-top:8px">⚠️ คนขับยังไม่ส่งรายเดือน — ตรวจได้ แต่จะเทียบได้แค่กับยอดในสมุด</div>' : '') + '</div>';
-  const rows = d.rows.map((r) => { const ln = AF.lines[r.item_code], sc = r.check_mode === 'score', au = r.audit;
-    const inp = ro ? '<td class="n">' + qtyTxt(au) + '</td><td class="sm">' + esc((au && au.note) || '') + '</td>'
-      : '<td><input type="number" min="' + (sc ? 1 : 0) + '" max="' + (sc ? 10 : 999) + '" step="1" data-af="' + r.item_code + '|q" value="' + esc(ln.q) + '" style="width:70px;border:1px solid var(--line);border-radius:8px;padding:5px 7px"' + (sc ? ' placeholder="1–10"' : '') + '>' +
-        (sc ? '' : ' <select data-af="' + r.item_code + '|cond" style="border:1px solid var(--line);border-radius:8px;padding:5px">' + ['ปกติ', 'ชำรุด', 'หาย'].map((c) => '<option' + (ln.cond === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>') + '</td>' +
-        '<td><input data-af="' + r.item_code + '|note" value="' + esc(ln.note) + '" placeholder="' + (ln.cond === 'ชำรุด' ? 'อาการ (ต้องกรอก)' : '') + '" style="width:100%;min-width:120px;border:1px solid var(--line);border-radius:8px;padding:5px 7px"></td>';
-    return '<tr><td class="n">' + r.no + '</td><td><div class="nm">' + esc(r.name) + '</div></td><td class="sm">' + esc(r.unit) + '</td>' +
-      '<td class="n">' + (r.on_hand == null ? '<span class="sm">–</span>' : nf(r.on_hand)) + '</td><td class="n">' + qtyTxt(r.driver) + (r.driver && r.driver.note ? '<div class="sm">' + esc(r.driver.note) + '</div>' : '') + '</td>' + inp + '</tr>'; }).join('');
-  const form = '<div class="card tw"><h3 style="margin:0 0 8px;font-size:15px">' + (ro ? 'ผลสุ่มตรวจ' : 'นับของจริงที่รถ แล้วกรอกช่อง "ตรวจพบ"') + '</h3><table class="t"><thead><tr><th class="n">ข้อ</th><th>รายการ</th><th>หน่วย</th><th class="n">ในสมุด</th><th class="n">คนขับแจ้ง</th><th>ตรวจพบ' + (ro ? '' : ' / สภาพ') + '</th><th>หมายเหตุ</th></tr></thead><tbody>' + rows + '</tbody></table>' +
-    (ro ? '' : '<div class="fg"><div><label>เลขไมล์ (ถ้าดู)</label><input id="afOdo" inputmode="numeric" value="' + esc(AF.odo) + '"></div><div style="grid-column:span 2"><label>หมายเหตุ</label><input id="afNote" value="' + esc(AF.note) + '"></div></div>' +
-      (AF.errs ? '<div class="err">' + AF.errs.map(esc).join('<br>') + '</div>' : '') +
-      '<button class="btn pri" id="afSave"' + (AF.busy ? ' disabled' : '') + '>' + (AF.busy ? 'กำลังบันทึก…' : '💾 บันทึกผลสุ่มตรวจ') + '</button> <span class="note">ทุกข้อต้องกรอก · ชำรุดต้องใส่อาการ · ถ้าไม่ตรงที่คนขับแจ้ง ระบบแจ้งแอดมินกลุ่ม</span>') + '</div>';
+  const list = d.rows.map((r) => afRow(r, ro)).join('');
+  const form = (ro ? '<div class="card"><h3 style="margin:0 0 4px;font-size:15px">ผลสุ่มตรวจ</h3><div class="note">ในสมุด = ยอดเบิก-คืน · คนขับ = รายเดือนของคนขับ · ตรวจพบ = ที่แอดมินนับ</div></div>'
+      : '<div class="card"><h3 style="margin:0 0 4px;font-size:15px">นับของจริงที่รถ ทีละข้อ</h3><div class="note">กด − / + หรือปุ่ม "= สมุด" ถ้านับได้เท่ากับในสมุด · เจอของเสียกด 🔧 ชำรุด แล้วพิมพ์อาการ</div>' +
+        '<label class="lnh" style="margin-top:10px">เลขไมล์ (ถ้าดู)</label><input id="afOdo" class="af-odo" inputmode="numeric" placeholder="เช่น 254310" value="' + esc(AF.odo) + '"></div>') +
+    '<div id="afList">' + list + '</div>' +
+    (ro ? '' : '<div class="card"><label class="lnh">หมายเหตุ (ถ้ามี)</label><input id="afNote" class="af-note" value="' + esc(AF.note) + '">' +
+      (AF.errs ? '<div class="err">' + AF.errs.map(esc).join('<br>') + '</div>' : '') + '</div>' +
+      '<div class="af-bar" id="afBar">' + afBar() + '</div>');
   $('main').innerHTML = head + (a && a.compare ? cmpHTML(a.compare, a.id) : '') + form;
+}
+// ── แถวละ 1 การ์ด (มือถือ): ปุ่ม −/+ ใหญ่ · = สมุด · ไม่มี (0) · ชิปสภาพ · ความสะอาด = คะแนน 1–10 ──
+function afRef(r) { return r.on_hand != null ? r.on_hand : r.driver && r.driver.qty_found != null ? r.driver.qty_found : r.qty_expected; }
+function afDone(r) { const ln = AF.lines[r.item_code]; return ln.q !== '' && (ln.cond !== 'ชำรุด' || ln.note.trim() !== ''); }
+function afRow(r, ro) {
+  const ln = AF.lines[r.item_code], sc = r.check_mode === 'score', au = r.audit, dr = r.driver, ref = afRef(r);
+  const info = '<div class="af-info">' + (r.on_hand != null ? '<span>📒 ในสมุด <b>' + nf(r.on_hand) + '</b> ' + esc(r.unit) + '</span>' : '') +
+    '<span>👤 คนขับ ' + (dr ? '<b>' + (dr.qty_found != null ? nf(dr.qty_found) : '–') + '</b>' + condB(dr) + (dr.note ? ' · ' + esc(dr.note) : '') : 'ยังไม่แจ้ง') + '</span></div>';
+  const top = '<div class="af-h"><span class="mr-n">' + r.no + '</span><b>' + esc(r.name) + '</b><span class="af-u">' + esc(r.unit) + '</span>';
+  if (ro) {
+    const bad = au && dr && ((au.qty_found != null && dr.qty_found != null && Number(dr.qty_found) > Number(au.qty_found)) || ((au.condition || 'ปกติ') !== 'ปกติ' && (dr.condition || 'ปกติ') === 'ปกติ'));
+    return '<div class="card af' + (bad ? ' af-bad' : '') + '">' + top + '<span class="af-res">' + (bad ? '🚩 ' : '') + 'ตรวจพบ <b>' + qtyTxt(au) + '</b></span></div>' + info + (au && au.note ? '<div class="note">📝 ' + esc(au.note) + '</div>' : '') + '</div>';
+  }
+  const k = r.item_code, has = ln.q !== '';
+  const ctl = sc ? '<div class="af-sc">' + [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((n) => '<button class="af-c' + (String(ln.q) === String(n) ? ' on' : '') + '" data-asc="' + k + '|' + n + '">' + n + '</button>').join('') + '</div>'
+    : '<div class="af-st"><button class="af-b" data-as="' + k + '|-1"' + (has && +ln.q <= 0 ? ' disabled' : '') + '>−</button><span class="af-num' + (has ? '' : ' em') + '">' + (has ? nf(ln.q) : '–') + '</span><button class="af-b" data-as="' + k + '|1">+</button>' +
+      '<div class="af-q">' + (ref != null && ref > 0 ? '<button class="af-eq' + (has && +ln.q === +ref ? ' on' : '') + '" data-aeq="' + k + '|' + ref + '">= ' + (r.on_hand != null ? 'สมุด' : r.driver && r.driver.qty_found != null ? 'คนขับ' : 'ที่ควรมี') + ' ' + nf(ref) + '</button>' : '') + '<button class="af-eq' + (has && +ln.q === 0 ? ' on' : '') + '" data-aeq="' + k + '|0">ไม่มี (0)</button></div></div>' +
+      '<div class="af-cd">' + [['ปกติ', '✅ ปกติ'], ['ชำรุด', '🔧 ชำรุด'], ['หาย', '❌ หาย']].map(([c, t]) => '<button class="af-c' + (ln.cond === c ? ' on c-' + c : '') + '" data-ac="' + k + '|' + c + '">' + t + '</button>').join('') + '</div>' +
+      (ln.cond !== 'ปกติ' || ln.note ? '<input class="af-note" data-af="' + k + '|note" value="' + esc(ln.note) + '" placeholder="' + (ln.cond === 'ชำรุด' ? 'อาการ (ต้องพิมพ์)' : 'หมายเหตุ') + '">' : '');
+  return '<div class="card af' + (afDone(r) ? ' af-ok' : '') + '" id="af-' + esc(k) + '">' + top + (afDone(r) ? '<span class="af-tick">✓</span>' : '') + '</div>' + info + ctl + '</div>';
+}
+function afBar() {
+  const rs = AF.sh.rows, n = rs.filter(afDone).length;
+  return '<div class="af-prog"><i style="width:' + Math.round(n / rs.length * 100) + '%"></i></div><div class="af-bt"><span>กรอกแล้ว <b>' + n + '/' + rs.length + '</b> ข้อ</span>' +
+    (n < rs.length ? '<button class="btn gh" id="afNext">ไปข้อที่ยังว่าง ↓</button>' : '') +
+    '<button class="btn pri" id="afSave"' + (AF.busy ? ' disabled' : '') + '>' + (AF.busy ? 'กำลังบันทึก…' : '💾 บันทึก') + '</button></div>';
+}
+function afRedraw(code) {
+  const r = AF.sh.rows.find((x) => x.item_code === code), el = $('af-' + code);
+  if (r && el) el.outerHTML = afRow(r, false);
+  if ($('afBar')) $('afBar').innerHTML = afBar();
+}
+function afTap(t) {
+  const c = (s) => t.closest(s);
+  const set = (k, fn) => { fn(AF.lines[k]); afRedraw(k); };
+  if (c('[data-as]')) { const [k, dd] = c('[data-as]').dataset.as.split('|'); set(k, (ln) => { ln.q = Math.max(0, (ln.q === '' ? 0 : +ln.q) + +dd); }); return true; }
+  if (c('[data-aeq]')) { const [k, n] = c('[data-aeq]').dataset.aeq.split('|'); set(k, (ln) => { ln.q = +n; if (+n === 0 && ln.cond === 'ปกติ') ln.cond = 'หาย'; if (+n > 0 && ln.cond === 'หาย') ln.cond = 'ปกติ'; }); return true; }
+  if (c('[data-asc]')) { const [k, n] = c('[data-asc]').dataset.asc.split('|'); set(k, (ln) => { ln.q = +n; }); return true; }
+  if (c('[data-ac]')) { const [k, cd] = c('[data-ac]').dataset.ac.split('|'); set(k, (ln) => { ln.cond = cd; if (cd === 'หาย' && ln.q === '') ln.q = 0; });
+    if (cd !== 'ปกติ') setTimeout(() => { const i = document.querySelector('[data-af="' + k + '|note"]'); if (i) i.focus(); }, 50); return true; }
+  if (c('#afNext')) { const r = AF.sh.rows.find((x) => !afDone(x)); if (r && $('af-' + r.item_code)) $('af-' + r.item_code).scrollIntoView({ behavior: 'smooth', block: 'center' }); return true; }
+  return false;
 }
 function cmpHTML(cp, checkId) {
   const fl = cp.flags || [], inf = cp.info || [], lg = cp.ledger || [];
@@ -453,7 +515,7 @@ async function saveAF() {
     if (r.check_mode === 'score') { if (!(+q >= 1 && +q <= 10)) errs.push('ข้อ ' + r.no + ' ' + r.name + ': คะแนน 1–10'); lines.push({ item_code: r.item_code, qty_found: +q }); return; }
     if (ln.cond === 'ชำรุด' && !ln.note.trim()) errs.push('ข้อ ' + r.no + ' ' + r.name + ': ชำรุด ใส่อาการ');
     lines.push({ item_code: r.item_code, qty_found: +q, condition: ln.cond, note: ln.note.trim() || null }); });
-  if (errs.length) { AF.errs = errs.slice(0, 12).concat(errs.length > 12 ? ['… อีก ' + (errs.length - 12) + ' ข้อ'] : []); renderAF(); return; }
+  if (errs.length) { AF.errs = errs.slice(0, 12).concat(errs.length > 12 ? ['… อีก ' + (errs.length - 12) + ' ข้อ'] : []); renderAF(); toast('ยังกรอกไม่ครบ ' + errs.length + ' ข้อ', true); const r0 = d.rows.find((x) => !afDone(x)); if (r0 && $('af-' + r0.item_code)) $('af-' + r0.item_code).scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
   AF.busy = true; AF.errs = null; renderAF();
   let r; try { r = await api({ action: 'saveAudit', auditId: AF.auditId || '', vehicleId: d.vehicle.id, date: bkk(), odometer: AF.odo ? +AF.odo : null, note: AF.note, lines }, true); }
   catch (e) { r = { error: 'เน็ตมีปัญหา ยังไม่แน่ใจว่าบันทึกหรือยัง — โหลดใหม่ดูก่อนกดซ้ำ' }; }
@@ -772,14 +834,14 @@ $('main').addEventListener('click', (e) => {
   if (c('#afBack')) { loadAud(AUD && AUD.plan.week); return; }
   if (c('#afPrint')) { printFm16(); return; }
   if (c('#afSave')) { saveAF(); return; }
+  if (VIEW === 'aud' && AF && afTap(t)) return;
   if (c('[data-adj]')) { openAdj(c('[data-adj]').dataset.adj); return; }
 });
 $('main').addEventListener('input', (e) => {   // ฟอร์มสุ่มตรวจ (แยกจากฟอร์มเบิก-คืน)
   const t = e.target; if (VIEW !== 'aud' || !AF) return;
-  if (t.dataset.af) { const [code, k] = t.dataset.af.split('|'); AF.lines[code][k] = t.value; if (k === 'cond') renderAF(); return; }
+  if (t.dataset.af) { const [code, k] = t.dataset.af.split('|'); AF.lines[code][k] = t.value; if ($('afBar')) $('afBar').innerHTML = afBar(); const el = $('af-' + code), r = AF.sh.rows.find((x) => x.item_code === code); if (el && r) el.classList.toggle('af-ok', afDone(r)); return; }
   if (t.id === 'afOdo') AF.odo = t.value.replace(/D/g, ''); else if (t.id === 'afNote') AF.note = t.value;
 });
-$('main').addEventListener('change', (e) => { const t = e.target; if (VIEW === 'aud' && AF && t.dataset.af && t.dataset.af.endsWith('|cond')) { AF.lines[t.dataset.af.split('|')[0]].cond = t.value; renderAF(); } });
 $('main').addEventListener('input', (e) => {
   const t = e.target; if (!F || VIEW === 'aud') return;
   if (t.dataset.l != null) { F.lines[+t.dataset.l][t.dataset.k] = t.value; if (t.dataset.k === 'code') renderVTab(); return; }
