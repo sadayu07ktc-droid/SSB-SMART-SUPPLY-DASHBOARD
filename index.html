@@ -392,7 +392,7 @@
         ['เกณฑ์เดินเบา','IDLE_LIMIT_MIN'],['การแจ้งเตือน','ใครได้รับ alert'],
         ['ผู้ใช้งาน/สิทธิ์','แอดมิน/ผู้บริหาร','/User_Management/'],
         ['🔑 ตั้งค่าสิทธิ์แอดมิน','ประเภท · แจ้งเตือน · อนุมัติ','/SSB-SMART-SUPPLY-DASHBOARD/admins.html'],
-        ['🛠️ Developer · ฟอร์มคนขับ','ดูจอคนขับทุกกลุ่ม · แก้งาน (DEV)','/SSB-SMART-SUPPLY-DASHBOARD/dev-drivers.html']
+        ['🛠️ Developer · ฟอร์มคนขับ','ดูจอคนขับทุกกลุ่ม · แก้งาน (DEV)','/SSB-SMART-SUPPLY-DASHBOARD/dev-drivers.html','dev']   // 'dev' = ซ่อนไว้ โชว์เฉพาะ DEV (เช็ค dev-drivers ?action=me หลังล็อกอิน)
       ]}
     ]}
   ];
@@ -406,7 +406,7 @@
     html+='<div class="nav-group">'+g.group+'</div>';
     g.items.forEach(it=>{
       const kids=(it.children||[]).map(c=>
-        `<button class="sub-item" data-title="${it.label} · ${c[0]}" data-sub="${c[1]}"${c[2]?` data-url="${c[2]}"`:''}><span class="dot${c[2]?' live':''}"></span><span><span class="st">${c[0]}${c[2]?'<em class="newtag">ใหม่</em>':''}</span><span class="ss">${c[1]}</span></span></button>`
+        `<button class="sub-item" data-title="${it.label} · ${c[0]}" data-sub="${c[1]}"${c[2]?` data-url="${c[2]}"`:''}${c[3]==='dev'?' data-devonly="1" style="display:none"':''}><span class="dot${c[2]?' live':''}"></span><span><span class="st">${c[0]}${c[2]?'<em class="newtag">ใหม่</em>':''}</span><span class="ss">${c[1]}</span></span></button>`
       ).join('');
       const subHead = it.children&&it.children.length ? `<div class="sh">${it.label}</div>` : '';
       html+=`<div class="nav-block">
@@ -532,6 +532,17 @@
   const GAS_URL = 'https://script.google.com/macros/s/AKfycbw2DXaTVoX5cgUZjQrGlpx7tQ1-gwcYYB85eY8MElo2oaqBIxCsjVfL7yMiM8uuUw9YxA/exec';
   const REFRESH_MS = 60000;                 // 1 นาที
   let MY_UID = '';
+  // 🛠️ เมนู DEV-only (data-devonly) — ถาม Edge dev-drivers ?action=me · dev:true ถึงโชว์ · error/ไม่ใช่ DEV = ซ่อนต่อ
+  async function showDevMenu(uid){
+    if(!uid) return;
+    try{
+      const r = await fetch('https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dev-drivers?action=me&userId=' + encodeURIComponent(uid));
+      const j = await r.json();
+      if(j && j.ok && j.dev === true){
+        document.querySelectorAll('[data-devonly]').forEach(el=>{ el.style.display=''; });
+      }
+    }catch(e){}
+  }
   let fleet = {
     gpsOnline: false,
     total: 0,
@@ -904,6 +915,7 @@ async function bootstrapStatus(){
       if(role === 'admin' || role === 'ผู้บริหาร' || role === 'executive'){
         try{ window.ssbSession && ssbSession.set({ uid: MY_UID, name: p.displayName || '', pic: p.pictureUrl || '', role: u.role || '' }); }catch(e){}
       }
+      showDevMenu(MY_UID);   // 🛠️ เมนู Developer โชว์เฉพาะ DEV (ไม่รอ · พลาด = ซ่อนต่อ)
 
       // ✅ ผ่านสิทธิ์แล้ว ค่อยแสดง Dashboard
       document.body.classList.remove('auth-lock');
