@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>อุปกรณ์ติดรถ — SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261016w"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* 🧰 อุปกรณ์ติดรถ (แอดมิน) · 12 พ.ย. 2569 · ซ้าย = รายชื่อรถ · ขวา = รายคัน (อุปกรณ์ที่ถือ / เบิก-คืน / ประวัติเช็ค) หรือ สรุปอุปกรณ์
+   ประหยัดโควตา: รายชื่อรถ = fmSheet (เบา) ครั้งเดียว · รายละเอียดโหลดเฉพาะตอนกดคัน (getVehicle) · ไม่มีรีเฟรชเอง */
+:root{
+  --bg:#EDF1EE; --card:#fff; --sunken:#F3F6F3; --ink:#152019; --muted:#5D6B62; --faint:#8A968D; --line:#DCE4DE;
+  --green:#1B4332; --green2:#2D6A4F; --gold:#C9A227; --goldtint:#FBF1DC; --bad:#B91C1C; --badtint:#FEE2E2; --ok:#15803D; --oktint:#DCFCE7; --warn:#B45309; --warntint:#FEF3C7;
+  --sans:"Noto Sans Thai","Sarabun","Segoe UI",sans-serif; color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+button,select,input,textarea{font:inherit;color:inherit}
+.top{background:var(--green);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top a{color:#fff;text-decoration:none;opacity:.85;font-size:13px}
+.top h1{font-size:17px;margin:0}
+.top .sub{font-size:12px;opacity:.8}
+.top .sp{flex:1}
+.vw{display:flex;gap:4px;background:rgba(255,255,255,.12);border-radius:10px;padding:3px}
+.vw button{border:0;border-radius:8px;padding:6px 12px;background:none;color:#fff;cursor:pointer;font-weight:600}
+.vw button.on{background:#fff;color:var(--green)}
+.wrap{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:12px;padding:12px 16px 32px}
+.wrap.full{grid-template-columns:1fr}
+.wrap.full .side{display:none}
+.side{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;align-self:start;position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{border:1px solid var(--line);background:var(--sunken);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--green);color:#fff;border-color:var(--green)}
+.srch{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:8px}
+.veh{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:10px;padding:7px 8px;cursor:pointer}
+.veh:hover{background:var(--sunken)}
+.veh.on{background:#E3EEE7;border-color:#B9D3C2}
+.veh .pl{font-weight:700;font-size:14px}
+.veh .dr{font-size:12px;color:var(--muted)}
+.veh .mt{margin-left:auto;font-size:12px;white-space:nowrap}
+.b{display:inline-block;border-radius:999px;padding:0 8px;font-size:11.5px;font-weight:700;white-space:nowrap}
+.b.bad{background:var(--badtint);color:var(--bad)} .b.ok{background:var(--oktint);color:var(--ok)} .b.gold{background:var(--goldtint);color:#7A5A12} .b.gr{background:var(--sunken);color:var(--muted)} .b.warn{background:var(--warntint);color:var(--warn)}
+.main{min-width:0}
+.msg{padding:28px;text-align:center;color:var(--muted)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:12px}
+.vh{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap}
+.vh .pl{font-size:20px;font-weight:800}
+.vh .pl small{font-size:13px;font-weight:600;color:var(--muted)}
+.vh .info{font-size:13px;color:var(--muted)}
+.vh .sp{flex:1}
+.kp{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.kp div{background:var(--sunken);border-radius:10px;padding:6px 12px;min-width:96px}
+.kp b{display:block;font-size:18px}
+.kp span{font-size:12px;color:var(--muted)}
+.kp .bad b{color:var(--bad)} .kp .ok b{color:var(--ok)}
+.tabs{display:flex;gap:4px;border-bottom:2px solid var(--line);margin:4px 0 12px;flex-wrap:wrap}
+.tabs button{border:0;background:none;padding:8px 14px;cursor:pointer;font-weight:700;color:var(--muted);border-bottom:3px solid transparent;margin-bottom:-2px}
+.tabs button.on{color:var(--green);border-bottom-color:var(--green)}
+table.t{border-collapse:collapse;width:100%;font-size:13px}
+table.t th,table.t td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:top}
+table.t th{background:var(--sunken);font-size:12px;color:var(--muted);font-weight:700;position:sticky;top:0}
+table.t td.n,table.t th.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.t tr.short td{background:#FFF7F7}
+table.t .nm{font-weight:600}
+table.t .sm{font-size:12px;color:var(--muted)}
+.tw{overflow-x:auto}
+.pos{color:var(--ok);font-weight:700} .neg{color:var(--bad);font-weight:700} .zero{color:var(--muted);font-weight:700}
+.btn{border:0;border-radius:8px;padding:6px 12px;cursor:pointer;font-weight:600}
+.btn.pri{background:var(--green);color:#fff}
+.btn.gh{background:var(--sunken);border:1px solid var(--line)}
+.btn.sm{padding:2px 8px;font-size:12px}
+.btn:disabled{opacity:.5;cursor:default}
+a.lk{color:var(--green2);font-weight:600}
+/* ฟอร์มเบิก-คืน */
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--sunken);border-radius:999px;padding:5px 14px;cursor:pointer;font-weight:700}
+.seg button.on{background:var(--green);color:#fff;border-color:var(--green)}
+.fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:10px 0}
+.fg label,.lnh{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:3px}
+.fg input,.fg select,.ln input,.ln select{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff}
+.ln{display:grid;grid-template-columns:minmax(160px,2fr) 80px minmax(110px,1fr) minmax(120px,1fr) 30px;gap:6px;align-items:end;margin-bottom:6px}
+.ln .x{border:0;background:none;color:var(--bad);font-size:18px;cursor:pointer;padding:4px}
+.ln .hold{font-size:11.5px;color:var(--muted);grid-column:1/-1;margin-top:-2px}
+.note{font-size:12.5px;color:var(--muted)}
+.err{background:var(--badtint);color:var(--bad);border-radius:10px;padding:8px 12px;margin:8px 0;font-size:13px}
+/* แถบ 14 วัน */
+.d14{display:flex;gap:3px;flex-wrap:wrap;margin:6px 0 10px}
+.d14 i{font-style:normal;display:flex;flex-direction:column;align-items:center;font-size:10.5px;color:var(--muted);min-width:30px}
+.d14 i b{font-size:16px;line-height:1.3}
+/* ลิ้นชัก */
+.dim{position:fixed;inset:0;background:rgba(10,20,14,.4);z-index:50;display:none}
+.drw{position:fixed;top:0;right:0;bottom:0;width:min(420px,100vw);background:#fff;z-index:51;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column;box-shadow:-10px 0 30px rgba(0,0,0,.15)}
+.drw.open{transform:none} .dim.open{display:block}
+.drw .hd{background:var(--green);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.drw .hd h4{margin:0;font-size:16px;flex:1}
+.drw .hd button{background:none;border:0;color:#fff;font-size:22px;cursor:pointer}
+.drw .bd{padding:14px 16px;overflow:auto;flex:1}
+.drw label{display:block;font-weight:700;font-size:13px;margin:10px 0 4px}
+.drw input,.drw textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f2a24;color:#fff;padding:9px 16px;border-radius:10px;z-index:60;font-size:14px;max-width:90vw}
+.toast.err{background:var(--bad)}
+.ldr{display:flex;align-items:center;gap:10px;justify-content:center;padding:30px;color:var(--muted)}
+.ldr i{width:20px;height:20px;border:3px solid #CFE0D5;border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (max-width:900px){ .wrap{grid-template-columns:1fr} .side{position:static;max-height:none} }
+@media (max-width:620px){ .ln{grid-template-columns:1fr 70px 30px} .ln .s2{grid-column:1/-1} }
+</style>
+</head>
+<body>
+<div class="top">
+  <a href="index.html">← แดชบอร์ด</a>
+  <div><h1>🧰 อุปกรณ์ติดรถ</h1><div class="sub">เบิก / คืน · อุปกรณ์ที่ถือ · ประวัติรถรายคัน</div></div>
+  <div class="sp"></div>
+  <div class="vw" id="vw"><button data-v="veh" class="on">🚚 รายคัน</button><button data-v="sum">📦 สรุปอุปกรณ์</button></div>
+</div>
+<div class="wrap" id="wrap">
+  <aside class="side">
+    <div class="chips" id="grp"></div>
+    <input class="srch" id="q" placeholder="ค้นทะเบียน / ชื่อคนขับ">
+    <div id="vlist"><div class="ldr"><i></i>กำลังโหลด</div></div>
+  </aside>
+  <main class="main" id="main"><div class="msg">เลือกรถทางซ้าย</div></main>
+</div>
+<div class="dim" id="dim"></div>
+<div class="drw" id="drw"><div class="hd"><h4 id="dT"></h4><button id="dX" aria-label="ปิด">×</button></div><div class="bd" id="dB"></div></div>
+
+<script>
+const EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/vehicle-equipment';
+const LIFF_ID = '2010274217-Ot7vGhri';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const TH_MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const bkk = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+const dTxt = (d) => d ? +d.slice(8, 10) + ' ' + TH_MS[+d.slice(5, 7) - 1] + ' ' + String(+d.slice(0, 4) + 543).slice(2) : '–';
+const nf = (n) => Number(n || 0).toLocaleString('th-TH');
+const GICON = { 'ไร่': '🌴', 'Bulk': '🛢️', 'Packing': '📦' };
+const TYPES = [['เบิก', '➕ เบิก'], ['คืน', '↩️ คืน'], ['เปลี่ยน', '⇄ เปลี่ยน'], ['ชำรุด', '⚠️ ชำรุด'], ['สูญหาย', '❌ สูญหาย']];
+const RR = { worn: '🔧 เสีย/หมดสภาพ', transfer: '📦 ย้ายคัน/เก็บเข้าคลัง' };
+const DAY_IC = { ok: '✅', sent: '✅', late: '🟡', miss: '🔴', idle: '➖', warn: '⚠️', wait: '⏳', none: '·' };
+let UID = '', ME = null, LIST = null, GRP = '', CUR = null, V = null, VTAB = 'hold', VIEW = 'veh', F = null, SUM = {};
+
+async function api(params, post) {
+  const r = post
+    ? await fetch(EDGE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...params, userId: UID }) })
+    : await fetch(EDGE + '?' + new URLSearchParams({ ...params, userId: UID }), { cache: 'no-store' });
+  return r.json();
+}
+function toast(t, err) { const el = document.createElement('div'); el.className = 'toast' + (err ? ' err' : ''); el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), err ? 6000 : 3200); }
+const canEdit = () => !!(ME && ME.canEdit !== false);
+const plateTxt = (v) => esc(v.plate_head || v.plate) + (v.plate_tail ? ' <small>/ ' + esc(v.plate_tail) + '</small>' : '');
+
+// ── รายชื่อรถ (fmSheet แบบไม่ระบุคัน = รายชื่อเบาๆ) ──
+async function loadList() {
+  $('vlist').innerHTML = '<div class="ldr"><i></i>กำลังโหลด</div>';
+  let d; try { d = await api({ action: 'fmSheet', month: bkk().slice(0, 7), group: GRP }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
+  if (!d.ok) { $('vlist').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; }
+  ME = d.me; LIST = d.vehicles || [];
+  if (!$('grp').innerHTML && ME.groups.length > 1)
+    $('grp').innerHTML = ['', ...ME.groups].map((g) => '<button class="chip' + (g === GRP ? ' on' : '') + '" data-g="' + esc(g) + '">' + (g ? GICON[g] + ' ' + g : 'ทั้งหมด') + '</button>').join('');
+  renderList();
+}
+function renderList() {
+  const q = $('q').value.trim().toLowerCase();
+  const vs = LIST.filter((v) => (!GRP || v.job_group === GRP) && (!q || (v.plate + ' ' + v.drivers.map((x) => x.name).join(' ')).toLowerCase().includes(q)));
+  $('vlist').innerHTML = vs.length ? vs.map((v) => '<button class="veh' + (CUR === v.id ? ' on' : '') + '" data-id="' + v.id + '"><div><div class="pl">' + esc(v.plate_head) + (v.plate_tail ? ' / ' + esc(v.plate_tail) : '') + '</div>' +
+    '<div class="dr">' + esc(v.drivers.map((x) => x.name).join(', ') || 'รถสแปร์') + '</div></div><div class="mt">' + (GICON[v.job_group] || '') + '</div></button>').join('')
+    : '<div class="msg">ไม่มีรถ</div>';
+}
+
+// ── รายคัน ──
+async function openVeh(id, keepTab) {
+  CUR = id; renderList(); if (!keepTab) { VTAB = 'hold'; F = null; }
+  $('main').innerHTML = '<div class="ldr"><i></i>กำลังโหลดรถคันนี้</div>';
+  let d; try { d = await api({ action: 'getVehicle', vehicleId: id }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
+  if (CUR !== id) return;
+  if (!d.ok) { $('main').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; }
+  V = d; if (!F) F = newForm('เบิก'); renderVeh();
+  history.replaceState(null, '', '?vehicle=' + id);
+}
+const ledger = () => (V.items || []).filter((i) => i.in_ledger);
+const held = (code) => { const i = (V.items || []).find((x) => x.code === code); return i ? Number(i.qty_on_hand) || 0 : 0; };
+function renderVeh() {
+  const v = V.vehicle, it = ledger(), req = it.filter((i) => i.is_required), short = it.filter((i) => i.is_required && Number(i.qty_on_hand) < Number(i.qty_required));
+  const dmg = it.filter((i) => i.found_condition === 'ชำรุด').length, mm = (V.mismatch || []).length;
+  $('main').innerHTML = '<div class="card"><div class="vh"><div><div class="pl">' + plateTxt(v) + '</div>' +
+    '<div class="info">' + (GICON[v.job_group] || '') + ' ' + esc(v.job_group) + ' · ' + esc(v.vehicle_type || v.tpl_kind || '') + ' · 👤 ' + esc((v.drivers || []).map((x) => x.name).join(', ') || 'รถสแปร์') + '</div></div>' +
+    '<div class="sp"></div><a class="lk" href="fm-tr-10.html?vehicle=' + v.id + '">📋 ใบ FM-TR-10 ของคันนี้ →</a></div>' +
+    '<div class="kp"><div><b>' + req.length + '</b><span>รายการที่ต้องมี</span></div>' +
+    '<div class="' + (short.length ? 'bad' : 'ok') + '"><b>' + short.length + '</b><span>รายการที่ขาด</span></div>' +
+    '<div class="' + (dmg ? 'bad' : '') + '"><b>' + dmg + '</b><span>ชำรุด (ตรวจล่าสุด)</span></div>' +
+    '<div class="' + (mm ? 'bad' : '') + '"><b>' + mm + '</b><span>ผลตรวจ ≠ ยอดเบิก</span></div>' +
+    '<div><b>' + (V.moves || []).length + '</b><span>รายการเบิก-คืน</span></div></div></div>' +
+    '<div class="tabs" id="vtabs">' + [['hold', '📦 อุปกรณ์ที่ถือ'], ['mv', '🔁 เบิก / คืน'], ['ck', '📋 ประวัติเช็ค']].map(([k, t]) => '<button data-t="' + k + '" class="' + (VTAB === k ? 'on' : '') + '">' + t + '</button>').join('') + '</div>' +
+    '<div id="vbody"></div>';
+  renderVTab();
+}
+function renderVTab() {
+  document.querySelectorAll('#vtabs button').forEach((b) => b.classList.toggle('on', b.dataset.t === VTAB));
+  $('vbody').innerHTML = VTAB === 'hold' ? holdHTML() : VTAB === 'mv' ? (canEdit() ? formHTML() : '') + movesHTML() : checksHTML();
+}
+function holdHTML() {
+  const rows = ledger().filter((i) => i.is_required || Number(i.qty_on_hand) !== 0).sort((a, b) => (a.sort || 0) - (b.sort || 0));
+  if (!rows.length) return '<div class="card msg">คันนี้ยังไม่มีชุดที่ต้องมี และยังไม่เคยเบิก</div>';
+  return '<div class="card tw"><table class="t"><thead><tr><th>อุปกรณ์</th><th class="n">ต้องมี</th><th class="n">เบิกไปแล้ว</th><th class="n">ขาด/เกิน</th><th>ตรวจล่าสุด</th><th>เลขเครื่อง / หมดอายุ</th><th>ใช้มาแล้ว</th>' + (canEdit() ? '<th></th>' : '') + '</tr></thead><tbody>' +
+    rows.map((i) => { const df = Number(i.qty_on_hand) - Number(i.qty_required || 0), sh = i.is_required && df < 0;
+      const found = i.found_qty == null && !i.found_condition ? '<span class="sm">–</span>' : (i.found_qty != null ? nf(i.found_qty) + ' ' : '') + (i.found_condition && i.found_condition !== 'ปกติ' ? '<span class="b bad">' + esc(i.found_condition) + '</span>' : '<span class="b ok">ปกติ</span>') + (i.mismatch ? ' <span class="b warn" title="ผลตรวจไม่ตรงยอดเบิก">≠</span>' : '');
+      const ser = [i.last_serial ? 'SN ' + esc(i.last_serial) : '', i.last_expiry ? 'หมด ' + dTxt(i.last_expiry) : ''].filter(Boolean).join('<br>') || '<span class="sm">–</span>';
+      return '<tr class="' + (sh ? 'short' : '') + '"><td><div class="nm">' + esc(i.name) + '</div><div class="sm">' + esc(i.category || '') + (i.item_active === false ? ' · เลิกใช้' : '') + '</div></td>' +
+        '<td class="n">' + (i.is_required ? nf(i.qty_required) : '<span class="sm">–</span>') + '</td><td class="n">' + nf(i.qty_on_hand) + ' <span class="sm">' + esc(i.unit || '') + '</span></td>' +
+        '<td class="n">' + (!i.is_required ? '' : df < 0 ? '<span class="neg">ขาด ' + nf(-df) + '</span>' : df > 0 ? '<span class="pos">+' + nf(df) + '</span>' : '<span class="zero">ครบ</span>') + '</td>' +
+        '<td>' + found + '</td><td class="sm">' + ser + '</td><td class="sm">' + esc(i.in_use_label || '–') + (i.lifespan_warn ? ' <span class="b warn">' + (i.lifespan_warn === 'over' ? 'เกินอายุเฉลี่ย' : 'ใกล้อายุเฉลี่ย') + '</span>' : '') + '</td>' +
+        (canEdit() ? '<td style="white-space:nowrap"><button class="btn gh sm" data-q="เบิก|' + esc(i.code) + '|' + (sh ? -df : 1) + '">เบิก</button> ' + (Number(i.qty_on_hand) > 0 ? '<button class="btn gh sm" data-q="คืน|' + esc(i.code) + '|1">คืน</button>' : '') + '</td>' : '') + '</tr>'; }).join('') +
+    '</tbody></table><div class="note" style="margin-top:8px">"เบิกไปแล้ว" = ยอดในสมุดเบิก-คืน · ชำรุดไม่ตัดยอด (บันทึกว่าเสีย) · ตรวจล่าสุด = เช็คลิสต์/สุ่มตรวจครั้งล่าสุด</div></div>';
+}
+
+// ── ฟอร์มเบิก-คืน (saveMoves · ไม่ต้อง PIN ยกเว้นกลับรายการ) ──
+function newForm(type, code, qty) { return { type, date: bkk(), doc: '', recv: '', note: '', reason: '', lines: [{ code: code || '', qty: qty || 1, serial: '', exp: '', old: '' }], errs: null, busy: false }; }
+function itemOpts(sel) {
+  const needHeld = F.type !== 'เบิก', its = ledger().filter((i) => (F.type === 'เบิก' ? i.item_active !== false : held(i.code) > 0) || i.code === sel)
+    .sort((a, b) => (b.is_required - a.is_required) || (a.sort || 0) - (b.sort || 0));
+  return '<option value="">— เลือกอุปกรณ์ —</option>' + its.map((i) => '<option value="' + esc(i.code) + '"' + (i.code === sel ? ' selected' : '') + '>' + esc(i.name) + (needHeld ? ' (ถือ ' + nf(held(i.code)) + ')' : '') + '</option>').join('') +
+    (needHeld && !its.length ? '<option disabled>คันนี้ยังไม่ได้เบิกอะไร</option>' : '');
+}
+function formHTML() {
+  const T = F.type, it = (c) => (V.items || []).find((x) => x.code === c) || {};
+  const lines = F.lines.map((l, k) => { const i = it(l.code);
+    const s2 = T === 'เปลี่ยน' && i.has_serial ? '<div class="s2"><span class="lnh">เลขเครื่องตัวเก่า</span><input data-l="' + k + '" data-k="old" value="' + esc(l.old) + '"></div>' : '<div class="s2"><span class="lnh">เลขเครื่อง' + (i.has_serial ? '' : ' (ถ้ามี)') + '</span><input data-l="' + k + '" data-k="serial" value="' + esc(l.serial) + '"></div>';
+    const ex = (T === 'เบิก' || T === 'เปลี่ยน') && i.has_expiry ? '<div class="s2"><span class="lnh">วันหมดอายุ</span><input type="date" data-l="' + k + '" data-k="exp" value="' + esc(l.exp) + '"></div>' : '<div class="s2"></div>';
+    return '<div class="ln"><div><span class="lnh">อุปกรณ์</span><select data-l="' + k + '" data-k="code">' + itemOpts(l.code) + '</select></div>' +
+      '<div><span class="lnh">' + (T === 'เปลี่ยน' || T === 'ชำรุด' ? 'กี่ชิ้น' : 'จำนวน') + '</span><input type="number" min="1" step="1" data-l="' + k + '" data-k="qty" value="' + esc(l.qty) + '"></div>' + s2 + ex +
+      '<button class="x" data-del="' + k + '" title="ลบแถว"' + (F.lines.length < 2 ? ' disabled style="visibility:hidden"' : '') + '>×</button>' +
+      (l.code ? '<div class="hold">ถืออยู่ ' + nf(held(l.code)) + ' ' + esc(i.unit || '') + (i.is_required ? ' · ต้องมี ' + nf(i.qty_required) : '') + '</div>' : '') + '</div>'; }).join('');
+  const hint = { 'เบิก': 'เพิ่มยอดถือ', 'คืน': 'ลดยอดถือ · ต้องเลือกเหตุผล', 'เปลี่ยน': 'สลับของเก่าเป็นของใหม่ ยอดถือเท่าเดิม', 'ชำรุด': 'บันทึกว่าเสีย ไม่ตัดยอด', 'สูญหาย': 'ลดยอดถือ' }[T];
+  return '<div class="card"><div class="seg" id="fType">' + TYPES.map(([k, t]) => '<button data-ty="' + k + '" class="' + (T === k ? 'on' : '') + '">' + t + '</button>').join('') + '</div>' +
+    '<div class="note" style="margin-top:6px">' + hint + '</div>' +
+    '<div class="fg"><div><label>วันที่</label><input type="date" id="fDate" max="' + bkk() + '" value="' + esc(F.date) + '"></div>' +
+    '<div><label>เลขที่เอกสาร (ถ้ามี)</label><input id="fDoc" value="' + esc(F.doc) + '" placeholder="เช่น WD-6911-001"></div>' +
+    (T === 'เบิก' ? '<div><label>ผู้รับของ (ถ้าไม่ใช่คนขับประจำ)</label><input id="fRecv" value="' + esc(F.recv) + '"></div>' : '') + '</div>' +
+    (T === 'คืน' ? '<div style="margin-bottom:10px"><label class="lnh">เหตุผลที่คืน</label><div class="seg" id="fRR">' + Object.entries(RR).map(([k, t]) => '<button data-rr="' + k + '" class="' + (F.reason === k ? 'on' : '') + '">' + t + '</button>').join('') + '</div></div>' : '') +
+    lines + '<button class="btn gh sm" id="fAdd">＋ เพิ่มรายการ</button>' +
+    '<div class="fg"><div style="grid-column:1/-1"><label>หมายเหตุ</label><input id="fNote" value="' + esc(F.note) + '"></div></div>' +
+    (F.errs ? '<div class="err">' + F.errs.map(esc).join('<br>') + '</div>' : '') +
+    '<button class="btn pri" id="fSave"' + (F.busy ? ' disabled' : '') + '>' + (F.busy ? 'กำลังบันทึก…' : '💾 บันทึก' + T) + '</button></div>';
+}
+async function saveForm() {
+  const T = F.type, lines = F.lines.filter((l) => l.code), errs = [];
+  if (!lines.length) errs.push('เลือกอุปกรณ์อย่างน้อย 1 รายการ');
+  lines.forEach((l, k) => { if (!(Number(l.qty) > 0)) errs.push('แถว ' + (k + 1) + ': จำนวนต้องมากกว่า 0'); if (T !== 'เบิก' && Number(l.qty) > held(l.code)) errs.push('แถว ' + (k + 1) + ': เกินยอดที่ถืออยู่ (' + held(l.code) + ')'); });
+  if (T === 'คืน' && !F.reason) errs.push('เลือกเหตุผลที่คืน');
+  if (errs.length) { F.errs = errs; renderVTab(); return; }
+  F.busy = true; F.errs = null; renderVTab();
+  let r; try {
+    r = await api({ action: 'saveMoves', vehicleId: V.vehicle.id, type: T, date: F.date, docNo: F.doc, receiverName: T === 'เบิก' ? F.recv : '', note: F.note, returnReason: T === 'คืน' ? F.reason : '',
+      lines: lines.map((l) => ({ itemCode: l.code, qty: Number(l.qty), serialNo: l.serial || '', oldSerialNo: l.old || '', expiryDate: l.exp || '' })) }, true);
+  } catch (e) { r = { error: 'เน็ตมีปัญหา ยังไม่แน่ใจว่าบันทึกหรือยัง — โหลดคันนี้ใหม่ดูก่อนกดซ้ำ' }; }
+  F.busy = false;
+  if (!r.ok) { F.errs = [r.error || 'บันทึกไม่ได้'].concat(r.errors || []); renderVTab(); return; }
+  toast('บันทึก' + T + ' ' + r.saved + ' รายการแล้ว' + (r.warnings && r.warnings.length ? ' (มีคำเตือน)' : ''));
+  F = newForm(T); openVeh(V.vehicle.id, true);
+}
+function movesHTML() {
+  const ms = V.moves || [], rev = new Set(ms.filter((m) => m.reverses_id).map((m) => Number(m.reverses_id))), it = (c) => ((V.items || []).find((x) => x.code === c) || {}).name || c;
+  if (!ms.length) return '<div class="card msg">ยังไม่มีรายการเบิก-คืน</div>';
+  const q = (m) => m.move_type === 'เปลี่ยน' ? '<span class="zero">⇄' + nf(m.affected_qty || 1) + '</span>' : m.move_type === 'ชำรุด' ? '<span style="color:var(--warn);font-weight:700">⚠' + nf(m.affected_qty || 1) + '</span>'
+    : '<span class="' + (m.qty > 0 ? 'pos' : m.qty < 0 ? 'neg' : 'zero') + '">' + (m.qty > 0 ? '+' : '') + nf(m.qty) + '</span>';
+  return '<div class="card tw"><h3 style="margin:0 0 8px;font-size:15px">ประวัติเบิก-คืน (ล่าสุด ' + ms.length + ' รายการ)</h3><table class="t"><thead><tr><th>วันที่</th><th>ประเภท</th><th>อุปกรณ์</th><th class="n">จำนวน</th><th>รายละเอียด</th><th>โดย</th>' + (canEdit() ? '<th></th>' : '') + '</tr></thead><tbody>' +
+    ms.map((m) => { const det = [m.return_reason ? RR[m.return_reason] || m.return_reason : '', m.serial_no ? 'SN ' + esc(m.serial_no) : '', m.old_serial_no ? 'ตัวเก่า ' + esc(m.old_serial_no) : '', m.expiry_date ? 'หมดอายุ ' + dTxt(m.expiry_date) : '',
+        m.doc_no ? '📄 ' + esc(m.doc_no) : '', m.receiver_name ? 'ผู้รับ ' + esc(m.receiver_name) : '', m.note ? esc(m.note) : ''].filter(Boolean).join(' · ');
+      const canRev = canEdit() && !m.reverses_id && !rev.has(Number(m.id));
+      return '<tr' + (rev.has(Number(m.id)) ? ' style="opacity:.5"' : '') + '><td style="white-space:nowrap">' + dTxt(m.move_date) + '</td><td>' + esc(m.move_type) + (m.reverses_id ? ' <span class="b gr">กลับรายการ</span>' : rev.has(Number(m.id)) ? ' <span class="b gr">ถูกกลับแล้ว</span>' : '') + '</td>' +
+        '<td>' + esc(it(m.item_code)) + '</td><td class="n">' + q(m) + '</td><td class="sm">' + (det || '–') + '</td><td class="sm">' + esc(m.created_by || '') + '</td>' +
+        (canEdit() ? '<td>' + (canRev ? '<button class="btn gh sm" data-rev="' + m.id + '" title="กลับรายการ (ต้องใส่ PIN)">↩︎</button>' : '') + '</td>' : '') + '</tr>'; }).join('') +
+    '</tbody></table></div>';
+}
+function openRev(id) {
+  const m = (V.moves || []).find((x) => Number(x.id) === Number(id)); if (!m) return;
+  $('dT').textContent = '↩︎ กลับรายการ #' + id;
+  $('dB').innerHTML = '<div class="note">' + esc(m.move_type) + ' ' + esc(((V.items || []).find((x) => x.code === m.item_code) || {}).name || m.item_code) + ' ' + nf(m.qty || m.affected_qty) + ' · ' + dTxt(m.move_date) + '</div>' +
+    '<div class="note" style="margin-top:6px">ระบบจะสร้างรายการ "ปรับยอด" หักล้างรายการนี้ (ไม่ลบของเดิม) · ต้องใส่ PIN ส่วนตัว 6 หลัก</div>' +
+    '<label>เหตุผล</label><input id="rvWhy" placeholder="เช่น บันทึกผิดคัน"><label>PIN 6 หลัก</label><input id="rvPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">' +
+    '<div id="rvErr"></div><button class="btn pri" id="rvGo" style="margin-top:12px;width:100%">ยืนยันกลับรายการ</button>';
+  $('rvGo').onclick = async () => {
+    const why = $('rvWhy').value.trim(), pin = $('rvPin').value.trim();
+    if (!why) { $('rvErr').innerHTML = '<div class="err">ใส่เหตุผล</div>'; return; }
+    if (!/^\d{6}$/.test(pin)) { $('rvErr').innerHTML = '<div class="err">PIN ต้องเป็นตัวเลข 6 หลัก</div>'; return; }
+    $('rvGo').disabled = true;
+    let r; try { r = await api({ action: 'saveMoves', reverse: [{ id: Number(id), note: why }], pin }, true); } catch (e) { r = { error: 'เน็ตมีปัญหา' }; }
+    if (!r.ok) { $('rvGo').disabled = false; $('rvPin').value = ''; $('rvErr').innerHTML = '<div class="err">' + esc(r.pinBad ? 'PIN ไม่ถูกต้อง' : r.error || 'ไม่สำเร็จ') + (r.errors ? '<br>' + r.errors.map(esc).join('<br>') : '') + '</div>'; return; }
+    closeDrw(); toast('กลับรายการแล้ว'); openVeh(V.vehicle.id, true);
+  };
+  $('dim').classList.add('open'); $('drw').classList.add('open'); setTimeout(() => $('rvWhy').focus(), 200);
+}
+function closeDrw() { $('dim').classList.remove('open'); $('drw').classList.remove('open'); }
+function checksHTML() {
+  const d14 = (V.days14 || []).map((d) => '<i title="' + esc(d.label || '') + '"><b>' + (d.emoji || DAY_IC[d.code] || '·') + '</b>' + (+String(d.date).slice(8, 10)) + '</i>').join('');
+  const ks = V.checks || [], kind = { daily: 'คนขับ', admin: 'แอดมินบันทึก', audit: 'สุ่มตรวจ' };
+  return '<div class="card"><h3 style="margin:0 0 4px;font-size:15px">14 วันล่าสุด</h3><div class="d14">' + (d14 || '<span class="sm">–</span>') + '</div>' +
+    '<div class="note">✅ ส่งแล้ว · 🟡 ส่งหลังออกรถ · 🔴 วิ่งแต่ไม่ส่ง · ⏳ รอส่งวันนี้ · ➖ ไม่ได้วิ่ง</div></div>' +
+    '<div class="card tw"><h3 style="margin:0 0 8px;font-size:15px">เช็คลิสต์ / สุ่มตรวจ (' + ks.length + ' ครั้ง)</h3>' + (ks.length ? '<table class="t"><thead><tr><th>วันที่</th><th>แบบ</th><th>สถานะ</th><th>ปัญหา</th><th>คนขับ / ผู้บันทึก</th><th class="n">เลขไมล์</th><th></th></tr></thead><tbody>' +
+    ks.map((k) => '<tr><td style="white-space:nowrap">' + dTxt(String(k.check_date).slice(0, 10)) + '</td><td>' + esc(kind[k.kind] || k.kind) + '</td><td>' + esc(k.status || '') + (k.on_time === false ? ' <span class="b gold">หลังออกรถ</span>' : '') + '</td>' +
+      '<td>' + (k.problem_count ? '<span class="b bad">' + k.problem_count + ' ข้อ</span>' : '<span class="b ok">ไม่มี</span>') + '</td><td class="sm">' + esc(k.driver_name || '') + '</td><td class="n">' + (k.odometer != null ? nf(k.odometer) : '–') + (k.flag_odometer ? ' <span class="b bad">ถอยหลัง</span>' : '') + '</td>' +
+      '<td><a class="lk" href="fm-tr-10.html?vehicle=' + V.vehicle.id + '&month=' + String(k.check_date).slice(0, 7) + '">ดูใบ</a></td></tr>').join('') + '</tbody></table>' : '<div class="msg">ยังไม่มีเช็คลิสต์</div>') + '</div>';
+}
+
+// ── สรุปอุปกรณ์ (getSummary) ──
+async function loadSum() {
+  $('main').innerHTML = '<div class="ldr"><i></i>กำลังโหลดสรุป</div>';
+  const key = GRP || 'all';
+  if (!SUM[key]) { let d; try { d = await api({ action: 'getSummary', group: GRP }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
+    if (!d.ok) { $('main').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; } SUM[key] = d.rows || []; }
+  const rows = SUM[key].filter((r) => r.job_group === (GRP || 'ทั้งหมด') || (!GRP && r.job_group === 'ทั้งหมด'));
+  const use = rows.length ? rows : SUM[key];
+  $('main').innerHTML = '<div class="card"><div class="chips" id="sgrp">' + ['', ...(ME ? ME.groups : [])].map((g) => '<button class="chip' + (g === GRP ? ' on' : '') + '" data-sg="' + esc(g) + '">' + (g ? GICON[g] + ' ' + g : 'ทุกกลุ่ม') + '</button>').join('') + '</div>' +
+    '<div class="tw"><table class="t"><thead><tr><th>อุปกรณ์</th>' + (GRP ? '' : '<th>กลุ่ม</th>') + '<th class="n">ต้องมี</th><th class="n">เบิกไปแล้ว</th><th class="n">ขาด</th><th class="n">คันที่ถือ</th><th class="n">ชำรุด</th><th class="n">หาย</th></tr></thead><tbody>' +
+    use.filter((r) => Number(r.qty_required) || Number(r.qty_on_hand)).map((r) => '<tr class="' + (Number(r.qty_short) > 0 ? 'short' : '') + '"><td><div class="nm">' + esc(r.name) + '</div><div class="sm">' + esc(r.category || '') + '</div></td>' + (GRP ? '' : '<td class="sm">' + esc(r.job_group) + '</td>') +
+      '<td class="n">' + nf(r.qty_required) + '</td><td class="n">' + nf(r.qty_on_hand) + ' <span class="sm">' + esc(r.unit || '') + '</span></td><td class="n">' + (Number(r.qty_short) > 0 ? '<span class="neg">' + nf(r.qty_short) + '</span>' : '<span class="zero">–</span>') + '</td>' +
+      '<td class="n">' + nf(r.vehicles_holding) + ' / ' + nf(r.vehicles_required) + '</td><td class="n">' + (r.damaged_qty ? '<span class="neg">' + nf(r.damaged_qty) + '</span> <span class="sm">(' + r.damaged_vehicles + ' คัน)</span>' : '–') + '</td>' +
+      '<td class="n">' + (r.lost_qty ? '<span class="neg">' + nf(r.lost_qty) + '</span> <span class="sm">(' + r.lost_vehicles + ' คัน)</span>' : '–') + '</td></tr>').join('') +
+    '</tbody></table></div><div class="note" style="margin-top:8px">ชำรุด/หาย นับจากเช็คลิสต์ล่าสุดของแต่ละคัน · ชำรุดยังนับอยู่ในยอดเบิก</div></div>';
+}
+function setView(v) {
+  VIEW = v; document.querySelectorAll('#vw button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
+  $('wrap').classList.toggle('full', v === 'sum');
+  if (v === 'sum') loadSum(); else if (CUR) openVeh(CUR, true); else $('main').innerHTML = '<div class="msg">เลือกรถทางซ้าย</div>';
+}
+
+// ── events ──
+$('vw').onclick = (e) => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); };
+$('grp').onclick = (e) => { const b = e.target.closest('[data-g]'); if (!b) return; GRP = b.dataset.g; document.querySelectorAll('#grp .chip').forEach((x) => x.classList.toggle('on', x === b)); renderList(); };
+$('q').oninput = () => LIST && renderList();
+$('vlist').onclick = (e) => { const b = e.target.closest('[data-id]'); if (b) openVeh(+b.dataset.id); };
+$('dX').onclick = closeDrw; $('dim').onclick = closeDrw;
+$('main').addEventListener('click', (e) => {
+  const t = e.target, c = (s) => t.closest(s);
+  if (c('[data-sg]')) { GRP = c('[data-sg]').dataset.sg; loadSum(); return; }
+  if (c('#vtabs button')) { VTAB = c('#vtabs button').dataset.t; renderVTab(); return; }
+  if (c('[data-q]')) { const [ty, code, n] = c('[data-q]').dataset.q.split('|'); F = newForm(ty, code, Math.max(1, +n || 1)); VTAB = 'mv'; renderVTab(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  if (c('[data-ty]')) { const ty = c('[data-ty]').dataset.ty; F.type = ty; F.errs = null; if (ty !== 'เบิก') F.lines.forEach((l) => { if (l.code && held(l.code) <= 0) l.code = ''; }); renderVTab(); return; }
+  if (c('[data-rr]')) { F.reason = c('[data-rr]').dataset.rr; renderVTab(); return; }
+  if (c('#fAdd')) { F.lines.push({ code: '', qty: 1, serial: '', exp: '', old: '' }); renderVTab(); return; }
+  if (c('[data-del]')) { F.lines.splice(+c('[data-del]').dataset.del, 1); renderVTab(); return; }
+  if (c('#fSave')) { saveForm(); return; }
+  if (c('[data-rev]')) { openRev(c('[data-rev]').dataset.rev); return; }
+});
+$('main').addEventListener('input', (e) => {
+  const t = e.target; if (!F) return;
+  if (t.dataset.l != null) { F.lines[+t.dataset.l][t.dataset.k] = t.value; if (t.dataset.k === 'code') renderVTab(); return; }
+  if (t.id === 'fDate') F.date = t.value; else if (t.id === 'fDoc') F.doc = t.value; else if (t.id === 'fRecv') F.recv = t.value; else if (t.id === 'fNote') F.note = t.value;
+});
+
+(async function init() {
+  const q = new URLSearchParams(location.search);
+  if (q.get('uid')) UID = q.get('uid');
+  else {
+    try { await liff.init({ liffId: LIFF_ID }); if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; } const p = await liff.getProfile(); UID = p.userId || ''; }
+    catch (e) { $('vlist').innerHTML = '<div class="msg">เข้าระบบ LINE ไม่สำเร็จ</div>'; return; }
+  }
+  await loadList();
+  if (q.get('vehicle')) openVeh(+q.get('vehicle'));
+})();
+</script>
+</body>
+</html>
