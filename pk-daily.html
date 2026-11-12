@@ -3101,8 +3101,9 @@ const ypCnt=a=>{const c={p:0,planned:0,ignored:0};(a||YP.msgs).forEach(m=>{const
 function ypBadge(){const b=$('ypN');if(!b)return;if(!YP.loaded){b.textContent='·';b.className='';return;}
   const YM=YP.msgs.filter(ypInYp),n=ypCnt(YM).p,nw=YM.filter(m=>!ypSt(m)&&ypIsNew(m)).length;b.textContent=n+(nw?' · ใหม่ '+nw:'');b.className=n&&YP.src==='db'?'on':'';
   b.title=nw?'มีออเดอร์ใหม่ '+nw+' รายการ · เปิดแล้วกดชิปวันที่เพื่อดู':'';
-  const q=$('poN');if(!q)return;const P=YP.msgs.filter(m=>ypIsPo(m)&&!ypSt(m)),pn=P.filter(ypIsNew).length;
-  q.textContent=P.length+(pn?' · ใหม่ '+pn:'');q.className=P.length&&YP.src==='db'?'on':'';q.title=pn?'มี PO ใหม่ '+pn+' รายการ':'';}
+  /* ปุ่ม PO = นับเฉพาะ ⏳ รอนัด (คุณน้อง 12 พ.ย.) · ได้วันแล้วไปนับที่ Pending ยี่ปั๊ว */
+  const q=$('poN');if(!q)return;const P=YP.msgs.filter(m=>ypIsPo(m)&&poSt(m)==='wait'),pn=P.filter(ypIsNew).length;
+  q.textContent=P.length+(pn?' · ใหม่ '+pn:'');q.className=P.length&&YP.src==='db'?'on':'';q.title='PO รอเซลส์นัด '+P.length+' รายการ'+(pn?' · ใหม่ '+pn:'');}
 const ypTime=iso=>{const d=new Date(iso);return isNaN(d)?'':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'});};
 async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;const sig0=YP.loaded?ypSig():'';
   try{const x=await fetch(ypUrl()+'?action=list&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());
