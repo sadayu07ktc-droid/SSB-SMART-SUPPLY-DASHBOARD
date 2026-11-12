@@ -75,6 +75,21 @@ svg.mk{width:14px;height:14px;vertical-align:middle;display:inline-block}
 svg.mk circle{stroke:none}
 svg.mk path{fill:none;stroke:#fff;stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}
 svg.mk.ok circle{fill:#1F9D55} svg.mk.bad circle{fill:#D92D20}
+svg.mk.ver circle{fill:#fff;stroke:#D92D20;stroke-width:1.8} svg.mk.ver path{stroke:#D92D20}
+.vtag{display:inline-block;border:1px solid #D92D20;color:#D92D20;border-radius:4px;padding:0 4px;font-size:10.5px;font-weight:700;line-height:1.4}
+/* ลิ้นชัก: ข้อที่ผู้ทวนสอบพบ (แบบฟอร์มคนขับ) */
+.dv{border:1px solid var(--line);border-radius:10px;margin-bottom:6px;background:#fff}
+.dv.on{border-color:#F3B4B4;background:#FFF7F7}
+.dv-h{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:8px 10px;cursor:pointer;text-align:left}
+.dv-bx{font-size:17px;line-height:1;color:var(--muted)} .dv.on .dv-bx{color:#D92D20}
+.dv-no{font-weight:800;min-width:26px} .dv-no .star{color:#D92D20}
+.dv-nm{font-weight:600;font-size:13.5px}
+.dv-b{padding:0 10px 10px 44px}
+.dv-cr{font-size:12px;color:var(--muted);margin-bottom:6px}
+.dv-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px}
+.pc{border:1px solid var(--line);background:var(--sunken);border-radius:999px;padding:4px 10px;cursor:pointer;font-size:13px}
+.pc.on{background:#FDECEC;border-color:#F3B4B4;color:#B42318;font-weight:700}
+.drw .dv-note{font-size:13px;padding:6px 9px}
 .legend svg.mk{width:13px;height:13px;vertical-align:-2px}
 body.printing table.fm svg.mk{width:12px;height:12px}
 table.fm td.m.mon{background:#FFFBEB}
@@ -226,12 +241,13 @@ async function openVeh(id) {
     '<div class="st"><b style="color:var(--bad)">' + s.missing + '</b><span>รถวิ่งแต่ไม่ส่ง</span></div>' +
     '<div class="st"><b style="color:var(--warn)">' + s.fail_days + '</b><span>วันที่มี X</span></div>' +
     '<div class="st"><b style="color:var(--bad)">' + s.unverified + '</b><span>รอทวนสอบ</span></div>' +
-    '<div class="st"><b>' + s.backdated + '</b><span>บันทึกย้อนหลัง (ย)</span></div></div>' + sheetHTML(d, true);
+    '<div class="st"><b>' + s.backdated + '</b><span>บันทึกย้อนหลัง</span></div></div>' + sheetHTML(d, true);
 }
 // เครื่องหมายในช่อง: ✓ วงเขียว = ผ่าน · ✗ วงแดง = ไม่ผ่าน (SVG คมทั้งจอและตอนปริ้น)
 const MARK = {
   '/': '<svg class="mk ok" viewBox="0 0 16 16" aria-label="ผ่าน"><circle cx="8" cy="8" r="7"/><path d="M4.6 8.3l2.2 2.2 4.6-4.9"/></svg>',
   'X': '<svg class="mk bad" viewBox="0 0 16 16" aria-label="ไม่ผ่าน"><circle cx="8" cy="8" r="7"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2"/></svg>',
+  'V': '<svg class="mk ver" viewBox="0 0 16 16" aria-label="ผู้ทวนสอบพบ"><circle cx="8" cy="8" r="6.6"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2"/></svg>',
 };
 function sheetHTML(d, live) {
   const v = d.vehicle, days = d.days, today = d.today || bkk();
@@ -251,17 +267,17 @@ function sheetHTML(d, live) {
   d.items.forEach((it) => {
     if (it.section !== last) { last = it.section; h += '<tr class="sec"><td colspan="' + (3 + days.length) + '">' + esc(sec[it.section] || it.section) + '</td></tr>'; }
     h += '<tr><td class="no">' + it.no + (it.star ? '<span class="star">★</span>' : '') + '</td><td class="nm">' + esc(it.name) + '</td><td class="cr">' + esc(it.criteria || '') + '</td>' +
-      days.map((dd) => { const m = dd.marks[it.code] || ''; return '<td class="m' + (m === 'X' ? ' x' : m === '–' ? ' na' : '') + (dd.monday ? ' mon' : '') + cl(dd) + '">' + (MARK[m] || m) + '</td>'; }).join('') + '</tr>';
+      days.map((dd) => { const m = dd.marks[it.code] || ''; return '<td class="m' + (m === 'X' || m === 'V' ? ' x' : m === '–' ? ' na' : '') + (dd.monday ? ' mon' : '') + cl(dd) + '">' + (MARK[m] || m) + '</td>'; }).join('') + '</tr>';
   });
   h += '<tr><td colspan="3" class="ft">ลายมือชื่อ พนักงานขับรถ</td>' + days.map((dd) => '<td class="vt' + (dd.missing ? ' miss' : '') + cl(dd) + '"><span>' + (dd.check_id ? esc(first(dd.driver_name)) : dd.missing ? 'ไม่ส่ง' : '') + '</span></td>').join('') + '</tr>' +
-    '<tr><td colspan="3" class="ft">บันทึกย้อนหลัง (ย)</td>' + days.map((dd) => '<td class="m' + cl(dd) + '">' + (dd.backdated ? 'ย' : '') + '</td>').join('') + '</tr>' +
     '<tr><td colspan="3" class="ft">ผู้ทวนสอบ (หัวหน้างาน)</td>' + days.map((dd) => '<td class="vt' + cl(dd) + '"><span>' + (dd.verified_by ? esc(first(dd.verified_by)) : dd.fail ? '<b style="color:var(--bad)">รอ</b>' : '') + '</span></td>').join('') + '</tr>' +
     '</tbody></table>' +
-    '<div class="legend"><b>วิธีอ่าน:</b> ' + MARK['/'] + ' = ผ่าน · ' + MARK['X'] + ' = ไม่ผ่าน · – = ไม่เกี่ยวกับรถคันนี้ / ไม่ใช่วันตรวจประจำสัปดาห์ · ว่าง = ไม่มีงาน · ย = บันทึกย้อนหลัง · <b class="star" style="color:var(--bad)">★</b> = ข้อห้ามออกรถ (ไม่ผ่าน ห้ามนำรถออกจนกว่าแก้ไข)</div>' +
+    '<div class="legend"><b>วิธีอ่าน:</b> ' + MARK['/'] + ' = ผ่าน · ' + MARK['X'] + ' = ไม่ผ่าน (คนขับแจ้ง) · ' + MARK['V'] + ' = ผู้ทวนสอบพบ · – = ไม่เกี่ยวกับรถคันนี้ / ไม่ใช่วันตรวจประจำสัปดาห์ · ว่าง = ไม่มีงาน ·<b class="star" style="color:var(--bad)">★</b> = ข้อห้ามออกรถ (ไม่ผ่าน ห้ามนำรถออกจนกว่าแก้ไข)</div>' +
     '<h3 class="rp">บันทึกแจ้งซ่อม (ดึงจากใบตรวจอัตโนมัติ)</h3>' +
     '<table class="rp"><thead><tr><th>วันที่</th><th>อาการผิดปกติ (คนขับแจ้ง)</th><th>ผู้แจ้ง</th><th>วันที่ทวนสอบ · ผู้ทวนสอบ</th><th>การดำเนินการ</th><th>สถานะรถ</th>' + (live ? '<th class="no-print"></th>' : '') + '</tr></thead><tbody>' +
-    (d.repairs.length ? d.repairs.map((r) => '<tr><td class="dt">' + dTxt(r.date) + (r.backdated ? ' (ย)' : '') + '</td><td>' +
-      r.items.map((x) => '<div>ข้อ ' + x.no + (x.star ? '<span class="star" style="color:var(--bad)">★</span>' : '') + ' ' + esc(x.name) + ': <span class="parts">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</span>' + (x.note ? ' — ' + esc(x.note) : '') +
+    (d.repairs.length ? d.repairs.map((r) => '<tr><td class="dt">' + dTxt(r.date) + '</td><td>' +
+      r.items.map((x) => '<div>ข้อ ' + x.no + (x.star ? '<span class="star" style="color:var(--bad)">★</span>' : '') + ' ' + esc(x.name) + ': ' + (x.by === 'verify' ? '<span class="vtag">ผู้ทวนสอบพบ</span> ' : '') + '<span class="parts">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</span>' + (x.note ? ' — ' + esc(x.note) : '') +
+        (x.verify_parts && x.verify_parts.length ? ' <span class="vtag">ผู้ทวนสอบเพิ่ม</span> <span class="parts">' + esc(x.verify_parts.join(', ')) + '</span>' + (x.verify_note ? ' — ' + esc(x.verify_note) : '') : '') +
         (x.photo_url ? '<div class="no-print"><img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '"></div>' : '') + '</div>').join('') + '</td>' +
       '<td>' + esc(r.driver_name || '') + '</td><td>' + (r.verified_at ? esc(tTxt(r.verified_at)) + '<br>' + esc(r.verified_by) : '<span style="color:var(--bad);font-weight:700">ยังไม่ทวนสอบ</span>') + '</td>' +
       '<td>' + esc(r.verify_action || '') + '</td><td>' + esc(r.vehicle_state || '') + '</td>' +
@@ -273,22 +289,42 @@ function sheetHTML(d, live) {
 }
 
 // ── ลิ้นชักรายวัน + ทวนสอบ ──
-let VER = { result: '', day: null };
+let VER = { result: '', day: null, def: {} };
+// รายการข้อที่ผู้ทวนสอบติ๊กเองได้ = ข้อที่ต้องตรวจวันนั้น (ไม่ใช่ – / ว่าง) และคนขับไม่ได้แจ้ง X ไว้แล้ว
+function defItems() { const dd = VER.day; return SHEET.items.filter((it) => { const m = dd.marks[it.code]; return m && m !== '–' && m !== 'X'; }); }
+function defHTML() {
+  const its = defItems();
+  if (!its.length) return '<div class="fl" style="color:var(--muted)">ใบนี้ไม่มีข้อ FM-TR-10 ให้เลือก (ส่งก่อนใช้แบบฟอร์มใหม่ หรือคนขับแจ้งผิดปกติครบแล้ว)</div>';
+  return '<div style="font-size:12.5px;color:var(--muted);margin-bottom:6px">แตะข้อที่พบ แล้วติ๊กว่าส่วนไหนผิดปกติ (เหมือนฟอร์มคนขับ)</div>' + its.map((it) => {
+    const d = VER.def[it.code], on = !!d, subs = (it.sub_parts || []).concat(['อื่นๆ']);
+    const needNote = on && (!(it.sub_parts || []).length || d.parts.has('อื่นๆ'));
+    return '<div class="dv' + (on ? ' on' : '') + '" data-code="' + esc(it.code) + '"><button class="dv-h" data-dv="' + esc(it.code) + '"><span class="dv-bx">' + (on ? '☑' : '☐') + '</span>' +
+      '<span class="dv-no">' + it.no + (it.star ? '<span class="star">★</span>' : '') + '</span><span class="dv-nm">' + esc(it.name) + '</span></button>' +
+      (on ? '<div class="dv-b">' + (it.criteria ? '<div class="dv-cr">เกณฑ์: ' + esc(it.criteria) + '</div>' : '') +
+        '<div class="dv-chips">' + subs.map((p) => '<button class="pc' + (d.parts.has(p) ? ' on' : '') + '" data-pc="' + esc(it.code) + '" data-p="' + esc(p) + '">' + (d.parts.has(p) ? '☑ ' : '☐ ') + esc(p) + '</button>').join('') + '</div>' +
+        '<input class="dv-note" data-nt="' + esc(it.code) + '" placeholder="' + (needNote ? 'พิมพ์อาการที่พบ (จำเป็น)' : 'อาการเพิ่มเติม (ถ้ามี)') + '" value="' + esc(d.note || '') + '"></div>' : '') + '</div>';
+  }).join('');
+}
+function renderDef() { const w = $('vDefW'); if (!w) return; w.style.display = VER.result === 'defect' ? '' : 'none'; $('vDef').innerHTML = defHTML(); }
 function openDay(date) {
   const dd = SHEET.days.find((x) => x.date === date); if (!dd || !dd.check_id) return;
   const rp = SHEET.repairs.find((r) => r.date === date) || null;
-  VER = { result: dd.verify_result === 'พบข้อบกพร่อง' ? 'defect' : dd.verify_result ? 'ok' : (dd.fail ? 'defect' : 'ok'), day: dd };
+  VER = { result: dd.verify_result === 'พบข้อบกพร่อง' ? 'defect' : dd.verify_result ? 'ok' : (dd.fail ? 'defect' : 'ok'), day: dd, def: {} };
+  (dd.verify_defects || []).forEach((x) => { VER.def[x.code] = { parts: new Set(x.parts || []), note: x.note || '' }; });
   $('dT').textContent = SHEET.vehicle.plate_head + ' · ' + dTxt(date);
-  const fails = rp ? rp.items : [];
-  let h = '<div class="row" style="font-size:13px;color:var(--muted)">ผู้ส่ง: <b style="color:var(--ink)">' + esc(dd.driver_name || '') + '</b> · ส่งเมื่อ ' + esc(tTxt(dd.submitted_at)) + (dd.backdated ? ' · <b>บันทึกย้อนหลัง (ย)</b>' : '') + '</div>';
-  h += fails.length ? fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b><div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
+  const fails = rp ? rp.items.filter((x) => x.by !== 'verify') : [];
+  let h = '<div class="row" style="font-size:13px;color:var(--muted)">ผู้ส่ง: <b style="color:var(--ink)">' + esc(dd.driver_name || '') + '</b> · ส่งเมื่อ ' + esc(tTxt(dd.submitted_at)) + (dd.backdated ? ' · <b>บันทึกย้อนหลัง</b>' : '') + '</div>';
+  h += fails.length ? '<div style="font-weight:700;font-size:13px;margin-bottom:4px">คนขับแจ้งผิดปกติ</div>' + fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b><div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
     (x.note ? '<div>' + esc(x.note) + '</div>' : '') + (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + '</div>').join('')
-    : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ ผ่านทุกข้อ</div>';
+    : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ คนขับแจ้งผ่านทุกข้อ</div>';
   const canEdit = ME && ME.canEdit;
-  if (!canEdit) h += '<div class="row" style="color:var(--muted)">บัญชีนี้ดูได้อย่างเดียว</div>';
+  const vds = rp ? rp.items.filter((x) => x.by === 'verify') : [];
+  if (!canEdit) h += (vds.length ? '<div style="font-weight:700;font-size:13px;margin:8px 0 4px">ผู้ทวนสอบพบเพิ่ม</div>' + vds.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b><div style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' + (x.note ? '<div>' + esc(x.note) + '</div>' : '') + '</div>').join('') : '') +
+    '<div class="row" style="color:var(--muted)">บัญชีนี้ดูได้อย่างเดียว</div>';
   else {
     h += '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><label>ผลการทวนสอบ</label><div class="seg">' +
       '<button data-r="ok" class="ok' + (VER.result === 'ok' ? ' on' : '') + '">✅ เรียบร้อย ไม่พบปัญหา</button><button data-r="defect" class="bad' + (VER.result === 'defect' ? ' on' : '') + '">⚠️ พบข้อบกพร่อง</button></div></div>' +
+      '<div class="row" id="vDefW"' + (VER.result === 'defect' ? '' : ' style="display:none"') + '><label>ข้อที่ผู้ทวนสอบพบ</label><div id="vDef">' + defHTML() + '</div></div>' +
       '<div class="row"><label>การดำเนินการ / สั่งซ่อม</label><textarea id="vAct" placeholder="เช่น ส่งซ่อมเบรกมือที่อู่… / เปลี่ยนหลอดไฟแล้ว">' + esc(rp && rp.verify_action || '') + '</textarea></div>' +
       '<div class="row"><label>สถานะรถ</label><select id="vState"><option value="">—</option>' + SHEET.states.map((s) => '<option' + ((rp && rp.vehicle_state) === s ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select></div>' +
       '<div class="row"><label>ชื่อผู้ทวนสอบ</label><input id="vName" placeholder="ว่าง = ชื่อบัญชีที่เข้าระบบ" value="' + esc(dd.verified_by || '') + '"></div>' +
@@ -302,7 +338,8 @@ function closeDrw() { $('drw').classList.remove('open'); $('dim').classList.remo
 async function saveVerify() {
   const b = $('vSave'); b.disabled = true; b.textContent = 'กำลังบันทึก…';
   try {
-    const r = await api({ action: 'verifyCheck', checkId: VER.day.check_id, result: VER.result, verifyAction: $('vAct').value.trim(), vehicleState: $('vState').value, verifierName: $('vName').value.trim() }, true);
+    const defects = VER.result === 'defect' ? Object.keys(VER.def).map((code) => ({ code, parts: [...VER.def[code].parts], note: (VER.def[code].note || '').trim() })) : [];
+    const r = await api({ action: 'verifyCheck', checkId: VER.day.check_id, result: VER.result, defects, verifyAction: $('vAct').value.trim(), vehicleState: $('vState').value, verifierName: $('vName').value.trim() }, true);
     if (!r.ok) { toast(r.error || 'บันทึกไม่สำเร็จ'); return; }
     toast('บันทึกการทวนสอบแล้ว'); closeDrw(); await openVeh(CUR); loadList();
   } catch (e) { toast('เน็ตหลุด ลองใหม่'); }
@@ -350,11 +387,14 @@ document.addEventListener('click', (e) => {
   const v = t.closest('.veh'); if (v) { openVeh(+v.dataset.id); return; }
   const im = t.closest('[data-img]'); if (im) { window.open(im.dataset.img, '_blank'); return; }
   const dy = t.closest('[data-day]'); if (dy && SHEET) { openDay(dy.dataset.day); return; }
-  const r = t.closest('.seg button'); if (r) { VER.result = r.dataset.r; r.parentNode.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === r)); return; }
+  const r = t.closest('.seg button'); if (r) { VER.result = r.dataset.r; r.parentNode.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === r)); renderDef(); return; }
+  const dv = t.closest('[data-dv]'); if (dv) { const c = dv.dataset.dv; if (VER.def[c]) delete VER.def[c]; else VER.def[c] = { parts: new Set(), note: '' }; renderDef(); return; }
+  const pc = t.closest('[data-pc]'); if (pc) { const d = VER.def[pc.dataset.pc]; if (d) { d.parts.has(pc.dataset.p) ? d.parts.delete(pc.dataset.p) : d.parts.add(pc.dataset.p); renderDef(); } return; }
   if (t.id === 'vSave') saveVerify();
 });
 $('dX').onclick = closeDrw; $('dim').onclick = closeDrw;
 $('q').oninput = () => LIST && renderList();
+document.addEventListener('input', (e) => { const n = e.target.closest && e.target.closest('[data-nt]'); if (n && VER.def[n.dataset.nt]) VER.def[n.dataset.nt].note = n.value; });
 $('month').onchange = () => { loadList(); if (CUR) openVeh(CUR); };
 $('bPrint').onclick = () => { if (!SHEET || !CUR) { toast('เลือกรถก่อน'); return; } doPrint(); };
 $('bPrintAll').onclick = printAll;
