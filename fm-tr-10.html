@@ -128,6 +128,12 @@ table.rp img{width:46px;height:46px;object-fit:cover;border-radius:6px;cursor:po
 .fl{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
 .fl.bad{border-color:#F3B4B4;background:#FFF7F7}
 .fl img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-top:6px;cursor:pointer;background:#f3f3f3}
+.phg{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin-bottom:8px}
+.ph{border:1px solid var(--line);border-radius:10px;overflow:hidden;cursor:pointer;background:#fff}
+.ph.bad{border-color:#F3B4B4}
+.ph img{display:block;width:100%;height:110px;object-fit:cover;background:#f3f3f3}
+.ph div{font-size:12px;padding:5px 7px;line-height:1.3}
+.ph.bad div{color:var(--bad);font-weight:600}
 .seg{display:flex;gap:6px}
 .seg button{flex:1;border:1px solid var(--line);background:var(--sunken);border-radius:8px;padding:8px;cursor:pointer;font-weight:600}
 .seg button.on.ok{background:var(--oktint);border-color:#86EFAC;color:var(--ok)}
@@ -317,6 +323,11 @@ function openDay(date) {
   h += fails.length ? '<div style="font-weight:700;font-size:13px;margin-bottom:4px">คนขับแจ้งผิดปกติ</div>' + fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b><div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
     (x.note ? '<div>' + esc(x.note) + '</div>' : '') + (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + '</div>').join('')
     : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ คนขับแจ้งผ่านทุกข้อ</div>';
+  // รูปทุกรูปที่คนขับถ่ายในใบนี้ (รวมข้อที่ผ่าน เช่น เกจถังดับเพลิง) · กดเปิดรูปเต็ม
+  const phs = dd.photos || [];
+  h += '<div style="font-weight:700;font-size:13px;margin:10px 0 4px">📷 รูปที่คนขับถ่าย' + (phs.length ? ' (' + phs.length + ')' : '') + (dd.odometer != null ? ' <span style="font-weight:400;color:var(--muted)">· เลขไมล์ ' + Number(dd.odometer).toLocaleString('th-TH') + ' กม.</span>' : '') + '</div>' +
+    (phs.length ? '<div class="phg">' + phs.map((x) => '<div class="ph' + (x.fail ? ' bad' : '') + '" data-img="' + esc(x.url) + '"><img loading="lazy" src="' + esc(x.url) + '" alt="' + esc(x.name) + '"><div>' + (x.no != null ? 'ข้อ ' + x.no + ' ' : '') + esc(x.name) + (x.unit_no ? ' (ถัง ' + x.unit_no + ')' : '') + (x.fail ? ' · ผิดปกติ' : '') + '</div></div>').join('') + '</div>'
+      : '<div class="fl" style="color:var(--muted)">ใบนี้ไม่มีรูป</div>');
   const canEdit = ME && ME.canEdit;
   const vds = rp ? rp.items.filter((x) => x.by === 'verify') : [];
   if (!canEdit) h += (vds.length ? '<div style="font-weight:700;font-size:13px;margin:8px 0 4px">ผู้ทวนสอบพบเพิ่ม</div>' + vds.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b><div style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' + (x.note ? '<div>' + esc(x.note) + '</div>' : '') + '</div>').join('') : '') +
