@@ -115,7 +115,7 @@ a.lk{color:var(--green2);font-weight:600}
   <a href="index.html">← แดชบอร์ด</a>
   <div><h1>🧰 อุปกรณ์ติดรถ</h1><div class="sub">เบิก / คืน · อุปกรณ์ที่ถือ · ประวัติรถรายคัน</div></div>
   <div class="sp"></div>
-  <div class="vw" id="vw"><button data-v="veh" class="on">🚚 รายคัน</button><button data-v="sum">📦 สรุปอุปกรณ์</button></div>
+  <div class="vw" id="vw"><button data-v="veh" class="on">🚚 รายคัน</button><button data-v="sum">📦 สรุปอุปกรณ์</button><button data-v="aud">🔍 สุ่มตรวจ</button></div>
 </div>
 <div class="wrap" id="wrap">
   <aside class="side">
@@ -324,8 +324,167 @@ async function loadSum() {
 }
 function setView(v) {
   VIEW = v; document.querySelectorAll('#vw button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
-  $('wrap').classList.toggle('full', v === 'sum');
-  if (v === 'sum') loadSum(); else if (CUR) openVeh(CUR, true); else $('main').innerHTML = '<div class="msg">เลือกรถทางซ้าย</div>';
+  $('wrap').classList.toggle('full', v === 'sum' || v === 'aud');
+  if (v === 'sum') loadSum(); else if (v === 'aud') loadAud(); else if (CUR) openVeh(CUR, true); else $('main').innerHTML = '<div class="msg">เลือกรถทางซ้าย</div>';
+}
+
+// ── 🔍 สุ่มตรวจ FM-TR-16 (getAuditPlan + fm16Sheet · โหลดเฉพาะตอนเปิดมุมนี้ ไม่มีรีเฟรชเอง) ──
+//   โควตา: ต่อสัปดาห์ แยกหน่วยงาน · 4 ล้อ 2 / 6 ล้อ 3 / 10 ล้อ 4 (10 ล้อ รวมพ่วง/หัวลาก/ฮุกลิฟ) · ตรวจ = นับของจริงตามใบ FM-TR-16 → เทียบที่คนขับแจ้งรายเดือน + ยอดสมุด
+let AUD = null, AF = null;
+const TH_MF = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const SZ_IC = { '4 ล้อ': '🚐', '6 ล้อ': '🚚', '10 ล้อ': '🚛' };
+const AST = { 'รอตรวจ': 'gold', 'ตรวจแล้ว': 'ok', 'ข้าม': 'gr' };
+const addD = (d, n) => new Date(Date.parse(d + 'T00:00:00Z') + n * 864e5).toISOString().slice(0, 10);
+const mFull = (m) => TH_MF[+m.slice(5, 7) - 1] + ' ' + (+m.slice(0, 4) + 543);
+const condB = (x) => !x ? '' : x.condition && x.condition !== 'ปกติ' ? ' <span class="b ' + (x.condition === 'ชำรุด' ? 'warn' : 'bad') + '">' + esc(x.condition) + '</span>' : '';
+const qtyTxt = (x) => x ? (x.qty_found != null ? nf(x.qty_found) : '–') + condB(x) : '<span class="sm">–</span>';
+async function loadAud(week) {
+  $('main').innerHTML = '<div class="ldr"><i></i>กำลังโหลดแผนสุ่มตรวจ</div>'; AF = null;
+  let p, s; try { [p, s] = await Promise.all([api({ action: 'getAuditPlan', group: GRP, week: week || '' }), api({ action: 'fm16Sheet', group: GRP, month: bkk().slice(0, 7) })]); } catch (e) { p = { error: 'เน็ตมีปัญหา' }; }
+  if (!p || !p.ok || !s || !s.ok) { $('main').innerHTML = '<div class="msg">' + esc((p && p.error) || (s && s.error) || 'โหลดไม่ได้') + '</div>'; return; }
+  AUD = { plan: p, fm: s }; renderAud();
+  history.replaceState(null, '', '?view=aud');
+}
+function renderAud() {
+  const p = AUD.plan, s = AUD.fm, thisWeek = p.week === addD(bkk(), -((new Date(bkk() + 'T00:00:00Z').getUTCDay() + 6) % 7));
+  const quota = p.groups.map((g) => { const av = p.avail_by_size[g] || {}, nd = p.need_by_size[g] || {};
+    const zs = p.sizes.filter((z) => av[z]); if (!zs.length) return '';
+    return '<div style="margin:4px 0"><b>' + (GICON[g] || '') + ' ' + esc(g) + '</b> ' + zs.map((z) => { const q = Math.min(p.quota[z], av[z]), got = q - (nd[z] || 0);
+      return '<span class="b ' + (got >= q ? 'ok' : 'gold') + '" title="มีรถ ' + av[z] + ' คัน">' + SZ_IC[z] + ' ' + z + ' ' + got + '/' + q + '</span>'; }).join(' ') + '</div>'; }).join('');
+  const need = Object.values(p.need || {}).reduce((t, x) => t + x, 0), rows = p.audits || [];
+  const done = rows.filter((a) => a.status === 'ตรวจแล้ว').length, mis = rows.filter((a) => a.mismatch === true).length;
+  const ed = canEdit() && thisWeek;
+  const addOpts = (LIST || []).filter((v) => (!GRP || v.job_group === GRP) && !rows.some((a) => Number(a.vehicle_id) === v.id && a.status !== 'ข้าม'))
+    .map((v) => '<option value="' + v.id + '">' + esc(v.plate_head + (v.plate_tail ? ' / ' + v.plate_tail : '')) + ' · ' + esc(v.job_group) + '</option>').join('');
+  $('main').innerHTML = '<div class="card"><div class="chips" id="agrp">' + ['', ...(ME ? ME.groups : [])].map((g) => '<button class="chip' + (g === GRP ? ' on' : '') + '" data-ag="' + esc(g) + '">' + (g ? GICON[g] + ' ' + g : 'ทุกกลุ่ม') + '</button>').join('') + '</div>' +
+    '<div class="vh"><div><div class="pl" style="font-size:17px">🔍 สุ่มตรวจสัปดาห์ ' + dTxt(p.week) + ' – ' + dTxt(p.week_end) + '</div>' +
+    '<div class="info">ต่อหน่วยงาน · 4 ล้อ ' + p.quota['4 ล้อ'] + ' / 6 ล้อ ' + p.quota['6 ล้อ'] + ' / 10 ล้อ ' + p.quota['10 ล้อ'] + ' คัน (10 ล้อ รวมพ่วง หัวลาก ฮุกลิฟ) · ระบบเน้นคันที่ไม่ได้ตรวจนาน/มีปัญหาบ่อย</div></div><div class="sp"></div>' +
+    '<button class="btn gh sm" data-aw="' + addD(p.week, -7) + '">‹ สัปดาห์ก่อน</button>' + (thisWeek ? '' : ' <button class="btn gh sm" data-aw="">สัปดาห์นี้ ›</button>') + '</div>' +
+    '<div style="margin-top:8px">' + quota + '</div>' +
+    '<div class="kp"><div><b>' + rows.filter((a) => a.status !== 'ข้าม').length + '</b><span>คันในแผน</span></div><div class="ok"><b>' + done + '</b><span>ตรวจแล้ว</span></div><div class="' + (mis ? 'bad' : '') + '"><b>' + mis + '</b><span>🚩 ไม่ตรงที่คนขับแจ้ง</span></div></div>' +
+    (ed ? '<div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">' + (need ? '<button class="btn pri" id="aPick">🎲 สุ่มให้ครบโควตา (ขาด ' + need + ' คัน)</button>' : '') +
+      (rows.some((a) => a.picked_by === 'system' && a.status === 'รอตรวจ') ? '<button class="btn gh" id="aShuf" title="สุ่มใหม่เฉพาะคันที่ระบบสุ่มและยังไม่ได้ตรวจ">🔀 สุ่มใหม่</button>' : '') +
+      '<span class="sp"></span><select id="aAddV" style="border:1px solid var(--line);border-radius:8px;padding:5px 8px;max-width:220px"><option value="">— เพิ่มคันเอง —</option>' + addOpts + '</select><button class="btn gh" id="aAdd">＋ เพิ่ม</button></div>' : '') + '</div>' +
+    '<div class="card tw"><h3 style="margin:0 0 8px;font-size:15px">รถที่ต้องตรวจสัปดาห์นี้</h3>' + (rows.length ? '<table class="t"><thead><tr><th>ทะเบียน</th><th>ขนาด</th><th>คนขับ</th><th>เหตุที่สุ่มได้</th><th>สถานะ</th><th></th></tr></thead><tbody>' +
+      rows.map((a) => '<tr' + (a.status === 'ข้าม' ? ' style="opacity:.55"' : '') + '><td><div class="nm">' + esc(a.plate_head || a.plate) + '</div><div class="sm">' + (GICON[a.job_group] || '') + ' ' + esc(a.job_group) + '</div></td>' +
+        '<td>' + (a.size ? SZ_IC[a.size] + ' ' + esc(a.size) : '–') + '</td><td class="sm">' + esc(a.driver_name || 'รถสแปร์') + '</td><td class="sm">' + esc(a.reason || '') + (a.picked_by === 'admin' ? ' <span class="b gr">แอดมินเพิ่ม</span>' : '') + '</td>' +
+        '<td><span class="b ' + (AST[a.status] || 'gr') + '">' + esc(a.status) + '</span>' + (a.mismatch === true ? ' <span class="b bad">🚩 ' + a.flags + '</span>' : a.status === 'ตรวจแล้ว' ? ' <span class="b ok">ตรงกัน</span>' : '') + (a.skip_reason ? '<div class="sm">' + esc(a.skip_reason) + '</div>' : '') + '</td>' +
+        '<td style="white-space:nowrap">' + (a.status === 'รอตรวจ' && ed ? '<button class="btn pri sm" data-aud="' + a.vehicle_id + '|' + a.id + '">ตรวจ</button> <button class="btn gh sm" data-askip="' + a.id + '">ข้าม</button>'
+          : a.status === 'ตรวจแล้ว' ? '<button class="btn gh sm" data-aud="' + a.vehicle_id + '|' + a.id + '">ดูผล</button>' : '') + '</td></tr>').join('') + '</tbody></table>'
+      : '<div class="msg">ยังไม่ได้สุ่ม' + (ed ? ' — กด 🎲 สุ่มให้ครบโควตา' : '') + '</div>') + '</div>' +
+    '<div class="card tw"><h3 style="margin:0 0 4px;font-size:15px">📋 FM-TR-16 เดือน' + mFull(s.month) + '</h3><div class="note" style="margin-bottom:8px">คนขับส่งแล้ว ' + s.counts.sent + '/' + s.counts.total + ' คัน · สุ่มตรวจแล้ว ' + s.counts.audited + ' คัน · คนขับกรอกเดือนละครั้งในหน้าเช็คก่อนออกรถ</div>' +
+      '<table class="t"><thead><tr><th>ทะเบียน</th><th>คนขับ</th><th>คนขับส่งรายเดือน</th><th>สุ่มตรวจ</th><th></th></tr></thead><tbody>' +
+      s.vehicles.map((v) => '<tr><td><div class="nm">' + esc(v.plate_head || v.plate) + '</div><div class="sm">' + (GICON[v.job_group] || '') + ' ' + esc(v.job_group) + '</div></td><td class="sm">' + esc(v.driver_name || 'รถสแปร์') + '</td>' +
+        '<td>' + (v.monthly ? '<span class="b ok">✅ ' + dTxt(v.monthly.date) + '</span>' + (v.monthly.problems ? ' <span class="b warn">' + v.monthly.problems + ' ข้อ</span>' : '') : '<span class="b gr">ยังไม่ส่ง</span>') + '</td>' +
+        '<td>' + (v.audit ? (v.audit.mismatch ? '<span class="b bad">🚩 ไม่ตรง</span>' : '<span class="b ok">ตรงกัน</span>') + ' <span class="sm">' + dTxt(v.audit.date) + ' · ' + esc(v.audit.by) + '</span>' : '<span class="sm">–</span>') + '</td>' +
+        '<td><button class="btn gh sm" data-aud="' + v.id + '|">' + (v.audit ? 'ดูผล' : canEdit() ? 'ตรวจ / ดูใบ' : 'ดูใบ') + '</button></td></tr>').join('') + '</tbody></table></div>';
+}
+async function openAudit(vid, auditId) {
+  $('main').innerHTML = '<div class="ldr"><i></i>กำลังโหลดใบ FM-TR-16</div>';
+  let d; try { d = await api({ action: 'fm16Sheet', vehicleId: vid, month: bkk().slice(0, 7) }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
+  if (!d.ok) { $('main').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; }
+  AF = { sh: d, auditId: auditId || (d.audit && d.audit.audit_id) || '', odo: '', note: '', busy: false, errs: null, lines: {} };
+  d.rows.forEach((r) => (AF.lines[r.item_code] = { q: '', cond: 'ปกติ', note: '' }));
+  renderAF();
+}
+function renderAF() {
+  const d = AF.sh, v = d.vehicle, a = d.audit, m = d.monthly, ro = !!a || !canEdit();
+  const head = '<div class="card"><div class="vh"><div><button class="btn gh sm" id="afBack">‹ กลับแผนสุ่มตรวจ</button>' +
+    '<div class="pl" style="margin-top:6px">' + plateTxt(v) + '</div><div class="info">' + (GICON[v.job_group] || '') + ' ' + esc(v.job_group) + ' · 👤 ' + esc(v.driver_name || 'รถสแปร์') + ' · FM-TR-16 เดือน' + mFull(d.month) + '</div></div>' +
+    '<div class="sp"></div><button class="btn gh" id="afPrint">🖨️ ปริ้นใบ FM-TR-16</button></div>' +
+    '<div class="kp"><div class="' + (m ? 'ok' : '') + '"><b>' + (m ? '✅' : '–') + '</b><span>คนขับส่งรายเดือน' + (m ? ' ' + dTxt(m.date) : ' (ยังไม่ส่ง)') + '</span></div>' +
+    (a ? '<div class="' + (a.mismatch ? 'bad' : 'ok') + '"><b>' + (a.mismatch ? '🚩' : '✅') + '</b><span>สุ่มตรวจ ' + dTxt(a.date) + ' · ' + esc(a.by) + '</span></div>' : '') + '</div>' +
+    (!m && !a ? '<div class="note" style="margin-top:8px">⚠️ คนขับยังไม่ส่งรายเดือน — ตรวจได้ แต่จะเทียบได้แค่กับยอดในสมุด</div>' : '') + '</div>';
+  const rows = d.rows.map((r) => { const ln = AF.lines[r.item_code], sc = r.check_mode === 'score', au = r.audit;
+    const inp = ro ? '<td class="n">' + qtyTxt(au) + '</td><td class="sm">' + esc((au && au.note) || '') + '</td>'
+      : '<td><input type="number" min="' + (sc ? 1 : 0) + '" max="' + (sc ? 10 : 999) + '" step="1" data-af="' + r.item_code + '|q" value="' + esc(ln.q) + '" style="width:70px;border:1px solid var(--line);border-radius:8px;padding:5px 7px"' + (sc ? ' placeholder="1–10"' : '') + '>' +
+        (sc ? '' : ' <select data-af="' + r.item_code + '|cond" style="border:1px solid var(--line);border-radius:8px;padding:5px">' + ['ปกติ', 'ชำรุด', 'หาย'].map((c) => '<option' + (ln.cond === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>') + '</td>' +
+        '<td><input data-af="' + r.item_code + '|note" value="' + esc(ln.note) + '" placeholder="' + (ln.cond === 'ชำรุด' ? 'อาการ (ต้องกรอก)' : '') + '" style="width:100%;min-width:120px;border:1px solid var(--line);border-radius:8px;padding:5px 7px"></td>';
+    return '<tr><td class="n">' + r.no + '</td><td><div class="nm">' + esc(r.name) + '</div></td><td class="sm">' + esc(r.unit) + '</td>' +
+      '<td class="n">' + (r.on_hand == null ? '<span class="sm">–</span>' : nf(r.on_hand)) + '</td><td class="n">' + qtyTxt(r.driver) + (r.driver && r.driver.note ? '<div class="sm">' + esc(r.driver.note) + '</div>' : '') + '</td>' + inp + '</tr>'; }).join('');
+  const form = '<div class="card tw"><h3 style="margin:0 0 8px;font-size:15px">' + (ro ? 'ผลสุ่มตรวจ' : 'นับของจริงที่รถ แล้วกรอกช่อง "ตรวจพบ"') + '</h3><table class="t"><thead><tr><th class="n">ข้อ</th><th>รายการ</th><th>หน่วย</th><th class="n">ในสมุด</th><th class="n">คนขับแจ้ง</th><th>ตรวจพบ' + (ro ? '' : ' / สภาพ') + '</th><th>หมายเหตุ</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+    (ro ? '' : '<div class="fg"><div><label>เลขไมล์ (ถ้าดู)</label><input id="afOdo" inputmode="numeric" value="' + esc(AF.odo) + '"></div><div style="grid-column:span 2"><label>หมายเหตุ</label><input id="afNote" value="' + esc(AF.note) + '"></div></div>' +
+      (AF.errs ? '<div class="err">' + AF.errs.map(esc).join('<br>') + '</div>' : '') +
+      '<button class="btn pri" id="afSave"' + (AF.busy ? ' disabled' : '') + '>' + (AF.busy ? 'กำลังบันทึก…' : '💾 บันทึกผลสุ่มตรวจ') + '</button> <span class="note">ทุกข้อต้องกรอก · ชำรุดต้องใส่อาการ · ถ้าไม่ตรงที่คนขับแจ้ง ระบบแจ้งแอดมินกลุ่ม</span>') + '</div>';
+  $('main').innerHTML = head + (a && a.compare ? cmpHTML(a.compare, a.id) : '') + form;
+}
+function cmpHTML(cp, checkId) {
+  const fl = cp.flags || [], inf = cp.info || [], lg = cp.ledger || [];
+  const fx = (x) => (x.qty_found != null ? nf(x.qty_found) : '–') + (x.condition && x.condition !== 'ปกติ' ? ' ' + esc(x.condition) : '');
+  return '<div class="card"><h3 style="margin:0 0 6px;font-size:15px">' + (fl.length ? '🚩 ไม่ตรงที่คนขับแจ้ง ' + fl.length + ' ข้อ' : '✅ ตรงกับที่คนขับแจ้ง') + '</h3>' +
+    (cp.driver_check_id ? '<div class="note">เทียบกับรายเดือนของคนขับ ' + esc(cp.driver_period || '') + (cp.same_period ? '' : ' (ไม่ใช่เดือนนี้)') + ' · ' + esc(cp.driver_name || '') + '</div>' : '<div class="note">คนขับยังไม่เคยส่งรายเดือน — เทียบไม่ได้</div>') +
+    (fl.length ? '<ul style="margin:6px 0">' + fl.map((f) => '<li>🚩 <b>' + esc(f.name) + '</b>: คนขับแจ้ง ' + fx(f.driver) + ' · ตรวจพบ ' + fx(f.audit) + '</li>').join('') + '</ul>' : '') +
+    (inf.length ? '<div class="note">ℹ️ คนขับแจ้งปัญหาแต่ตรวจแล้วปกติ: ' + inf.map((f) => esc(f.name)).join(', ') + '</div>' : '') +
+    (lg.length ? '<h3 style="margin:12px 0 6px;font-size:14px">📒 ไม่ตรงยอดในสมุดเบิก-คืน ' + lg.length + ' ข้อ</h3><div class="tw"><table class="t"><thead><tr><th>อุปกรณ์</th><th class="n">ในสมุด</th><th class="n">ตรวจพบ</th></tr></thead><tbody>' +
+      lg.map((x) => '<tr><td>' + esc(x.name) + '</td><td class="n">' + nf(x.on_hand) + '</td><td class="n ' + (x.audit < x.on_hand ? 'neg' : 'pos') + '">' + nf(x.audit) + '</td></tr>').join('') + '</tbody></table></div>' +
+      (canEdit() && checkId ? '<button class="btn gh" style="margin-top:8px" data-adj="' + esc(checkId) + '">📒 ปรับยอดสมุดตามที่ตรวจ (ต้องใส่ PIN)</button>' : '') : '') + '</div>';
+}
+async function saveAF() {
+  const d = AF.sh, errs = [], lines = [];
+  d.rows.forEach((r) => { const ln = AF.lines[r.item_code], q = String(ln.q).trim();
+    if (q === '' || isNaN(+q) || +q < 0) { errs.push('ข้อ ' + r.no + ' ' + r.name + ': ใส่จำนวน'); return; }
+    if (r.check_mode === 'score') { if (!(+q >= 1 && +q <= 10)) errs.push('ข้อ ' + r.no + ' ' + r.name + ': คะแนน 1–10'); lines.push({ item_code: r.item_code, qty_found: +q }); return; }
+    if (ln.cond === 'ชำรุด' && !ln.note.trim()) errs.push('ข้อ ' + r.no + ' ' + r.name + ': ชำรุด ใส่อาการ');
+    lines.push({ item_code: r.item_code, qty_found: +q, condition: ln.cond, note: ln.note.trim() || null }); });
+  if (errs.length) { AF.errs = errs.slice(0, 12).concat(errs.length > 12 ? ['… อีก ' + (errs.length - 12) + ' ข้อ'] : []); renderAF(); return; }
+  AF.busy = true; AF.errs = null; renderAF();
+  let r; try { r = await api({ action: 'saveAudit', auditId: AF.auditId || '', vehicleId: d.vehicle.id, date: bkk(), odometer: AF.odo ? +AF.odo : null, note: AF.note, lines }, true); }
+  catch (e) { r = { error: 'เน็ตมีปัญหา ยังไม่แน่ใจว่าบันทึกหรือยัง — โหลดใหม่ดูก่อนกดซ้ำ' }; }
+  AF.busy = false;
+  if (!r.ok) { AF.errs = [r.error || 'บันทึกไม่ได้'].concat(r.errors || []); renderAF(); return; }
+  toast(r.compare && r.compare.mismatch ? '🚩 บันทึกแล้ว — ไม่ตรงที่คนขับแจ้ง ' + r.compare.flags.length + ' ข้อ' : '✅ บันทึกผลสุ่มตรวจแล้ว');
+  openAudit(d.vehicle.id, AF.auditId);
+}
+function openAdj(checkId) {
+  $('dT').textContent = '📒 ปรับยอดสมุดตามที่ตรวจ';
+  $('dB').innerHTML = '<div class="note">ระบบจะสร้างรายการ "ปรับยอด" ให้ยอดในสมุดเท่ากับที่ตรวจพบ (ไม่ลบของเดิม) · ต้องใส่ PIN ส่วนตัว 6 หลัก</div>' +
+    '<label>เหตุผล</label><input id="adWhy" value="สุ่มตรวจ FM-TR-16"><label>PIN 6 หลัก</label><input id="adPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off">' +
+    '<div id="adErr"></div><button class="btn pri" id="adGo" style="margin-top:12px;width:100%">ยืนยันปรับยอด</button>';
+  $('adGo').onclick = async () => {
+    const why = $('adWhy').value.trim(), pin = $('adPin').value.trim();
+    if (!why) { $('adErr').innerHTML = '<div class="err">ใส่เหตุผล</div>'; return; }
+    if (!/^\d{6}$/.test(pin)) { $('adErr').innerHTML = '<div class="err">PIN ต้องเป็นตัวเลข 6 หลัก</div>'; return; }
+    $('adGo').disabled = true;
+    let r; try { r = await api({ action: 'adjustToCheck', checkId, vehicleId: AF.sh.vehicle.id, reason: why, pin }, true); } catch (e) { r = { error: 'เน็ตมีปัญหา' }; }
+    if (!r.ok) { $('adGo').disabled = false; $('adPin').value = ''; $('adErr').innerHTML = '<div class="err">' + esc(r.pinBad ? 'PIN ไม่ถูกต้อง' : r.error || 'ไม่สำเร็จ') + (r.errors ? '<br>' + r.errors.map(esc).join('<br>') : '') + '</div>'; return; }
+    closeDrw(); toast(r.saved ? 'ปรับยอดแล้ว ' + r.saved + ' รายการ' : (r.message || 'สมุดตรงแล้ว'));
+  };
+  $('dim').classList.add('open'); $('drw').classList.add('open'); setTimeout(() => $('adPin').focus(), 200);
+}
+function printFm16() {
+  const d = AF.sh, v = d.vehicle, by = {}, m = d.monthly, a = d.audit; d.rows.forEach((r) => (by[r.item_code] = r));
+  const ck = (g) => '<span class="bx">' + (v.job_group === g ? '✓' : '') + '</span>';
+  const cell = (x) => !x ? '' : (x.qty_found != null ? x.qty_found : '');
+  const ver = (r) => { if (!r.audit) return ''; const au = r.audit, dr = r.driver;
+    const same = dr && dr.qty_found === au.qty_found && (dr.condition || 'ปกติ') === (au.condition || 'ปกติ');
+    return same ? '✓' : (au.qty_found != null ? 'พบ ' + au.qty_found : '') + (au.condition && au.condition !== 'ปกติ' ? ' ' + au.condition : '') + (au.note ? ' · ' + au.note : ''); };
+  const rows = [{ no: 1, name: 'เลขไมล์', one: true }].concat(d.form_rows || []).map((f) => {
+    if (f.one) return '<tr><td class="c">1</td><td>เลขไมล์</td><td class="c">' + (m && m.odometer != null ? nf(m.odometer) : '') + '</td><td class="c">กม.</td><td></td><td class="c">' + (a && a.odometer != null ? nf(a.odometer) : '') + '</td></tr>';
+    const r = by[f.code];
+    if (!r) return '<tr class="na"><td class="c">' + f.no + '</td><td>' + esc(f.name) + '</td><td class="c">-</td><td class="c">-</td><td></td><td></td></tr>';
+    const dr = r.driver, sym = dr && dr.condition && dr.condition !== 'ปกติ' ? dr.condition + (dr.note ? ': ' + dr.note : '') : (dr && dr.note) || '';
+    return '<tr><td class="c">' + f.no + '</td><td>' + esc(f.name) + '</td><td class="c">' + cell(dr) + '</td><td class="c">' + esc(r.unit) + '</td><td>' + esc(sym) + '</td><td>' + esc(ver(r)) + '</td></tr>'; }).join('');
+  const html = '<!doctype html><html lang="th"><head><meta charset="utf-8"><title>FM-TR-16 ' + esc(v.plate) + ' ' + d.month + '</title>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4;margin:10mm}body{font:13px/1.35 Sarabun,"Noto Sans Thai",sans-serif;color:#000;margin:0}' +
+    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3px 6px}th{font-weight:700}.c{text-align:center}.ttl{text-align:center;font-weight:700;font-size:15px}.na td{color:#666}' +
+    '.bx{display:inline-block;width:34px;height:18px;border:1.5px solid #000;border-radius:4px;vertical-align:middle;text-align:center;line-height:16px;margin:0 6px}.ft{display:flex;justify-content:space-between;margin-top:6px;font-size:12px}</style></head><body>' +
+    '<table><tr><td colspan="6" class="ttl">ตรวจเช็คอุปกรณ์ติดรถ</td></tr>' +
+    '<tr><td style="width:90px"><b>ประจำเดือน</b></td><td colspan="5"><b>' + mFull(d.month) + '</b></td></tr>' +
+    '<tr><td><b>ประเภทขนส่ง</b></td><td colspan="5">ขนส่งPK.' + ck('Packing') + ' &nbsp; ขนส่งBULK' + ck('Bulk') + ' &nbsp; ขนส่งฝ่ายไร่' + ck('ไร่') + '</td></tr>' +
+    '<tr><td><b>ทะเบียนรถ</b></td><td colspan="5">' + esc(v.plate_head + (v.plate_tail ? ' / ' + v.plate_tail : '')) + ' · ' + esc(v.driver_name || '') + '</td></tr>' +
+    '<tr><th rowspan="2" style="width:44px">ลำดับ</th><th rowspan="2">รายการ</th><th colspan="3">พนักงานขับรถ</th><th rowspan="2" style="width:150px">ผู้ทวนสอบ</th></tr>' +
+    '<tr><th style="width:60px">ตัวเลข</th><th style="width:50px">หน่วย</th><th style="width:190px">แจ้งอาการถ้าชำรุดเสียหาย</th></tr>' + rows +
+    '<tr><td colspan="2" rowspan="2" class="c"><b>*** ตรวจเช็ค เดือนละ 1 ครั้ง ***</b></td><td colspan="2">ลงชื่อผู้ตรวจ</td><td colspan="2">' + esc(m ? m.by + ' · ' + dTxt(m.date) : '') + '</td></tr>' +
+    '<tr><td colspan="2">ลงชื่อผู้ทวนสอบ</td><td colspan="2">' + esc(a ? a.by + ' · ' + dTxt(a.date) : '') + '</td></tr></table>' +
+    '<div class="ft"><span>พิมพ์จากระบบ SSB ' + dTxt(bkk()) + '</span><span>FM-TR-16 ประกาศใช้ 5 ม.ค. 67</span></div>' +
+    '<script>document.fonts.ready.then(function(){setTimeout(function(){window.print()},300)})<\/script></body></html>';
+  const w = window.open('', '_blank'); if (!w) { toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาต popup แล้วกดอีกครั้ง', true); return; }
+  w.document.open(); w.document.write(html); w.document.close();
+}
+async function audAct(params, msg) {
+  let r; try { r = await api(params, true); } catch (e) { r = { error: 'เน็ตมีปัญหา' }; }
+  if (!r.ok) { toast(r.error || 'ไม่สำเร็จ', true); return; }
+  toast(msg(r)); loadAud(AUD && AUD.plan.week);
 }
 
 // ── events ──
@@ -345,9 +504,27 @@ $('main').addEventListener('click', (e) => {
   if (c('[data-del]')) { F.lines.splice(+c('[data-del]').dataset.del, 1); renderVTab(); return; }
   if (c('#fSave')) { saveForm(); return; }
   if (c('[data-rev]')) { openRev(c('[data-rev]').dataset.rev); return; }
+  // 🔍 สุ่มตรวจ
+  if (c('[data-ag]')) { GRP = c('[data-ag]').dataset.ag; loadAud(AUD && AUD.plan.week); return; }
+  if (c('[data-aw]')) { loadAud(c('[data-aw]').dataset.aw); return; }
+  if (c('#aPick')) { c('#aPick').disabled = true; audAct({ action: 'pickAudits', group: GRP, week: AUD.plan.week }, (r) => '🎲 สุ่มได้ ' + ((r.picked || []).length) + ' คัน'); return; }
+  if (c('#aShuf')) { if (!confirm('สุ่มใหม่เฉพาะคันที่ระบบสุ่มและยังไม่ได้ตรวจ?')) return; audAct({ action: 'pickAudits', group: GRP, week: AUD.plan.week, reshuffle: true }, () => '🔀 สุ่มใหม่แล้ว'); return; }
+  if (c('#aAdd')) { const vid = $('aAddV').value; if (!vid) { toast('เลือกรถก่อน', true); return; } audAct({ action: 'addAudit', vehicleId: +vid, week: AUD.plan.week }, () => '＋ เพิ่มเข้าแผนแล้ว'); return; }
+  if (c('[data-askip]')) { const why = prompt('เหตุผลที่ข้ามคันนี้ (เช่น รถเข้าซ่อม / คนขับลา)'); if (!why || !why.trim()) return; audAct({ action: 'skipAudit', auditId: c('[data-askip]').dataset.askip, reason: why.trim() }, () => 'ข้ามแล้ว'); return; }
+  if (c('[data-aud]')) { const [vid, aid] = c('[data-aud]').dataset.aud.split('|'); openAudit(+vid, aid); window.scrollTo({ top: 0 }); return; }
+  if (c('#afBack')) { loadAud(AUD && AUD.plan.week); return; }
+  if (c('#afPrint')) { printFm16(); return; }
+  if (c('#afSave')) { saveAF(); return; }
+  if (c('[data-adj]')) { openAdj(c('[data-adj]').dataset.adj); return; }
 });
+$('main').addEventListener('input', (e) => {   // ฟอร์มสุ่มตรวจ (แยกจากฟอร์มเบิก-คืน)
+  const t = e.target; if (VIEW !== 'aud' || !AF) return;
+  if (t.dataset.af) { const [code, k] = t.dataset.af.split('|'); AF.lines[code][k] = t.value; if (k === 'cond') renderAF(); return; }
+  if (t.id === 'afOdo') AF.odo = t.value.replace(/D/g, ''); else if (t.id === 'afNote') AF.note = t.value;
+});
+$('main').addEventListener('change', (e) => { const t = e.target; if (VIEW === 'aud' && AF && t.dataset.af && t.dataset.af.endsWith('|cond')) { AF.lines[t.dataset.af.split('|')[0]].cond = t.value; renderAF(); } });
 $('main').addEventListener('input', (e) => {
-  const t = e.target; if (!F) return;
+  const t = e.target; if (!F || VIEW === 'aud') return;
   if (t.dataset.l != null) { F.lines[+t.dataset.l][t.dataset.k] = t.value; if (t.dataset.k === 'code') renderVTab(); return; }
   if (t.id === 'fDate') F.date = t.value; else if (t.id === 'fDoc') F.doc = t.value; else if (t.id === 'fRecv') F.recv = t.value; else if (t.id === 'fNote') F.note = t.value;
 });
@@ -360,7 +537,8 @@ $('main').addEventListener('input', (e) => {
     catch (e) { $('vlist').innerHTML = '<div class="msg">เข้าระบบ LINE ไม่สำเร็จ</div>'; return; }
   }
   await loadList();
-  if (q.get('vehicle')) openVeh(+q.get('vehicle'));
+  if (q.get('view') === 'aud') setView('aud');
+  else if (q.get('vehicle')) openVeh(+q.get('vehicle'));
 })();
 </script>
 </body>
