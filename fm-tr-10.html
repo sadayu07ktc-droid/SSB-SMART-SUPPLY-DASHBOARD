@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>FM-TR-10 ใบตรวจเช็ครถ — SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<script src="ssb-read.js?v=20261016w"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* FM-TR-10 Rev.02 ใบตรวจเช็ครถก่อนออกงาน · 12 พ.ย. 2569 · ซ้าย = รายชื่อรถ · ขวา = ใบรายเดือน (หน้าตาตามเอกสาร) · ปริ้น A4 แนวนอน */
+:root{
+  --bg:#EDF1EE; --card:#fff; --sunken:#F3F6F3; --ink:#152019; --muted:#5D6B62; --faint:#8A968D; --line:#DCE4DE;
+  --green:#1B4332; --green2:#2D6A4F; --gold:#C9A227; --goldtint:#FBF1DC; --bad:#B91C1C; --badtint:#FEE2E2; --ok:#15803D; --oktint:#DCFCE7; --warn:#B45309;
+  --sans:"Noto Sans Thai","Sarabun","Segoe UI",sans-serif; color-scheme:light;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--sans)}
+button,select,input,textarea{font:inherit}
+.top{background:var(--green);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.top a{color:#fff;text-decoration:none;opacity:.85;font-size:13px}
+.top h1{font-size:17px;margin:0}
+.top .sub{font-size:12px;opacity:.8}
+.top .sp{flex:1}
+.top select,.top button{border:0;border-radius:8px;padding:6px 10px;background:#fff;color:var(--ink);cursor:pointer}
+.top button.gold{background:var(--gold);color:#1b1b1b;font-weight:700}
+.wrap{display:grid;grid-template-columns:minmax(0,300px) minmax(0,1fr);gap:12px;padding:12px 16px 32px}
+.side{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;align-self:start;position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.chip{border:1px solid var(--line);background:var(--sunken);border-radius:999px;padding:3px 10px;cursor:pointer;font-size:13px}
+.chip.on{background:var(--green);color:#fff;border-color:var(--green)}
+.srch{width:100%;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin-bottom:8px}
+.veh{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:1px solid transparent;background:none;border-radius:10px;padding:7px 8px;cursor:pointer}
+.veh:hover{background:var(--sunken)}
+.veh.on{background:#E3EEE7;border-color:#B9D3C2}
+.veh .pl{font-weight:700;font-size:14px}
+.veh .dr{font-size:12px;color:var(--muted)}
+.veh .mt{margin-left:auto;text-align:right;font-size:12px;white-space:nowrap}
+.b{display:inline-block;border-radius:999px;padding:0 7px;font-size:11.5px;font-weight:700}
+.b.bad{background:var(--badtint);color:var(--bad)} .b.ok{background:var(--oktint);color:var(--ok)} .b.gold{background:var(--goldtint);color:#7A5A12}
+.main{min-width:0}
+.msg{padding:28px;text-align:center;color:var(--muted)}
+.stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.st{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 14px;min-width:120px}
+.st b{display:block;font-size:20px}
+.st span{font-size:12px;color:var(--muted)}
+/* ── ใบ FM-TR-10 ── */
+.sheet{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px;overflow-x:auto}
+.sh-hd{display:flex;align-items:flex-start;gap:14px;margin-bottom:8px}
+.sh-hd .logo{font-weight:800;color:var(--green);font-size:15px;line-height:1.2}
+.sh-hd .ttl{flex:1;text-align:center}
+.sh-hd .ttl h2{margin:0;font-size:17px}
+.sh-hd .ttl div{font-size:12.5px;color:var(--muted)}
+.sh-hd .doc{font-size:11.5px;text-align:right;color:var(--muted);white-space:nowrap}
+.meta{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}
+.meta b{font-weight:700}
+table.fm{border-collapse:collapse;width:100%;table-layout:fixed;font-size:11px}
+table.fm th,table.fm td{border:1px solid #9AA59E;padding:2px 3px;vertical-align:middle}
+table.fm th{background:#E8EFEA;font-weight:700}
+table.fm col.c-no{width:28px} table.fm col.c-name{width:168px} table.fm col.c-crit{width:190px}
+table.fm td.no{text-align:center;font-weight:700}
+table.fm td.nm{font-weight:600;line-height:1.3}
+table.fm td.cr{color:#3D4A42;line-height:1.3;font-size:10.5px}
+table.fm .star{color:var(--bad)}
+table.fm tr.sec td{background:#F5F1E3;font-weight:700;font-size:11.5px}
+table.fm th.d{font-size:10px;padding:2px 0;text-align:center;cursor:pointer}
+table.fm th.d.mon{background:#F6E7B8}
+table.fm th.d.miss{background:var(--badtint);color:var(--bad)}
+table.fm td.m{text-align:center;font-weight:700;font-size:12px;padding:0;height:20px}
+table.fm td.m.x{color:var(--bad);background:#FFF1F1}
+table.fm td.m.na{color:#9AA59E;font-weight:400}
+table.fm td.m.mon{background:#FFFBEB}
+table.fm td.m.x.mon{background:#FFF1F1}
+table.fm td.vt{height:62px;padding:1px 0;text-align:center;font-size:9.5px;line-height:1.05}
+table.fm td.vt span{writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;max-height:60px;overflow:hidden;white-space:nowrap}
+table.fm td.vt.miss span{color:var(--bad);font-weight:700}
+table.fm td.ft{font-weight:700;font-size:11px}
+table.fm td.cl{cursor:pointer}
+table.fm td.cl:hover{outline:2px solid var(--gold);outline-offset:-2px}
+.legend{font-size:11.5px;color:#3D4A42;margin-top:6px}
+.legend b{color:var(--ink)}
+h3.rp{font-size:14px;margin:14px 0 6px}
+table.rp{border-collapse:collapse;width:100%;font-size:12px}
+table.rp th,table.rp td{border:1px solid #9AA59E;padding:4px 6px;vertical-align:top;text-align:left}
+table.rp th{background:#E8EFEA}
+table.rp td.dt{white-space:nowrap}
+table.rp .parts{color:var(--bad);font-weight:600}
+table.rp img{width:46px;height:46px;object-fit:cover;border-radius:6px;cursor:pointer;vertical-align:middle;margin-right:4px}
+.btn{border:0;border-radius:8px;padding:5px 10px;cursor:pointer;font-weight:600}
+.btn.pri{background:var(--green);color:#fff}
+.btn.gh{background:var(--sunken);border:1px solid var(--line)}
+.foot{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:8px}
+/* ลิ้นชักทวนสอบ */
+.dim{position:fixed;inset:0;background:rgba(10,20,14,.4);z-index:50;display:none}
+.drw{position:fixed;top:0;right:0;bottom:0;width:min(440px,100vw);background:#fff;z-index:51;transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column;box-shadow:-10px 0 30px rgba(0,0,0,.15)}
+.drw.open{transform:none} .dim.open{display:block}
+.drw .hd{background:var(--green);color:#fff;padding:12px 16px;display:flex;align-items:center;gap:10px}
+.drw .hd h4{margin:0;font-size:16px;flex:1}
+.drw .hd button{background:none;border:0;color:#fff;font-size:22px;cursor:pointer}
+.drw .bd{padding:14px 16px;overflow:auto;flex:1}
+.drw .row{margin-bottom:10px}
+.drw label{display:block;font-weight:700;font-size:13px;margin-bottom:4px}
+.drw select,.drw textarea,.drw input{width:100%;border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+.drw textarea{min-height:70px}
+.fl{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.fl.bad{border-color:#F3B4B4;background:#FFF7F7}
+.fl img{width:100%;max-height:220px;object-fit:contain;border-radius:8px;margin-top:6px;cursor:pointer;background:#f3f3f3}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;border:1px solid var(--line);background:var(--sunken);border-radius:8px;padding:8px;cursor:pointer;font-weight:600}
+.seg button.on.ok{background:var(--oktint);border-color:#86EFAC;color:var(--ok)}
+.seg button.on.bad{background:var(--badtint);border-color:#FCA5A5;color:var(--bad)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1f2a24;color:#fff;padding:9px 16px;border-radius:10px;z-index:60;font-size:14px}
+.ldr{display:flex;align-items:center;gap:10px;justify-content:center;padding:30px;color:var(--muted)}
+.ldr i{width:20px;height:20px;border:3px solid #CFE0D5;border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.print-only{display:none}
+@media (max-width:900px){ .wrap{grid-template-columns:1fr} .side{position:static;max-height:none} }
+@media print{
+  @page{size:A4 landscape;margin:7mm}
+  html,body{background:#fff}
+  .top,.side,.stats,.no-print,.btn{display:none !important}
+  .print-only{display:block}
+  .wrap{display:block;padding:0}
+  .sheet{border:0;border-radius:0;padding:0;margin:0;overflow:visible;page-break-after:always;break-after:page}
+  .sheet:last-child{page-break-after:auto;break-after:auto}
+  table.fm{font-size:9.5px} table.fm td.cr{font-size:9px}
+  table.fm th,table.fm td{border-color:#555}
+  table.fm td.m.x,table.fm td.m.mon,table.fm th.d.mon,table.fm th.d.miss{background:none !important}
+  table.fm td.cl:hover{outline:0}
+  table.rp{font-size:10.5px} table.rp img{display:none}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<div class="top">
+  <a href="index.html">← แดชบอร์ด</a>
+  <div><h1>📋 FM-TR-10 ใบตรวจเช็ครถก่อนออกงาน</h1><div class="sub">คนขับเช็คทุกวันผ่าน LINE (พิมพ์ ช) · แอดมินทวนสอบ + ปริ้นรายเดือน</div></div>
+  <div class="sp"></div>
+  <select id="month" aria-label="เดือน"></select>
+  <button id="bPrint" class="gold">🖨️ ปริ้นคันนี้</button>
+  <button id="bPrintAll">🖨️ ปริ้นทั้งกลุ่ม</button>
+</div>
+<div class="wrap">
+  <aside class="side">
+    <div class="chips" id="grp"></div>
+    <input class="srch" id="q" placeholder="ค้นทะเบียน / ชื่อคนขับ">
+    <div id="vlist"><div class="ldr"><i></i>กำลังโหลด</div></div>
+  </aside>
+  <main class="main" id="main"><div class="msg">เลือกรถทางซ้าย</div></main>
+</div>
+<div class="dim" id="dim"></div>
+<div class="drw" id="drw"><div class="hd"><h4 id="dT">ทวนสอบ</h4><button id="dX" aria-label="ปิด">×</button></div><div class="bd" id="dB"></div></div>
+
+<script>
+const EDGE = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/vehicle-equipment';
+const LIFF_ID = '2010274217-Ot7vGhri';
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const TH_M = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const bkk = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+const monTxt = (m) => TH_M[+m.slice(5, 7) - 1] + ' ' + (+m.slice(0, 4) + 543);
+const dTxt = (d) => +d.slice(8, 10) + ' ' + TH_MS[+d.slice(5, 7) - 1] + ' ' + String(+d.slice(0, 4) + 543).slice(2);
+const tTxt = (iso) => iso ? dTxt(iso.slice(0, 10)) + ' ' + iso.slice(11, 16) : '';
+const first = (n) => String(n || '').replace(/^แอดมิน\s*/, '').split(/\s+/)[0];
+let UID = '', ME = null, LIST = null, GRP = '', CUR = null, SHEET = null;
+
+async function api(params, post) {
+  const r = post
+    ? await fetch(EDGE, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...params, userId: UID }) })
+    : await fetch(EDGE + '?' + new URLSearchParams({ ...params, userId: UID }), { cache: 'no-store' });
+  return r.json();
+}
+function toast(t) { const el = document.createElement('div'); el.className = 'toast'; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 3200); }
+
+// ── รายชื่อรถ ──
+async function loadList() {
+  $('vlist').innerHTML = '<div class="ldr"><i></i>กำลังโหลด</div>';
+  const d = await api({ action: 'fmSheet', month: $('month').value, group: GRP });
+  if (!d.ok) { $('vlist').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; }
+  ME = d.me; LIST = d;
+  if (!$('grp').innerHTML && ME.groups.length > 1) {
+    $('grp').innerHTML = ['', ...ME.groups].map((g) => '<button class="chip' + (g === GRP ? ' on' : '') + '" data-g="' + esc(g) + '">' + (g || 'ทั้งหมด') + '</button>').join('');
+  }
+  renderList();
+}
+function renderList() {
+  const q = $('q').value.trim().toLowerCase();
+  const vs = LIST.vehicles.filter((v) => !q || (v.plate + ' ' + v.drivers.map((x) => x.name).join(' ')).toLowerCase().includes(q));
+  $('vlist').innerHTML = vs.length ? vs.map((v) => '<button class="veh' + (CUR === v.id ? ' on' : '') + '" data-id="' + v.id + '"><div><div class="pl">' + esc(v.plate_head) + (v.plate_tail ? ' / ' + esc(v.plate_tail) : '') + '</div>' +
+    '<div class="dr">' + esc(v.drivers.map((x) => x.name).join(', ') || 'รถสแปร์') + ' · ' + esc(v.job_group) + '</div></div>' +
+    '<div class="mt">' + (v.days_checked ? '<span class="b ok">' + v.days_checked + ' วัน</span>' : '<span class="b" style="color:var(--faint)">ยังไม่มี</span>') +
+    (v.unverified ? '<br><span class="b bad">รอทวนสอบ ' + v.unverified + '</span>' : v.problem_days ? '<br><span class="b gold">มี X ' + v.problem_days + ' วัน</span>' : '') + '</div></button>').join('')
+    : '<div class="msg">ไม่มีรถ</div>';
+}
+
+// ── ใบรายเดือน ──
+async function openVeh(id) {
+  CUR = id; renderList();
+  $('main').innerHTML = '<div class="ldr"><i></i>กำลังโหลดใบตรวจ</div>';
+  const d = await api({ action: 'fmSheet', month: $('month').value, vehicleId: id });
+  if (!d.ok) { $('main').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; }
+  SHEET = d;
+  const s = d.stats;
+  $('main').innerHTML = '<div class="stats no-print">' +
+    '<div class="st"><b>' + s.checked + '</b><span>วันที่ส่งใบตรวจ</span></div>' +
+    '<div class="st"><b style="color:var(--bad)">' + s.missing + '</b><span>รถวิ่งแต่ไม่ส่ง</span></div>' +
+    '<div class="st"><b style="color:var(--warn)">' + s.fail_days + '</b><span>วันที่มี X</span></div>' +
+    '<div class="st"><b style="color:var(--bad)">' + s.unverified + '</b><span>รอทวนสอบ</span></div>' +
+    '<div class="st"><b>' + s.backdated + '</b><span>บันทึกย้อนหลัง (ย)</span></div></div>' + sheetHTML(d, true);
+}
+function sheetHTML(d, live) {
+  const v = d.vehicle, days = d.days, today = d.today || bkk();
+  const sec = { 'ก': 'ก. ตรวจทุกครั้งก่อนออกงาน', 'ข': 'ข. เฉพาะหัวลาก / เทรลเลอร์', 'ค': 'ค. ตรวจประจำสัปดาห์ (วันจันทร์)' };
+  const cl = (dd) => live && dd.check_id ? ' cl" data-day="' + dd.date : '';
+  let h = '<section class="sheet">' +
+    '<div class="sh-hd"><div class="logo">SSB<br><span style="font-size:11px;font-weight:600;color:var(--muted)">Suksomboon Group</span></div>' +
+    '<div class="ttl"><h2>ใบตรวจเช็ครถก่อนออกงาน (Pre-Trip Inspection)</h2><div>ประจำเดือน ' + monTxt(d.month) + '</div></div>' +
+    '<div class="doc">FM-TR-10 Rev.02<br>ประกาศใช้ 12 พ.ย. 2569</div></div>' +
+    '<div class="meta"><span>ทะเบียนหัว: <b>' + esc(v.plate_head) + '</b></span><span>ทะเบียนหาง: <b>' + esc(v.plate_tail || '—') + '</b></span>' +
+    '<span>ประเภทรถ: <b>' + esc(v.head_kind || (v.has_tail ? 'รถพ่วง' : '—')) + '</b></span><span>กลุ่มงาน: <b>' + esc(v.job_group) + '</b></span>' +
+    '<span>พนักงานขับรถประจำ: <b>' + esc(v.drivers.map((x) => x.name).join(', ') || 'รถสแปร์') + '</b></span></div>' +
+    '<table class="fm"><colgroup><col class="c-no"><col class="c-name"><col class="c-crit">' + days.map(() => '<col>').join('') + '</colgroup>' +
+    '<thead><tr><th>ข้อ</th><th>รายการตรวจ</th><th>วิธีดู / เกณฑ์ปกติ</th>' +
+    days.map((dd) => '<th class="d' + (dd.monday ? ' mon' : '') + (dd.missing ? ' miss' : '') + (live && dd.check_id ? ' cl" data-day="' + dd.date : '') + '" title="' + dTxt(dd.date) + (dd.missing ? ' · รถวิ่งแต่ไม่ส่ง' : '') + '">' + dd.day + '</th>').join('') + '</tr></thead><tbody>';
+  let last = '';
+  d.items.forEach((it) => {
+    if (it.section !== last) { last = it.section; h += '<tr class="sec"><td colspan="' + (3 + days.length) + '">' + esc(sec[it.section] || it.section) + '</td></tr>'; }
+    h += '<tr><td class="no">' + it.no + (it.star ? '<span class="star">★</span>' : '') + '</td><td class="nm">' + esc(it.name) + '</td><td class="cr">' + esc(it.criteria || '') + '</td>' +
+      days.map((dd) => { const m = dd.marks[it.code] || ''; return '<td class="m' + (m === 'X' ? ' x' : m === '–' ? ' na' : '') + (dd.monday ? ' mon' : '') + cl(dd) + '">' + m + '</td>'; }).join('') + '</tr>';
+  });
+  h += '<tr><td colspan="3" class="ft">ลายมือชื่อ พนักงานขับรถ</td>' + days.map((dd) => '<td class="vt' + (dd.missing ? ' miss' : '') + cl(dd) + '"><span>' + (dd.check_id ? esc(first(dd.driver_name)) : dd.missing ? 'ไม่ส่ง' : '') + '</span></td>').join('') + '</tr>' +
+    '<tr><td colspan="3" class="ft">บันทึกย้อนหลัง (ย)</td>' + days.map((dd) => '<td class="m' + cl(dd) + '">' + (dd.backdated ? 'ย' : '') + '</td>').join('') + '</tr>' +
+    '<tr><td colspan="3" class="ft">ผู้ทวนสอบ (หัวหน้างาน)</td>' + days.map((dd) => '<td class="vt' + cl(dd) + '"><span>' + (dd.verified_by ? esc(first(dd.verified_by)) : dd.fail ? '<b style="color:var(--bad)">รอ</b>' : '') + '</span></td>').join('') + '</tr>' +
+    '</tbody></table>' +
+    '<div class="legend"><b>วิธีอ่าน:</b> / = ผ่าน · <b style="color:var(--bad)">X</b> = ไม่ผ่าน · – = ไม่เกี่ยวกับรถคันนี้ / ไม่ใช่วันตรวจประจำสัปดาห์ · ว่าง = ไม่มีงาน · ย = บันทึกย้อนหลัง · <b class="star" style="color:var(--bad)">★</b> = ข้อห้ามออกรถ (ไม่ผ่าน ห้ามนำรถออกจนกว่าแก้ไข)</div>' +
+    '<h3 class="rp">บันทึกแจ้งซ่อม (ดึงจากใบตรวจอัตโนมัติ)</h3>' +
+    '<table class="rp"><thead><tr><th>วันที่</th><th>อาการผิดปกติ (คนขับแจ้ง)</th><th>ผู้แจ้ง</th><th>วันที่ทวนสอบ · ผู้ทวนสอบ</th><th>การดำเนินการ</th><th>สถานะรถ</th>' + (live ? '<th class="no-print"></th>' : '') + '</tr></thead><tbody>' +
+    (d.repairs.length ? d.repairs.map((r) => '<tr><td class="dt">' + dTxt(r.date) + (r.backdated ? ' (ย)' : '') + '</td><td>' +
+      r.items.map((x) => '<div>ข้อ ' + x.no + (x.star ? '<span class="star" style="color:var(--bad)">★</span>' : '') + ' ' + esc(x.name) + ': <span class="parts">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</span>' + (x.note ? ' — ' + esc(x.note) : '') +
+        (x.photo_url ? '<div class="no-print"><img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '"></div>' : '') + '</div>').join('') + '</td>' +
+      '<td>' + esc(r.driver_name || '') + '</td><td>' + (r.verified_at ? esc(tTxt(r.verified_at)) + '<br>' + esc(r.verified_by) : '<span style="color:var(--bad);font-weight:700">ยังไม่ทวนสอบ</span>') + '</td>' +
+      '<td>' + esc(r.verify_action || '') + '</td><td>' + esc(r.vehicle_state || '') + '</td>' +
+      (live ? '<td class="no-print"><button class="btn ' + (r.verified_at ? 'gh' : 'pri') + '" data-day="' + r.date + '">' + (r.verified_at ? 'แก้' : 'ทวนสอบ') + '</button></td>' : '') + '</tr>').join('')
+      : '<tr><td colspan="' + (live ? 7 : 6) + '" style="text-align:center;color:var(--muted)">ไม่มีรายการผิดปกติในเดือนนี้</td></tr>') +
+    '</tbody></table>' +
+    '<div class="foot"><span>FM-TR-10 Rev.02 ประกาศใช้ 12 พ.ย.2569</span><span>พิมพ์จากระบบ SSB Smart Supply ' + dTxt(today) + '</span></div></section>';
+  return h;
+}
+
+// ── ลิ้นชักรายวัน + ทวนสอบ ──
+let VER = { result: '', day: null };
+function openDay(date) {
+  const dd = SHEET.days.find((x) => x.date === date); if (!dd || !dd.check_id) return;
+  const rp = SHEET.repairs.find((r) => r.date === date) || null;
+  VER = { result: dd.verify_result === 'พบข้อบกพร่อง' ? 'defect' : dd.verify_result ? 'ok' : (dd.fail ? 'defect' : 'ok'), day: dd };
+  $('dT').textContent = SHEET.vehicle.plate_head + ' · ' + dTxt(date);
+  const fails = rp ? rp.items : [];
+  let h = '<div class="row" style="font-size:13px;color:var(--muted)">ผู้ส่ง: <b style="color:var(--ink)">' + esc(dd.driver_name || '') + '</b> · ส่งเมื่อ ' + esc(tTxt(dd.submitted_at)) + (dd.backdated ? ' · <b>บันทึกย้อนหลัง (ย)</b>' : '') + '</div>';
+  h += fails.length ? fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b><div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
+    (x.note ? '<div>' + esc(x.note) + '</div>' : '') + (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + '</div>').join('')
+    : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ ผ่านทุกข้อ</div>';
+  const canEdit = ME && ME.canEdit;
+  if (!canEdit) h += '<div class="row" style="color:var(--muted)">บัญชีนี้ดูได้อย่างเดียว</div>';
+  else {
+    h += '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><label>ผลการทวนสอบ</label><div class="seg">' +
+      '<button data-r="ok" class="ok' + (VER.result === 'ok' ? ' on' : '') + '">✅ เรียบร้อย ไม่พบปัญหา</button><button data-r="defect" class="bad' + (VER.result === 'defect' ? ' on' : '') + '">⚠️ พบข้อบกพร่อง</button></div></div>' +
+      '<div class="row"><label>การดำเนินการ / สั่งซ่อม</label><textarea id="vAct" placeholder="เช่น ส่งซ่อมเบรกมือที่อู่… / เปลี่ยนหลอดไฟแล้ว">' + esc(rp && rp.verify_action || '') + '</textarea></div>' +
+      '<div class="row"><label>สถานะรถ</label><select id="vState"><option value="">—</option>' + SHEET.states.map((s) => '<option' + ((rp && rp.vehicle_state) === s ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select></div>' +
+      '<div class="row"><label>ชื่อผู้ทวนสอบ</label><input id="vName" placeholder="ว่าง = ชื่อบัญชีที่เข้าระบบ" value="' + esc(dd.verified_by || '') + '"></div>' +
+      (dd.verified_by ? '<div class="row" style="font-size:12.5px;color:var(--muted)">ทวนสอบแล้วโดย ' + esc(dd.verified_by) + ' · ' + esc(tTxt(dd.verified_at)) + '</div>' : '') +
+      '<button class="btn pri" id="vSave" style="width:100%;padding:10px">💾 บันทึกการทวนสอบ</button>';
+  }
+  $('dB').innerHTML = h;
+  $('drw').classList.add('open'); $('dim').classList.add('open');
+}
+function closeDrw() { $('drw').classList.remove('open'); $('dim').classList.remove('open'); }
+async function saveVerify() {
+  const b = $('vSave'); b.disabled = true; b.textContent = 'กำลังบันทึก…';
+  try {
+    const r = await api({ action: 'verifyCheck', checkId: VER.day.check_id, result: VER.result, verifyAction: $('vAct').value.trim(), vehicleState: $('vState').value, verifierName: $('vName').value.trim() }, true);
+    if (!r.ok) { toast(r.error || 'บันทึกไม่สำเร็จ'); return; }
+    toast('บันทึกการทวนสอบแล้ว'); closeDrw(); await openVeh(CUR); loadList();
+  } catch (e) { toast('เน็ตหลุด ลองใหม่'); }
+  finally { b.disabled = false; b.textContent = '💾 บันทึกการทวนสอบ'; }
+}
+
+// ── ปริ้น ──
+async function printAll() {
+  if (!LIST || !LIST.vehicles.length) return;
+  const vs = LIST.vehicles.filter((v) => v.days_checked > 0);
+  if (!vs.length) { toast('เดือนนี้ยังไม่มีคันไหนส่งใบตรวจ'); return; }
+  if (!confirm('ปริ้นใบ FM-TR-10 ' + vs.length + ' คัน (เฉพาะคันที่มีใบตรวจเดือนนี้)?')) return;
+  $('main').innerHTML = '<div class="ldr"><i></i>กำลังเตรียม <span id="pc">0</span>/' + vs.length + ' คัน</div>';
+  let h = '';
+  for (let i = 0; i < vs.length; i++) {
+    const d = await api({ action: 'fmSheet', month: $('month').value, vehicleId: vs[i].id });
+    if (d.ok) h += sheetHTML(d, false);
+    const pc = $('pc'); if (pc) pc.textContent = i + 1;
+  }
+  CUR = null; renderList(); $('main').innerHTML = h;
+  setTimeout(() => window.print(), 300);
+}
+
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  const g = t.closest('#grp .chip'); if (g) { GRP = g.dataset.g; $('grp').querySelectorAll('.chip').forEach((c) => c.classList.toggle('on', c === g)); loadList(); return; }
+  const v = t.closest('.veh'); if (v) { openVeh(+v.dataset.id); return; }
+  const im = t.closest('[data-img]'); if (im) { window.open(im.dataset.img, '_blank'); return; }
+  const dy = t.closest('[data-day]'); if (dy && SHEET) { openDay(dy.dataset.day); return; }
+  const r = t.closest('.seg button'); if (r) { VER.result = r.dataset.r; r.parentNode.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === r)); return; }
+  if (t.id === 'vSave') saveVerify();
+});
+$('dX').onclick = closeDrw; $('dim').onclick = closeDrw;
+$('q').oninput = () => LIST && renderList();
+$('month').onchange = () => { loadList(); if (CUR) openVeh(CUR); };
+$('bPrint').onclick = () => { if (!SHEET || !CUR) { toast('เลือกรถก่อน'); return; } window.print(); };
+$('bPrintAll').onclick = printAll;
+
+(async function init() {
+  const now = bkk().slice(0, 7), ms = [];
+  for (let i = 0; i < 12; i++) { const d = new Date(Date.UTC(+now.slice(0, 4), +now.slice(5, 7) - 1 - i, 1)); ms.push(d.toISOString().slice(0, 7)); }
+  $('month').innerHTML = ms.map((m) => '<option value="' + m + '">' + monTxt(m) + '</option>').join('');
+  const q = new URLSearchParams(location.search);
+  if (q.get('month')) $('month').value = q.get('month');
+  if (q.get('uid')) UID = q.get('uid');
+  else {
+    try { await liff.init({ liffId: LIFF_ID }); if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; } const p = await liff.getProfile(); UID = p.userId || ''; }
+    catch (e) { $('vlist').innerHTML = '<div class="msg">เข้าระบบ LINE ไม่สำเร็จ</div>'; return; }
+  }
+  await loadList();
+  if (q.get('vehicle')) openVeh(+q.get('vehicle'));
+})();
+</script>
+</body>
+</html>
