@@ -582,6 +582,7 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 .lt-ctx{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lt-ctx.bad{color:var(--bad)}
 .lt-ctx .tok{color:#15803D;font-weight:600}
+.tchip.so{background:#EEF2FF;color:#3730A3}
 .chip .cx{font-size:11px;font-weight:600;opacity:.8}
 .jflow{flex-basis:100%;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;font-size:12px;color:var(--muted)}
 .jflow span{border:1px solid var(--line);border-radius:999px;padding:2px 10px;background:var(--surface2)}
@@ -816,7 +817,9 @@ const RTK=[['พาเลทเปล่า','พาเลท'],['ลัง / �
 const rtU=k=>(RTK.find(x=>x[0]===k)||RTK[4])[1];
 const rtTxt=r=>'รับ'+r.k+(r.q?' '+r.q+' '+r.u:'')+(r.d?' · '+r.d:'');   // r.d = ระบุงาน (10 พ.ย. คุณน้อง)
 const jsN=s=>s.rt?'↩ '+rtTxt(s.rt)+(s.tbd?'':' @ '+s.n):s.n;   // ชื่อจุดในใบแจ้งงาน/ขอรถไร่ (งานรับของกลับ)
-const stChip=s=>(s.rt?'<span class="tchip rtc">↩ ขากลับ</span>':tchip(tyOf(s)))+(s.tk?' <span class="tchip">🛢️ '+esc(s.tk)+' ถัง</span>':'')+(s.coa?' <span class="tchip coa" title="ขนถังต้องมีใบขนย้าย COA">📄 COA</span>':'');
+/* 🧾 เลข SO ของออเดอร์ยี่ปั๊ว (การ์ด/เมล) โชว์ที่จุดส่งในแพลน (คุณน้อง 12 พ.ย.) */
+const soOfYp=mid=>{try{const m=(YP.msgs||[]).find(x=>x.mid===mid);return m&&m.p&&m.p.so||'';}catch(e){return '';}};
+const stChip=s=>(s.rt?'<span class="tchip rtc">↩ ขากลับ</span>':tchip(tyOf(s)))+(s.yp&&soOfYp(s.yp)?' <span class="tchip so">🧾 SO '+esc(soOfYp(s.yp))+'</span>':'')+(s.tk?' <span class="tchip">🛢️ '+esc(s.tk)+' ถัง</span>':'')+(s.coa?' <span class="tchip coa" title="ขนถังต้องมีใบขนย้าย COA">📄 COA</span>':'');
 const TBD_N='รอแจ้งสถานที่';
 /* แจ้งคนขับเมื่อระบุ/เปลี่ยนสถานที่รับของกลับ · เว็บจริง = การ์ด LINE ถึงคนขับคันนั้น (สีเขียว + ปุ่มแผนที่/รับทราบ) · เดโมโชว์การ์ดที่จะส่ง */
 function rtCard(v,p,n){const s=n.s,pr=p.stops[n.i-1],d=drvOf(p.driver);
@@ -3093,7 +3096,7 @@ async function ypPlate(m,o,btn){const p=m.p||{},k=(p.pick=p.pick||{}),pick=!!p.p
     if(!msgPl){if(plate){k.plate=plate;k.plateBy=by;}else{delete k.plate;delete k.plateBy;}}
     if(pick){if(driver){k.driver=driver;k.driverBy=by;}else if(k.driverBy){delete k.driver;delete k.driverBy;}}
     if(so){p.so=so;p.soBy=by;}else{delete p.so;delete p.soBy;}
-    const sv=YP.sel[m.mid];if(sv){delete sv.plt;delete sv.drv;delete sv.so;}ypDraw();
+    const sv=YP.sel[m.mid];if(sv){delete sv.plt;delete sv.drv;delete sv.so;}ypDraw();if(ypInPlan(m.mid)&&!ED)renderAll();
     toast(plate||driver||so?'✅ บันทึกแล้ว · '+[driver&&'คนขับ '+driver,plate&&'ทะเบียน '+plate,so&&'SO '+so].filter(Boolean).join(' · ')+' (ขึ้นในแผนการส่งมอบ)':'ล้างแล้ว');}
   catch(e){toast('❌ '+(e.message||e));if(btn)btn.disabled=false;}}
 const ypLive=()=>typeof PKD_URL!=='undefined'&&typeof MY_UID!=='undefined'&&!!MY_UID;
@@ -3257,7 +3260,8 @@ function ypOpen(mode){if(typeof ED!=='undefined'&&ED){toast('ปิดลิ้�
   YP.fresh.clear();YP.day='';ypDraw();const x=document.querySelector('#ypDr .x');if(x)x.focus();if(ypLive())ypLoad();}
 async function ypSet(m,st,btn,extra){const old=m.st;if(btn)btn.disabled=true;
   try{await ypMark(m,st,extra);ypBadge();ypDraw();return true;}catch(e){m.st=old;toast('❌ '+(e.message||e));if(btn)btn.disabled=false;return false;}}
-async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data-ypveh]').value,stn=card.querySelector('[data-ypst]').value.trim();
+async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data-ypveh]').value,stn=card.querySelector('[data-ypst]').value.trim(),
+    soEl=card.querySelector('[data-ypso]'),soT=soEl?soEl.value.replace(/\s+/g,' ').trim().slice(0,80):'';   /* SO ที่พิมพ์ค้างไว้ (ยังไม่กดบันทึก) */
   if(!head){toast('⚠️ กรุณาเลือกรถที่จะลงงานนี้');card.querySelector('[data-ypveh]').focus();return;}
   if(ypInPlan(m.mid)){toast('ออเดอร์นี้ลงแพลนไว้แล้ว');return;}
   const P=PLAN[head];if(!P||P.status!=='ready'){toast('⚠️ รถคันนี้ไม่พร้อมวิ่ง');return;}
@@ -3271,6 +3275,7 @@ async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data
   catch(e){P.stops=P.stops.filter(y=>y!==stop);P.note=note0;toast('❌ '+(e.message||e));btn.disabled=false;return;}
   delete YP.sel[m.mid];if(PM!=='all')setPM('all');else renderAll();ypBadge();ypDraw();
   toast('✅ ลง '+(stop.n)+' '+ypQty(p)+' เข้ารถ '+plOf(head)+' แล้ว · อย่าลืมกดบันทึกแพลน');
+  if(soT&&soT!==String(p.so||''))await ypPlate(m,{plate:'',driver:'',so:soT});
   ypMailOpen(m,true);}   /* ✉️ เด้งเมล FM-MK ต่อทันที (บันทึกลงฟอร์มอัตโนมัติ) */
 async function ypPick(m,btn){const old=m.head,oldD=m.planDate,d=(m.p&&m.p.dlv)||$('pdate').value;m.head='รับเอง';m.planDate=d;
   if(!(await ypSet(m,'planned',btn,{planDate:d,head:'รับเอง'}))){m.head=old;m.planDate=oldD;return;}toast('✅ '+((m.p&&m.p.shop)||'')+' ลูกค้ารับเอง · ปิดรายการแล้ว');
@@ -3364,6 +3369,8 @@ async function ypMkPreview(S,m,ov,btn,send,redraw){ypMkRead(S,ov);
   S.row.items=S.row.items.filter(x=>x.n||x.q);if(!S.row.items.length){toast('⚠️ ต้องมีสินค้าอย่างน้อย 1 บรรทัด');return;}
   const lab=btn.textContent;btn.disabled=true;btn.textContent='กำลังโหลด…';
   try{if(S.dirty){await mkPost({action:'addRows',date:S.d,rows:[S.row]});ypMkSync(S,await mkGet(S.d),m);S.dirty=0;}
+    {const so=String(S.row.so||'').replace(/\s+/g,' ').trim().slice(0,80),p=m.p||{},k=p.pick||{};
+      if(so!==String(p.so||''))await ypPlate(m,{plate:k.plate||'',driver:k.driver||'',so});}   /* SO ที่คีย์ในเมล → การ์ด+แพลน */
     const q={date:S.d,rev:S.rev,grp:S.g,nos:[S.no],subject:(S.sub[S.g]||'').trim(),note:(S.note[S.g]||'').trim()};
     const r=await mkPost(Object.assign({action:'mailPreview'},q));
     const ppl=l=>l.length?l.map(x=>'<span class="pvp">'+esc(x.name||x.email.split('@')[0])+'</span>').join(''):'<span class="warn">ยังไม่ได้ตั้งผู้รับ (ตั้งที่ 👥 ผู้รับเมล ในหน้า FM-MK)</span>';
