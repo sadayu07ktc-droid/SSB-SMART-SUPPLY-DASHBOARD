@@ -155,6 +155,24 @@
   .btn.ghost{background:transparent;border:1px solid var(--line-strong);color:var(--ink-soft);font-weight:500}
   .btn:disabled{opacity:.5;cursor:not-allowed}
   .chgn{font-size:12px;color:var(--dev);font-weight:700}
+  /* ── ที่มาเช็คอิน / เวลาถึงแต่ละจุด / พิกัดรถ (12 พ.ย.) ── */
+  .src{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:999px;background:var(--surface-3);color:var(--ink-soft)}
+  .src.gps{background:var(--green-bg);color:var(--green)}
+  .src.man{background:var(--amber-bg);color:var(--amber)}
+  .src.no{background:var(--red-bg);color:var(--red)}
+  .mini{font-size:11.5px;color:var(--ink-faint)}
+  .btn.sm{padding:5px 11px;font-size:12px}
+  .cki{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--ink-soft)}
+  .cki .gpsres{flex-basis:100%}
+  .arow{display:flex;gap:10px;padding:9px 4px;border-top:1px solid var(--line);font-size:13px}
+  .arow:first-of-type{border-top:0}
+  .arow .sq{font-family:var(--mono);font-weight:700;color:var(--ink-faint);width:20px;text-align:center;flex:none;padding-top:1px}
+  .arow .nm{flex:1;min-width:0;display:flex;flex-direction:column;gap:5px;align-items:flex-start}
+  .gbox{font-size:12.5px;line-height:1.7;border-radius:9px;padding:8px 11px;border-left:3px solid var(--line-strong);background:var(--surface-2)}
+  .gbox.gps{border-left-color:var(--green);background:var(--green-bg)}
+  .gbox.man{border-left-color:var(--amber);background:var(--amber-bg)}
+  .gbox.no{border-left-color:var(--red);background:var(--red-bg)}
+  .gbox a{color:var(--blue);font-weight:600;margin-left:8px;white-space:nowrap}
 
   #gate{position:fixed;inset:0;z-index:200;background:var(--bg);display:grid;place-items:center;text-align:center;padding:30px}
   #gate .ring{width:44px;height:44px;border:4px solid var(--line-strong);border-top-color:var(--pine);border-radius:50%;margin:0 auto 18px;animation:spin 1s linear infinite}
@@ -233,7 +251,95 @@ FLOW.forEach(x=>LABEL[x[1]]=x[2]);
 PTS.forEach(([c,t])=>{ LABEL['mile_'+c]='เลขไมล์ '+t; LABEL['hub_'+c]='ดุมล้อ '+t; LABEL['load_'+c]='สภาพรถ '+t; });
 W_GROUPS.forEach(([c,t])=>{ LABEL['weight_gross_'+c]='น้ำหนักรวม '+t; LABEL['weight_tare_'+c]='น้ำหนักรถ '+t; LABEL['weight_net_'+c]='น้ำหนักสุทธิ '+t; });
 COSTS.forEach(([k,t])=>LABEL[k]=t);
-const lbl=k=>LABEL[k]||k;
+let JOB_LBL={};   // ป้ายเฉพาะงาน (PK = ชื่อจุดส่ง) — ตั้งใน drawPanel
+const lbl=k=>JOB_LBL[k]||LABEL[k]||k;
+
+/* ── ช่องเวลา/จุดตามประเภทงาน (12 พ.ย. คุณน้อง: PK/Bulk ไม่มีลาน → ตัด · PK ช่องลาน = จุดส่งที่ 1/2/3) ──
+   งาน PK ใช้ช่องเดิมตามจำนวนจุด (= pk-driver PK_SLOTS): 1 จุด = ลูกค้า · 2 = ลูกค้า → ลานขากลับ · 3+ = ลานวางกระบะ → ลูกค้า → ลานขากลับ */
+const SLOT_TIME={rampDrop:'ramp_place_at',client:'left_customer_at',ramp:'ramp_return_at'};
+const SLOT_PT={rampDrop:'ramp_place',client:'customer',ramp:'ramp_return'};
+const SLOT_TH={rampDrop:'ลานวางกระบะ',client:'ลูกค้า',ramp:'ลานขากลับ'};
+function jobLayout(){
+  const o=JOB.order, lw=JOB.lw||{}, L={hideTime:new Set(),hidePt:new Set(),hideW:new Set(),tLabel:{},ptLabel:{}};
+  const plan=JOB.pk&&JOB.pk.plan;
+  if(plan&&plan.length){
+    Object.entries(SLOT_TIME).forEach(([sl,k])=>{
+      const ss=plan.filter(s=>s.slot===sl);
+      if(!ss.length){ L.hideTime.add(k); L.hidePt.add(SLOT_PT[sl]); return; }
+      const nm='จุด '+(ss.length>1?ss[0].seq+'–'+ss[ss.length-1].seq:ss[0].seq)+' · '+ss.map(s=>s.name).join(' + ');
+      L.tLabel[k]='เวลาเสร็จ'+nm; L.ptLabel[SLOT_PT[sl]]='📦 '+nm;
+    });
+    L.tLabel.arrived_at='เวลาถึงจุดแรก (เช็คอิน)'; L.ptLabel.start='🚀 ออกจาก SSB'; L.ptLabel.dest='🏁 กลับถึง SSB';
+    L.hideW.add('ramp_atramp'); L.hideW.add('ramp_factory');
+  } else if(o.job_type==='Bulk'){
+    ['ramp_place_at','ramp_return_at'].forEach(k=>L.hideTime.add(k)); ['ramp_place','ramp_return'].forEach(c=>L.hidePt.add(c));
+    L.hideW.add('ramp_atramp'); L.hideW.add('ramp_factory'); L.ptLabel.customer='🏭 ลูกค้า';
+  }
+  // ช่องที่มีค่าอยู่แล้วไม่ซ่อน (กันข้อมูลหายจากจอ)
+  [...L.hideTime].forEach(k=>{ if(String(o[k]??'').trim()) L.hideTime.delete(k); });
+  [...L.hidePt].forEach(c=>{ if(['mile_','hub_','load_'].some(p=>String(lw[p+c]??'').trim())) L.hidePt.delete(c); });
+  [...L.hideW].forEach(c=>{ if(['weight_gross_','weight_tare_','weight_net_'].some(p=>String(lw[p+c]??'').trim())) L.hideW.delete(c); });
+  JOB_LBL={}; Object.entries(L.tLabel).forEach(([k,t])=>JOB_LBL[k]=t);
+  Object.entries(L.ptLabel).forEach(([c,t])=>{ JOB_LBL['mile_'+c]='เลขไมล์ '+t; JOB_LBL['hub_'+c]='ดุมล้อ '+t; JOB_LBL['load_'+c]='สภาพรถ '+t; });
+  return L;
+}
+/* ── ที่มาเวลาถึง (orders.checkin_source) — กติกาเดียวกับ Order_Status checkinTag · Driver_form · การ์ด LINE (memory ssb-checkin-status-points.md) ──
+   GPS อัตโนมัติ / คนขับกดเอง / ไม่ได้เช็คอิน (เวลา = ตอนกดออก · ก่อน 12 พ.ย. = ว่าง + เวลาถึง==เวลาออก) */
+function ordCheckin(){
+  const o=JOB.order, at=String(o.arrived_at||'').trim(); if(!at) return null;
+  const src=String(o.checkin_source||'').trim(), noChk=src==='ไม่ได้เช็คอิน'||(!src&&at===String(o.left_customer_at||'').trim());
+  const plan=(JOB.pk&&JOB.pk.plan)||[], cIdx=plan.findIndex(s=>s.slot==='client');
+  return { at, src:noChk?'ไม่ได้เช็คอิน':src, noChk, seq:plan.length?(noChk&&cIdx>=0?cIdx+1:1):0 };
+}
+function srcChip(src,long){
+  return src==='GPS อัตโนมัติ'?'<span class="src gps">🛰️ GPS อัตโนมัติ</span>'
+    :src==='คนขับกดเอง'?'<span class="src man">👆 คนขับกดเช็คอินเอง</span>'
+    :src==='ไม่ได้เช็คอิน'?`<span class="src no">⚠️ ไม่ได้เช็คอิน${long?' — เวลาถึง = ตอนคนขับกด "ออกจากลูกค้า"':''}</span>`
+    :`<span class="src man">❔ ${src?esc(src):'ไม่ทราบที่มา'}</span>`;
+}
+function checkinHtml(){
+  const c=ordCheckin(); if(!c) return '';
+  const isPk=!!(JOB.pk&&JOB.pk.plan), gps=c.src==='GPS อัตโนมัติ';
+  return `<div class="cki"><span>ที่มาเวลา${isPk?'ถึงจุดที่ '+c.seq:'ถึงลูกค้า'}:</span>${srcChip(c.src,true)}
+    <button class="btn ghost sm" data-at="${esc(c.at)}" data-seq="${isPk?c.seq:''}" onclick="gpsCheck(this)">📍 ${gps?'เช็คพิกัดรถ':'ดูพิกัดรถตอนนั้น'}</button><div class="gpsres"></div></div>`;
+}
+/* ── PK: เวลาถึงแต่ละจุด (pk_stop_arrivals · GPS) + เวลาคนขับบันทึกจุด (pk_stop_logs) ── */
+const thShort=iso=>{ const d=new Date(iso); return isNaN(d)?'—':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
+function arrivalsSec(){
+  const pk=JOB.pk; if(!pk||!pk.plan||!pk.plan.length) return '';
+  const arr={}, lg={}; (pk.arrivals||[]).forEach(a=>arr[a.seq]=a); (pk.logs||[]).forEach(l=>lg[l.seq]=l);
+  const oc=ordCheckin();   // ไม่มี GPS รายจุด → ใช้เช็คอินของออเดอร์ (จุดแรก / ไม่ได้เช็คอิน = จุดช่องลูกค้า) = กติกาเดียวกับ order-tracker
+  const rows=pk.plan.map(s=>{ const a=arr[s.seq], l=lg[s.seq];
+    const arrive=a?`<span><span class="src gps">🛰️ ถึง ${thShort(a.arrived_at)}</span> <span class="mini">ห่างหมุด ${a.dist_m??'—'} ม.${a.notified?' · แจ้ง LINE แล้ว':''}</span></span>`
+      : oc&&oc.seq===s.seq?`<span>${srcChip(oc.src)} <span class="mini">เวลาถึง ${esc(oc.at)}</span></span>`
+      : !s.pin?'<span class="src no">⚠️ ไม่มีหมุด DTC — จับเวลาถึงไม่ได้</span>'
+      : '<span class="mini">ยังไม่มีเวลาถึงจาก GPS</span>';
+    return `<div class="arow"><span class="sq">${s.seq}</span><div class="nm"><div><b>${esc(s.name)}</b> <span class="mini">· ช่อง${SLOT_TH[s.slot]||s.slot}</span></div>${arrive}
+      ${l?`<span class="mini">📝 คนขับบันทึกจุดนี้ ${thShort(l.created_at)}</span>`:''}
+      ${!a&&l?`<button class="btn ghost sm" data-at="${esc(l.created_at)}" data-seq="${s.seq}" onclick="gpsCheck(this)">📍 ดูพิกัดรถตอนบันทึก</button>`:''}<div class="gpsres"></div></div></div>`; }).join('');
+  return `<div class="sec"><h3>📍 เวลาถึงแต่ละจุด<span class="r">รถเข้ารัศมีหมุด DTC = จดเวลาถึงให้เอง</span></h3>${rows}
+    <div class="note">เริ่มเก็บ 12 พ.ย. 2569 · งานก่อนหน้านี้มีแค่เวลาถึงจุดแรก</div></div>`;
+}
+/* ── พิกัดรถ ณ เวลานั้น (Edge gpsAt · DTC ±15 นาที) ── */
+async function gpsCheck(btn){
+  const box=btn.parentElement.querySelector('.gpsres'); if(!box||!JOB) return;
+  btn.disabled=true; box.innerHTML='<span class="mini">⏳ กำลังดึง GPS จาก DTC…</span>';
+  try{
+    const r=await apiGet({action:'gpsAt',order:JOB.order.order_id,at:btn.dataset.at,seq:btn.dataset.seq||''});
+    if(!r.ok) box.innerHTML=`<span class="src no">❌ ${esc(r.error||'ดึงไม่ได้')}</span>`;
+    else if(r.none) box.innerHTML=`<span class="src no">⚠️ ${esc(r.why||'ไม่มีข้อมูล GPS')}</span>`;
+    else{
+      const p=r.point, d=r.distM, tg=r.target||{}, cls=d==null?'':d<=300?'gps':d<=1000?'man':'no';
+      const dTxt=d==null?(tg.noPin?'ไม่มีหมุดให้เทียบ':'—'):d<1000?d.toLocaleString()+' ม.':(d/1000).toFixed(1)+' กม.';
+      const t=new Date(p.ms).toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      box.innerHTML=`<div class="gbox ${cls}">📍 รถอยู่ที่ <span class="mono">${p.lat.toFixed(6)}, ${p.lon.toFixed(6)}</span> · GPS ${t} <span class="mini">(${r.diffSec>=0?'+':''}${r.diffSec} วิ)</span> · ${p.spd>2?Math.round(p.spd)+' กม./ชม.':'จอด'}<br>
+        ห่าง <b>${esc(tg.name||'ปลายทาง')}</b> <b>${dTxt}</b>
+        <a href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lon}" target="_blank" rel="noopener">🗺️ ตำแหน่งรถ</a>
+        ${tg.lat!=null?`<a href="https://www.google.com/maps/dir/?api=1&origin=${p.lat},${p.lon}&destination=${tg.lat},${tg.lon}" target="_blank" rel="noopener">↔️ เทียบกับหมุด</a>`:''}</div>`;
+    }
+  }catch(e){ box.innerHTML=`<span class="src no">❌ ${esc(e)}</span>`; }
+  btn.disabled=false;
+}
 
 /* ═════════ รายชื่อคนขับ ═════════ */
 async function load(){
@@ -315,7 +421,7 @@ function fld(key,label,val,opt){   // opt: {num, sel:[...], area, ph}
 }
 function drawPanel(){
   const o=JOB.order, lw=JOB.lw||{}, locked=!!(lw.wage_locked||lw.wage_paid_at), cx=o.status==='ยกเลิก';
-  const fee=lw.calc_trip_fee;
+  const fee=lw.calc_trip_fee, L=jobLayout();
   let h='';
   if(locked) h+=`<div class="warnbox">🔒<div><b>${lw.wage_paid_at?'จ่ายค่าแรงใบนี้แล้ว':'ค่าแรงใบนี้ถูกล็อก'}</b> — ดูได้อย่างเดียว แก้ไม่ได้</div></div>`;
   if(cx) h+=`<div class="warnbox">⛔<div><b>งานนี้ถูกยกเลิกแล้ว</b> — ดูได้อย่างเดียว</div></div>`;
@@ -325,14 +431,16 @@ function drawPanel(){
       ${(o.job_type||'ปาล์ม')!=='Packing'&&o.job_type!=='Bulk'?fld('order.extra_pickup','จุดรับเพิ่ม (ลาน) · ว่าง = ไม่แวะลาน',o.extra_pickup):''}</div>
     <label class="ck" style="margin-top:9px"><input type="checkbox" id="clrLater" checked> ถอยสถานะ → ล้างเวลาของขั้นที่อยู่หลังสถานะใหม่ให้ด้วย</label></div>`;
   h+=`<div class="sec"><h3>⏱️ เวลาแต่ละขั้น<span class="r">รูปแบบ วว/ดด/ปปปป ชช:นน:วว · ว่าง = ลบเวลา</span></h3>
-    <div class="grid">${FLOW.map(([st,k,t])=>fld('order.'+k,t,o[k],{ph:'เช่น 12/11/2026 10:49:00'})).join('')}</div>
+    <div class="grid">${FLOW.filter(([,k])=>!L.hideTime.has(k)).map(([st,k,t])=>fld('order.'+k,L.tLabel[k]||t,o[k],{ph:'เช่น 12/11/2026 10:49:00'})).join('')}</div>
+    ${checkinHtml()}
     <button class="btn ghost" style="margin-top:9px;padding:6px 12px;font-size:12px" onclick="fillNow()">🕒 ใส่ "ตอนนี้" ให้ขั้นของสถานะที่เลือก (ถ้ายังว่าง)</button></div>`;
+  h+=arrivalsSec();
   h+=`<div class="sec"><h3>🛣️ เลขไมล์ · ดุมล้อ · สภาพรถ ต่อจุด</h3><table class="pts"><tr><th>จุด</th><th>เลขไมล์</th><th>ดุมล้อ</th><th>สภาพรถ</th></tr>
-    ${PTS.map(([c,t])=>`<tr><td>${t}</td><td>${fld('lw.mile_'+c,'',lw['mile_'+c],{num:1})}</td><td>${fld('lw.hub_'+c,'',lw['hub_'+c],{num:1})}</td>
+    ${PTS.filter(([c])=>!L.hidePt.has(c)).map(([c,t])=>`<tr><td>${esc(L.ptLabel[c]||t)}</td><td>${fld('lw.mile_'+c,'',lw['mile_'+c],{num:1})}</td><td>${fld('lw.hub_'+c,'',lw['hub_'+c],{num:1})}</td>
       <td>${fld('lw.load_'+c,'',lw['load_'+c]||'',{sel:['','เบา','หนัก']})}</td></tr>`).join('')}</table>
     <div class="calc">${['distance_light_km','distance_heavy_km','heavy_percent','distance_total_km'].map(k=>`<span class="kv">${lbl(k)} <b>${lw[k]==null?'—':esc(lw[k])}</b></span>`).join('')}</div>
     <div class="note">ระยะเบา/หนัก/%หนัก/ระยะรวม ระบบคิดใหม่ให้เองตอนบันทึก (สูตรเดียวกับตอนคนขับส่ง)</div></div>`;
-  h+=`<div class="sec"><h3>⚖️ น้ำหนัก</h3>${W_GROUPS.map(([c,t])=>`<div style="font-size:12px;font-weight:600;margin:4px 0 5px">${t}</div>
+  h+=`<div class="sec"><h3>⚖️ น้ำหนัก</h3>${W_GROUPS.filter(([c])=>!L.hideW.has(c)).map(([c,t])=>`<div style="font-size:12px;font-weight:600;margin:4px 0 5px">${t}</div>
       <div class="grid" style="margin-bottom:8px">${fld('lw.weight_gross_'+c,'รวม (กก.)',lw['weight_gross_'+c],{num:1})}${fld('lw.weight_tare_'+c,'รถ (กก.)',lw['weight_tare_'+c],{num:1})}${fld('lw.weight_net_'+c,'สุทธิ (กก.)',lw['weight_net_'+c],{num:1})}</div>`).join('')}
     <div class="grid">${fld('lw.price_per_kg','ราคา/กก.',lw.price_per_kg,{num:1})}${fld('lw.total_amount','ยอดเงิน',lw.total_amount,{num:1})}</div></div>`;
   h+=`<div class="sec"><h3>⛽ น้ำมัน · ค่าใช้จ่าย</h3><div class="grid">${COSTS.map(([k,t])=>fld('lw.'+k,t,lw[k],{num:1})).join('')}</div>
@@ -401,7 +509,7 @@ function changes(){
 function updChg(){ const n=changes().length+(stopsChanged()?1:0); const e=$('#chgn'); if(e) e.textContent=n?`แก้ ${n} ช่อง`:'ยังไม่มีการแก้'; }
 function fillNow(){
   const st=$('#f_order__status').value, row=FLOW.find(x=>x[0]===st); if(!row) return;
-  const el=$('#f_order__'+row[1]); if(el.value.trim()) return toast('ขั้นนี้มีเวลาอยู่แล้ว');
+  const el=$('#f_order__'+row[1]); if(!el) return toast('ขั้นนี้ไม่ได้ใช้กับงานนี้'); if(el.value.trim()) return toast('ขั้นนี้มีเวลาอยู่แล้ว');
   const d=new Date(), p=n=>String(n).padStart(2,'0');
   el.value=`${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`; mark(el);
 }
