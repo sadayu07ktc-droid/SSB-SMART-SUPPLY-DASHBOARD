@@ -488,7 +488,7 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 .mov{position:fixed;inset:0;z-index:90;background:rgba(10,25,18,.45);display:flex;align-items:center;justify-content:center;padding:16px}
 /* ✉️ เมล FM-MK จาก Pending ยี่ปั๊ว · z 55 = เหนือลิ้นชัก (46) ใต้ toast (60) และ askModal (90) */
 .mov.ymov{z-index:55}
-.mbox.ymb{max-width:820px;padding:18px 18px 14px}
+.mbox.ymb{max-width:min(1360px,96vw);padding:18px 18px 14px}   /* กว้างพอให้ตารางเมลไม่ต้องเลื่อน (คุณน้อง 12 พ.ย.) */
 .ymh{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;margin-bottom:6px}.ymh h3{margin:0 0 2px;font-size:17px}
 .ymh .x,.ymb .ib{border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:9px;min-width:34px;height:34px;cursor:pointer;flex:none}
 .ytest{background:#FDE8E8;color:#8A1C12;border:1px solid #F3B8B3;border-radius:10px;padding:7px 10px;font-size:13px;margin:4px 0 8px}
