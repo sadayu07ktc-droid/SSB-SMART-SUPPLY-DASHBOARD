@@ -175,6 +175,27 @@
   .tr small{color:var(--txt2)}
   .tsec{font-size:12.5px;font-weight:700;margin:14px 2px 4px;display:flex;justify-content:space-between;gap:8px}
   .tsec span{font-weight:500;color:var(--txt2)}
+  /* 📍 ดึงพิกัดล่าสุดจาก DTC (หัวลิ้นชัก 📡 · คุณน้อง 12 พ.ย.) */
+  .dr-poi{flex:none;height:34px;padding:0 11px;border:1px solid var(--line2);border-radius:9px;background:var(--card);color:var(--txt);font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .dr-poi:hover{border-color:var(--primary);color:var(--primary)}
+  .dr-poi:disabled{opacity:.55;cursor:wait}
+  .dr-poi:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .dr-poi .s{display:none}
+  #ovPoi{z-index:50}
+  .poisec{font-size:13px;font-weight:700;margin:14px 0 4px;display:flex;justify-content:space-between;gap:8px}
+  .poisec span{font-weight:500;color:var(--txt2);font-size:12px}
+  .poir{padding:8px 2px;border-top:1px solid var(--line);font-size:13px;line-height:1.55;overflow-wrap:anywhere}
+  .poir small{color:var(--txt2);font-size:11.5px}
+  .poir .id{font-size:11px;color:var(--txt2);font-variant-numeric:tabular-nums}
+  .poir a{color:var(--primary)}
+  .poitag{display:inline-block;font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:4px;vertical-align:1px}
+  .poitag.c{background:rgba(46,165,103,.14);color:var(--primary)}
+  .poitag.w{background:rgba(184,134,11,.15);color:var(--warn)}
+  .poitag.b{background:rgba(200,53,47,.12);color:var(--danger)}
+  .poisum{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:8px 0 6px}
+  .poisum div{background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:7px 4px;text-align:center;font-size:11px;color:var(--txt2)}
+  .poisum b{display:block;font-size:18px;color:var(--txt);font-variant-numeric:tabular-nums}
+  @media(max-width:620px){.dr-poi .l{display:none}.dr-poi .s{display:inline}}
   @media(max-width:620px){.dtcbtn .lb{display:none}.dr-row{grid-template-columns:minmax(0,1fr) 70px 76px}}
 </style>
 </head>
@@ -309,10 +330,19 @@
   <div class="dr-h">
     <button class="dr-x" id="dtcBack" type="button" onclick="dtcList()" aria-label="กลับไปรายการ" style="display:none">‹</button>
     <div style="flex:1;min-width:0"><h2 id="dtcT">📡 ค่ากลางจาก DTC</h2><div class="sub" id="dtcSub"></div></div>
+    <button class="dr-poi" id="dtcPoiBtn" type="button" onclick="dtcPoiSync()" aria-label="ดึงพิกัดล่าสุดจาก DTC" title="ดึงหมุดล่าสุดจาก DTC แล้วสรุปว่ามีอะไรเพิ่ม/เปลี่ยน (เฉพาะ DEV)">📍 <span class="l">ดึงพิกัดล่าสุดจาก DTC</span><span class="s">ดึงพิกัด</span></button>
     <button class="dr-x" type="button" onclick="closeDtc()" aria-label="ปิด">✕</button>
   </div>
   <div class="dr-b" id="dtcBody"></div>
 </aside>
+<!-- 📍 ผลดึงพิกัดล่าสุดจาก DTC -->
+<div class="ov" id="ovPoi" onclick="if(event.target===this&&!DTC_POI_BUSY)closeOv('ovPoi')">
+  <div class="dlg" role="dialog" aria-modal="true" aria-labelledby="poiT">
+    <h2 id="poiT">📍 ดึงพิกัดล่าสุดจาก DTC</h2>
+    <div id="poiBody" aria-live="polite"></div>
+    <div class="dact"><button class="btn" id="poiOk" onclick="closeOv('ovPoi')">ปิด</button></div>
+  </div>
+</div>
 <div class="toast" id="toast" role="status"></div>
 
 <script>
@@ -328,6 +358,7 @@ function goBack(){ if(history.length>1)history.back(); else location.href='/SSB-
 function openOv(id){$(id).classList.add('on');}
 function closeOv(id){$(id).classList.remove('on');}
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;
+  if($('ovPoi').classList.contains('on')){if(!DTC_POI_BUSY)closeOv('ovPoi');return;}
   const open=['xrtPv','ovAsk','ovImp','ovPick','ovEdit'].filter(id=>$(id)&&$(id).classList.contains('on'));
   if(open.length)open.forEach(closeOv); else if($('dtcDrw').classList.contains('on'))closeDtc();});
 function codeName(c){const x=(DATA.codes||[]).find(k=>k.code===c);return x?x.name:'';}
@@ -1506,6 +1537,46 @@ const DTC_XP={
   apply:rows=>dtcXPost('xrt_apply',rows,'pair'),
   onDone:()=>{DTC_P=null;dtcLoad();}
 };
+/* ── 📍 ดึงพิกัดล่าสุดจาก DTC (คุณน้อง 12 พ.ย.) · เฉพาะ DEV
+ * Edge dtc-poi {action:'sync'} → sync แบบเดียวกับรอบทุกคืน 02:00 (save=1) แล้วเทียบตาราง dtc_poi ก่อน/หลัง
+ * ชื่อที่เปลี่ยน ระบบเปลี่ยนตามในค่ากลาง/ออเดอร์เองตอน 02:10 (apply_poi_renames) · ย้ายพิกัดด้วย = DEV ตรวจเอง */
+const POI_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dtc-poi';
+let DTC_POI_BUSY=false;
+const poiDist=m=>m>=1000?nf(m/1000,1)+' กม.':nf(m,0)+' ม.';
+const poiMap=ll=>{const m=String(ll||'').replace(/\s/g,'').match(/^(-?\d+\.?\d*),(-?\d+\.?\d*)$/);return m?'<a href="https://www.google.com/maps?q='+m[1]+','+m[2]+'" target="_blank" rel="noopener">'+esc(m[1]+', '+m[2])+'</a>':esc(ll||'ไม่มีพิกัด');};
+const poiWhen=t=>t?new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit'})+' น.':'–';
+async function dtcPoiSync(){
+  if(DTC_POI_BUSY)return;
+  DTC_POI_BUSY=true;const btn=$('dtcPoiBtn');btn.disabled=true;$('poiOk').disabled=true;
+  $('poiBody').innerHTML='<div class="ldr"><div class="ring"></div>กำลังดึงหมุดทั้งหมดจาก DTC แล้วเทียบกับของเดิม<small>DTC ให้ดึงได้ 3 ครั้ง/นาที — บางครั้งต้องรอถึง 1 นาที</small></div>';
+  openOv('ovPoi');
+  const c=new AbortController(), t=setTimeout(()=>c.abort(),150000);
+  try{
+    const r=await fetch(POI_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sync',userId:MY_UID}),signal:c.signal});
+    let d;try{d=await r.json();}catch(e){throw new Error('หลังบ้านตอบผิดรูปแบบ (HTTP '+r.status+')');}
+    if(!d.success)throw new Error(d.denied?'ดึงพิกัดจาก DTC ได้เฉพาะ DEV':(d.error||'ดึงไม่สำเร็จ'));
+    $('poiBody').innerHTML=dtcPoiHtml(d);
+  }catch(e){
+    $('poiBody').innerHTML='<div class="errbox">'+esc(e&&e.name==='AbortError'?'หลังบ้านไม่ตอบภายใน 2.5 นาที — ลองใหม่อีกครั้ง':(e&&e.message||e))+'</div>';
+  }finally{clearTimeout(t);DTC_POI_BUSY=false;btn.disabled=false;$('poiOk').disabled=false;$('poiOk').focus();}
+}
+function dtcPoiHtml(d){
+  const A=d.added||[],R=d.renamed||[],M=d.moved||[],G=d.gone||[];
+  const tagC=x=>x.inCentral?'<span class="poitag c">อยู่ในค่ากลาง</span>':'';
+  const idTx=x=>' <span class="id">'+esc(x.id)+'</span>';
+  let h='<div class="note">ดึงเมื่อ '+poiWhen(d.at)+' · หมุดใน DTC '+nf(d.total,0)+' จุด · เทียบกับรอบก่อน '+poiWhen(d.prevSync)+'</div>'
+    +'<div class="poisum"><div><b>'+A.length+'</b>เพิ่มใหม่</div><div><b>'+R.length+'</b>เปลี่ยนชื่อ</div><div><b>'+M.length+'</b>ย้ายพิกัด</div><div><b>'+G.length+'</b>หายจาก DTC</div></div>';
+  if(!A.length&&!R.length&&!M.length&&!G.length)h+='<div class="msg" style="padding:18px 6px">✅ ไม่มีหมุดเพิ่มหรือเปลี่ยนจากรอบก่อน</div>';
+  if(A.length)h+='<div class="poisec">🆕 หมุดใหม่ <span>'+A.length+' จุด</span></div>'+A.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+'<br><small>'+(x.kind?esc(x.kind)+' · ':'')+poiMap(x.loc)+'</small></div>').join('');
+  if(R.length)h+='<div class="poisec">✏️ เปลี่ยนชื่อ <span>'+R.length+' จุด</span></div>'+R.map(x=>'<div class="poir"><s style="color:var(--txt2)">'+esc(x.old)+'</s> → <b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)
+    +(x.movedM?'<br><span class="poitag w" style="margin-left:0">ย้ายพิกัดด้วย '+poiDist(x.movedM)+'</span> <small>ระบบไม่เปลี่ยนชื่อในค่ากลางให้อัตโนมัติ — DEV ตรวจเอง</small>':'')+'</div>').join('');
+  if(M.length)h+='<div class="poisec">📍 ย้ายพิกัด <span>'+M.length+' จุด</span></div>'+M.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)
+    +' <span class="poitag '+(x.movedM>=1000?'b':'w')+'">ห่างจากเดิม '+poiDist(x.movedM)+'</span><br><small>เดิม '+poiMap(x.from)+' → ใหม่ '+poiMap(x.to)+'</small></div>').join('');
+  if(G.length)h+='<div class="poisec">❌ หายจาก DTC <span>'+G.length+' จุด</span></div>'+G.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)+'<br><small>DTC ไม่ส่งหมุดนี้มารอบนี้ (ถูกลบหรือปิดใน DTC) · ระบบยังเก็บพิกัดเดิมไว้</small></div>').join('');
+  if(d.goneOld)h+='<div class="note" style="margin-top:8px">อีก '+d.goneOld+' หมุดหายจาก DTC ไปก่อนหน้านี้แล้ว (ไม่นับรอบนี้)</div>';
+  if(R.length||d.renamePending)h+='<div class="note" style="margin-top:10px">🔁 ชื่อที่เปลี่ยน ระบบจะเปลี่ยนตามในค่ากลาง / คู่ปลายทาง / ออเดอร์ / แพลน PK ให้เองตอน <b>02:10 น.</b>'+(d.renamePending?' (รออยู่ '+d.renamePending+' รายการ)':'')+'</div>';
+  return h;
+}
 async function dtcXPost(action,rows,kind){
   const r=await fetch(DTC_EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,userId:MY_UID,days:DTC_DAYS,rows,kind:kind||''})});
   let d; try{d=await r.json();}catch(e){throw new Error('หลังบ้านตอบผิดรูปแบบ');}
