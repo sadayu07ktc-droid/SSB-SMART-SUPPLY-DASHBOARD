@@ -419,6 +419,7 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
 .jt .nt{white-space:normal;min-width:96px;max-width:118px;font-size:12.5px}
 .jt .hp{font-size:12.5px}
 .jt .rd{color:var(--bad);font-weight:600}
+.jt .tok,.edt .tok{color:#15803D;font-weight:600;font-size:12.5px}
 .jt .or{color:var(--warn);font-weight:600}
 .jt .m{color:var(--muted)}
 .jt td.stc{background:color-mix(in srgb,var(--gold) 7%,var(--surface));min-width:56px;font-weight:600}
@@ -1785,7 +1786,7 @@ function planSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=
       if(p.out)hl.push({t:'เด็กนอก '+p.out+' คน',ph:''});
       const pls=v.plate.split(',').map(s=>s.trim()).filter(Boolean);
       rows.push({no:++no,plate:pls.join(' / '),pls,shape:[BRAND[v.head],v.shape].filter(Boolean).join(' · '),
-        drv:v.tail?'':dv?dv.name:'',k,status:k==='job'?(otOnly(p)?'งานอื่นๆ · '+otLabel(p):''):(PSTAT[k]||'')+((k==='rep'||k==='off')&&p.reason?' · '+p.reason:''),
+        drv:v.tail?'':dv?dv.name:'',k,status:k==='job'?(otOnly(p)?'งานอื่นๆ · '+otLabel(p):''):(PSTAT[k]||'')+((k==='rep'||k==='off')&&p.reason?' · '+p.reason:'')+(tailTxt(v)?' · '+tailTxt(v):''),
         stops:S.map(s=>({n:s.rt?'↩ '+rtTxt(s.rt)+' · '+s.n:s.n,ty:tyOf(s),pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:feeOf(v,s)||0})),
         hl,ht:/^[0-9]{1,2}[:.][0-9]{2}$/.test(String(p.htime||'').trim())?tmTH(String(p.htime).trim()):String(p.htime||'').trim(),note:String(p.note||'').trim()});});
     if(rows.length)groups.push({g,rows});});
@@ -2033,6 +2034,11 @@ const otLabel=p=>p.ot+(String(p.otd||'').trim()?' · '+String(p.otd).trim():'')+
 function kind(v){const p=PLAN[v.head];
   if(v.tail)return 'tail'; if(p.status==='repair')return 'rep'; if(p.status==='off')return 'off';
   if(!p.driver)return 'nod'; return p.stops.length||otOnly(p)?'job':'wait';}
+/* 🔧 12 พ.ย. คุณน้อง: ซ่อม/งดวิ่ง = ตัวหัว → หางยังใช้งานได้ · สถานะติดข้ามวัน (VST จาก pk-draft · ตาราง pk_vehicle_status) */
+const tailOk=v=>{const t=(v.plate.split(',')[1]||'').trim(),k=kind(v);return t&&(k==='rep'||k==='off')?t:'';};
+const tailTxt=v=>{const t=tailOk(v);return t?'หาง '+t+' ใช้งานได้':'';};
+let VST={};
+const dShort=iso=>{const d=new Date(String(iso||'')+'T00:00:00');return isNaN(d)?'':d.getDate()+' '+MON[d.getMonth()];};
 const KLAB={job:['มีงาน','p-job'],wait:['รอมีงาน','p-wait'],rep:['ซ่อม','p-rep'],off:['งดวิ่ง','p-wait'],nod:['ไม่มีคนขับ','p-nod'],tail:['หางสำรอง','p-tail']};
 function busy(){/* ใครถูกใส่ซ้ำหลายคันวันเดียวกัน */
   const dc={},hc={};VEH.forEach(v=>{const p=PLAN[v.head];if(p.status!=='ready'||(!p.stops.length&&!otOnly(p)))return;
@@ -2319,8 +2325,10 @@ function renderPlan(){
       const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join('');
       const S0=p.status==='ready'?p.stops:[],S=PM==='mall'?S0.filter(isMall):S0,nOther=S0.length-S.length;
       let cust;
-      if(k==='rep')cust='<span class="rd">'+esc(p.reason||'ซ่อม')+'</span>';
-      else if(k==='off')cust='<span class="m">งดวิ่ง '+esc(p.reason||'')+'</span>';
+      const vsF=VST[v.head]&&VST[v.head].s===p.status&&VST[v.head].from<$('pdate').value?'<span class="m"> · ตั้งแต่ '+esc(dShort(VST[v.head].from))+'</span>':'';
+      const tOk=tailOk(v)?'<div class="ln"><span class="tok">✓ หาง '+esc(tailOk(v))+' ใช้งานได้</span></div>':'';
+      if(k==='rep')cust='<div class="ln"><span class="rd">'+esc(p.reason||'ซ่อม')+'</span>'+vsF+'</div>'+tOk;
+      else if(k==='off')cust='<div class="ln"><span class="m">งดวิ่ง '+esc(p.reason||'')+'</span>'+vsF+'</div>'+tOk;
       else if(v.tail)cust='<span class="m">หางสำรอง</span>';
       else if(!S.length&&otOnly(p))cust=PM==='mall'?'<span class="m">มีงานอื่นๆ · '+esc(p.ot)+' (แพลนรวม)</span>':'<span class="ell" title="'+esc(otLabel(p))+'"><b>'+esc(p.ot)+'</b>'+(p.otd?' · '+esc(p.otd):'')+'</span> '+tchip('อื่นๆ')+' <span class="m" title="สถานที่ไม่มีในรายชื่อจุดส่ง (ค่ากลาง) · ไม่มีระยะ · ค่าแรงยังไม่คิด">ไม่มีจุดส่งในระบบ'+(p.otd?'':' · ดูหมายเหตุ')+'</span>';
       else if(!S.length)cust='<span class="m">'+(nOther?'มีงานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)':d?'ว่าง · รอมีงาน':'รถสแปร์')+'</span>';
@@ -2465,7 +2473,7 @@ function renderList(){
     if(grp!==lastK){const gn=vs.filter(x=>kind(x)===k).length;h+='<div class="lgh lg-'+k+'"><i></i>'+grp+'<b>'+gn+' คัน</b></div>';lastK=grp;}
     const name=v.tail?'หางสำรอง':d?d.name:'ยังไม่มีคนขับ';
     /* การ์ดแบบหน้า Command: ป้ายสถานะ GPS · ชื่อ · ทะเบียนหัว / กม.จากโรงงาน ~นาที / งานบรรทัดเดียว */
-    const job=k==='job'&&!s0?'🧭 '+otLabel(p):k==='job'?'📦 '+(s0.at||'--:--')+' ลงสินค้า '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):k==='rep'?'🔧 '+(p.reason||'ซ่อม'):k==='tail'?'หางสำรอง':k==='off'?'งดวิ่ง':'ยังไม่มีงาน';
+    const job=k==='job'&&!s0?'🧭 '+otLabel(p):k==='job'?'📦 '+(s0.at||'--:--')+' ลงสินค้า '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):k==='rep'?'🔧 '+(p.reason||'ซ่อม')+(tailTxt(v)?' · '+tailTxt(v):''):k==='tail'?'หางสำรอง':k==='off'?'งดวิ่ง'+(p.reason?' · '+p.reason:'')+(tailTxt(v)?' · '+tailTxt(v):''):'ยังไม่มีงาน';
     const g=G[v.head],gd=g&&g.d;let pill,r2,ctx=job;
     if(LIVE&&!v.tail){
       const dir=gd?(gd.direction||(gd.distTrend==='out'?'out':gd.distTrend==='in'?'back':'none')):'none';
@@ -2507,7 +2515,9 @@ function drawEditor(){
   if(PM==='mall')h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><b>'+({ready:'พร้อมใช้งาน',repair:'ซ่อม',off:'งดวิ่ง'})[p.status]+'</b>'+(p.reason?' · '+esc(p.reason):'')+'<div class="note">ตั้งซ่อม/งดวิ่งที่แพลนรวม</div></div>';
   else h+='<div class="box"><span class="lb">สถานะรถวันนี้</span><div class="seg">'
    +[['ready','พร้อมใช้งาน'],['repair','ซ่อม'],['off','งดวิ่ง']].map(([k,l])=>'<button data-s="'+k+'" class="'+(p.status===k?'on':'')+(k==='repair'?' r':'')+'">'+l+'</button>').join('')+'</div>'
-   +(p.status!=='ready'?'<input class="in" id="reason" placeholder="สาเหตุ เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 12/11" value="'+esc(p.reason)+'"><div class="note">ข้อความนี้ขึ้นในช่องสถานะของรูปสรุปสถานะรถ</div>':'')+'</div>';
+   +(p.status!=='ready'?'<input class="in" id="reason" placeholder="สาเหตุ เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 12/11" value="'+esc(p.reason)+'"><div class="note">ข้อความนี้ขึ้นในช่องสถานะของรูปสรุปสถานะรถ</div>'
+     +(DS.on?'<div class="note">📌 สถานะนี้ติดไปแพลนวันถัดไปทุกวัน จนกว่าจะกด “พร้อมใช้งาน”'+(VST[v.head]&&VST[v.head].s===p.status?' · ตั้งแต่ '+esc(dShort(VST[v.head].from))+(VST[v.head].by?' โดย '+esc(VST[v.head].by):''):'')+'</div>':'')
+     +((v.plate.split(',')[1]||'').trim()?'<div class="note" style="color:#15803D">✓ ซ่อม/งดวิ่งที่ตัวหัว '+esc(v.head)+' · หาง '+esc(v.plate.split(',')[1].trim())+' ยังใช้งานได้</div>':''):'')+'</div>';
   if(p.status==='ready'&&!v.tail){
     const mine=DRV.find(d=>d.head===v.head);
     h+='<div class="box"><label for="drv">คนขับ'+(drvLock?' 🔒':'')+'</label><select class="in" id="drv"'+(drvLock?' disabled':'')+'><option value="">— ไม่มีคนขับ —</option>'
@@ -2620,7 +2630,9 @@ function drawEditor(){
     if(p.status!=='ready'&&PLAN[v.head].stops.some(isMall)){toast('รถคันนี้มีงานห้าง ให้แอดมินห้างย้ายงานไปคันอื่นในแพลนห้างก่อน');return;}
     if(p.status!=='ready'){p.stops=[];p.helpers=[];p.out=0;}
     const ntf=[];p.stops.forEach((s,i)=>{if(!s.rt||s.tbd||!s.rt.id)return;const o=PLAN[v.head].stops.find(x=>x.rt&&x.rt.id===s.rt.id);if(o&&(o.tbd||o.id!==s.id))ntf.push({s,i,prev:o.tbd?'':o.n});});
+    const o0=PLAN[v.head],stCh=!v.tail&&(o0.status!==p.status||(p.status!=='ready'&&String(o0.reason||'').trim()!==String(p.reason||'').trim()));
     PLAN[v.head]=p;closeEditor();renderAll();toast('บันทึกรถ '+v.head+' ในแพลนแล้ว (เดโม)');
+    if(stCh&&typeof vstSave==='function')vstSave(v.head,p.status,p.status==='ready'?'':String(p.reason||'').trim());
     if(ntf.length&&p.status==='ready')rtNotify(v,p,ntf);};
   document.onkeydown=e=>{if(e.key==='Escape'&&ED)closeEditor();};
 }
@@ -2669,7 +2681,7 @@ function renderHelpers(){
 let WITHJOB=true,IMG='',RCV=null;
 /* เขียว = พร้อมใช้งาน มีคนขับ · เหลือง = พร้อม แต่ไม่มีคนขับ · แดง = ซ่อม · เทา = งดวิ่ง / หางสำรอง */
 const DOT={job:'#16A34A',wait:'#16A34A',nod:'#EAB308',rep:'#DC2626',off:'#9CA3AF',tail:'#9CA3AF'};
-function stTxt(v,k,p){return k==='rep'?(p.reason||'ซ่อม'):k==='off'?'งดวิ่ง'+(p.reason?' · '+p.reason:''):k==='tail'?'หางสำรอง':k==='nod'?'พร้อม · ไม่มีคนขับ':k==='job'?'ออกงาน'+(otOnly(p)?' · '+p.ot:''):'พร้อม · รอมีงาน';}
+function stTxt(v,k,p){const tt=tailTxt(v)?' · '+tailTxt(v):'';return k==='rep'?(p.reason||'ซ่อม')+tt:k==='off'?'งดวิ่ง'+(p.reason?' · '+p.reason:'')+tt:k==='tail'?'หางสำรอง':k==='nod'?'พร้อม · ไม่มีคนขับ':k==='job'?'ออกงาน'+(otOnly(p)?' · '+p.ot:''):'พร้อม · รอมีงาน';}
 function rrect(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
 function dot(x,cx,cy,r,col,hollow){x.beginPath();x.arc(cx,cy,r+4,0,Math.PI*2);x.fillStyle=col+'2E';x.fill();
   x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);if(hollow){x.lineWidth=3;x.strokeStyle=col;x.stroke();}else{x.fillStyle=col;x.fill();}}
@@ -2871,6 +2883,14 @@ function dsApply(d){const base=JSON.parse(DS_BASE),pl=d&&d.plan||{};
   MJ=Array.isArray(d&&d.mj)?d.mj:[];MJN=d&&+d.mjn||MJ.reduce((a,j)=>Math.max(a,+(String(j.id).replace(/\D/g,''))||0),0);
   const m=d&&d.mall||{};MALL.rev=m.rev!=null?m.rev:-1;MALL.snap=m.snap||{};MALL.log=m.log||[];MALL.ack.clear();(m.ack||[]).forEach(x=>MALL.ack.add(x));
   if(ED)closeEditor();JE=null;}
+/* สถานะรถของวันนี้ = แถวล่าสุดใน pk_vehicle_status ที่มีผลถึงวันนี้ (ทับค่าในแพลนรายวัน) · ซ่อม/งดวิ่ง = ซ่อนจุดส่ง (ยังเก็บไว้ไม่ลบ) */
+function vstApply(m){VST=m&&typeof m==='object'?m:{};
+  VEH.forEach(v=>{const s=VST[v.head],p=PLAN[v.head];if(!s||!p||v.tail)return;p.status=s.s;p.reason=s.s==='ready'?'':(s.r||'');});}
+async function vstSave(head,st,rs){if(!DS.on||!DS.edit)return;
+  try{const x=await fetch(DS_URL,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'vstat',userId:MY_UID,date:DS.date||$('pdate').value,head,status:st,reason:rs||''})}).then(r=>r.json());
+    if(!x.ok)throw new Error(x.error||'บันทึกสถานะรถไม่สำเร็จ');if(x.vst)VST[head]=x.vst;else delete VST[head];
+    if(!x.same)toast(st==='ready'?'✅ '+head+' พร้อมใช้งานตั้งแต่ '+dShort(DS.date)+' เป็นต้นไป':'📌 '+head+' '+(st==='repair'?'ซ่อม':'งดวิ่ง')+' ตั้งแต่ '+dShort(DS.date)+' · ติดไปแพลนวันถัดไปจนกว่าจะกดพร้อมใช้งาน');}
+  catch(e){toast('❌ '+(e.message||e)+' · สถานะนี้มีผลเฉพาะแพลนวันนี้');}}
 function dsBadge(){const b=$('dsSt');if(!b)return;if(!DS.on){b.hidden=true;return;}b.hidden=false;
   const hm=s=>{const x=new Date(s);return isNaN(x)?'':x.toLocaleTimeString('th-TH',{hour:'2-digit',minute:'2-digit'});};
   b.className='dsst'+(DS.err?' e':DS.t||DS.busy?' w':'');
@@ -2878,7 +2898,7 @@ function dsBadge(){const b=$('dsSt');if(!b)return;if(!DS.on){b.hidden=true;retur
 async function dsLoad(d){DS.ready=false;DS.date=d;dsBadge();
   for(let i=0;i<3;i++){try{const x=await fetch(DS_URL+'?action=get&userId='+encodeURIComponent(MY_UID)+'&date='+d+'&t='+Date.now()).then(r=>r.json());
     if(!x.ok)throw new Error(x.error||'โหลดแพลนไม่สำเร็จ');if($('pdate').value!==d)return;
-    dsApply(x.data);DS.ver=x.ver||0;DS.at=x.at;DS.by=x.by||'';DS.edit=x.edit!==false;DS.last=dsSnap();DS.err=0;DS.ready=true;syncMall();_rA();dsBadge();return;}
+    dsApply(x.data);vstApply(x.vst);DS.ver=x.ver||0;DS.at=x.at;DS.by=x.by||'';DS.edit=x.edit!==false;DS.last=dsSnap();DS.err=0;DS.ready=true;syncMall();_rA();dsBadge();return;}
   catch(e){if(i===2){DS.err=1;dsBadge();toast('❌ โหลดแพลนวันนี้ไม่สำเร็จ: '+(e.message||e)+' · รีเฟรชหน้าอีกครั้ง (ยังไม่บันทึกทับ)');return;}await new Promise(r=>setTimeout(r,1500));}}}
 async function dsSave(force){clearTimeout(DS.t);DS.t=null;if(!DS.on||!DS.ready||!DS.edit||DS.busy)return;
   const s=dsSnap();if(s===DS.last&&!force){dsBadge();return;}
