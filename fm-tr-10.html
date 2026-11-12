@@ -354,8 +354,9 @@ function fitSheets() {
   document.querySelectorAll('.sheet').forEach((s) => {
     s.style.zoom = ''; let z = 1;
     for (let k = 0; k < 4; k++) { s.style.width = (PW / z) + 'px'; const nz = Math.min(1, PH / s.offsetHeight); if (Math.abs(nz - z) < 0.004) { z = nz; break; } z = nz; }
-    s.style.width = (PW / z) + 'px'; const h = s.offsetHeight; if (h * z > PH) z = PH / h;
-    s.style.zoom = z < 1 ? String(z) : '';
+    s.style.width = (PW / z) + 'px'; s.style.zoom = z < 1 ? String(z) : '';
+    // เส้นขอบ/ตัวอักษรไม่ย่อตามสัดส่วนเป๊ะ → วัดขนาดจริงหลังย่อแล้วปรับซ้ำ
+    for (let k = 0; k < 4; k++) { const vh = s.getBoundingClientRect().height; if (vh <= PH) break; z = z * PH / vh * 0.995; s.style.width = (PW / z) + 'px'; s.style.zoom = String(z); }
   });
 }
 function unfitSheets() {
