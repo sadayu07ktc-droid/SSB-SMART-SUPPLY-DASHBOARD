@@ -106,6 +106,31 @@ a.lk{color:var(--green2);font-weight:600}
 .ldr{display:flex;align-items:center;gap:10px;justify-content:center;padding:30px;color:var(--muted)}
 .ldr i{width:20px;height:20px;border:3px solid #CFE0D5;border-top-color:var(--green);border-radius:50%;animation:sp 1s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+/* 📊 ปุ่มรายงาน + popup 3 ขั้น */
+.rbtn{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.35);background:rgba(201,162,39,.18);color:#fff;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:700}
+.rbtn:hover{background:rgba(201,162,39,.32)} .rbtn svg{color:var(--gold)}
+.rpm{position:fixed;inset:0;background:rgba(10,20,14,.45);z-index:55;display:none;align-items:center;justify-content:center;padding:16px}
+.rpm.open{display:flex}
+.rpb{background:#fff;width:100%;max-width:520px;max-height:calc(100vh - 32px);overflow:auto;border-radius:18px;padding:16px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.rph{display:flex;gap:12px;align-items:center}.rph b{font-size:16px}.rph>div{flex:1;min-width:0}
+.rpi{flex:none;width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--green),var(--green2));color:var(--gold);display:flex;align-items:center;justify-content:center}
+.rpx{border:0;background:none;font-size:18px;color:var(--muted);cursor:pointer;padding:4px 8px}
+.rpl{font-size:11px;font-weight:700;color:var(--faint);margin:14px 0 6px;letter-spacing:.3px}
+.rpk{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px solid var(--line);background:#fff;border-radius:12px;padding:9px 12px;margin-bottom:6px;cursor:pointer}
+.rpk.on{border:1.5px solid var(--c);background:color-mix(in srgb,var(--c) 8%,#fff)}
+.rpk:disabled{opacity:.45;cursor:default}
+.rki{flex:none;width:36px;height:36px;border-radius:10px;background:color-mix(in srgb,var(--c) 14%,#fff);color:var(--c);display:flex;align-items:center;justify-content:center}
+.rkt{flex:1;min-width:0}.rkt b{display:block;font-size:14px}.rkt span{font-size:12px;color:var(--muted)}
+.rpk i{flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--line)}.rpk.on i{border:5px solid var(--c)}
+.rpr{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}.rpr>span{flex:none;width:44px;font-size:12px;font-weight:700;color:var(--muted);padding-top:4px}.rpr>div{display:flex;gap:5px;flex-wrap:wrap}
+.rpc{border:1px solid var(--line);background:var(--sunken);border-radius:999px;padding:3px 11px;cursor:pointer;font-size:13px}
+.rpc.on{background:linear-gradient(135deg,var(--green),var(--green2));color:#fff;border-color:var(--green)}
+.rps{font-size:13px;background:var(--sunken);border-radius:10px;padding:8px 12px}
+.rpf{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.rpf button{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 6px;cursor:pointer}
+.rpf button:hover{border-color:var(--green2)} .rpf button:disabled{opacity:.6;cursor:wait}
+.rpf span{width:40px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px}
+.rpf b{font-size:14px}.rpf small{font-size:11px;color:var(--muted)}
 @media (max-width:900px){ .wrap{grid-template-columns:1fr} .side{position:static;max-height:none} }
 @media (max-width:620px){ .ln{grid-template-columns:1fr 70px 30px} .ln .s2{grid-column:1/-1} }
 </style>
@@ -116,6 +141,7 @@ a.lk{color:var(--green2);font-weight:600}
   <div><h1>🧰 อุปกรณ์ติดรถ</h1><div class="sub">เบิก / คืน · อุปกรณ์ที่ถือ · ประวัติรถรายคัน</div></div>
   <div class="sp"></div>
   <div class="vw" id="vw"><button data-v="veh" class="on">🚚 รายคัน</button><button data-v="sum">📦 สรุปอุปกรณ์</button><button data-v="aud">🔍 สุ่มตรวจ</button></div>
+  <button class="rbtn" id="bRep" title="ออกรายงาน Excel / PDF / JPEG"></button>
 </div>
 <div class="wrap" id="wrap">
   <aside class="side">
@@ -125,6 +151,7 @@ a.lk{color:var(--green2);font-weight:600}
   </aside>
   <main class="main" id="main"><div class="msg">เลือกรถทางซ้าย</div></main>
 </div>
+<div class="rpm" id="rpm"><div class="rpb" id="rpb"></div></div>
 <div class="dim" id="dim"></div>
 <div class="drw" id="drw"><div class="hd"><h4 id="dT"></h4><button id="dX" aria-label="ปิด">×</button></div><div class="bd" id="dB"></div></div>
 
@@ -342,7 +369,7 @@ async function loadAud(week) {
   $('main').innerHTML = '<div class="ldr"><i></i>กำลังโหลดแผนสุ่มตรวจ</div>'; AF = null;
   let p, s; try { [p, s] = await Promise.all([api({ action: 'getAuditPlan', group: GRP, week: week || '' }), api({ action: 'fm16Sheet', group: GRP, month: bkk().slice(0, 7) })]); } catch (e) { p = { error: 'เน็ตมีปัญหา' }; }
   if (!p || !p.ok || !s || !s.ok) { $('main').innerHTML = '<div class="msg">' + esc((p && p.error) || (s && s.error) || 'โหลดไม่ได้') + '</div>'; return; }
-  AUD = { plan: p, fm: s }; renderAud();
+  AUD = { plan: p, fm: s, fmGrp: GRP }; renderAud();
   history.replaceState(null, '', '?view=aud');
 }
 function renderAud() {
@@ -465,19 +492,23 @@ function printFm16() {
     const dr = r.driver, sym = dr && dr.condition && dr.condition !== 'ปกติ' ? dr.condition + (dr.note ? ': ' + dr.note : '') : (dr && dr.note) || '';
     return '<tr><td class="c">' + f.no + '</td><td>' + esc(f.name) + '</td><td class="c">' + cell(dr) + '</td><td class="c">' + esc(r.unit) + '</td><td>' + esc(sym) + '</td><td>' + esc(ver(r)) + '</td></tr>'; }).join('');
   const html = '<!doctype html><html lang="th"><head><meta charset="utf-8"><title>FM-TR-16 ' + esc(v.plate) + ' ' + d.month + '</title>' +
-    '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4;margin:10mm}body{font:13px/1.35 Sarabun,"Noto Sans Thai",sans-serif;color:#000;margin:0}' +
-    'table{border-collapse:collapse;width:100%}td,th{border:1px solid #000;padding:3px 6px}th{font-weight:700}.c{text-align:center}.ttl{text-align:center;font-weight:700;font-size:15px}.na td{color:#666}' +
-    '.bx{display:inline-block;width:34px;height:18px;border:1.5px solid #000;border-radius:4px;vertical-align:middle;text-align:center;line-height:16px;margin:0 6px}.ft{display:flex;justify-content:space-between;margin-top:6px;font-size:12px}</style></head><body>' +
-    '<table><tr><td colspan="6" class="ttl">ตรวจเช็คอุปกรณ์ติดรถ</td></tr>' +
-    '<tr><td style="width:90px"><b>ประจำเดือน</b></td><td colspan="5"><b>' + mFull(d.month) + '</b></td></tr>' +
-    '<tr><td><b>ประเภทขนส่ง</b></td><td colspan="5">ขนส่งPK.' + ck('Packing') + ' &nbsp; ขนส่งBULK' + ck('Bulk') + ' &nbsp; ขนส่งฝ่ายไร่' + ck('ไร่') + '</td></tr>' +
-    '<tr><td><b>ทะเบียนรถ</b></td><td colspan="5">' + esc(v.plate_head + (v.plate_tail ? ' / ' + v.plate_tail : '')) + ' · ' + esc(v.driver_name || '') + '</td></tr>' +
-    '<tr><th rowspan="2" style="width:44px">ลำดับ</th><th rowspan="2">รายการ</th><th colspan="3">พนักงานขับรถ</th><th rowspan="2" style="width:150px">ผู้ทวนสอบ</th></tr>' +
-    '<tr><th style="width:60px">ตัวเลข</th><th style="width:50px">หน่วย</th><th style="width:190px">แจ้งอาการถ้าชำรุดเสียหาย</th></tr>' + rows +
+    // พอดี A4 หน้าเดียว: กว้างคงที่ 194 มม. · คอลัมน์ตายตัว (colgroup) · แถวสูงคงที่ ไม่ตัดบรรทัด (ยาวเกิน = …) · ยังล้น = ย่อทั้งหน้า (zoom) ก่อนสั่งพิมพ์
+    '<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;700&display=swap" rel="stylesheet"><style>@page{size:A4 portrait;margin:8mm}*{box-sizing:border-box}html,body{margin:0;background:#fff}' +
+    '#pg{width:194mm;font:12px/1.2 Sarabun,"Noto Sans Thai",sans-serif;color:#000;-webkit-print-color-adjust:exact;print-color-adjust:exact}' +
+    'table{border-collapse:collapse;width:100%;table-layout:fixed}td,th{border:1px solid #000;padding:0 5px;height:5.7mm;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;vertical-align:middle}' +
+    'th{font-weight:700;text-align:center;height:6.2mm}.c{text-align:center}.ttl{text-align:center;font-weight:700;font-size:15px;height:8mm}.na td{color:#777}.hd td{height:6.4mm}' +
+    '.bx{display:inline-block;width:30px;height:16px;border:1.5px solid #000;border-radius:4px;vertical-align:middle;text-align:center;line-height:13px;margin:0 10px 0 5px}.ft{display:flex;justify-content:space-between;margin-top:4px;font-size:11px}</style></head><body><div id="pg">' +
+    '<table><colgroup><col style="width:7%"><col style="width:31%"><col style="width:9%"><col style="width:8%"><col style="width:25%"><col style="width:20%"></colgroup>' +
+    '<tr><td colspan="6" class="ttl">ตรวจเช็คอุปกรณ์ติดรถ</td></tr>' +
+    '<tr class="hd"><td colspan="2"><b>ประจำเดือน</b></td><td colspan="4"><b>' + mFull(d.month) + '</b></td></tr>' +
+    '<tr class="hd"><td colspan="2"><b>ประเภทขนส่ง</b></td><td colspan="4">ขนส่งPK.' + ck('Packing') + 'ขนส่งBULK' + ck('Bulk') + 'ขนส่งฝ่ายไร่' + ck('ไร่') + '</td></tr>' +
+    '<tr class="hd"><td colspan="2"><b>ทะเบียนรถ</b></td><td colspan="4">' + esc(v.plate_head + (v.plate_tail ? ' / ' + v.plate_tail : '')) + ' · ' + esc(v.driver_name || '') + '</td></tr>' +
+    '<tr><th rowspan="2">ลำดับ</th><th rowspan="2">รายการ</th><th colspan="3">พนักงานขับรถ</th><th rowspan="2">ผู้ทวนสอบ</th></tr>' +
+    '<tr><th>ตัวเลข</th><th>หน่วย</th><th>แจ้งอาการถ้าชำรุดเสียหาย</th></tr>' + rows +
     '<tr><td colspan="2" rowspan="2" class="c"><b>*** ตรวจเช็ค เดือนละ 1 ครั้ง ***</b></td><td colspan="2">ลงชื่อผู้ตรวจ</td><td colspan="2">' + esc(m ? m.by + ' · ' + dTxt(m.date) : '') + '</td></tr>' +
     '<tr><td colspan="2">ลงชื่อผู้ทวนสอบ</td><td colspan="2">' + esc(a ? a.by + ' · ' + dTxt(a.date) : '') + '</td></tr></table>' +
-    '<div class="ft"><span>พิมพ์จากระบบ SSB ' + dTxt(bkk()) + '</span><span>FM-TR-16 ประกาศใช้ 5 ม.ค. 67</span></div>' +
-    '<script>document.fonts.ready.then(function(){setTimeout(function(){window.print()},300)})<\/script></body></html>';
+    '<div class="ft"><span>พิมพ์จากระบบ SSB ' + dTxt(bkk()) + '</span><span>FM-TR-16 ประกาศใช้ 5 ม.ค. 67</span></div></div>' +
+    '<script>document.fonts.ready.then(function(){var p=document.getElementById("pg"),h=p.scrollHeight,max=279*96/25.4;if(h>max)p.style.zoom=(max/h).toFixed(3);setTimeout(function(){window.print()},300)})<\/script></body></html>';
   const w = window.open('', '_blank'); if (!w) { toast('เบราว์เซอร์บล็อกหน้าต่างใหม่ — อนุญาต popup แล้วกดอีกครั้ง', true); return; }
   w.document.open(); w.document.write(html); w.document.close();
 }
@@ -486,6 +517,232 @@ async function audAct(params, msg) {
   if (!r.ok) { toast(r.error || 'ไม่สำเร็จ', true); return; }
   toast(msg(r)); loadAud(AUD && AUD.plan.week);
 }
+
+// ── 📊 รายงาน (Excel / PDF / JPEG) · popup 3 ขั้น: ขอบเขต → ชนิดรายงาน → รูปแบบไฟล์ ──
+//   ธีม: อุปกรณ์ติดรถ = เขียว SSB + ทอง · ไอคอนกล่องเครื่องมือ · ลายหัว = ถนนเส้นประ + ประแจ
+//   โควตา: ดึงข้อมูลตอนกดสร้างไฟล์เท่านั้น (ใช้ของที่โหลดบนจอแล้วก่อน) · ไลบรารีโหลดจาก CDN ตอนกดครั้งแรก
+const RT = { ink: '#0F2A1E', mid: '#1B4332', main: '#2D6A4F', acc: '#C9A227', accTint: '#FBF1DC', label: 'VEHICLE EQUIPMENT REPORT', org: 'SSB Smart Supply', app: 'ระบบอุปกรณ์ติดรถ' };
+const RLIB = { xlsx: 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js', h2c: 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js', pdf: 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js' };
+const RLOADED = {};
+const rLoad = (k) => RLOADED[k] || (RLOADED[k] = new Promise((ok, no) => { const s = document.createElement('script'); s.src = RLIB[k]; s.onload = ok;
+  s.onerror = () => { delete RLOADED[k]; s.remove(); no(new Error('โหลดตัวสร้างไฟล์ไม่ได้ ลองใหม่อีกครั้ง')); }; document.head.appendChild(s); }));
+let rSave = (blob, name) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); toast('ออกไฟล์แล้ว: ' + name); };
+const RIC = {   // ไอคอนลายเส้น (stroke = currentColor)
+  box: '<path d="M3 9h18v10a1 1 0 01-1 1H4a1 1 0 01-1-1z"/><path d="M8 9V6a1 1 0 011-1h6a1 1 0 011 1v3"/><path d="M3 13h18M10 13v2h4v-2"/>',
+  truck: '<path d="M2 6h11v10H2zM13 9h4l3 3v4h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
+  swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
+  search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/><path d="M9 11l1.5 1.5L13.5 9"/>',
+  report: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 17v-3M12 17v-6M15 17v-4"/>',
+};
+const rIco = (k, sz, sw) => '<svg width="' + (sz || 18) + '" height="' + (sz || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 1.9) + '" stroke-linecap="round" stroke-linejoin="round">' + RIC[k] + '</svg>';
+const RKINDS = [
+  { k: 'sum', ic: 'box', clr: '#2D6A4F', t: 'สรุปอุปกรณ์ทั้งกลุ่ม', d: 'ต้องมี / เบิกไปแล้ว / ขาด / ชำรุด / หาย ต่ออุปกรณ์', grp: true },
+  { k: 'hold', ic: 'truck', clr: '#1d4ed8', t: 'อุปกรณ์ที่ถือ รายคัน', d: 'ของคันที่เปิดอยู่ · ขาด-เกิน · เลขเครื่อง · อายุใช้งาน', veh: true },
+  { k: 'mv', ic: 'swap', clr: '#B45309', t: 'ประวัติเบิก-คืน รายคัน', d: 'ของคันที่เปิดอยู่ · ล่าสุดก่อน', veh: true },
+  { k: 'fm16', ic: 'search', clr: '#B91C1C', t: 'FM-TR-16 รายเดือน + สุ่มตรวจ', d: 'คนขับส่งรายเดือนหรือยัง · ผลสุ่มตรวจตรง/ไม่ตรง', grp: true, month: true },
+];
+let RS = { kind: '', grp: '', month: '' };
+const ymAdd = (ym, n) => { const d = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
+const mShort = (ym) => TH_MS[+ym.slice(5, 7) - 1] + ' ' + String(+ym.slice(0, 4) + 543).slice(2);
+function openReport() {
+  const def = VIEW === 'sum' ? 'sum' : VIEW === 'aud' ? 'fm16' : V ? 'hold' : 'sum';
+  RS = { kind: RS.kind && (RS.kind !== 'hold' && RS.kind !== 'mv' || V) ? RS.kind : def, grp: GRP, month: bkk().slice(0, 7) };
+  if (VIEW !== 'veh' || !V) { if (RS.kind === 'hold' || RS.kind === 'mv') RS.kind = def; } else if (RS.kind === 'sum' || RS.kind === 'fm16') RS.kind = def;
+  drawReport(); $('rpm').classList.add('open');
+}
+function drawReport() {
+  const K = RKINDS.find((x) => x.k === RS.kind), vTxt = V ? (V.vehicle.plate_head || V.vehicle.plate) : '';
+  const chip = (on, attr, txt, dis) => '<button class="rpc' + (on ? ' on' : '') + '" ' + attr + (dis ? ' disabled' : '') + '>' + txt + '</button>';
+  const months = [0, -1, -2, -3, -4, -5].map((n) => ymAdd(bkk().slice(0, 7), n));
+  const scope = K.veh ? '<div class="rps">🚚 รถที่เปิดอยู่: <b>' + esc(vTxt) + '</b></div>'
+    : (ME && ME.groups.length > 1 ? '<div class="rpr"><span>กลุ่ม</span><div>' + ['', ...ME.groups].map((g) => chip(RS.grp === g, 'data-rg="' + esc(g) + '"', g ? (GICON[g] || '') + ' ' + g : 'ทุกกลุ่ม')).join('') + '</div></div>' : '') +
+      (K.month ? '<div class="rpr"><span>เดือน</span><div>' + months.map((m) => chip(RS.month === m, 'data-rm="' + m + '"', mShort(m))).join('') + '</div></div>' : '');
+  $('rpb').innerHTML = '<div class="rph"><span class="rpi">' + rIco('box', 22) + '</span><div><b>ออกรายงานอุปกรณ์ติดรถ</b><div class="note">' + esc(rScopeTxt()) + (RS.grp === GRP ? ' · ตรงกับตัวกรองบนจอ' : '') + '</div></div><button class="rpx" id="rpX" aria-label="ปิด">✕</button></div>' +
+    '<div class="rpl">1 · เลือกรายงาน</div>' + RKINDS.map((x) => { const dis = x.veh && !V;
+      return '<button class="rpk' + (x.k === RS.kind ? ' on' : '') + '" data-rk="' + x.k + '" style="--c:' + x.clr + '"' + (dis ? ' disabled title="เปิดรถคันใดคันหนึ่งในมุมรายคันก่อน"' : '') + '><span class="rki">' + rIco(x.ic, 20) + '</span><span class="rkt"><b>' + x.t + '</b><span>' + (dis ? 'เปิดรถในมุม 🚚 รายคันก่อน' : x.veh ? x.d.replace('คันที่เปิดอยู่', vTxt) : x.d) + '</span></span><i></i></button>'; }).join('') +
+    '<div class="rpl">2 · เลือกขอบเขต</div>' + scope +
+    '<div class="rpl">3 · เลือกรูปแบบไฟล์</div><div class="rpf">' +
+    [['xlsx', 'XLS', '#1d6f42', '#e3f1e8', 'Excel', 'กรอง/เรียงต่อได้'], ['pdf', 'PDF', '#b91c1c', '#fdeaea', 'PDF', 'A4 พร้อมพิมพ์'], ['jpg', 'JPG', '#0f766e', '#e6f4f1', 'JPEG', 'ภาพเดียว ส่งไลน์']]
+      .map(([k, ic, c, bg, t, d]) => '<button data-rf="' + k + '"><span style="background:' + bg + ';color:' + c + '">' + ic + '</span><b>' + t + '</b><small>' + d + '</small></button>').join('') + '</div>';
+}
+function rScopeTxt() {
+  const K = RKINDS.find((x) => x.k === RS.kind);
+  if (K.veh) return V ? 'รถ ' + (V.vehicle.plate_head || V.vehicle.plate) + (V.vehicle.plate_tail ? ' / ' + V.vehicle.plate_tail : '') : '–';
+  return (RS.grp || 'ทุกกลุ่ม') + (K.month ? ' · เดือน' + mFull(RS.month) : '');
+}
+// ── ทำ spec ของแต่ละรายงาน (ใช้ของบนจอก่อน ไม่พอค่อยดึง) ──
+async function rSpec() {
+  const K = RS.kind, made = bkk(), gtxt = RS.grp || 'ทุกกลุ่ม';
+  if (K === 'sum') {
+    const key = RS.grp || 'all';
+    if (!SUM[key]) { const d = await api({ action: 'getSummary', group: RS.grp }); if (!d.ok) throw new Error(d.error || 'โหลดสรุปไม่ได้'); SUM[key] = d.rows || []; }
+    const all = SUM[key], rs0 = all.filter((r) => r.job_group === (RS.grp || 'ทั้งหมด')), use = (rs0.length ? rs0 : all).filter((r) => Number(r.qty_required) || Number(r.qty_on_hand));
+    const short = use.filter((r) => Number(r.qty_short) > 0);
+    return { title: 'สรุปอุปกรณ์ติดรถ', file: 'สรุปอุปกรณ์ติดรถ_' + gtxt, sub: gtxt + ' · ' + use.length + ' รายการ · ณ ' + dTxt(made),
+      kpis: [['รายการอุปกรณ์', use.length + ' รายการ', RT.mid], ['รายการที่ขาด', short.length + ' รายการ', short.length ? '#B91C1C' : '#15803D'],
+        ['ชำรุด (ชิ้น)', nf(use.reduce((t, r) => t + (Number(r.damaged_qty) || 0), 0)) + ' ชิ้น', '#B45309'], ['หาย (ชิ้น)', nf(use.reduce((t, r) => t + (Number(r.lost_qty) || 0), 0)) + ' ชิ้น', '#B91C1C']],
+      cols: [{ h: 'อุปกรณ์', w: 0, x: 30 }, { h: 'หมวด', w: 120, x: 16 }, { h: 'ต้องมี', w: 70, a: 'right', x: 9 }, { h: 'เบิกไปแล้ว', w: 80, a: 'right', x: 11 }, { h: 'หน่วย', w: 60, x: 8 },
+        { h: 'ขาด', w: 60, a: 'right', x: 8 }, { h: 'คันที่ถือ / ต้องมี', w: 110, a: 'center', x: 15 }, { h: 'ชำรุด', w: 60, a: 'right', x: 8 }, { h: 'หาย', w: 60, a: 'right', x: 8 }, { h: 'สถานะ', w: 80, a: 'center', x: 10 }],
+      rows: use.map((r) => [r.name, r.category || '', Number(r.qty_required) || 0, Number(r.qty_on_hand) || 0, r.unit || '', Number(r.qty_short) || 0, nf(r.vehicles_holding) + ' / ' + nf(r.vehicles_required),
+        Number(r.damaged_qty) || 0, Number(r.lost_qty) || 0, Number(r.qty_short) > 0 ? 'ขาด' : (Number(r.damaged_qty) || Number(r.lost_qty)) ? 'มีชำรุด/หาย' : 'ครบ']),
+      st: { 9: RST }, note: 'ชำรุด/หาย นับจากเช็คลิสต์ล่าสุดของแต่ละคัน · ชำรุดยังนับอยู่ในยอดเบิก' };
+  }
+  if (K === 'hold' || K === 'mv') {
+    const v = V.vehicle, pl = (v.plate_head || v.plate) + (v.plate_tail ? ' / ' + v.plate_tail : ''), drv = (v.drivers || []).map((x) => x.name).join(', ') || 'รถสแปร์';
+    const sub = pl + ' · ' + v.job_group + ' · ' + drv;
+    if (K === 'hold') {
+      const rows = ledger().filter((i) => i.is_required || Number(i.qty_on_hand) !== 0).sort((a, b) => (a.sort || 0) - (b.sort || 0));
+      const st = (i) => { const df = Number(i.qty_on_hand) - Number(i.qty_required || 0); return i.found_condition === 'ชำรุด' ? 'ชำรุด' : i.found_condition === 'หาย' ? 'หาย' : !i.is_required ? 'ไม่บังคับ' : df < 0 ? 'ขาด' : df > 0 ? 'เกิน' : 'ครบ'; };
+      const sh = rows.filter((i) => i.is_required && Number(i.qty_on_hand) < Number(i.qty_required));
+      return { title: 'อุปกรณ์ที่ถือ ' + pl, file: 'อุปกรณ์ติดรถ_' + (v.plate_head || v.plate), sub: sub + ' · ณ ' + dTxt(made),
+        kpis: [['รายการที่ต้องมี', rows.filter((i) => i.is_required).length + ' รายการ', RT.mid], ['รายการที่ขาด', sh.length + ' รายการ', sh.length ? '#B91C1C' : '#15803D'],
+          ['ชำรุด (ตรวจล่าสุด)', rows.filter((i) => i.found_condition === 'ชำรุด').length + ' รายการ', '#B45309'], ['ผลตรวจ ≠ ยอดเบิก', (V.mismatch || []).length + ' รายการ', '#B91C1C']],
+        cols: [{ h: 'อุปกรณ์', w: 0, x: 28 }, { h: 'หมวด', w: 110, x: 14 }, { h: 'ต้องมี', w: 60, a: 'right', x: 8 }, { h: 'เบิกไปแล้ว', w: 76, a: 'right', x: 10 }, { h: 'หน่วย', w: 56, x: 8 },
+          { h: 'ตรวจพบล่าสุด', w: 90, a: 'right', x: 12 }, { h: 'เลขเครื่อง / หมดอายุ', w: 160, x: 24 }, { h: 'ใช้มาแล้ว', w: 110, x: 16 }, { h: 'สถานะ', w: 76, a: 'center', x: 10 }],
+        rows: rows.map((i) => [i.name, i.category || '', i.is_required ? Number(i.qty_required) || 0 : '', Number(i.qty_on_hand) || 0, i.unit || '', i.found_qty != null ? Number(i.found_qty) : '',
+          [i.last_serial ? 'SN ' + i.last_serial : '', i.last_expiry ? 'หมด ' + dTxt(i.last_expiry) : ''].filter(Boolean).join(' · '), i.in_use_label || '', st(i)]),
+        st: { 8: RST }, note: 'เบิกไปแล้ว = ยอดในสมุดเบิก-คืน · ตรวจพบล่าสุด = เช็คลิสต์/สุ่มตรวจครั้งล่าสุด' };
+    }
+    const ms = V.moves || [], it = (c) => ((V.items || []).find((x) => x.code === c) || {}).name || c, rev = new Set(ms.filter((m) => m.reverses_id).map((m) => Number(m.reverses_id)));
+    const cnt = (t) => ms.filter((m) => m.move_type === t && !m.reverses_id && !rev.has(Number(m.id))).length;
+    return { title: 'ประวัติเบิก-คืน ' + pl, file: 'เบิกคืนอุปกรณ์_' + (v.plate_head || v.plate), sub: sub + ' · ล่าสุด ' + ms.length + ' รายการ',
+      kpis: [['เบิก', cnt('เบิก') + ' ครั้ง', '#15803D'], ['คืน', cnt('คืน') + ' ครั้ง', '#1d4ed8'], ['ชำรุด', cnt('ชำรุด') + ' ครั้ง', '#B45309'], ['สูญหาย', cnt('สูญหาย') + ' ครั้ง', '#B91C1C']],
+      cols: [{ h: 'วันที่', w: 80, x: 11 }, { h: 'ประเภท', w: 80, a: 'center', x: 10 }, { h: 'อุปกรณ์', w: 190, x: 26 }, { h: 'จำนวน', w: 60, a: 'right', x: 8 },
+        { h: 'รายละเอียด', w: 0, x: 40 }, { h: 'โดย', w: 130, x: 18 }, { h: 'หมายเหตุระบบ', w: 100, x: 14 }],
+      rows: ms.map((m) => [dTxt(m.move_date), m.move_type, it(m.item_code), m.move_type === 'เปลี่ยน' || m.move_type === 'ชำรุด' ? Number(m.affected_qty || 1) : Number(m.qty) || 0,
+        [m.return_reason ? RR[m.return_reason] || m.return_reason : '', m.serial_no ? 'SN ' + m.serial_no : '', m.old_serial_no ? 'ตัวเก่า ' + m.old_serial_no : '', m.expiry_date ? 'หมดอายุ ' + dTxt(m.expiry_date) : '',
+          m.doc_no ? 'เอกสาร ' + m.doc_no : '', m.receiver_name ? 'ผู้รับ ' + m.receiver_name : '', m.note || ''].filter(Boolean).join(' · '), m.created_by || '',
+        m.reverses_id ? 'กลับรายการ' : rev.has(Number(m.id)) ? 'ถูกกลับแล้ว' : '']),
+      st: { 1: MVST, 6: { 'กลับรายการ': ['#5f5e5a', '#efefef'], 'ถูกกลับแล้ว': ['#5f5e5a', '#efefef'] } }, note: 'จำนวน: เบิก = + · คืน/สูญหาย = − · เปลี่ยน/ชำรุด = จำนวนชิ้นที่เกี่ยว (ไม่เปลี่ยนยอด)' };
+  }
+  // fm16
+  let s = AUD && AUD.fm && AUD.fm.month === RS.month && (AUD.fmGrp || '') === RS.grp ? AUD.fm : null;
+  if (!s) { s = await api({ action: 'fm16Sheet', group: RS.grp, month: RS.month }); if (!s.ok) throw new Error(s.error || 'โหลด FM-TR-16 ไม่ได้'); }
+  const vs = s.vehicles || [], mis = vs.filter((v) => v.audit && v.audit.mismatch).length;
+  return { title: 'FM-TR-16 อุปกรณ์ติดรถรายเดือน', file: 'FM-TR-16_' + RS.month + '_' + gtxt, sub: gtxt + ' · เดือน' + mFull(RS.month) + ' · ' + vs.length + ' คัน',
+    kpis: [['รถทั้งหมด', vs.length + ' คัน', RT.mid], ['คนขับส่งแล้ว', s.counts.sent + ' / ' + s.counts.total + ' คัน', '#15803D'], ['สุ่มตรวจแล้ว', s.counts.audited + ' คัน', RT.acc], ['🚩 ไม่ตรงที่คนขับแจ้ง', mis + ' คัน', '#B91C1C']],
+    cols: [{ h: 'ทะเบียน', w: 110, x: 14 }, { h: 'กลุ่ม', w: 70, x: 9 }, { h: 'คนขับ', w: 0, x: 24 }, { h: 'ส่งรายเดือน', w: 90, a: 'center', x: 12 }, { h: 'วันที่ส่ง', w: 80, x: 11 },
+      { h: 'ปัญหาที่แจ้ง', w: 80, a: 'right', x: 11 }, { h: 'สุ่มตรวจ', w: 80, x: 11 }, { h: 'ผู้ตรวจ', w: 130, x: 18 }, { h: 'ผลสุ่มตรวจ', w: 90, a: 'center', x: 12 }],
+    rows: vs.map((v) => [v.plate_head || v.plate, v.job_group, v.driver_name || 'รถสแปร์', v.monthly ? 'ส่งแล้ว' : 'ยังไม่ส่ง', v.monthly ? dTxt(v.monthly.date) : '', v.monthly ? v.monthly.problems : '',
+      v.audit ? dTxt(v.audit.date) : '', v.audit ? v.audit.by : '', !v.audit ? 'ยังไม่ตรวจ' : v.audit.mismatch ? 'ไม่ตรง' : 'ตรงกัน']),
+    st: { 3: { 'ส่งแล้ว': ['#127a2e', '#e7f5ee'], 'ยังไม่ส่ง': ['#8a5a0b', '#fef0d9'] }, 8: { 'ตรงกัน': ['#127a2e', '#e7f5ee'], 'ไม่ตรง': ['#a32d2d', '#fceded'], 'ยังไม่ตรวจ': ['#5f5e5a', '#efefef'] } },
+    note: 'คนขับกรอกเดือนละ 1 ครั้ง · แอดมินสุ่มตรวจต่อสัปดาห์ แยกหน่วยงาน 4 ล้อ 2 / 6 ล้อ 3 / 10 ล้อ 4 คัน · ไม่ตรง = นับได้น้อยกว่าที่คนขับแจ้ง หรือเจอปัญหาที่คนขับไม่ได้แจ้ง' };
+}
+const RST = { 'ครบ': ['#127a2e', '#e7f5ee'], 'เกิน': ['#185fa5', '#e6f1fb'], 'ขาด': ['#a32d2d', '#fceded'], 'ชำรุด': ['#8a5a0b', '#fef0d9'], 'หาย': ['#a32d2d', '#fceded'], 'มีชำรุด/หาย': ['#8a5a0b', '#fef0d9'], 'ไม่บังคับ': ['#5f5e5a', '#efefef'] };
+const MVST = { 'เบิก': ['#127a2e', '#e7f5ee'], 'คืน': ['#185fa5', '#e6f1fb'], 'เปลี่ยน': ['#5f5e5a', '#efefef'], 'ชำรุด': ['#8a5a0b', '#fef0d9'], 'สูญหาย': ['#a32d2d', '#fceded'], 'ปรับยอด': ['#5f5e5a', '#efefef'] };
+const rMade = () => { const d = new Date(Date.now() + 7 * 3600000).toISOString(); return dTxt(d.slice(0, 10)) + ' ' + d.slice(11, 16) + ' น.'; };
+const rName = (spec, ext) => spec.file.replace(/[\\/:*?"<>|\s]+/g, '_') + '_' + bkk().replace(/-/g, '') + '.' + ext;
+async function reportGo(kind, b) {
+  const h = b.innerHTML; b.disabled = true; b.innerHTML = '<span>…</span><b>กำลังสร้าง</b><small>รอสักครู่</small>';
+  try {
+    const spec = await rSpec();
+    if (!spec.rows.length) { toast('ไม่มีข้อมูลในขอบเขตที่เลือก', true); return; }
+    if (kind === 'xlsx') await rXlsx(spec); else await rImage(spec, kind);
+    $('rpm').classList.remove('open');
+  } catch (e) { toast('สร้างไฟล์ไม่สำเร็จ: ' + (e.message || e), true); }
+  finally { b.innerHTML = h; b.disabled = false; }
+}
+async function rXlsx(spec) {
+  await rLoad('xlsx');
+  const X = window.XLSX, n = spec.cols.length, LN = 'CFDCD3', hex = (c) => String(c || '').replace('#', '').toUpperCase();
+  const bd = { top: { style: 'thin', color: { rgb: LN } }, bottom: { style: 'thin', color: { rgb: LN } }, left: { style: 'thin', color: { rgb: LN } }, right: { style: 'thin', color: { rgb: LN } } };
+  const F = (o) => Object.assign({ name: 'Tahoma', sz: 10, color: { rgb: '152019' } }, o || {});
+  const S = { title: { font: F({ sz: 16, bold: true, color: { rgb: 'FFFFFF' } }), fill: { fgColor: { rgb: hex(RT.mid) } }, alignment: { vertical: 'center' } },
+    sub: { font: F({ color: { rgb: 'E9D9A6' } }), fill: { fgColor: { rgb: hex(RT.mid) } } },
+    kl: { font: F({ sz: 9, color: { rgb: '5D6B62' } }), fill: { fgColor: { rgb: 'F3F6F3' } }, border: bd, alignment: { horizontal: 'center' } },
+    kv: { font: F({ sz: 13, bold: true }), fill: { fgColor: { rgb: 'F3F6F3' } }, border: bd, alignment: { horizontal: 'center' } },
+    th: { font: F({ bold: true, color: { rgb: 'FFFFFF' } }), fill: { fgColor: { rgb: hex(RT.main) } }, border: bd, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } },
+    note: { font: F({ sz: 9, italic: true, color: { rgb: '5D6B62' } }) } };
+  const c = (v, s) => { const num = typeof v === 'number'; return { v: v == null ? '' : v, t: num ? 'n' : 's', s, z: num ? '#,##0.##' : undefined }; };
+  const fill = (s) => Array.from({ length: n }, () => c('', s));
+  const r0 = fill(S.title); r0[0] = c('🧰 ' + spec.title + ' — ' + RT.org, S.title);
+  const r1 = fill(S.sub); r1[0] = c((spec.sub || '') + ' · สร้างเมื่อ ' + rMade(), S.sub);
+  const aoa = [r0, r1, []], merges = [{ s: { r: 0, c: 0 }, e: { r: 0, c: n - 1 } }, { s: { r: 1, c: 0 }, e: { r: 1, c: n - 1 } }];
+  if (spec.kpis && spec.kpis.length) {
+    const kl = fill(null), kv = fill(null), w = Math.max(1, Math.floor(n / spec.kpis.length));
+    spec.kpis.forEach((k, i) => { const c0 = i * w, c1 = i === spec.kpis.length - 1 ? n - 1 : c0 + w - 1;
+      for (let x = c0; x <= c1; x++) { kl[x] = c(x === c0 ? k[0] : '', S.kl); kv[x] = c(x === c0 ? String(k[1]) : '', S.kv); }
+      if (c1 > c0) { merges.push({ s: { r: aoa.length, c: c0 }, e: { r: aoa.length, c: c1 } }, { s: { r: aoa.length + 1, c: c0 }, e: { r: aoa.length + 1, c: c1 } }); } });
+    aoa.push(kl, kv, []);
+  }
+  const hr = aoa.length; aoa.push(spec.cols.map((k) => c(k.h, S.th)));
+  spec.rows.forEach((r, i) => {
+    const base = { font: F(), border: bd, alignment: { vertical: 'top', wrapText: true } }; if (i % 2) base.fill = { fgColor: { rgb: 'F6F9F7' } };
+    aoa.push(r.map((v, ci) => { let s = Object.assign({}, base, { alignment: Object.assign({}, base.alignment, { horizontal: spec.cols[ci].a || 'left' }) });
+      const mp = spec.st && spec.st[ci]; if (mp && mp[v]) s = Object.assign({}, s, { font: F({ bold: true, color: { rgb: hex(mp[v][0]) } }), fill: { fgColor: { rgb: hex(mp[v][1]) } } });
+      return c(v, s); }));
+  });
+  if (spec.note) { aoa.push([]); const nr = fill(S.note); nr[0] = c('หมายเหตุ: ' + spec.note, S.note); aoa.push(nr); merges.push({ s: { r: aoa.length - 1, c: 0 }, e: { r: aoa.length - 1, c: n - 1 } }); }
+  const ws = X.utils.aoa_to_sheet([[]]);
+  aoa.forEach((row, r) => row.forEach((cell, ci) => { if (cell) ws[X.utils.encode_cell({ r, c: ci })] = cell; }));
+  ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: n - 1 } });
+  ws['!cols'] = spec.cols.map((k) => ({ wch: k.x || 12 })); ws['!merges'] = merges; ws['!rows'] = [{ hpt: 30 }, { hpt: 18 }];
+  ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: hr, c: 0 }, e: { r: hr + spec.rows.length, c: n - 1 } }) };
+  const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, 'รายงาน');
+  rSave(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), rName(spec, 'xlsx'));
+}
+function rPages(spec) {
+  const W = 1123, H = 794, e = esc, made = rMade();
+  const cell = 'padding:0 6px;height:26px;line-height:26px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-bottom:1px solid #E6ECE8';
+  const th = 'padding:0 6px;height:28px;line-height:28px;font-size:10.5px;font-weight:700;color:#fff;background:' + RT.main + ';white-space:nowrap;overflow:hidden';
+  const pat = '<svg style="position:absolute;right:-10px;top:-6px;opacity:.16" width="380" height="130" viewBox="0 0 380 130" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round">' +
+    '<path d="M0 118 C90 88 170 104 250 70 S350 30 380 22" stroke-width="16" stroke="#fff" opacity=".35"/><path d="M0 118 C90 88 170 104 250 70 S350 30 380 22" stroke="' + RT.ink + '" stroke-width="2" stroke-dasharray="12 10"/>' +
+    '<g transform="translate(250 10) rotate(35)"><path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z" transform="scale(2.4)"/></g>' +
+    '<g transform="translate(120 4)"><path d="M3 9h18v10H3zM8 9V6h8v3M3 13h18" transform="scale(2)"/></g></svg>';
+  const logo = '<span style="flex:none;width:46px;height:46px;border-radius:12px;background:linear-gradient(135deg,#E3C45A,' + RT.acc + ');color:' + RT.ink + ';display:flex;align-items:center;justify-content:center;box-shadow:0 6px 14px -6px rgba(201,162,39,.9)">' + rIco('box', 26, 2.1) + '</span>';
+  const head = '<div style="background:linear-gradient(120deg,' + RT.ink + ',' + RT.main + ');color:#fff;border-radius:14px;padding:14px 20px;position:relative;overflow:hidden;border-left:5px solid ' + RT.acc + '">' + pat +
+    '<div style="display:flex;gap:14px;align-items:center;position:relative">' + logo + '<div><div style="font-size:10.5px;font-weight:700;letter-spacing:2.5px;color:' + RT.acc + '">' + RT.label + '</div>' +
+    '<div style="font-size:22px;font-weight:800;line-height:1.25">' + e(spec.title) + '</div>' +
+    '<div style="display:flex;gap:18px;margin-top:3px;font-size:11.5px;color:#CFE0D5"><span>' + e(spec.sub || '') + '</span><span>สร้างเมื่อ <b style="color:#fff">' + made + '</b></span></div></div></div></div>';
+  const kpis = (spec.kpis || []).length ? '<div style="display:flex;gap:10px;margin-top:10px">' + spec.kpis.map((k) => '<div style="flex:1;background:#F6F9F7;border:1px solid #DCE4DE;border-radius:10px;padding:7px 12px;border-top:3px solid ' + (k[2] || RT.mid) + '">' +
+    '<div style="font-size:10.5px;color:#5D6B62">' + e(k[0]) + '</div><div style="font-size:18px;font-weight:800;color:' + RT.ink + '">' + e(String(k[1])) + '</div></div>').join('') + '</div>' : '';
+  const colg = '<colgroup>' + spec.cols.map((k) => '<col' + (k.w ? ' style="width:' + k.w + 'px"' : '') + '>').join('') + '</colgroup>';
+  const thead = '<tr>' + spec.cols.map((k, i) => '<th style="' + th + ';text-align:' + (k.a || 'left') + (i === 0 ? ';border-radius:8px 0 0 0' : '') + (i === spec.cols.length - 1 ? ';border-radius:0 8px 0 0' : '') + '">' + e(k.h) + '</th>').join('') + '</tr>';
+  const tr = (r, i) => '<tr style="background:' + (i % 2 ? '#F6F9F7' : '#fff') + '">' + r.map((v, ci) => { const mp = spec.st && spec.st[ci];
+    const val = mp && mp[v] ? '<span style="display:inline-block;line-height:16px;vertical-align:middle;padding:1px 8px;border-radius:9px;font-size:10px;font-weight:700;color:' + mp[v][0] + ';background:' + mp[v][1] + '">' + e(String(v)) + '</span>'
+      : e(typeof v === 'number' ? nf(v) : String(v == null ? '' : v));
+    return '<td style="' + cell + ';text-align:' + (spec.cols[ci].a || 'left') + '">' + val + '</td>'; }).join('') + '</tr>';
+  const FIRST = (spec.kpis || []).length ? 15 : 18, NEXT = 21, pages = [spec.rows.slice(0, FIRST)];
+  for (let i = FIRST; i < spec.rows.length; i += NEXT) pages.push(spec.rows.slice(i, i + NEXT));
+  const total = pages.length;
+  return pages.map((pr, pi) => {
+    const small = '<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid ' + RT.mid + ';padding-bottom:6px;margin-bottom:10px"><b style="font-size:14px;color:' + RT.mid + ';display:flex;gap:6px;align-items:center"><span style="color:' + RT.acc + '">' + rIco('box', 16, 2.2) + '</span>' + e(spec.title) + '</b><span style="font-size:11px;color:#5D6B62">' + e(spec.sub || '') + '</span></div>';
+    return '<div class="rp-page" style="width:' + W + 'px;height:' + H + 'px;box-sizing:border-box;padding:26px 34px;background:#fff;position:relative;font-family:\'Noto Sans Thai\',sans-serif;color:#152019;font-size:11.5px">' +
+      (pi === 0 ? head + kpis + '<div style="height:12px"></div>' : small) +
+      '<table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:11px">' + colg + thead + pr.map(tr).join('') + '</table>' +
+      (pi === total - 1 && spec.note ? '<div style="margin-top:8px;font-size:10.5px;color:#5D6B62;background:' + RT.accTint + ';border-radius:8px;padding:5px 10px">📝 ' + e(spec.note) + '</div>' : '') +
+      '<div style="position:absolute;left:34px;right:34px;bottom:14px;display:flex;justify-content:space-between;font-size:10px;color:#8A968D;border-top:1px solid #DCE4DE;padding-top:6px"><span>🧰 ' + RT.org + ' · ' + RT.app + ' · ' + e(spec.title) + '</span><span>หน้า ' + (pi + 1) + ' / ' + total + '</span></div></div>';
+  });
+}
+async function rImage(spec, kind) {
+  await rLoad('h2c'); if (kind === 'pdf') await rLoad('pdf');
+  const host = document.createElement('div'); host.style.cssText = 'position:fixed;left:-12000px;top:0;width:1123px;z-index:-1';
+  host.innerHTML = rPages(spec).join(''); document.body.appendChild(host);
+  try {
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const canv = []; for (const p of host.querySelectorAll('.rp-page')) canv.push(await html2canvas(p, { scale: 2, backgroundColor: '#ffffff', useCORS: true, logging: false }));
+    if (kind === 'pdf') {
+      const pdf = new window.jspdf.jsPDF({ unit: 'pt', format: 'a4', orientation: 'landscape', compress: true });
+      canv.forEach((cv, i) => { if (i) pdf.addPage('a4', 'landscape'); pdf.addImage(cv.toDataURL('image/jpeg', 0.92), 'JPEG', 0, 0, 841.89, 595.28); });
+      rSave(new Blob([pdf.output('arraybuffer')], { type: 'application/octet-stream' }), rName(spec, 'pdf'));   // octet-stream: LINE in-app ไม่พยายามเปิด PDF เอง
+    } else {
+      const gap = 20, w = canv[0].width, h = canv.reduce((s, c) => s + c.height, 0) + gap * (canv.length - 1);
+      const out = document.createElement('canvas'); out.width = w; out.height = h; const g = out.getContext('2d'); g.fillStyle = '#DCE4DE'; g.fillRect(0, 0, w, h);
+      let y = 0; canv.forEach((c) => { g.drawImage(c, 0, y); y += c.height + gap; });
+      rSave(await new Promise((ok) => out.toBlob(ok, 'image/jpeg', 0.92)), rName(spec, 'jpg'));
+    }
+  } finally { host.remove(); }
+}
+$('bRep').innerHTML = rIco('report', 17, 2) + '<span>รายงาน</span>';
+$('bRep').onclick = openReport;
+$('rpm').addEventListener('click', (e) => {
+  const t = e.target, c = (s) => t.closest(s);
+  if (t.id === 'rpm' || c('#rpX')) { $('rpm').classList.remove('open'); return; }
+  if (c('[data-rk]')) { if (!c('[data-rk]').disabled) { RS.kind = c('[data-rk]').dataset.rk; drawReport(); } return; }
+  if (c('[data-rg]')) { RS.grp = c('[data-rg]').dataset.rg; drawReport(); return; }
+  if (c('[data-rm]')) { RS.month = c('[data-rm]').dataset.rm; drawReport(); return; }
+  if (c('[data-rf]')) reportGo(c('[data-rf]').dataset.rf, c('[data-rf]'));
+});
 
 // ── events ──
 $('vw').onclick = (e) => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); };
