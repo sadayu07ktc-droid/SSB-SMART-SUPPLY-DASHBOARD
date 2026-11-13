@@ -734,7 +734,12 @@ function renderRaw(raw,row){
   const rest=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k]));
   if(rest.length){h+='<div class="sec" style="color:var(--txt2)">📝 อื่นๆ</div>';rest.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});}
   const photos=Object.keys(raw).filter(k=>!SKIP[k]&&isUrl(raw[k]));
-  if(photos.length){h+='<div class="sec" style="color:var(--txt2)">📷 รูปถ่าย</div>';photos.forEach(k=>h+=`<div class="drow"><span class="l">${k}</span><a href="${raw[k]}" target="_blank" style="color:var(--primary);font-weight:600">เปิดรูป ↗</a></div>`+(k==='รูปน้ำมัน(โรงงาน)'?fuelBillRow():''));}
+  // ⚠️ 12 พ.ย. กรอกลิตรน้ำมันโรงงานแต่ไม่มีรูปบิล → แอดมินตามคนขับ (ฟอร์มคนขับบังคับรูปตั้งแต่ 12 พ.ย.)
+  const fLit=parseFloat(String(raw['ลิตรน้ำมัน(โรงงาน)']==null?'':raw['ลิตรน้ำมัน(โรงงาน)']).replace(/,/g,''));
+  const noFuelPhoto=fLit>0&&!isUrl(raw['รูปน้ำมัน(โรงงาน)']);
+  if(photos.length||noFuelPhoto)h+='<div class="sec" style="color:var(--txt2)">📷 รูปถ่าย</div>';
+  photos.forEach(k=>h+=`<div class="drow"><span class="l">${k}</span><a href="${raw[k]}" target="_blank" style="color:var(--primary);font-weight:600">เปิดรูป ↗</a></div>`+(k==='รูปน้ำมัน(โรงงาน)'?fuelBillRow():''));
+  if(noFuelPhoto)h+=`<div class="drow"><span class="l">🧾 เลขบิลน้ำมัน (โรงงาน)</span><span style="color:#b45309;font-weight:600">⚠️ กรอกน้ำมัน ${fLit.toLocaleString('th-TH',{maximumFractionDigits:2})} ลิตร แต่ไม่มีรูปบิล</span></div>`;
   return h;
 }
 /* 🧾 เลขบิลน้ำมัน (โรงงาน) — เครื่องในออฟฟิศให้ Claude อ่านจากรูปหลังคนขับส่ง (Edge fuel-bill · ทุก 5 นาที 05–22 น.) */
