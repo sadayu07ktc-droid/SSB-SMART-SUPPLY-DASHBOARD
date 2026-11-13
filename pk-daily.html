@@ -3173,7 +3173,19 @@ async function ypMark(m,st,extra){m.st=st;if(m.sample||!ypLive())return;
 function ypQty(p){return [p.cs||!p.tk?comma(p.cs||0)+' ลัง':'',p.tk?comma(p.tk)+' ถัง':''].filter(Boolean).join(' + ');}
 function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head].status==='ready').map(v=>{const p=PLAN[v.head],d=drvOf(p.driver),n=p.stops.length;
   return '<option value="'+esc(v.head)+'"'+(v.head===sel?' selected':'')+'>'+esc(plOf(v.head))+' · '+esc(v.g||'')+(d?' · '+esc(d.name.split(' ')[0]):v.ext?' · รถนอก':' · ไม่มีคนขับ')+(n?' · มี '+n+' จุด':' · ว่าง')+'</option>';}).join('');}
-function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=ypMatch(p.shop),inP=ypInPlan(m.mid);
+/* 🧾 PO: ลูกค้า + "สาขาที่ส่ง" → ร้านในค่ากลาง (คุณน้อง 13 พ.ย. ศรีธิคำ สะพานสี่/คลังสินค้าใหม่/ตลาดอมร)
+ *   ชื่อไม่สนวรรณยุกต์/ไม้ไต่คู้ (มาร์เก็ตติ้ง = มาร์เกตติ้ง) · ร้านต้องมีชื่อลูกค้า · สาขาเทียบคู่ตัวอักษร (คลังสินค้าใหม่ ≈ คลังใหม่) · ได้คะแนนสูงสุดคนเดียว ≥0.6 */
+const ypLoose=x=>ypNorm(x).replace(/[\u0E47-\u0E4E]/g,'').replace(/มารเกตติง|มารเกตติ้ง|ซุปเปอรมารเกต|ค้าส่ง|คาสง|สาขา|สนญ|สำนักงานใหญ/g,'');
+function ypBig(s){const a=new Set();for(let i=0;i<s.length-1;i++)a.add(s.slice(i,i+2));return a;}
+function ypMatchPo(p){const o=p&&p.po;if(!o)return null;const br0=String(o.branch||'').trim();
+  const brand=ypLoose(String(o.short||o.buyer||p.shop||'').trim().split(/\s+/)[0]||'');if(brand.length<3)return null;
+  const C=ST.filter(x=>tyOf({id:x.id})!=='ห้าง'&&ypLoose(x.n).includes(brand));if(!C.length)return null;
+  if(!br0)return C.length===1?C[0]:null;
+  const br=ypLoose(br0).split(brand).join('');if(br.length<2)return C.length===1?C[0]:null;
+  const B=ypBig(br),sc=C.map(x=>{const r=ypLoose(x.n).split(brand).join(''),R=ypBig(r);if(!R.size||!B.size)return {x,s:0};
+    let k=0;R.forEach(g=>{if(B.has(g))k++;});return {x,s:r===br?2:k/Math.min(R.size,B.size)};}).sort((a,b)=>b.s-a.s);
+  return sc[0].s>=0.6&&(!sc[1]||sc[0].s>sc[1].s)?sc[0].x:null;}
+function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop),inP=ypInPlan(m.mid);
   const sumQ=its.reduce((a,i)=>a+(i.u==='ถัง'?0:(+i.q||0)),0),qT=ypQty(p),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+(p.dlvFrom?' · แจ้งตามมา':'')+'</span>':p.waitDate?'<span class="w">⏳ '+(p.po?'รอเซลส์นัดส่ง/รับ':'รอแจ้งวันเข้ารับ')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
     (p.cs||!p.tk?'<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>':''),(p.tk?'<span class="i">🛢️ '+comma(p.tk)+' ถัง'+(p.tkFree?' (แถมจริง '+comma(p.tkFree)+')':'')+'</span>':''),p.coa?'<span class="r">📄 ต้องมี COA</span>':'',p.receipt?'<span class="w">📃 ใบเสร็จ</span>':'',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':'',p.prepay?'<span class="w">💳 โอนเงินก่อน</span>':'',
     p.pickAt?'<span class="i">'+(p.pickAt==='บางนา'?'🏬 ขึ้นของ คลังบางนา':'🏭 ขึ้นของ โรงงานหนองใหญ่')+'</span>':'',
@@ -3183,7 +3195,8 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
   let h='<div class="box ypc'+(nw?' ypnew':'')+'" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+(nw?'<span class="tchip nw">🆕 ใหม่</span> ':'')+esc(p.shop||'(ไม่มีชื่อร้าน)')+(p.pickup?' <span class="tchip ypk">🙋 รับเอง</span>':'')+(mlT.length?' <span class="tchip ypml" title="ส่งเมลแผนการส่งมอบแล้ว: '+esc(mlT.join(' · '))+'">📨 ส่งเมลแล้ว'+(mlT.length<2?' · '+esc(mlT[0]):'')+'</span>':'')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
   if(p.po){const o=p.po,amt=Number(o.amt);   /* 🧾 PO จากรูป/PDF (Edge pk-po) · ดูรูป = ลิงก์ชั่วคราว 10 นาที */
     h+='<div class="pobx"><span>🧾 <b>PO '+esc(o.no||'-')+'</b>'+(o.doc?' · ลงวันที่ '+esc(dateTH(o.doc)):'')+(o.due?' · กำหนดส่งตาม PO '+esc(dateTH(o.due)):'')+(amt>0?' · ยอด '+amt.toLocaleString('th-TH',{maximumFractionDigits:2})+' บ.':'')
-      +(o.buyer&&ypNorm(o.buyer)!==ypNorm(p.shop)?'<br><span class="note">'+esc(o.buyer)+'</span>':'')+'</span><button class="btn sm" type="button" data-yppo>🖼️ ดูรูป PO</button></div>';}
+      +(o.buyer&&ypNorm(o.buyer)!==ypNorm(p.shop)?'<br><span class="note">'+esc(o.buyer)+'</span>':'')
+      +(o.branch?'<br>📍 สาขาที่ส่ง <b>'+esc(o.branch)+'</b>'+(hit?' → <span class="tchip">'+esc(hit.n)+'</span>':' <span class="note">· ยังไม่พบร้านนี้ในค่ากลาง</span>'):'')+'</span><button class="btn sm" type="button" data-yppo>🖼️ ดูรูป PO</button></div>';}
   h+='<table class="pol"><thead><tr><th>สินค้า</th><th class="n">จำนวน</th><th class="n">แถมจริง</th><th class="n">ราคา</th></tr></thead><tbody>'
     +its.map(i=>{const tu=i.u==='ถัง'?' ถัง':'';return '<tr><td>'+(tu?'🛢️ ':'')+esc(i.n)+'</td><td class="n">'+(i.q?comma(i.q)+tu:'')+'</td><td class="n">'+(i.f?'+'+comma(i.f)+tu:'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>';}).join('')
     +'<tr><td><b>รวมลงแพลน</b></td><td class="n" colspan="2"><b>'+qT+'</b></td><td></td></tr></tbody></table>';
