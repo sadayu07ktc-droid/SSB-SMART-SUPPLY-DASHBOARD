@@ -179,7 +179,7 @@ a.lk{color:var(--green2);font-weight:600}
   <a href="index.html">← แดชบอร์ด</a>
   <div><h1>🧰 อุปกรณ์ติดรถ</h1><div class="sub">เบิก / คืน · อุปกรณ์ที่ถือ · ประวัติรถรายคัน</div></div>
   <div class="sp"></div>
-  <div class="vw" id="vw"><button data-v="veh" class="on">🚚 รายคัน</button><button data-v="sum">📦 สรุปอุปกรณ์</button><button data-v="aud">🔍 สุ่มตรวจ</button></div>
+  <div class="vw" id="vw"><button data-v="veh" class="on">🚚 รายคัน</button><button data-v="sum">📦 สรุปอุปกรณ์</button><button data-v="aud">🔍 สุ่มตรวจ</button><button data-v="tpl">📋 ชุดมาตรฐาน</button></div>
   <button class="rbtn" id="bRep" title="ออกรายงาน Excel / PDF / JPEG"></button>
 </div>
 <div class="wrap" id="wrap">
@@ -389,10 +389,10 @@ async function loadSum() {
       '<td class="n">' + (r.lost_qty ? '<span class="neg">' + nf(r.lost_qty) + '</span> <span class="sm">(' + r.lost_vehicles + ' คัน)</span>' : '–') + '</td></tr>').join('') +
     '</tbody></table></div><div class="note" style="margin-top:8px">ชำรุด/หาย นับจากเช็คลิสต์ล่าสุดของแต่ละคัน · ชำรุดยังนับอยู่ในยอดเบิก</div></div>';
 }
-function setView(v) {
+function setView(v, pre) {
   VIEW = v; document.querySelectorAll('#vw button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
-  $('wrap').classList.toggle('full', v === 'sum' || v === 'aud');
-  if (v === 'sum') loadSum(); else if (v === 'aud') loadAud(); else if (CUR) openVeh(CUR, true); else $('main').innerHTML = '<div class="msg">เลือกรถทางซ้าย</div>';
+  $('wrap').classList.toggle('full', v === 'sum' || v === 'aud' || v === 'tpl');
+  if (v === 'sum') loadSum(); else if (v === 'aud') loadAud(); else if (v === 'tpl') loadTpl(pre); else if (CUR) openVeh(CUR, true); else $('main').innerHTML = '<div class="msg">เลือกรถทางซ้าย</div>';
 }
 
 // ── 🔍 สุ่มตรวจ FM-TR-16 (getAuditPlan + fm16Sheet · โหลดเฉพาะตอนเปิดมุมนี้ ไม่มีรีเฟรชเอง) ──
@@ -880,9 +880,10 @@ function renderSet() {
   let cat = null; const list = show.map((i) => { const h = i.category !== cat ? '<div class="rq-cat">' + esc(i.category || 'อื่นๆ') + '</div>' : ''; cat = i.category; return h + rqRow(i, ed); }).join('');
   $('vbody').innerHTML = xaCard() + '<div class="card"><h3 style="margin:0 0 4px;font-size:15px">⚙️ ชุดที่คันนี้ต้องมี · ' + req.length + ' รายการ</h3>' +
     '<div class="note">ใช้คิด ขาด/ครบ ในแท็บอุปกรณ์ที่ถือ · จำนวนที่ควรมีในใบ FM-TR-16 · เช็คก่อนออกรถ (ถ้ากลุ่มไม่ได้ตั้งชุดรายวันไว้) · ตั้งเป็น 0 = ไม่ต้องมี</div>' +
-    (tn ? '<div class="rq-tpl"><span>📋 ชุดมาตรฐาน ' + esc(d.vehicle.job_group) + (d.vehicle.tpl_kind ? ' · ' + esc(d.vehicle.tpl_kind) : '') + ' มี <b>' + tn + '</b> รายการ</span>' +
+    (tn ? '<div class="rq-tpl"><span>📋 ชุดมาตรฐาน ' + esc(d.vehicle.job_group) + ' · ' + (d.template_own ? esc(d.vehicle.tpl_kind) : 'ชุดตั้งต้นของกลุ่ม' + (d.vehicle.tpl_kind ? ' <small>(' + esc(d.vehicle.tpl_kind) + ' ยังไม่มีชุดของตัวเอง)</small>' : '')) + ' มี <b>' + tn + '</b> รายการ</span>' +
+      '<button class="btn gh sm" id="rqEditTpl">✏️ แก้ชุดมาตรฐาน</button>' +
       (ed ? '<button class="btn gh sm" id="rqFill" title="เพิ่มเฉพาะรายการที่คันนี้ยังไม่มี">＋ เติมที่ขาดจากมาตรฐาน</button><button class="btn gh sm" id="rqTpl" title="ให้เหมือนชุดมาตรฐานทุกข้อ">↺ ให้ตรงมาตรฐานทั้งชุด</button>' : '') + '</div>'
-      : '<div class="note" style="margin-top:6px">กลุ่ม/ชนิดรถนี้ยังไม่มีชุดมาตรฐาน — ตั้งทีละรายการด้านล่าง</div>') +
+      : '<div class="note" style="margin-top:6px">กลุ่ม/ชนิดรถนี้ยังไม่มีชุดมาตรฐาน — ตั้งทีละรายการด้านล่าง <button class="btn gh sm" id="rqEditTpl">✏️ ตั้งชุดมาตรฐาน</button></div>') +
     '<div class="chips" style="margin:10px 0 0"><button class="chip' + (RQ.all ? '' : ' on') + '" data-rqall="0">เฉพาะที่ต้องมี (' + req.length + ')</button><button class="chip' + (RQ.all ? ' on' : '') + '" data-rqall="1">＋ อุปกรณ์ทั้งหมดของกลุ่ม (' + its.length + ')</button></div></div>' +
     '<div class="card rq-list">' + (list || '<div class="msg">ยังไม่มีรายการ — กด "อุปกรณ์ทั้งหมดของกลุ่ม" แล้วกด + ที่รายการที่ต้องมี</div>') + '</div>' +
     (ed ? '<div class="af-bar" id="rqBar">' + rqBar() + '</div>' : '');
@@ -926,6 +927,7 @@ function rqTap(t) {
   if (c('#rqTpl')) { if (confirm('ให้ชุดของคันนี้เหมือนชุดมาตรฐานทุกข้อ? (รายการที่ไม่อยู่ในมาตรฐานจะถูกตั้งเป็น 0) — ยังไม่บันทึกจนกว่าจะกด 💾')) rqApplyTpl(true); return true; }
   if (c('#rqUndo')) { RQ.q = Object.assign({}, RQ.orig); RQ.note = Object.assign({}, RQ.onote); renderSet(); return true; }
   if (c('#rqSave')) { rqSaveAsk(); return true; }
+  if (c('#rqEditTpl')) { const vv = RQ.d.vehicle; setView('tpl', { grp: vv.job_group, kind: vv.tpl_kind || '' }); window.scrollTo({ top: 0 }); return true; }
   if (c('#xaDl')) { xaDownload(GRP, c('#xaDl')); return true; }
   if (c('#xaUp')) { xaPick(); return true; }
   return false;
@@ -1102,6 +1104,132 @@ function xaCard() {
     '<button class="btn" id="xaDl" style="background:#1d6f42;color:#fff;border-color:#1d6f42">⬇ ดาวน์โหลด Excel</button>' + (canEdit() ? '<button class="btn gh" id="xaUp">⬆ อัปโหลด</button>' : '') + '</div>';
 }
 
+// ── 📋 ชุดมาตรฐาน: กลุ่มงาน → ชนิดรถ → อุปกรณ์กี่ชิ้น (veq_templates) · getTemplates ครั้งเดียวตอนเปิด · บันทึก saveTemplate + PIN ──
+//   ชนิดที่มีชุดของตัวเอง = ใช้ชุดนั้นทั้งชุด · ยังไม่ตั้ง = ใช้ "ชุดตั้งต้นของกลุ่ม" · ใช้เป็นแม่แบบตอน "เติมที่ขาด" ของแต่ละคัน
+let TP = null;
+async function loadTpl(pre) {
+  $('main').innerHTML = '<div class="ldr"><i></i>กำลังโหลดชุดมาตรฐาน</div>';
+  let d; try { d = await api({ action: 'getTemplates', group: '' }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
+  if (VIEW !== 'tpl') return;
+  if (!d.ok) { $('main').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; }
+  const p = pre || (TP ? { grp: TP.grp, kind: TP.kind } : {});
+  const grp = d.groups.indexOf(p.grp) >= 0 ? p.grp : d.groups.indexOf(GRP) >= 0 ? GRP : d.groups[0];
+  TP = { d, grp, kind: p.kind || '', q: {}, orig: {}, all: false, busy: false, own: true };
+  tpPick(); renderTpl();
+}
+const tpRows = (grp, kind) => TP.d.templates.filter((t) => t.job_group === grp && (t.head_kind || '') === kind);
+const tpKinds = () => (TP.d.kinds[TP.grp] || []).slice().sort((a, b) => a.localeCompare(b, 'th'));
+const tpVeh = (kind) => TP.d.kindVehicles[TP.grp + '|' + kind] || [];
+const tpUsing = (kind) => kind ? (tpRows(TP.grp, kind).length ? tpVeh(kind) : []) : tpKinds().filter((k) => !tpRows(TP.grp, k).length).flatMap(tpVeh).concat(tpVeh(''));
+function tpPick() {
+  const rows = tpRows(TP.grp, TP.kind);
+  TP.own = !TP.kind || rows.length > 0; TP.q = {}; TP.all = false;
+  (rows.length || !TP.kind ? rows : tpRows(TP.grp, '')).forEach((r) => (TP.q[r.item_code] = Number(r.qty)));
+  TP.orig = TP.own ? Object.assign({}, TP.q) : {};
+}
+const tpItems = () => TP.d.items.filter((i) => (i.groups || []).indexOf(TP.grp) >= 0 || TP.q[i.code] != null || TP.orig[i.code] != null);
+const tpChanged = (k) => (TP.q[k] || 0) !== (TP.orig[k] || 0);
+const tpNChg = () => tpItems().filter((i) => tpChanged(i.code)).length;
+function tpRow(i, ed) {
+  const k = i.code, q = TP.q[k] || 0, ch = ed && tpChanged(k);
+  return '<div class="rq' + (q > 0 ? ' on' : '') + (ch ? ' ch' : '') + '" id="tp-' + esc(k) + '"><div class="rq-n"><b>' + esc(i.name) + '</b><div class="sm">' + esc(i.unit || '') +
+    (ch ? ' <span class="b warn">แก้ จาก ' + nf(TP.orig[k] || 0) + '</span>' : '') + '</div></div>' +
+    (ed ? '<div class="rq-st"><button class="af-b" data-tq="' + esc(k) + '|-1"' + (q <= 0 ? ' disabled' : '') + '>−</button><span class="af-num' + (q ? '' : ' em') + '">' + nf(q) + '</span><button class="af-b" data-tq="' + esc(k) + '|1">+</button></div>'
+      : '<div class="af-num' + (q ? '' : ' em') + '">' + nf(q) + '</div>') + '</div>';
+}
+function tpBar() {
+  const n = tpNChg();
+  return '<div class="af-bt"><span>' + (n ? 'แก้ไป <b>' + n + '</b> รายการ (ยังไม่บันทึก)' : 'ยังไม่มีการแก้') + '</span>' +
+    (n ? '<button class="btn gh" id="tpUndo">ยกเลิก</button>' : '') + '<button class="btn pri" id="tpSave"' + (n && !TP.busy ? '' : ' disabled') + '>💾 บันทึกชุดมาตรฐาน</button></div>';
+}
+function renderTpl() {
+  const d = TP.d, ed = canEdit() && TP.own, kinds = tpKinds(), name = TP.kind || 'ชุดตั้งต้นของกลุ่ม';
+  const chip = (on, attr, txt) => '<button class="chip' + (on ? ' on' : '') + '" ' + attr + '>' + txt + '</button>';
+  const its = tpItems(), inSet = its.filter((i) => (TP.q[i.code] || 0) > 0);
+  const show = (TP.all || !inSet.length ? its : its.filter((i) => (TP.q[i.code] || 0) > 0 || tpChanged(i.code)))
+    .sort((a, b) => String(a.category || '').localeCompare(String(b.category || ''), 'th') || (a.sort || 0) - (b.sort || 0));
+  let cat = null; const list = show.map((i) => { const h = i.category !== cat ? '<div class="rq-cat">' + esc(i.category || 'อื่นๆ') + '</div>' : ''; cat = i.category; return h + tpRow(i, ed); }).join('');
+  const using = tpUsing(TP.kind), base = tpRows(TP.grp, '').length;
+  const head = '<div class="card"><h3 style="margin:0 0 4px;font-size:16px">📋 ชุดมาตรฐาน</h3><div class="note">แยกตามกลุ่มงาน → ชนิดรถ · ชนิดที่ตั้งชุดของตัวเอง ใช้ชุดนั้นทั้งชุด · ชนิดที่ยังไม่ตั้ง ใช้ชุดตั้งต้นของกลุ่ม · ใช้เป็นแม่แบบตอนกด "เติมที่ขาดจากมาตรฐาน" ของแต่ละคัน</div>' +
+    (d.groups.length > 1 ? '<div class="rpl" style="margin-top:12px">กลุ่มงาน</div><div class="chips" style="margin:0">' + d.groups.map((g) => chip(g === TP.grp, 'data-tg="' + esc(g) + '"', (GICON[g] || '') + ' ' + esc(g))).join('') + '</div>' : '') +
+    '<div class="rpl" style="margin-top:12px">ชนิดรถของ ' + esc(TP.grp) + '</div><div class="chips" style="margin:0">' +
+    chip(!TP.kind, 'data-tk=""', '⭐ ชุดตั้งต้นของกลุ่ม' + (base ? ' (' + base + ')' : ' (ยังไม่ตั้ง)')) +
+    kinds.map((k) => { const own = tpRows(TP.grp, k).length; return chip(TP.kind === k, 'data-tk="' + esc(k) + '"', esc(k) + ' · ' + tpVeh(k).length + ' คัน' + (own ? ' ✓' : '')); }).join('') + '</div>' +
+    '<div class="note" style="margin-top:6px">✓ = มีชุดของตัวเองแล้ว · ไม่มี ✓ = ใช้ชุดตั้งต้นของกลุ่ม</div></div>';
+  const info = !TP.own
+    ? '<div class="card rq-tpl" style="display:block"><b>' + esc(TP.kind) + '</b> (' + tpVeh(TP.kind).length + ' คัน) ยังไม่มีชุดของตัวเอง — ตอนนี้ใช้<b>ชุดตั้งต้นของ ' + esc(TP.grp) + '</b> ' + inSet.length + ' รายการ (ด้านล่าง)' +
+      (canEdit() ? '<div style="margin-top:8px"><button class="btn pri" id="tpNew">✚ สร้างชุดของ ' + esc(TP.kind) + ' (เริ่มจากชุดตั้งต้น)</button></div>' : '') + '</div>'
+    : '<div class="card"><b>' + esc(TP.grp) + ' · ' + esc(name) + '</b> · ' + inSet.length + ' รายการ · ใช้กับรถ ' + using.length + ' คัน' +
+      (TP.kind && tpRows(TP.grp, TP.kind).length && canEdit() ? ' <button class="btn gh sm" id="tpDrop" style="margin-left:6px">↩ เลิกชุดเฉพาะ กลับไปใช้ชุดตั้งต้น</button>' : '') +
+      (canEdit() && using.length && !tpNChg() && inSet.length ? '<div style="margin-top:8px"><button class="btn gh" id="tpFill">➕ เติมที่ขาดให้รถที่ใช้ชุดนี้ (' + using.length + ' คัน)</button> <span class="note">ไม่ลด/ไม่ลบของที่คันมีอยู่แล้ว · ดูรายการก่อนบันทึก</span></div>' : '') +
+      '<div class="chips" style="margin:10px 0 0">' + chip(!TP.all, 'data-tall="0"', 'เฉพาะที่อยู่ในชุด (' + inSet.length + ')') + chip(TP.all, 'data-tall="1"', '＋ อุปกรณ์ทั้งหมดของกลุ่ม (' + its.length + ')') + '</div></div>';
+  $('main').innerHTML = head + info + '<div class="card rq-list">' + (list || '<div class="msg">ยังไม่มีรายการ — กด "อุปกรณ์ทั้งหมดของกลุ่ม" แล้วกด + ที่รายการที่ต้องมี</div>') + '</div>' +
+    (ed ? '<div class="af-bar" id="tpBar">' + tpBar() + '</div>' : '');
+  history.replaceState(null, '', '?view=tpl');
+}
+function tpRedraw(k) {
+  const i = tpItems().find((x) => x.code === k), el = $('tp-' + k);
+  if (i && el) el.outerHTML = tpRow(i, canEdit() && TP.own);
+  if ($('tpBar')) $('tpBar').innerHTML = tpBar();
+}
+// PIN drawer ใช้ร่วม: run(pin) → ผล api · ok → done(r)
+function tpPin(title, body, btn, run, done) {
+  $('dT').textContent = title;
+  $('dB').innerHTML = body + '<label>PIN 6 หลัก</label><input id="tpPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"><div id="tpErr"></div>' +
+    '<button class="btn pri" id="tpGo" style="margin-top:12px;width:100%">' + btn + '</button>';
+  $('tpGo').onclick = async () => {
+    const pin = $('tpPin').value.trim();
+    if (!/^\d{6}$/.test(pin)) { $('tpErr').innerHTML = '<div class="err">PIN ต้องเป็นตัวเลข 6 หลัก</div>'; return; }
+    if (TP.busy) return; TP.busy = true; $('tpGo').disabled = true;
+    let r; try { r = await run(pin); } catch (e) { r = { error: 'เน็ตมีปัญหา ยังไม่แน่ใจว่าบันทึกหรือยัง — โหลดใหม่ดูก่อนกดซ้ำ' }; }
+    TP.busy = false;
+    if (!r.ok) { $('tpGo').disabled = false; $('tpPin').value = ''; $('tpErr').innerHTML = '<div class="err">' + esc(r.pinBad ? 'PIN ไม่ถูกต้อง' : r.error || 'ไม่สำเร็จ') + (r.errors ? '<br>' + r.errors.map((e) => esc(typeof e === 'string' ? e : e.msg || '')).join('<br>') : '') + '</div>'; return; }
+    closeDrw(); done(r);
+  };
+  $('dim').classList.add('open'); $('drw').classList.add('open'); setTimeout(() => $('tpPin').focus(), 200);
+}
+const tpNm = (k) => (TP.d.items.find((i) => i.code === k) || {}).name || k;
+function tpSaveAsk(drop) {
+  const ch = drop ? [] : tpItems().filter((i) => tpChanged(i.code)), items = drop ? [] : Object.keys(TP.q).filter((k) => TP.q[k] > 0).map((k) => ({ itemCode: k, qty: TP.q[k] }));
+  const nm = TP.grp + ' · ' + (TP.kind || 'ชุดตั้งต้นของกลุ่ม');
+  if (!drop && !items.length && !confirm('ชุด ' + nm + ' จะว่างเปล่า' + (TP.kind ? ' (= กลับไปใช้ชุดตั้งต้นของกลุ่ม)' : '') + ' — ยืนยัน?')) return;
+  tpPin(drop ? '↩ เลิกชุดเฉพาะ' : '💾 บันทึกชุดมาตรฐาน',
+    '<div class="note">' + esc(nm) + (drop ? ' → กลับไปใช้ชุดตั้งต้นของ ' + esc(TP.grp) : ' · แก้ ' + ch.length + ' รายการ · รวม ' + items.length + ' รายการ') + '</div>' +
+    (drop ? '' : '<ul style="margin:8px 0;padding-left:18px">' + ch.slice(0, 40).map((i) => '<li>' + esc(i.name) + ': ' + nf(TP.orig[i.code] || 0) + ' → <b>' + nf(TP.q[i.code] || 0) + '</b>' + (!(TP.q[i.code] > 0) ? ' (เอาออก)' : '') + '</li>').join('') + (ch.length > 40 ? '<li>… อีก ' + (ch.length - 40) + '</li>' : '') + '</ul>') +
+    '<div class="note">ยังไม่แก้ชุดของรถแต่ละคัน — บันทึกแล้วกด "เติมที่ขาดให้รถที่ใช้ชุดนี้" หรือกดในแท็บ ⚙️ ของแต่ละคัน</div>',
+    drop ? 'ยืนยันเลิกชุดเฉพาะ' : 'ยืนยันบันทึก',
+    (pin) => api({ action: 'saveTemplate', group: TP.grp, headKind: TP.kind || null, items, pin }, true),
+    (r) => { toast(drop ? 'กลับไปใช้ชุดตั้งต้นแล้ว' : 'บันทึกชุดมาตรฐานแล้ว ' + r.saved + ' รายการ'); RQ = null; loadTpl({ grp: TP.grp, kind: TP.kind }); });
+}
+async function tpFill(b) {
+  const ids = tpUsing(TP.kind); b.disabled = true; const h = b.innerHTML; b.innerHTML = '⏳ กำลังคำนวณ…';
+  let p; try { p = await api({ action: 'applyTemplate', mode: 'fill', vehicleIds: ids }, true); } catch (e) { p = { error: 'เน็ตมีปัญหา' }; }
+  b.disabled = false; b.innerHTML = h;
+  if (!p.ok) { toast(p.error || 'คำนวณไม่ได้', true); return; }
+  const vs = p.vehicles || [], n = vs.reduce((t, v) => t + v.add.length, 0);
+  if (!n) { toast('ทุกคันที่ใช้ชุดนี้มีครบแล้ว'); return; }
+  tpPin('➕ เติมที่ขาดจากชุดมาตรฐาน',
+    '<div class="note">' + esc(TP.grp + ' · ' + (TP.kind || 'ชุดตั้งต้นของกลุ่ม')) + ' · ' + vs.length + ' คัน · เพิ่ม ' + n + ' รายการ (ไม่ลด/ไม่ลบของเดิม)</div><ul style="margin:8px 0;padding-left:18px;max-height:50vh;overflow:auto">' +
+    vs.map((v) => '<li><b>' + esc(v.plate) + '</b>: ' + v.add.map((a) => esc(tpNm(a.item_code)) + ' ' + nf(a.qty)).join(', ') + '</li>').join('') + '</ul>' +
+    '<div class="note">มีผลกับเช็ครายวัน/รายเดือน/สุ่มตรวจครั้งถัดไป · ของที่คันยังไม่ได้เบิก จะขึ้น "ขาด" จนกว่าจะลงเบิก</div>',
+    'ยืนยันเติม ' + n + ' รายการ',
+    (pin) => api({ action: 'applyTemplate', mode: 'fill', vehicleIds: vs.map((v) => v.vehicle_id), apply: true, pin }, true),
+    (r) => { toast('เติมแล้ว ' + r.vehicles + ' คัน ' + r.rows + ' รายการ'); RQ = null; XA = null; loadTpl({ grp: TP.grp, kind: TP.kind }); });
+}
+function tpTap(t) {
+  const c = (s) => t.closest(s);
+  if (c('[data-tg]')) { TP.grp = c('[data-tg]').dataset.tg; TP.kind = ''; tpPick(); renderTpl(); return true; }
+  if (c('[data-tk]')) { if (tpNChg() && !confirm('ยังไม่ได้บันทึกที่แก้ไว้ — ทิ้งไหม?')) return true; TP.kind = c('[data-tk]').dataset.tk; tpPick(); renderTpl(); return true; }
+  if (c('[data-tall]')) { TP.all = c('[data-tall]').dataset.tall === '1'; renderTpl(); return true; }
+  if (c('[data-tq]')) { const [k, dd] = c('[data-tq]').dataset.tq.split('|'); const q = Math.max(0, (TP.q[k] || 0) + +dd); if (q) TP.q[k] = q; else delete TP.q[k]; tpRedraw(k); return true; }
+  if (c('#tpNew')) { TP.own = true; TP.orig = {}; renderTpl(); toast('คัดลอกชุดตั้งต้นมาแล้ว — ปรับให้ตรงกับ ' + TP.kind + ' แล้วกด 💾'); return true; }
+  if (c('#tpUndo')) { tpPick(); renderTpl(); return true; }
+  if (c('#tpSave')) { tpSaveAsk(false); return true; }
+  if (c('#tpDrop')) { tpSaveAsk(true); return true; }
+  if (c('#tpFill')) { tpFill(c('#tpFill')); return true; }
+  return false;
+}
+
 // ── events ──
 $('vw').onclick = (e) => { const b = e.target.closest('button'); if (b) setView(b.dataset.v); };
 $('grp').onclick = (e) => { const b = e.target.closest('[data-g]'); if (!b) return; GRP = b.dataset.g; document.querySelectorAll('#grp .chip').forEach((x) => x.classList.toggle('on', x === b)); renderList(); };
@@ -1131,6 +1259,7 @@ $('main').addEventListener('click', (e) => {
   if (c('#afPrint')) { printFm16(); return; }
   if (c('#afSave')) { saveAF(); return; }
   if (VIEW === 'aud' && AF && afTap(t)) return;
+  if (VIEW === 'tpl' && TP && tpTap(t)) return;
   if (VIEW === 'veh' && VTAB === 'set' && RQ && rqTap(t)) return;
   if (c('[data-adj]')) { openAdj(c('[data-adj]').dataset.adj); return; }
 });
@@ -1158,6 +1287,7 @@ $('main').addEventListener('input', (e) => {
   }
   await loadList();
   if (q.get('view') === 'aud') setView('aud');
+  if (q.get('view') === 'tpl') setView('tpl');
   else if (q.get('vehicle')) openVeh(+q.get('vehicle'));
 })();
 </script>
