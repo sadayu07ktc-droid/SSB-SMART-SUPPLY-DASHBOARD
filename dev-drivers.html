@@ -461,8 +461,8 @@ function drawPanel(){
     <div class="note">ระยะเบา/หนัก/%หนัก/ระยะรวม ระบบคิดใหม่ให้เองตอนบันทึก (สูตรเดียวกับตอนคนขับส่ง)</div></div>`;
   h+=`<div class="sec"><h3>⚖️ น้ำหนัก</h3>${W_GROUPS.filter(([c])=>!L.hideW.has(c)).map(([c,t])=>`<div style="font-size:12px;font-weight:600;margin:4px 0 5px">${t}</div>
       <div class="grid" style="margin-bottom:8px">${fld('lw.weight_gross_'+c,'รวม (กก.)',lw['weight_gross_'+c],{num:1})}${fld('lw.weight_tare_'+c,'รถ (กก.)',lw['weight_tare_'+c],{num:1})}${fld('lw.weight_net_'+c,'สุทธิ (กก.)',lw['weight_net_'+c],{num:1})}</div>`).join('')}
-    <div class="grid">${fld('lw.price_per_kg','ราคา/กก.',lw.price_per_kg,{num:1})}${fld('lw.total_amount','ยอดเงิน',lw.total_amount,{num:1})}</div></div>`;
-  h+=`<div class="sec"><h3>⛽ น้ำมัน · ค่าใช้จ่าย</h3><div class="grid">${COSTS.map(([k,t])=>fld('lw.'+k,t,lw[k],{num:1})).join('')}</div>
+    <div class="grid">${fld('lw.price_per_kg','ราคา/กก.',lw.price_per_kg,{num:1})}${fld('lw.total_amount','ยอดเงิน',lw.total_amount,{num:1,ph:'= สุทธิ × ราคา/กก. (คิดให้)'})}</div></div>`;
+  h+=`<div class="sec"><h3>⛽ น้ำมัน · ค่าใช้จ่าย</h3><div class="grid">${COSTS.map(([k,t])=>fld('lw.'+k,t,lw[k],{num:1,ph:k==='fuel_total_road'?'= ลิตร × ราคา (คิดให้)':''})).join('')}</div>
     <div class="grid" style="margin-top:9px;grid-template-columns:1fr">${fld('lw.expense_note','หมายเหตุค่าใช้จ่าย',lw.expense_note,{area:1})}</div></div>`;
   if(JOB.pk) h+=pkSec();
   h+=`<div class="sec"><h3>💰 ค่าแรง</h3><div class="calc"><span class="kv">ค่าแรงตอนนี้ <b>${fee==null?'ยังไม่คิด':Number(fee).toLocaleString()+' บ.'}</b></span>
@@ -519,7 +519,26 @@ const stopsChanged=()=>STOPS && stopsSig(STOPS)!==stopsSig(JOB.pk.stops.map((s,i
 /* ── จับการแก้ ── */
 const normV=(k,v)=>{ v=String(v??'').trim(); if(/^lw\.(mile|hub|weight|fuel|toll|external|unload|helper|hooklift|overnight|price|total)/.test(k) && v!=='' && !isNaN(v.replace(/,/g,''))) return String(Number(v.replace(/,/g,''))); return v; };
 function mark(el){ const f=el.closest('.f'), o=f.dataset.orig, ch=normV(el.dataset.k,el.value)!==normV(el.dataset.k,o);
-  f.classList.toggle('chg',ch); f.querySelector('.was').textContent=ch?('เดิม: '+(o===''?'—':o)):''; updChg(); }
+  f.classList.toggle('chg',ch); f.querySelector('.was').textContent=ch?('เดิม: '+(o===''?'—':o)):''; autoMoney(el.dataset.k); updChg(); }
+/* 💵 ช่องเงินคิดให้เองเมื่อแก้ตัวคูณ (คุณน้อง 13 พ.ย.) · ลิตร × ราคา / สุทธิ × ราคา/กก. ปัดเป็นบาทเต็ม
+   แก้ช่องเงินเองได้ (คิดใหม่เฉพาะตอนแก้ ลิตร/ราคา หรือ สุทธิ/ราคา) · ตัวคูณว่างทั้งคู่ = ล้างช่องเงิน */
+const AUTO_MONEY={'lw.fuel_total_road':['lw.fuel_liter_road','lw.fuel_price_road'],'lw.total_amount':['lw.weight_net_customer','lw.price_per_kg']};
+function autoMoney(k){
+  Object.entries(AUTO_MONEY).forEach(([out,[a,b]])=>{
+    if(k!==a&&k!==b) return;
+    const ea=document.querySelector(`#panel [data-k="${a}"]`), eb=document.querySelector(`#panel [data-k="${b}"]`), eo=document.querySelector(`#panel [data-k="${out}"]`);
+    if(!ea||!eb||!eo) return;
+    const num=e=>{ const s=e.value.replace(/,/g,'').trim(); return s===''||isNaN(s)?null:Number(s); };
+    const x=num(ea), y=num(eb);
+    let v;
+    if(x!=null&&y!=null) v=String(Math.round(x*y));   // ปัดเป็นบาทเต็ม (คุณน้องเลือก 13 พ.ย.) · แก้ทับเองได้
+    else if(ea.value.trim()===''&&eb.value.trim()==='') v='';
+    else return;   // พิมพ์ยังไม่ครบ/ไม่ใช่ตัวเลข → ไม่แตะ
+    if(eo.value===v) return;
+    eo.value=v; const f=eo.closest('.f'), o=f.dataset.orig, ch=normV(out,v)!==normV(out,o);
+    f.classList.toggle('chg',ch); f.querySelector('.was').textContent=ch?('เดิม: '+(o===''?'—':o)+' · คิดให้อัตโนมัติ'):'';
+  });
+}
 function changes(){
   const out=[]; document.querySelectorAll('#panel [data-k]').forEach(el=>{ const o=el.closest('.f').dataset.orig;
     if(normV(el.dataset.k,el.value)!==normV(el.dataset.k,o)) out.push({k:el.dataset.k, from:o, to:el.value.trim()}); });
