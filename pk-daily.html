@@ -3177,13 +3177,18 @@ function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head]
  *   ชื่อไม่สนวรรณยุกต์/ไม้ไต่คู้ (มาร์เก็ตติ้ง = มาร์เกตติ้ง) · ร้านต้องมีชื่อลูกค้า · สาขาเทียบคู่ตัวอักษร (คลังสินค้าใหม่ ≈ คลังใหม่) · ได้คะแนนสูงสุดคนเดียว ≥0.6 */
 const ypLoose=x=>ypNorm(x).replace(/[\u0E47-\u0E4E]/g,'').replace(/มารเกตติง|มารเกตติ้ง|ซุปเปอรมารเกต|ค้าส่ง|คาสง|สาขา|สนญ|สำนักงานใหญ/g,'');
 function ypBig(s){const a=new Set();for(let i=0;i<s.length-1;i++)a.add(s.slice(i,i+2));return a;}
-function ypMatchPo(p){const o=p&&p.po;if(!o)return null;const br0=String(o.branch||'').trim();
-  const brand=ypLoose(String(o.short||o.buyer||p.shop||'').trim().split(/\s+/)[0]||'');if(brand.length<3)return null;
-  const C=ST.filter(x=>tyOf({id:x.id})!=='ห้าง'&&ypLoose(x.n).includes(brand));if(!C.length)return null;
-  if(!br0)return C.length===1?C[0]:null;
-  const br=ypLoose(br0).split(brand).join('');if(br.length<2)return C.length===1?C[0]:null;
-  const B=ypBig(br),sc=C.map(x=>{const r=ypLoose(x.n).split(brand).join(''),R=ypBig(r);if(!R.size||!B.size)return {x,s:0};
-    let k=0;R.forEach(g=>{if(B.has(g))k++;});return {x,s:r===br?2:k/Math.min(R.size,B.size)};}).sort((a,b)=>b.s-a.s);
+/* ชื่อลูกค้าใน PO อ่านเพี้ยนได้ (ศรีธิคำ → ศรีธำคำ / ศรีสินค้า) → ยี่ห้อเทียบแบบคู่ตัวอักษร รวมคำว่ามาร์เก็ตติ้ง · ใช้ชื่อร้านที่เซลส์พิมพ์ด้วย */
+const ypTone=x=>ypNorm(x).replace(/[็-๎]/g,'').replace(/สำนักงานใหญ/g,'');
+function ypCov(a,b){const A=ypBig(a),B=ypBig(b);if(!A.size||!B.size)return 0;let k=0;A.forEach(g=>{if(B.has(g))k++;});return k/Math.min(A.size,B.size);}
+function ypMatchPo(p){const o=p&&p.po;if(!o)return null;
+  const src=[o.short,o.buyer,p.shop].map(x=>String(x||'').trim()).filter(Boolean);if(!src.length)return null;
+  const first=x=>String(x||'').trim().split(/\s+/)[0]||'';
+  const C=ST.filter(x=>{if(tyOf({id:x.id})==='ห้าง')return false;const f=ypTone(first(x.n)),fl=ypLoose(first(x.n));if(fl.length<3)return false;
+    return src.some(z=>{const zl=ypLoose(first(z));return (zl.length>=3&&ypLoose(x.n).includes(zl))||ypCov(ypTone(z.split(/\s+/).slice(0,2).join('')),f)>=0.6;});});
+  if(!C.length)return null;
+  const br0=String(o.branch||'').trim(),br=ypLoose(br0);
+  if(br.length<2)return C.length===1?C[0]:null;
+  const sc=C.map(x=>{const t=String(x.n).trim().split(/\s+/),r=ypLoose(t.length>1?t.slice(1).join(''):'');return {x,s:!r?0:r===br?2:ypCov(r,br)};}).sort((a,b)=>b.s-a.s);
   return sc[0].s>=0.6&&(!sc[1]||sc[0].s>sc[1].s)?sc[0].x:null;}
 function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop),inP=ypInPlan(m.mid);
   const sumQ=its.reduce((a,i)=>a+(i.u==='ถัง'?0:(+i.q||0)),0),qT=ypQty(p),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+(p.dlvFrom?' · แจ้งตามมา':'')+'</span>':p.waitDate?'<span class="w">⏳ '+(p.po?'รอเซลส์นัดส่ง/รับ':'รอแจ้งวันเข้ารับ')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
