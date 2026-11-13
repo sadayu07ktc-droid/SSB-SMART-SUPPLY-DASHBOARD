@@ -424,7 +424,10 @@ $('bPrintAll').onclick = printAll;
     catch (e) { $('vlist').innerHTML = '<div class="msg">เข้าระบบ LINE ไม่สำเร็จ</div>'; return; }
   }
   await loadList();
-  if (q.get('vehicle')) openVeh(+q.get('vehicle'));
+  if (q.get('vehicle')) {
+    await openVeh(+q.get('vehicle'));
+    if (q.get('day') && SHEET) openDay(q.get('day'));   // มาจากการ์ดเคสแจ้งซ่อม → เปิดลิ้นชักทวนสอบของวันนั้นเลย
+  }
 })();
 </script>
 </body>

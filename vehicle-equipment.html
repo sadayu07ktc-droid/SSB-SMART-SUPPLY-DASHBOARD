@@ -120,6 +120,7 @@ a.lk{color:var(--green2);font-weight:600}
 .fx-box b{display:block;font-size:12.5px;margin-bottom:2px}
 .fx-act{background:var(--warntint)} .fx-fix{background:#EEF4FF} .fx-ok{background:var(--oktint)}
 .fx-bt{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.fx-bt a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .fx-hs{margin-top:8px;font-size:12px;color:var(--muted)} .fx-hs summary{cursor:pointer}
 .drw select{font:inherit}
 /* 🔍 ฟอร์มสุ่มตรวจ แบบมือถือ (ปุ่มใหญ่เหมือนฟอร์มคนขับ) */
@@ -1431,9 +1432,11 @@ function fxCard(c) {
     (c.vehicle_state ? '<div>🚦 ' + esc(c.vehicle_state) + '</div>' : '') + '</div>';
   if (c.fixed_at) h += '<div class="fx-box fx-fix"><b>📸 ' + esc(c.fixed_by || 'คนขับ') + ' แก้แล้ว ' + fxDT(c.fixed_at) + '</b>' + (c.fix_note ? esc(c.fix_note) : '') + '<div class="fx-phs">' + fxPh(c.fix_photos) + '</div></div>';
   if (c.status === 'closed') h += '<div class="fx-box fx-ok"><b>✅ ปิดเคส ' + (c.closed_by ? esc(c.closed_by) + ' ' : '') + fxDT(c.closed_at) + (c.close_kind === 'no_issue' ? ' · ไม่ต้องแก้' : '') + '</b>' + (c.close_note ? esc(c.close_note) : '') + '</div>';
-  if (ed && c.status !== 'closed') h += '<div class="fx-bt">' + (c.status === 'fixed'
+  const ck = c.check_date ? '<a class="btn gh" href="fm-tr-10.html?vehicle=' + c.vehicle_id + '&month=' + c.check_date.slice(0, 7) + '&day=' + c.check_date + '" title="เปิดใบ FM-TR-10 วันที่แจ้ง">📋 ดูใบตรวจที่แจ้ง</a>' : '';
+  if (!(ed && c.status !== 'closed')) { if (ck) h += '<div class="fx-bt">' + ck + '</div>'; }
+  else h += '<div class="fx-bt">' + (c.status === 'fixed'
     ? '<button class="btn pri" data-fxok="' + c.id + '">✅ ตรวจแล้ว ปิดเคส</button><button class="btn gh" data-fxa="' + c.id + '">↩️ ยังไม่เรียบร้อย ส่งกลับ</button>'
-    : '<button class="btn pri" data-fxa="' + c.id + '">' + (c.status === 'assigned' ? '✏️ แก้คำสั่ง' : '🛠️ สั่งแก้ ส่งให้คนขับ') + '</button><button class="btn gh" data-fxc="' + c.id + '">ปิดเคส</button>') + '</div>';
+    : '<button class="btn pri" data-fxa="' + c.id + '">' + (c.status === 'assigned' ? '✏️ แก้คำสั่ง' : '🛠️ สั่งแก้ ส่งให้คนขับ') + '</button><button class="btn gh" data-fxc="' + c.id + '">ปิดเคส</button>') + ck + '</div>';
   if (c.history && c.history.length) h += '<details class="fx-hs"><summary>ประวัติ ' + c.history.length + ' รายการ</summary>' +
     c.history.map((x) => '<div>' + fxDT(x.at) + ' · ' + (FX_ACT[x.act] || esc(x.act)) + (x.by ? ' · ' + esc(x.by) : '') + (x.note ? ' — ' + esc(x.note) : '') + '</div>').join('') + '</details>';
   return h + '</div>';
