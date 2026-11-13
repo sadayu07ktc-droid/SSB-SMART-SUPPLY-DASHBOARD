@@ -2773,7 +2773,7 @@ function renderHelpers(){
 let WITHJOB=true,IMG='',RCV=null;
 /* เขียว = พร้อมใช้งาน มีคนขับ · เหลือง = พร้อม แต่ไม่มีคนขับ · แดง = ซ่อม · เทา = งดวิ่ง / หางสำรอง */
 const DOT={job:'#16A34A',wait:'#16A34A',nod:'#EAB308',rep:'#DC2626',off:'#9CA3AF',tail:'#9CA3AF'};
-function stTxt(v,k,p){const tt='';return k==='rep'?(p.reason||'ซ่อม')+tt:k==='off'?'งดวิ่ง'+(p.reason?' · '+p.reason:'')+tt:k==='tail'?'หางสำรอง':k==='nod'?'พร้อม · ไม่มีคนขับ':k==='job'?'ออกงาน'+(otOnly(p)?' · '+p.ot:''):'พร้อม · รอมีงาน';}
+function stTxt(v,k,p){const tt='';return k==='rep'?(p.reason||'ซ่อม')+tt:k==='off'?'งดวิ่ง'+(p.reason?' · '+p.reason:'')+tt:k==='tail'?'หางสำรอง':k==='nod'?'พร้อม · ไม่มีคนขับ':k==='job'?'พร้อม · วิ่งงาน'+(otOnly(p)?' · '+p.ot:''):'พร้อม · รอมีงาน';}
 function rrect(x,X,Y,w,h,r){x.beginPath();x.moveTo(X+r,Y);x.arcTo(X+w,Y,X+w,Y+h,r);x.arcTo(X+w,Y+h,X,Y+h,r);x.arcTo(X,Y+h,X,Y,r);x.arcTo(X,Y,X+w,Y,r);x.closePath();}
 function dot(x,cx,cy,r,col,hollow){x.beginPath();x.arc(cx,cy,r+4,0,Math.PI*2);x.fillStyle=col+'2E';x.fill();
   x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);if(hollow){x.lineWidth=3;x.strokeStyle=col;x.stroke();}else{x.fillStyle=col;x.fill();}}
@@ -2793,7 +2793,7 @@ async function drawReport(){
   x.fillStyle='#CFE3D6';x.font=F('500',22);x.fillText(dateTH($('pdate').value),PAD,146);
   /* การ์ดตัวเลข */
   const c=counts(1),ready=c.job+c.wait;
-  const tiles=[['รถทั้งหมด',c.all-c.tail,'#1B4332',null],['พร้อม มีคนขับ',ready,'#16A34A','ออกงาน '+c.job],['ไม่มีคนขับ',c.nod,'#EAB308',null],['ซ่อม',c.rep+c.off,'#DC2626',c.off?'งดวิ่ง '+c.off:null]];
+  const tiles=[['รถทั้งหมด',c.all-c.tail,'#1B4332',null],['พร้อม มีคนขับ',ready,'#16A34A','วิ่งงาน '+c.job],['ไม่มีคนขับ',c.nod,'#EAB308',null],['ซ่อม',c.rep+c.off,'#DC2626',c.off?'งดวิ่ง '+c.off:null]];
   const tw=(W-PAD*2-3*14)/4;
   tiles.forEach(([l,n,col,sub],i)=>{const X=PAD+i*(tw+14),Y=HEAD+20;
     x.fillStyle='#FFFFFF';rrect(x,X,Y,tw,KP-34,16);x.fill();
@@ -2857,7 +2857,7 @@ async function renderReport(){
 
 /* ---------- รายงานสถานะรถ (Excel / PDF / JPEG) · ข้อมูลชุดเดียวกับรูป: รถทุกคันของวันที่เลือก แบ่งตามขนาดล้อ ---------- */
 const RSC=[['ลำดับ',6,'c'],['ทะเบียน',20,'c'],['ยี่ห้อ / รูปทรง',24,'l'],['สถานะ',20,'c'],['สาเหตุ / หมายเหตุ',26,'l'],['คนขับ',22,'l'],['จุดแรก',30,'l'],['เวลาลงสินค้า',10,'c'],['จุดส่ง',9,'c']];
-const RS_ST={job:['พร้อม · ออกงาน','127A2E','E7F5EE'],wait:['พร้อม · รอมีงาน','127A2E','E7F5EE'],nod:['พร้อม · ไม่มีคนขับ','8A5A0B','FEF0D9'],
+const RS_ST={job:['พร้อม · วิ่งงาน','127A2E','E7F5EE'],wait:['พร้อม · รอมีงาน','127A2E','E7F5EE'],nod:['พร้อม · ไม่มีคนขับ','8A5A0B','FEF0D9'],
   rep:['ซ่อม','A32D2D','FCEDED'],tail:['หางสำรอง','5F5E5A','EFEFEF'],off:['งดวิ่ง','5F5E5A','EFEFEF']};
 function rsSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=!isNaN(dt),c=counts(1);
   const groups=['4 ล้อ','6 ล้อ','10/22 ล้อ'].map(g=>({g,rows:VEH.filter(v=>v.g===g&&!v.ext).map((v,i)=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver),S=!v.tail&&k!=='rep'?(p.stops||[]):[];
@@ -2889,7 +2889,7 @@ async function rsXlsx(D){await mxLoad('xlsx');const XL=window.XLSX,N=RSC.length;
     {fill:{fgColor:{rgb:'2D6A4F'}},font:{sz:10,bold:true,color:{rgb:'E9CF6E'}},alignment:{horizontal:'left',indent:1},border:{bottom:{style:'medium',color:{rgb:'C9A227'}}}});RH.push(20);r++;
   RH.push(10);r++;
   /* การ์ดตัวเลข 4 ช่อง ชุดเดียวกับในรูป */
-  const KB=[[0,1,'รถทั้งหมด',D.total,'0" คัน"','1B4332','E3F1E8'],[2,3,'พร้อม มีคนขับ',(c.job+c.wait)+' คัน · ออกงาน '+c.job,null,'127A2E','E7F5EE'],[4,5,'ไม่มีคนขับ',c.nod,'0" คัน"','8A5A0B','FEF0D9'],[6,8,'ซ่อม',c.rep,'0" คัน"','A32D2D','FCEDED']];
+  const KB=[[0,1,'รถทั้งหมด',D.total,'0" คัน"','1B4332','E3F1E8'],[2,3,'พร้อม มีคนขับ',(c.job+c.wait)+' คัน · วิ่งงาน '+c.job,null,'127A2E','E7F5EE'],[4,5,'ไม่มีคนขับ',c.nod,'0" คัน"','8A5A0B','FEF0D9'],[6,8,'ซ่อม',c.rep,'0" คัน"','A32D2D','FCEDED']];
   const kb=(top,bot,col)=>{const o={left:{style:'thick',color:{rgb:col}}};if(top)o.top=thin('FFFFFF');if(bot)o.bottom=thin('FFFFFF');return o;};
   KB.forEach(([a,b,l,,,col,bg])=>band(a,b,l,{fill:{fgColor:{rgb:bg}},font:{sz:10,bold:true,color:{rgb:'5D6E63'}},alignment:{horizontal:'left',indent:1,vertical:'bottom'},border:kb(1,0,col)}));RH.push(20);r++;
   KB.forEach(([a,b,,v,z,col,bg])=>band(a,b,v,{fill:{fgColor:{rgb:bg}},font:{sz:16,bold:true,color:{rgb:col}},alignment:{horizontal:'left',indent:1,vertical:'top'},border:kb(0,1,col)},z));RH.push(30);r++;
@@ -2910,7 +2910,7 @@ async function rsXlsx(D){await mxLoad('xlsx');const XL=window.XLSX,N=RSC.length;
   const tg={fill:{fgColor:{rgb:'E3F1E8'}},font:{bold:true,sz:12,color:{rgb:'1B4332'}},border:{top:{style:'medium',color:{rgb:'2D6A4F'}},bottom:{style:'medium',color:{rgb:'2D6A4F'}}}};
   band(0,N-1,'รวม '+D.total+' คัน'+(c.tail?' (ไม่นับหางสำรอง '+c.tail+')':'')+'   ·   พร้อม มีคนขับ '+(c.job+c.wait)+'   ·   ไม่มีคนขับ '+c.nod+'   ·   ซ่อม '+c.rep+(c.off?'   ·   งดวิ่ง '+c.off:''),Object.assign({},tg,{alignment:{horizontal:'left',indent:1}}));RH.push(28);r++;
   RH.push(10);r++;
-  band(0,N-1,'คำอธิบาย:  พร้อม = มีคนขับ (ออกงาน / รอมีงาน)  ·  พร้อม · ไม่มีคนขับ = รถใช้ได้แต่ยังไม่มีคนขับ  ·  ซ่อม / งดวิ่ง = ดูสาเหตุในช่องถัดไป  ·  หางสำรอง = ไม่นับเป็นรถพร้อมใช้',{font:{sz:10,color:{rgb:'5D6E63'}},alignment:{horizontal:'left',indent:1},border:{}});RH.push(20);r++;
+  band(0,N-1,'คำอธิบาย:  พร้อม = มีคนขับ (วิ่งงาน / รอมีงาน)  ·  พร้อม · ไม่มีคนขับ = รถใช้ได้แต่ยังไม่มีคนขับ  ·  ซ่อม / งดวิ่ง = ดูสาเหตุในช่องถัดไป  ·  หางสำรอง = ไม่นับเป็นรถพร้อมใช้',{font:{sz:10,color:{rgb:'5D6E63'}},alignment:{horizontal:'left',indent:1},border:{}});RH.push(20);r++;
   ws['!ref']=XL.utils.encode_range({s:{r:0,c:0},e:{r:r-1,c:N-1}});ws['!merges']=M;ws['!cols']=RSC.map(h=>({wch:h[1]}));ws['!rows']=RH.map(h=>({hpt:h}));
   ws['!margins']={left:.3,right:.3,top:.4,bottom:.4,header:.2,footer:.2};ws['!pageSetup']={orientation:'landscape',fitToWidth:1,fitToHeight:0,paperSize:9};ws['!printHeader']=[hdr+1,hdr+1];
   const wb=XL.utils.book_new();XL.utils.book_append_sheet(wb,ws,'สถานะรถ');
