@@ -169,6 +169,7 @@ body.printing .legend{font-size:10.5px;margin-top:4px}
 body.printing h3.rp{font-size:12.5px;margin:8px 0 4px}
 body.printing table.rp{font-size:10px} body.printing table.rp th,body.printing table.rp td{padding:2px 5px} body.printing table.rp img{display:none}
 body.printing .foot{margin-top:5px;font-size:10px}
+.ctag{display:inline-block;margin-left:4px;padding:0 8px;border-radius:99px;font-size:11.5px;font-weight:700;text-decoration:none;background:#FEF3C7;color:#92400E}.ctag.c-assigned{background:#FEE2E2;color:#B91C1C}.ctag.c-fixed{background:#DBEAFE;color:#1D4ED8}.ctag.c-closed{background:#DCFCE7;color:#166534}
 </style>
 </head>
 <body>
@@ -282,7 +283,7 @@ function sheetHTML(d, live) {
     '<h3 class="rp">บันทึกแจ้งซ่อม (ดึงจากใบตรวจอัตโนมัติ)</h3>' +
     '<table class="rp"><thead><tr><th>วันที่</th><th>อาการผิดปกติ (คนขับแจ้ง)</th><th>ผู้แจ้ง</th><th>วันที่ทวนสอบ · ผู้ทวนสอบ</th><th>การดำเนินการ</th><th>สถานะรถ</th>' + (live ? '<th class="no-print"></th>' : '') + '</tr></thead><tbody>' +
     (d.repairs.length ? d.repairs.map((r) => '<tr><td class="dt">' + dTxt(r.date) + '</td><td>' +
-      r.items.map((x) => '<div>ข้อ ' + x.no + (x.star ? '<span class="star" style="color:var(--bad)">★</span>' : '') + ' ' + esc(x.name) + ': ' + (x.by === 'verify' ? '<span class="vtag">ผู้ทวนสอบพบ</span> ' : '') + '<span class="parts">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</span>' + (x.note ? ' — ' + esc(x.note) : '') +
+      r.items.map((x) => '<div>ข้อ ' + x.no + (x.star ? '<span class="star" style="color:var(--bad)">★</span>' : '') + ' ' + esc(x.name) + ': ' + (x.by === 'verify' ? '<span class="vtag">ผู้ทวนสอบพบ</span> ' : '') + '<span class="parts">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</span>' + (x.note ? ' — ' + esc(x.note) : '') + (x.case_label ? ' <a class="no-print ctag c-' + esc(x.case_status) + '" href="vehicle-equipment.html?view=fix&id=' + x.case_id + '" title="เปิดเคสแจ้งซ่อม">' + esc(x.case_label) + '</a>' : '') +
         (x.verify_parts && x.verify_parts.length ? ' <span class="vtag">ผู้ทวนสอบเพิ่ม</span> <span class="parts">' + esc(x.verify_parts.join(', ')) + '</span>' + (x.verify_note ? ' — ' + esc(x.verify_note) : '') : '') +
         (x.photo_url ? '<div class="no-print"><img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '"></div>' : '') + '</div>').join('') + '</td>' +
       '<td>' + esc(r.driver_name || '') + '</td><td>' + (r.verified_at ? esc(tTxt(r.verified_at)) + '<br>' + esc(r.verified_by) : '<span style="color:var(--bad);font-weight:700">ยังไม่ทวนสอบ</span>') + '</td>' +
@@ -320,7 +321,7 @@ function openDay(date) {
   $('dT').textContent = SHEET.vehicle.plate_head + ' · ' + dTxt(date);
   const fails = rp ? rp.items.filter((x) => x.by !== 'verify') : [];
   let h = '<div class="row" style="font-size:13px;color:var(--muted)">ผู้ส่ง: <b style="color:var(--ink)">' + esc(dd.driver_name || '') + '</b> · ส่งเมื่อ ' + esc(tTxt(dd.submitted_at)) + (dd.backdated ? ' · <b>บันทึกย้อนหลัง</b>' : '') + '</div>';
-  h += fails.length ? '<div style="font-weight:700;font-size:13px;margin-bottom:4px">คนขับแจ้งผิดปกติ</div>' + fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b><div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
+  h += fails.length ? '<div style="font-weight:700;font-size:13px;margin-bottom:4px">คนขับแจ้งผิดปกติ</div>' + fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b>' + (x.case_label ? ' <a class="no-print ctag c-' + esc(x.case_status) + '" href="vehicle-equipment.html?view=fix&id=' + x.case_id + '" title="เปิดเคสแจ้งซ่อม">' + esc(x.case_label) + '</a>' : '') + '<div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
     (x.note ? '<div>' + esc(x.note) + '</div>' : '') + (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + '</div>').join('')
     : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ คนขับแจ้งผ่านทุกข้อ</div>';
   // รูปทุกรูปที่คนขับถ่ายในใบนี้ (รวมข้อที่ผ่าน เช่น เกจถังดับเพลิง) · กดเปิดรูปเต็ม
@@ -336,7 +337,7 @@ function openDay(date) {
     h += '<hr style="border:0;border-top:1px solid var(--line);margin:14px 0"><div class="row"><label>ผลการทวนสอบ</label><div class="seg">' +
       '<button data-r="ok" class="ok' + (VER.result === 'ok' ? ' on' : '') + '">✅ เรียบร้อย ไม่พบปัญหา</button><button data-r="defect" class="bad' + (VER.result === 'defect' ? ' on' : '') + '">⚠️ พบข้อบกพร่อง</button></div></div>' +
       '<div class="row" id="vDefW"' + (VER.result === 'defect' ? '' : ' style="display:none"') + '><label>ข้อที่ผู้ทวนสอบพบ</label><div id="vDef">' + defHTML() + '</div></div>' +
-      '<div class="row"><label>การดำเนินการ / สั่งซ่อม</label><textarea id="vAct" placeholder="เช่น ส่งซ่อมเบรกมือที่อู่… / เปลี่ยนหลอดไฟแล้ว">' + esc(rp && rp.verify_action || '') + '</textarea></div>' +
+      '<div class="row"><label>การดำเนินการ / สั่งซ่อม</label><div style="font-size:12px;color:var(--muted);margin:-2px 0 4px">📲 พบข้อบกพร่อง + ใส่ช่องนี้ = สั่งแก้ ส่ง LINE ให้คนขับ · คนขับแก้แล้วถ่ายรูปส่ง → ตรวจปิดเคสที่ <a href="vehicle-equipment.html?view=fix">🔧 แจ้งซ่อม</a></div><textarea id="vAct" placeholder="เช่น ส่งซ่อมเบรกมือที่อู่… / เปลี่ยนหลอดไฟแล้ว">' + esc(rp && rp.verify_action || '') + '</textarea></div>' +
       '<div class="row"><label>สถานะรถ</label><select id="vState"><option value="">—</option>' + SHEET.states.map((s) => '<option' + ((rp && rp.vehicle_state) === s ? ' selected' : '') + '>' + esc(s) + '</option>').join('') + '</select></div>' +
       '<div class="row"><label>ชื่อผู้ทวนสอบ</label><input id="vName" placeholder="ว่าง = ชื่อบัญชีที่เข้าระบบ" value="' + esc(dd.verified_by || '') + '"></div>' +
       (dd.verified_by ? '<div class="row" style="font-size:12.5px;color:var(--muted)">ทวนสอบแล้วโดย ' + esc(dd.verified_by) + ' · ' + esc(tTxt(dd.verified_at)) + '</div>' : '') +
@@ -352,7 +353,7 @@ async function saveVerify() {
     const defects = VER.result === 'defect' ? Object.keys(VER.def).map((code) => ({ code, parts: [...VER.def[code].parts], note: (VER.def[code].note || '').trim() })) : [];
     const r = await api({ action: 'verifyCheck', checkId: VER.day.check_id, result: VER.result, defects, verifyAction: $('vAct').value.trim(), vehicleState: $('vState').value, verifierName: $('vName').value.trim() }, true);
     if (!r.ok) { toast(r.error || 'บันทึกไม่สำเร็จ'); return; }
-    toast('บันทึกการทวนสอบแล้ว'); closeDrw(); await openVeh(CUR); loadList();
+    toast('บันทึกการทวนสอบแล้ว' + (r.repairs_assigned ? ' · สั่งแก้ ' + r.repairs_assigned + ' ข้อ' + (r.notified ? ' ส่ง LINE ' + r.notified + ' คน' : '') : '')); closeDrw(); await openVeh(CUR); loadList();
   } catch (e) { toast('เน็ตหลุด ลองใหม่'); }
   finally { b.disabled = false; b.textContent = '💾 บันทึกการทวนสอบ'; }
 }
