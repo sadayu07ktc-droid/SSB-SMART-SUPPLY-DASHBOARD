@@ -138,6 +138,13 @@ a.lk{color:var(--green2);font-weight:600}
 .rq-n{flex:1;min-width:0}.rq-n .sm{font-size:12px;color:var(--muted)}
 .rq-st{display:flex;align-items:center;gap:6px}.rq .af-b{width:44px;height:44px;font-size:24px}.rq .af-num{min-width:40px;font-size:22px}
 .rq-note{width:100%;max-width:340px;margin-top:4px;border:1px solid var(--line);border-radius:8px;padding:5px 9px;font-size:13px}
+/* 📊 Excel รถทั้งหมด */
+.xa-c{display:flex;gap:8px;align-items:center;flex-wrap:wrap;border-left:4px solid #1d6f42}.xa-t{flex:1;min-width:200px}
+.xa-k{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.xa-k span{background:var(--sunken);border-radius:999px;padding:3px 10px;font-size:12.5px}
+.xa-k .ok{background:var(--oktint);color:var(--ok)}.xa-k .bl{background:#e6f1fb;color:#185fa5}.xa-k .bad{background:var(--badtint);color:var(--bad)}
+.xa-s{margin:10px 0;font-size:13px}.xa-s ul{margin:4px 0;padding-left:18px;max-height:260px;overflow:auto}.xa-s li{margin:2px 0}
+.xa-s.ok>b{color:var(--ok)}.xa-s.bl>b{color:#185fa5}.xa-s.bad>b{color:var(--bad)}.xa-s summary{cursor:pointer;font-weight:700}
+.xa-up{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:10px;background:var(--goldtint);font-size:13px}.xa-up span{flex:1}
 /* 📊 ปุ่มรายงาน + popup 3 ขั้น */
 .rbtn{display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.35);background:rgba(201,162,39,.18);color:#fff;border-radius:10px;padding:6px 12px;cursor:pointer;font-weight:700}
 .rbtn:hover{background:rgba(201,162,39,.32)} .rbtn svg{color:var(--gold)}
@@ -604,6 +611,7 @@ const RIC = {   // ไอคอนลายเส้น (stroke = currentColor)
   truck: '<path d="M2 6h11v10H2zM13 9h4l3 3v4h-7"/><circle cx="6" cy="17.5" r="1.8"/><circle cx="17" cy="17.5" r="1.8"/>',
   swap: '<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
   search: '<circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/><path d="M9 11l1.5 1.5L13.5 9"/>',
+  grid: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14h18M9 4v16"/>',
   report: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9 17v-3M12 17v-6M15 17v-4"/>',
 };
 const rIco = (k, sz, sw) => '<svg width="' + (sz || 18) + '" height="' + (sz || 18) + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="' + (sw || 1.9) + '" stroke-linecap="round" stroke-linejoin="round">' + RIC[k] + '</svg>';
@@ -611,13 +619,14 @@ const RKINDS = [
   { k: 'sum', ic: 'box', clr: '#2D6A4F', t: 'สรุปอุปกรณ์ทั้งกลุ่ม', d: 'ต้องมี / เบิกไปแล้ว / ขาด / ชำรุด / หาย ต่ออุปกรณ์', grp: true },
   { k: 'hold', ic: 'truck', clr: '#1d4ed8', t: 'อุปกรณ์ที่ถือ รายคัน', d: 'ของคันที่เปิดอยู่ · ขาด-เกิน · เลขเครื่อง · อายุใช้งาน', veh: true },
   { k: 'mv', ic: 'swap', clr: '#B45309', t: 'ประวัติเบิก-คืน รายคัน', d: 'ของคันที่เปิดอยู่ · ล่าสุดก่อน', veh: true },
+  { k: 'all', ic: 'grid', clr: '#6D28D9', t: 'รถทั้งหมด: ที่เบิกมี + ที่ต้องเช็ค', d: 'ทุกคัน · ต้องมี/ถือ/ขาด · ข้อเช็ครายวัน + FM-TR-16 · Excel แก้แล้วอัปโหลดกลับได้', grp: true },
   { k: 'fm16', ic: 'search', clr: '#B91C1C', t: 'FM-TR-16 รายเดือน + สุ่มตรวจ', d: 'คนขับส่งรายเดือนหรือยัง · ผลสุ่มตรวจตรง/ไม่ตรง', grp: true, month: true },
 ];
 let RS = { kind: '', grp: '', month: '' };
 const ymAdd = (ym, n) => { const d = new Date(Date.UTC(+ym.slice(0, 4), +ym.slice(5, 7) - 1 + n, 1)); return d.toISOString().slice(0, 7); };
 const mShort = (ym) => TH_MS[+ym.slice(5, 7) - 1] + ' ' + String(+ym.slice(0, 4) + 543).slice(2);
 function openReport() {
-  const def = VIEW === 'sum' ? 'sum' : VIEW === 'aud' ? 'fm16' : V ? 'hold' : 'sum';
+  const def = VIEW === 'veh' && VTAB === 'set' ? 'all' : VIEW === 'sum' ? 'sum' : VIEW === 'aud' ? 'fm16' : V ? 'hold' : 'sum';
   RS = { kind: RS.kind && (RS.kind !== 'hold' && RS.kind !== 'mv' || V) ? RS.kind : def, grp: GRP, month: bkk().slice(0, 7) };
   if (VIEW !== 'veh' || !V) { if (RS.kind === 'hold' || RS.kind === 'mv') RS.kind = def; } else if (RS.kind === 'sum' || RS.kind === 'fm16') RS.kind = def;
   drawReport(); $('rpm').classList.add('open');
@@ -635,7 +644,8 @@ function drawReport() {
     '<div class="rpl">2 · เลือกขอบเขต</div>' + scope +
     '<div class="rpl">3 · เลือกรูปแบบไฟล์</div><div class="rpf">' +
     [['xlsx', 'XLS', '#1d6f42', '#e3f1e8', 'Excel', 'กรอง/เรียงต่อได้'], ['pdf', 'PDF', '#b91c1c', '#fdeaea', 'PDF', 'A4 พร้อมพิมพ์'], ['jpg', 'JPG', '#0f766e', '#e6f4f1', 'JPEG', 'ภาพเดียว ส่งไลน์']]
-      .map(([k, ic, c, bg, t, d]) => '<button data-rf="' + k + '"><span style="background:' + bg + ';color:' + c + '">' + ic + '</span><b>' + t + '</b><small>' + d + '</small></button>').join('') + '</div>';
+      .map(([k, ic, c, bg, t, d]) => '<button data-rf="' + k + '"><span style="background:' + bg + ';color:' + c + '">' + ic + '</span><b>' + t + '</b><small>' + (RS.kind === 'all' && k === 'xlsx' ? 'แก้แล้วอัปโหลดกลับได้' : d) + '</small></button>').join('') + '</div>' +
+    (RS.kind === 'all' && canEdit() ? '<div class="xa-up"><span>แก้ไฟล์ Excel แล้ว?</span><button class="btn gh" id="xaUp2">⬆ อัปโหลดไฟล์ที่แก้แล้ว</button></div>' : '');
 }
 function rScopeTxt() {
   const K = RKINDS.find((x) => x.k === RS.kind);
@@ -687,6 +697,15 @@ async function rSpec() {
         m.reverses_id ? 'กลับรายการ' : rev.has(Number(m.id)) ? 'ถูกกลับแล้ว' : '']),
       st: { 1: MVST, 6: { 'กลับรายการ': ['#5f5e5a', '#efefef'], 'ถูกกลับแล้ว': ['#5f5e5a', '#efefef'] } }, note: 'จำนวน: เบิก = + · คืน/สูญหาย = − · เปลี่ยน/ชำรุด = จำนวนชิ้นที่เกี่ยว (ไม่เปลี่ยนยอด)' };
   }
+  if (K === 'all') {
+    const d = await xaData(RS.grp), { sum } = xaCalc(d), sh = sum.filter((r) => r[6] > 0).length, no = sum.filter((r) => !r[4]).length;
+    return { title: 'อุปกรณ์ติดรถ รถทั้งหมด', file: 'อุปกรณ์ติดรถ_รถทั้งหมด_' + gtxt, sub: gtxt + ' · ' + sum.length + ' คัน · ณ ' + dTxt(made),
+      kpis: [['รถทั้งหมด', sum.length + ' คัน', RT.mid], ['ตั้งชุดแล้ว', (sum.length - no) + ' คัน', '#15803D'], ['มีของขาด', sh + ' คัน', sh ? '#B91C1C' : '#15803D'], ['ยังไม่ตั้งชุด', no + ' คัน', no ? '#B45309' : '#15803D']],
+      cols: [{ h: 'ทะเบียน', w: 120, x: 15 }, { h: 'กลุ่ม', w: 64, x: 8 }, { h: 'ชนิดรถ', w: 90, x: 12 }, { h: 'คนขับ', w: 0, x: 18 }, { h: 'ต้องมี', w: 60, a: 'right', x: 9 }, { h: 'ถือ', w: 54, a: 'right', x: 9 },
+        { h: 'ขาด', w: 54, a: 'right', x: 9 }, { h: 'เกิน', w: 54, a: 'right', x: 9 }, { h: 'เช็ครายวัน', w: 78, a: 'right', x: 10 }, { h: 'FM-TR-16', w: 70, a: 'right', x: 10 }, { h: 'ชุดรายวันจาก', w: 96, x: 13 }, { h: 'สถานะ', w: 110, a: 'center', x: 15 }],
+      rows: sum, st: { 11: Object.assign({ 'ครบ': ['#127a2e', '#e7f5ee'], 'ยังไม่ตั้งชุด': ['#8a5a0b', '#fef0d9'] }, Object.fromEntries(sum.filter((r) => r[6] > 0).map((r) => [r[11], ['#a32d2d', '#fceded']]))) },
+      note: 'หน่วย = จำนวนรายการ · ถือ = ของเบิกที่คันนี้ถืออยู่ · รายละเอียดทีละชิ้นอยู่ในไฟล์ Excel แผ่น "รายละเอียด"' };
+  }
   // fm16
   let s = AUD && AUD.fm && AUD.fm.month === RS.month && (AUD.fmGrp || '') === RS.grp ? AUD.fm : null;
   if (!s) { s = await api({ action: 'fm16Sheet', group: RS.grp, month: RS.month }); if (!s.ok) throw new Error(s.error || 'โหลด FM-TR-16 ไม่ได้'); }
@@ -707,6 +726,7 @@ const rName = (spec, ext) => spec.file.replace(/[\\/:*?"<>|\s]+/g, '_') + '_' + 
 async function reportGo(kind, b) {
   const h = b.innerHTML; b.disabled = true; b.innerHTML = '<span>…</span><b>กำลังสร้าง</b><small>รอสักครู่</small>';
   try {
+    if (kind === 'xlsx' && RS.kind === 'all') { await xaDownload(RS.grp); $('rpm').classList.remove('open'); return; }
     const spec = await rSpec();
     if (!spec.rows.length) { toast('ไม่มีข้อมูลในขอบเขตที่เลือก', true); return; }
     if (kind === 'xlsx') await rXlsx(spec); else await rImage(spec, kind);
@@ -813,6 +833,7 @@ $('rpm').addEventListener('click', (e) => {
   if (c('[data-rk]')) { if (!c('[data-rk]').disabled) { RS.kind = c('[data-rk]').dataset.rk; drawReport(); } return; }
   if (c('[data-rg]')) { RS.grp = c('[data-rg]').dataset.rg; drawReport(); return; }
   if (c('[data-rm]')) { RS.month = c('[data-rm]').dataset.rm; drawReport(); return; }
+  if (c('#xaUp2')) { $('rpm').classList.remove('open'); xaPick(); return; }
   if (c('[data-rf]')) reportGo(c('[data-rf]').dataset.rf, c('[data-rf]'));
 });
 
@@ -857,7 +878,7 @@ function renderSet() {
   const show = (RQ.all || !req.length ? its : its.filter((i) => (RQ.q[i.code] || 0) > 0 || rqChanged(i.code)))
     .sort((a, b) => String(a.category || '').localeCompare(String(b.category || ''), 'th') || String(a.name).localeCompare(String(b.name), 'th'));
   let cat = null; const list = show.map((i) => { const h = i.category !== cat ? '<div class="rq-cat">' + esc(i.category || 'อื่นๆ') + '</div>' : ''; cat = i.category; return h + rqRow(i, ed); }).join('');
-  $('vbody').innerHTML = '<div class="card"><h3 style="margin:0 0 4px;font-size:15px">⚙️ ชุดที่คันนี้ต้องมี · ' + req.length + ' รายการ</h3>' +
+  $('vbody').innerHTML = xaCard() + '<div class="card"><h3 style="margin:0 0 4px;font-size:15px">⚙️ ชุดที่คันนี้ต้องมี · ' + req.length + ' รายการ</h3>' +
     '<div class="note">ใช้คิด ขาด/ครบ ในแท็บอุปกรณ์ที่ถือ · จำนวนที่ควรมีในใบ FM-TR-16 · เช็คก่อนออกรถ (ถ้ากลุ่มไม่ได้ตั้งชุดรายวันไว้) · ตั้งเป็น 0 = ไม่ต้องมี</div>' +
     (tn ? '<div class="rq-tpl"><span>📋 ชุดมาตรฐาน ' + esc(d.vehicle.job_group) + (d.vehicle.tpl_kind ? ' · ' + esc(d.vehicle.tpl_kind) : '') + ' มี <b>' + tn + '</b> รายการ</span>' +
       (ed ? '<button class="btn gh sm" id="rqFill" title="เพิ่มเฉพาะรายการที่คันนี้ยังไม่มี">＋ เติมที่ขาดจากมาตรฐาน</button><button class="btn gh sm" id="rqTpl" title="ให้เหมือนชุดมาตรฐานทุกข้อ">↺ ให้ตรงมาตรฐานทั้งชุด</button>' : '') + '</div>'
@@ -905,7 +926,180 @@ function rqTap(t) {
   if (c('#rqTpl')) { if (confirm('ให้ชุดของคันนี้เหมือนชุดมาตรฐานทุกข้อ? (รายการที่ไม่อยู่ในมาตรฐานจะถูกตั้งเป็น 0) — ยังไม่บันทึกจนกว่าจะกด 💾')) rqApplyTpl(true); return true; }
   if (c('#rqUndo')) { RQ.q = Object.assign({}, RQ.orig); RQ.note = Object.assign({}, RQ.onote); renderSet(); return true; }
   if (c('#rqSave')) { rqSaveAsk(); return true; }
+  if (c('#xaDl')) { xaDownload(GRP, c('#xaDl')); return true; }
+  if (c('#xaUp')) { xaPick(); return true; }
   return false;
+}
+
+// ── 📊 Excel รถทั้งหมด: ที่เบิกมี + ชุดที่ต้องมี + ข้อที่ต้องเช็ค · ดาวน์โหลด (exportExcel template) → แก้ → อัปโหลด (importExcel preview → PIN → apply) ──
+//   แผ่นแก้ได้ 2 แผ่น: ชุดที่ต้องมี (_sheet=required) · ยอดถือ (_sheet=opening → ระบบลง "ปรับยอด" ส่วนต่าง) · ช่องว่าง = คงเดิม · ลบแถว ≠ ลบในระบบ
+let XA = null, XA_BUSY = false;
+const XA_SH = { required: 'ชุดที่ต้องมี', opening: 'ยอดถือ' };
+const XA_MODE = { count: 'นับจำนวน', pass_fail: 'ปกติ/ไม่ปกติ', score: 'ให้คะแนน 1–10', gauge: 'ดูเกจ', status: 'สถานะ', installed: 'ติดตั้งอยู่' };
+const XA_META = [['id', 'id (ห้ามแก้)', 7], ['plate', 'ทะเบียน', 15], ['job_group', 'กลุ่ม', 8], ['tpl_kind', 'ชนิดรถ', 12], ['driver_name', 'คนขับ', 16]];
+async function xaData(grp) {
+  if (XA && XA.grp === grp && Date.now() - XA.t < 120000) return XA.d;
+  const d = await api({ action: 'exportExcel', kind: 'template', group: grp });
+  if (!d.ok) throw new Error(d.error || 'โหลดข้อมูลไม่ได้');
+  XA = { grp, d, t: Date.now() }; return d;
+}
+// คิดสรุปรายคัน + แถวรายละเอียด จากข้อมูลชุดเดียว (ไม่ยิงซ้ำ)
+function xaCalc(d) {
+  const cols = d.columns || [], oh = {}, num = (x) => (x === '' || x == null ? 0 : Number(x) || 0);
+  (d.sheets.opening || []).forEach((r) => (oh[r.id] = r));
+  const sum = [], det = [];
+  (d.sheets.required || []).slice().sort((a, b) => String(a.job_group).localeCompare(String(b.job_group), 'th') || String(a.plate).localeCompare(String(b.plate), 'th')).forEach((r) => {
+    const h = oh[r.id] || {}, ck = (d.checks || {})[r.id] || { daily: [], monthly: [] }, dS = new Set(ck.daily || []), mS = new Set(ck.monthly || []);
+    let need = 0, short = 0, over = 0, held = 0, dN = 0, mN = 0;
+    cols.forEach((c) => {
+      const q = num(r[c.code]), hv = c.in_ledger ? num(h[c.code]) : null, inD = dS.has(c.code), inM = mS.has(c.code);
+      if (!q && !hv && !inD && !inM) return;
+      if (q) need++; if (hv) held++; if (inD) dN++; if (inM) mN++;
+      const df = c.in_ledger && q ? hv - q : null;
+      if (df != null && df < 0) short++; if (df != null && df > 0) over++;
+      const st = !c.in_ledger ? (q ? 'เช็คอย่างเดียว' : '') : !q ? (hv ? 'ไม่บังคับ' : '') : df < 0 ? 'ขาด' : df > 0 ? 'เกิน' : 'ครบ';
+      det.push([r.plate, r.job_group, r.driver_name, c.category || '', c.code, c.name, c.unit || '', q || '', hv == null ? '–' : hv, df == null ? '' : df, st,
+        inD ? '✓' : '', inM ? (c.fm16_no != null ? 'ข้อ ' + c.fm16_no : '✓') : '', XA_MODE[c.check_mode] || c.check_mode || '']);
+    });
+    sum.push([r.plate, r.job_group, r.tpl_kind, r.driver_name, need, held, short, over, dN, mN, ck.daily_src === 'daily_set' ? 'ชุดของกลุ่ม' : 'ชุดของคัน',
+      !need ? 'ยังไม่ตั้งชุด' : short ? 'ขาด ' + short + ' รายการ' : 'ครบ']);
+  });
+  return { sum, det };
+}
+const XA_ST = { 'ครบ': ['#127a2e', '#e7f5ee'], 'ขาด': ['#a32d2d', '#fceded'], 'เกิน': ['#185fa5', '#e6f1fb'], 'ไม่บังคับ': ['#5f5e5a', '#efefef'], 'เช็คอย่างเดียว': ['#5f5e5a', '#efefef'], 'ยังไม่ตั้งชุด': ['#8a5a0b', '#fef0d9'] };
+async function xaDownload(grp, btn) {
+  if (XA_BUSY) return; XA_BUSY = true; const h = btn ? btn.innerHTML : ''; if (btn) { btn.disabled = true; btn.innerHTML = '⏳ กำลังสร้าง…'; }
+  try {
+    const [d] = await Promise.all([xaData(grp), rLoad('xlsx')]);
+    if (!(d.sheets.required || []).length) { toast('ไม่มีรถในกลุ่มนี้', true); return; }
+    const X = window.XLSX, cols = (d.columns || []).filter((c) => c.in_ledger).concat((d.columns || []).filter((c) => !c.in_ledger)), led =cols.filter((c) => c.in_ledger), { sum, det } = xaCalc(d), gtxt = grp || 'ทุกกลุ่ม';
+    const LN = 'BFBFBF', bd = { top: { style: 'thin', color: { rgb: LN } }, bottom: { style: 'thin', color: { rgb: LN } }, left: { style: 'thin', color: { rgb: LN } }, right: { style: 'thin', color: { rgb: LN } } };
+    const F = (o) => Object.assign({ name: 'Tahoma', sz: 10, color: { rgb: '1F1F1F' } }, o || {});
+    const S = { th: { font: F({ bold: true, color: { rgb: 'FFFFFF' } }), fill: { fgColor: { rgb: '1F3864' } }, border: bd, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } },
+      key: { font: F({ sz: 8, color: { rgb: '808080' } }), fill: { fgColor: { rgb: 'F2F2F2' } }, border: bd, alignment: { horizontal: 'center' } },
+      idh: { font: F({ bold: true, color: { rgb: '595959' } }), fill: { fgColor: { rgb: 'D9D9D9' } }, border: bd, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } },
+      ro: { font: F({ color: { rgb: '595959' } }), fill: { fgColor: { rgb: 'EDEDED' } }, border: bd },
+      ed: { font: F(), border: bd, alignment: { horizontal: 'center' } }, td: { font: F(), border: bd, alignment: { vertical: 'top' } } };
+    const hex = (x) => String(x).replace('#', '').toUpperCase();
+    const cs = (v, s) => ({ v: v == null ? '' : String(v), t: 's', s });
+    const cn = (v, s) => (typeof v === 'number' ? { v, t: 'n', s, z: '#,##0.##' } : cs(v, s));
+    const put = (aoa, widths, opt) => {
+      const ws = {}; let w = 0;
+      aoa.forEach((row, r) => { w = Math.max(w, row.length); row.forEach((cell, c) => { if (cell) ws[X.utils.encode_cell({ r, c })] = cell; }); });
+      ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: Math.max(aoa.length - 1, 0), c: Math.max(w - 1, 0) } });
+      ws['!cols'] = widths.map((x) => ({ wch: x })); ws['!rows'] = (opt && opt.rows) || [{ hpt: 36 }];
+      if (opt && opt.filter) ws['!autofilter'] = { ref: X.utils.encode_range({ s: { r: opt.filter, c: 0 }, e: { r: aoa.length - 1, c: w - 1 } }) };
+      return ws;
+    };
+    const rpt = (head, rows, widths, stCol) => put([head.map((x) => cs(x, S.th)), ...rows.map((r, i) => r.map((v, c) => {
+      let s = Object.assign({}, S.td, i % 2 ? { fill: { fgColor: { rgb: 'F6F8FB' } } } : {}); const m = stCol != null && c === stCol && (XA_ST[v] || XA_ST[String(v).split(' ')[0]]);
+      if (m) s = Object.assign({}, s, { font: F({ bold: true, color: { rgb: hex(m[0]) } }), fill: { fgColor: { rgb: hex(m[1]) } } }); return cn(v, s); }))], widths, { filter: rows.length ? 0 : null });
+    // แผ่นแก้ได้: แถว 1 หัวไทย · แถว 2 คีย์ (ห้ามแก้) · id เทา · ข้อมูลคนขับ/กลุ่ม = อ่านอย่างเดียว · ทุกช่องเป็นข้อความ
+    const edit = (rows, ic) => put([
+      [...XA_META.map(([k, t]) => cs(k === 'id' || k === 'plate' ? t : t + ' (อ่านอย่างเดียว)', S.idh)), ...ic.map((c) => cs(c.name + (c.unit ? ' (' + c.unit + ')' : ''), S.th))],
+      [...XA_META.map(([k]) => cs(k, S.key)), ...ic.map((c) => cs(c.code, S.key))],
+      ...rows.map((r) => [...XA_META.map(([k]) => cs(r[k], S.ro)), ...ic.map((c) => cs(r[c.code], S.ed))]),
+    ], [...XA_META.map((m) => m[2]), ...ic.map(() => 11)], { rows: [{ hpt: 48 }, { hpt: 14 }] });
+    const sortR = (a) => a.slice().sort((x, y) => String(x.job_group).localeCompare(String(y.job_group), 'th') || String(x.plate).localeCompare(String(y.plate), 'th'));
+    const help = put([
+      [cs('วิธีใช้ไฟล์นี้ — อุปกรณ์ติดรถ ' + gtxt + ' (ดาวน์โหลด ' + rMade() + ')', S.th), cs('', S.th)],
+      ...[['1', 'แผ่น "สรุปรายคัน" และ "รายละเอียด" = รายงานอ่านอย่างเดียว (อัปโหลดกลับแล้วไม่อ่าน)'],
+        ['2', 'แก้ได้ 2 แผ่น: "ชุดที่ต้องมี" (คันนี้ต้องมีกี่ชิ้น) และ "ยอดถือ" (นับได้จริงตอนนี้)'],
+        ['3', 'ช่องว่าง = คงค่าเดิม · ใส่ 0 ในชุดที่ต้องมี = ไม่ต้องมี · ลบทั้งแถว ≠ ลบรถออกจากระบบ'],
+        ['4', 'ห้ามแก้คอลัมน์ id และแถวที่ 2 (รหัสภาษาอังกฤษ) — ใช้จับคู่ตอนอัปโหลด · ห้ามกด Format as Table'],
+        ['5', 'อัปโหลดที่ปุ่ม ⬆ อัปโหลด → ระบบตรวจและสรุป เพิ่ม/แก้/ผิด ให้ดูก่อน → ใส่ PIN 6 หลัก → ยืนยัน'],
+        ['', ''], ['แผ่น', 'ค่าที่ใช้ได้'],
+        ['ชุดที่ต้องมี', 'ตัวเลข 0–10,000 (ทศนิยมไม่เกิน 2) · มีผลกับ ขาด/ครบ · จำนวนที่ควรมีในใบ FM-TR-16 · เช็คก่อนออกรถ (ถ้ากลุ่มไม่ได้ตั้งชุดรายวัน)'],
+        ['ยอดถือ', 'เฉพาะของเบิก · ใส่จำนวนที่นับได้จริง ระบบลงรายการ "ปรับยอด" ส่วนต่างในสมุดเบิก-คืน (เอกสาร XLSX-วันที่) ย้อนดูได้ในแท็บเบิก/คืน'],
+        ['รายละเอียด', 'เช็ครายวัน ✓ = อยู่ในเช็คลิสต์ก่อนออกรถ · FM-TR-16 = ข้อในใบตรวจรายเดือน · ถือ "–" = ไม่ใช่ของเบิก (เช็คอย่างเดียว)'],
+        ['', ''], ['', 'ดาวน์โหลดใหม่ทุกครั้งก่อนแก้ — ไฟล์เก่าอาจทับยอดที่คนอื่นเพิ่งแก้']].map(([a, b]) => [cs(a, S.td), cs(b, S.td)]),
+    ], [14, 110], { rows: [{ hpt: 24 }] });
+    const wb = X.utils.book_new();
+    X.utils.book_append_sheet(wb, rpt(['ทะเบียน', 'กลุ่ม', 'ชนิดรถ', 'คนขับ', 'ต้องมี (รายการ)', 'ของเบิกที่ถือ (รายการ)', 'ขาด (รายการ)', 'เกิน (รายการ)', 'เช็ครายวัน (ข้อ)', 'FM-TR-16 (ข้อ)', 'ชุดเช็ครายวันจาก', 'สถานะ'],
+      sum, [15, 8, 12, 18, 10, 12, 10, 10, 10, 10, 13, 16], 11), 'สรุปรายคัน');
+    X.utils.book_append_sheet(wb, rpt(['ทะเบียน', 'กลุ่ม', 'คนขับ', 'หมวด', 'รหัส', 'อุปกรณ์', 'หน่วย', 'ต้องมี', 'ถือ (เบิกมี)', 'ขาด(−) / เกิน(+)', 'สถานะ', 'เช็ครายวัน', 'FM-TR-16', 'วิธีเช็ค'],
+      det, [15, 8, 16, 14, 12, 26, 7, 8, 9, 10, 13, 9, 9, 13], 10), 'รายละเอียด');
+    X.utils.book_append_sheet(wb, edit(sortR(d.sheets.required || []), cols), XA_SH.required);
+    X.utils.book_append_sheet(wb, edit(sortR(d.sheets.opening || []), led), XA_SH.opening);
+    X.utils.book_append_sheet(wb, help, 'วิธีใช้');
+    const name = ('อุปกรณ์ติดรถ_รถทั้งหมด_' + gtxt).replace(/[\\/:*?"<>|\s]+/g, '_') + '_' + bkk().replace(/-/g, '') + '.xlsx';
+    rSave(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/octet-stream' }), name);
+  } catch (e) { toast('สร้างไฟล์ไม่สำเร็จ: ' + (e.message || e), true); }
+  finally { XA_BUSY = false; if (btn) { btn.disabled = false; btn.innerHTML = h; } }
+}
+// อ่านไฟล์: หาแผ่นจากชื่อ (ไทย/อังกฤษ) · หาแถวคีย์ที่มี id + plate · แถวถัดไป = ข้อมูล (_line = เลขแถวใน Excel)
+function xaPick() {
+  if (!canEdit()) { toast('สิทธิ์ดูอย่างเดียว อัปโหลดไม่ได้', true); return; }
+  let f = $('xaFile');
+  if (!f) { f = document.createElement('input'); f.type = 'file'; f.id = 'xaFile'; f.accept = '.xlsx,.xls'; f.style.display = 'none'; document.body.appendChild(f); f.onchange = () => { const x = f.files[0]; f.value = ''; if (x) xaUpload(x); }; }
+  f.click();
+}
+async function xaRead(file) {
+  await rLoad('xlsx');
+  const X = window.XLSX, wb = X.read(await file.arrayBuffer(), { type: 'array', cellDates: true }), rows = [], seen = [];
+  wb.SheetNames.forEach((sn) => {
+    const nm = String(sn).trim(), sheet = nm === XA_SH.required || /^required$/i.test(nm) ? 'required' : nm === XA_SH.opening || /^opening$/i.test(nm) ? 'opening' : '';
+    if (!sheet) return;
+    const aoa = X.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: '' });
+    const kr = aoa.slice(0, 6).findIndex((r) => r.some((x) => String(x).trim() === 'id') && r.some((x) => String(x).trim() === 'plate'));
+    if (kr < 0) throw new Error('แผ่น "' + nm + '" ไม่พบแถวรหัส (แถวที่ 2 มี id, plate) — ห้ามแก้/ลบแถวที่ 2 · ดาวน์โหลดไฟล์ใหม่จากหน้านี้');
+    const keys = aoa[kr].map((x) => String(x).trim()); seen.push(sheet);
+    aoa.slice(kr + 1).forEach((r, i) => {
+      const o = { _sheet: sheet, _line: kr + 2 + i }; let any = false;
+      keys.forEach((k, c) => { if (!k) return; let v = r[c] instanceof Date ? r[c].toISOString().slice(0, 10) : String(r[c] == null ? '' : r[c]).trim().replace(/^'/, ''); o[k] = v; if (v && XA_META.every((m) => m[0] !== k)) any = true; });
+      if (any) rows.push(o);
+    });
+  });
+  if (!seen.length) throw new Error('ไม่พบแผ่น "' + XA_SH.required + '" หรือ "' + XA_SH.opening + '" — ใช้ไฟล์ที่ดาวน์โหลดจากปุ่ม Excel รถทั้งหมด');
+  return rows;
+}
+const xaGroupOf = (rows) => { const g = [...new Set(rows.map((r) => r.job_group).filter(Boolean))]; return g.length === 1 && ME && ME.groups.indexOf(g[0]) >= 0 ? g[0] : ''; };
+async function xaUpload(file) {
+  if (XA_BUSY) return; XA_BUSY = true; toast('กำลังตรวจไฟล์ ' + file.name + ' …');
+  let rows, r;
+  try {
+    rows = await xaRead(file);
+    if (!rows.length) { toast('ไฟล์ไม่มีตัวเลขที่ต้องนำเข้า (ช่องว่าง = คงเดิม)', true); return; }
+    if (rows.length > 1000) { toast('ไฟล์ใหญ่เกิน 1,000 แถว — แบ่งไฟล์ตามกลุ่ม', true); return; }
+    r = await api({ action: 'importExcel', rows, group: xaGroupOf(rows) }, true);
+  } catch (e) { toast('อ่านไฟล์ไม่ได้: ' + (e.message || e), true); return; }
+  finally { XA_BUSY = false; }
+  if (!r.ok) { toast(r.error || 'ตรวจไฟล์ไม่สำเร็จ', true); return; }
+  xaPreview(file.name, rows, r);
+}
+function xaPreview(fname, rows, p) {
+  const nAdd = p.add.length, nChg = p.change.length, nErr = p.errors.length, n = nAdd + nChg, cap = 150;
+  const sh = (x) => '<span class="b gr">' + (x.sheet === 'opening' ? 'ยอดถือ' : 'ต้องมี') + '</span> ';
+  const li = (a, f) => a.slice(0, cap).map(f).join('') + (a.length > cap ? '<li class="note">… อีก ' + nf(a.length - cap) + ' รายการ</li>' : '');
+  const sec = (cls, t, cnt, body) => cnt ? '<div class="xa-s ' + cls + '"><b>' + t + ' ' + nf(cnt) + '</b><ul>' + body + '</ul></div>' : '';
+  const mv = p.add.concat(p.change).filter((x) => x.sheet === 'opening').length;
+  $('dT').textContent = '📤 ตรวจไฟล์ก่อนนำเข้า';
+  $('dB').innerHTML = '<div class="note">' + esc(fname) + ' · ' + nf(rows.length) + ' แถว</div>' +
+    '<div class="xa-k"><span class="ok">เพิ่ม <b>' + nf(nAdd) + '</b></span><span class="bl">แก้ <b>' + nf(nChg) + '</b></span><span class="bad">ผิด <b>' + nf(nErr) + '</b></span><span>ไม่เปลี่ยน <b>' + nf(p.same) + '</b></span><span>ไม่อยู่ในไฟล์ <b>' + nf(p.missing.length) + '</b></span></div>' +
+    (p.warnings || []).map((w) => '<div class="err" style="background:var(--warntint);color:#7A5A12">⚠️ ' + esc(w) + '</div>').join('') +
+    sec('bad', '❌ ผิด (ข้ามทั้งแถว ' + nf(p.will_skip_rows) + ' แถว)', nErr, li(p.errors, (e) => '<li>แถว ' + e.line + ' ' + sh(e) + '<b>' + esc(e.name || '') + '</b>: ' + esc(e.msg) + '</li>')) +
+    sec('ok', '🟢 เพิ่มใหม่', nAdd, li(p.add, (x) => '<li>' + sh(x) + '<b>' + esc(x.plate) + '</b> · ' + esc(x.name) + ': <b>' + nf(x.new) + '</b>' + (x.move ? ' <small>(ปรับยอด ' + (x.move.qty > 0 ? '+' : '') + nf(x.move.qty) + ')</small>' : '') + '</li>')) +
+    sec('bl', '🔵 แก้ไข', nChg, li(p.change, (x) => '<li>' + sh(x) + '<b>' + esc(x.plate) + '</b> · ' + esc(x.name) + ': <s>' + nf(x.old) + '</s> → <b>' + nf(x.new) + '</b>' + (x.off ? ' <small>(ไม่ต้องมีแล้ว)</small>' : '') + (x.move ? ' <small>(ปรับยอด ' + (x.move.qty > 0 ? '+' : '') + nf(x.move.qty) + ')</small>' : '') + '</li>')) +
+    (p.missing.length ? '<details class="xa-s"><summary>ไม่อยู่ในไฟล์ ' + nf(p.missing.length) + ' คัน (ข้อมูลเดิมคงอยู่)</summary><div class="note">' + p.missing.map((m) => esc(m.plate)).join(' · ') + '</div></details>' : '') +
+    (mv ? '<div class="note" style="margin-top:8px">📒 ยอดถือที่แก้ ' + nf(mv) + ' รายการ จะลงเป็น "ปรับยอด" ในสมุดเบิก-คืน (ย้อนดูได้ในแท็บ 🔁 เบิก/คืน ของแต่ละคัน)</div>' : '') +
+    (n ? '<label>PIN 6 หลัก</label><input id="xaPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"><div id="xaErr"></div>' : '') +
+    '<button class="btn pri" id="xaGo" style="margin-top:12px;width:100%"' + (n ? '' : ' disabled') + '>' + (n ? 'ยืนยันนำเข้า ' + nf(n) + ' รายการ' + (nErr ? ' (ข้ามแถวที่ผิด)' : '') : 'ไม่มีอะไรเปลี่ยน') + '</button>';
+  if (n) $('xaGo').onclick = async () => {
+    const pin = $('xaPin').value.trim();
+    if (!/^\d{6}$/.test(pin)) { $('xaErr').innerHTML = '<div class="err">PIN ต้องเป็นตัวเลข 6 หลัก</div>'; return; }
+    if (XA_BUSY) return; XA_BUSY = true; $('xaGo').disabled = true; $('xaGo').textContent = '⏳ กำลังบันทึก…';
+    let r; try { r = await api({ action: 'importExcel', rows, group: xaGroupOf(rows), apply: true, pin }, true); } catch (e) { r = { error: 'เน็ตมีปัญหา ยังไม่แน่ใจว่าบันทึกหรือยัง — ดาวน์โหลดใหม่ตรวจก่อนอัปซ้ำ' }; }
+    XA_BUSY = false;
+    if (!r.ok) { $('xaGo').disabled = false; $('xaGo').textContent = 'ยืนยันนำเข้า ' + nf(n) + ' รายการ'; $('xaPin').value = ''; $('xaErr').innerHTML = '<div class="err">' + esc(r.pinBad ? 'PIN ไม่ถูกต้อง' : r.error || 'ไม่สำเร็จ') + (r.errors ? '<br>' + r.errors.map((e) => esc(typeof e === 'string' ? e : e.msg || JSON.stringify(e))).join('<br>') : '') + '</div>'; return; }
+    closeDrw(); XA = null; SUM = {};
+    toast('นำเข้าแล้ว · ชุดที่ต้องมี ' + nf(r.required_saved || 0) + ' · ปรับยอด ' + nf(r.moves_saved || 0) + (r.skipped_rows ? ' · ข้าม ' + r.skipped_rows + ' แถว' : ''));
+    if (VIEW === 'veh' && V) { RQ = null; openVeh(V.vehicle.id, true); }
+  };
+  $('dim').classList.add('open'); $('drw').classList.add('open');
+}
+function xaCard() {
+  return '<div class="card xa-c"><div class="xa-t"><b>📊 รถทั้งหมด' + (GRP ? ' · ' + esc(GRP) : '') + '</b><div class="note">ที่เบิกมี · ชุดที่ต้องมี · ข้อที่ต้องเช็ค ทุกคันในไฟล์เดียว — แก้ในไฟล์แล้วอัปโหลดกลับ</div></div>' +
+    '<button class="btn" id="xaDl" style="background:#1d6f42;color:#fff;border-color:#1d6f42">⬇ ดาวน์โหลด Excel</button>' + (canEdit() ? '<button class="btn gh" id="xaUp">⬆ อัปโหลด</button>' : '') + '</div>';
 }
 
 // ── events ──
