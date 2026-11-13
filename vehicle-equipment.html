@@ -123,6 +123,11 @@ a.lk{color:var(--green2);font-weight:600}
 .fx-bt a.btn{text-decoration:none;display:inline-flex;align-items:center}
 .fx-hs{margin-top:8px;font-size:12px;color:var(--muted)} .fx-hs summary{cursor:pointer}
 .drw select{font:inherit}
+.t tr.si{cursor:pointer} .t tr.si:hover td{background:#EEF6F1} .si-go{color:var(--muted);font-weight:400}
+.si-k{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;background:#F4F7F5;border-radius:10px;padding:8px 10px}
+.drw .sh{font-weight:700;font-size:13px;margin:12px 0 2px}
+.sv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:5px 0;cursor:pointer;font:inherit;color:inherit}
+.sv:hover{border-color:var(--green)} .sv .gi{font-size:18px} .sv .q{margin-left:auto;font-weight:700;white-space:nowrap}
 /* 🔍 ฟอร์มสุ่มตรวจ แบบมือถือ (ปุ่มใหญ่เหมือนฟอร์มคนขับ) */
 .af{padding:12px 14px;margin-bottom:8px}.af.af-ok{border-left:5px solid var(--ok)}.af.af-bad{border-left:5px solid var(--bad);background:#FFF9F9}
 .af-h{display:flex;align-items:center;gap:8px;font-size:16px}.af-h b{flex:1;min-width:0}
@@ -400,12 +405,42 @@ async function loadSum() {
   const use = rows.length ? rows : SUM[key];
   $('main').innerHTML = '<div class="card"><div class="chips" id="sgrp">' + ['', ...(ME ? ME.groups : [])].map((g) => '<button class="chip' + (g === GRP ? ' on' : '') + '" data-sg="' + esc(g) + '">' + (g ? GICON[g] + ' ' + g : 'ทุกกลุ่ม') + '</button>').join('') + '</div>' +
     '<div class="tw"><table class="t"><thead><tr><th>อุปกรณ์</th><th class="n">ต้องมี</th><th class="n">เบิกไปแล้ว</th><th class="n">ขาด</th><th class="n">คันที่ถือ</th><th class="n">ชำรุด</th><th class="n">หาย</th></tr></thead><tbody>' +
-    use.filter((r) => Number(r.qty_required) || Number(r.qty_on_hand)).map((r) => '<tr class="' + (Number(r.qty_short) > 0 ? 'short' : '') + '"><td><div class="nm">' + esc(r.name) + '</div><div class="sm">' + esc(r.category || '') + '</div></td>' +
+    use.filter((r) => Number(r.qty_required) || Number(r.qty_on_hand)).map((r) => '<tr class="si' + (Number(r.qty_short) > 0 ? ' short' : '') + '" data-si="' + esc(r.item_code) + '" title="ดูรายชื่อรถ/คนที่เบิก"><td><div class="nm">' + esc(r.name) + ' <span class="si-go">›</span></div><div class="sm">' + esc(r.category || '') + '</div></td>' +
       '<td class="n">' + nf(r.qty_required) + '</td><td class="n">' + nf(r.qty_on_hand) + ' <span class="sm">' + esc(r.unit || '') + '</span></td><td class="n">' + (Number(r.qty_short) > 0 ? '<span class="neg">' + nf(r.qty_short) + '</span>' : '<span class="zero">–</span>') + '</td>' +
       '<td class="n">' + nf(r.vehicles_holding) + ' / ' + nf(r.vehicles_required) + '</td><td class="n">' + (r.damaged_qty ? '<span class="neg">' + nf(r.damaged_qty) + '</span> <span class="sm">(' + r.damaged_vehicles + ' คัน)</span>' : '–') + '</td>' +
       '<td class="n">' + (r.lost_qty ? '<span class="neg">' + nf(r.lost_qty) + '</span> <span class="sm">(' + r.lost_vehicles + ' คัน)</span>' : '–') + '</td></tr>').join('') +
-    '</tbody></table></div><div class="note" style="margin-top:8px">ชำรุด/หาย นับจากเช็คลิสต์ล่าสุดของแต่ละคัน · ชำรุดยังนับอยู่ในยอดเบิก</div></div>';
+    '</tbody></table></div><div class="note" style="margin-top:8px">ชำรุด/หาย นับจากเช็คลิสต์ล่าสุดของแต่ละคัน · ชำรุดยังนับอยู่ในยอดเบิก · จิ้มแต่ละหัวข้อ = รายชื่อรถ/คนที่เบิก</div></div>';
 }
+// จิ้มหัวข้อในสรุป → ลิ้นชักรายชื่อรถ/คนขับที่เบิก (getSummaryItem · แคชต่อกลุ่ม+รายการ)
+const SI = {};
+async function openSumItem(code) {
+  const r = (SUM[GRP || 'all'] || []).find((x) => x.item_code === code) || { name: code, unit: '' };
+  $('dT').textContent = '📦 ' + (r.name || code);
+  $('dB').innerHTML = '<div class="ldr"><i></i>กำลังโหลดรายชื่อ</div>';
+  $('dim').classList.add('open'); $('drw').classList.add('open');
+  const key = (GRP || 'all') + '|' + code;
+  if (!SI[key]) { let d; try { d = await api({ action: 'getSummaryItem', itemCode: code, group: GRP }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
+    if (!d.ok) { $('dB').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; } SI[key] = d.vehicles || []; }
+  if ($('dT').textContent !== '📦 ' + (r.name || code)) return;   // ปิด/เปิดอันอื่นไปแล้ว
+  renderSumItem(r, SI[key]);
+}
+function renderSumItem(r, vs) {
+  const u = esc(r.unit || ''), q = (($('siQ') || {}).value || '').trim().toLowerCase();
+  const sum = (f) => vs.reduce((a, v) => a + Number(v[f] || 0), 0);
+  const list = vs.filter((v) => !q || ((v.plate || '') + ' ' + (v.driver_name || '')).toLowerCase().includes(q));
+  const grp = [['none', '❌ ยังไม่ได้เบิก'], ['short', '⚠️ เบิกไม่ครบ'], ['ok', '✅ เบิกครบ']];
+  const row = (v) => '<button class="sv" data-ov="' + v.vehicle_id + '"><span class="gi">' + (GICON[v.job_group] || '🚚') + '</span><span><b>' + esc(v.plate_head || v.plate) + '</b>' +
+    (v.plate && v.plate_head && v.plate !== v.plate_head ? ' <small class="sm">' + esc(String(v.plate).replace(v.plate_head, '').replace(/^\s*[,/]\s*/, '/ ')) + '</small>' : '') +
+    '<div class="sm">👤 ' + esc(v.driver_name || (v.spare ? 'รถสแปร์' : 'ยังไม่มีคนขับ')) + (v.serial_no ? ' · #' + esc(v.serial_no) : '') + (v.expiry_date ? ' · หมดอายุ ' + esc(dTxt(v.expiry_date)) : '') + '</div></span>' +
+    '<span class="q' + (v.state === 'ok' ? '' : ' neg') + '">' + nf(v.qty) + (Number(v.qty_required) ? ' / ' + nf(v.qty_required) : '') + ' <span class="sm">' + u + '</span></span></button>';
+  $('dB').innerHTML = '<div class="si-k"><span>ต้องมี <b>' + nf(sum('qty_required')) + '</b></span><span>เบิกไปแล้ว <b>' + nf(sum('qty')) + '</b></span><span>ขาด <b class="neg">' + nf(sum('short')) + '</b></span><span>รถ <b>' + vs.length + '</b> คัน</span></div>' +
+    '<input id="siQ" placeholder="🔎 ค้นทะเบียน / ชื่อคนขับ" value="' + esc(q) + '" style="margin:8px 0 2px">' +
+    (list.length ? grp.map(([st, t]) => { const g = list.filter((v) => v.state === st); return g.length ? '<div class="sh">' + t + ' (' + g.length + ')</div>' + g.map(row).join('') : ''; }).join('')
+      : '<div class="msg">' + (vs.length ? 'ไม่พบที่ค้น' : 'ยังไม่มีรถที่ต้องมี/เบิกรายการนี้') + '</div>') +
+    '<div class="note" style="margin-top:10px">ตัวเลข = เบิกไปแล้ว / ต้องมี · ชื่อ = คนขับประจำคันตอนนี้ · จิ้มรถ = เปิดรายคัน</div>';
+  const inp = $('siQ'); inp.oninput = () => { const p = inp.selectionStart; renderSumItem(r, vs); const n = $('siQ'); n.focus(); n.setSelectionRange(p, p); };
+}
+$('drw').addEventListener('click', (e) => { const b = e.target.closest('[data-ov]'); if (!b) return; closeDrw(); CUR = +b.dataset.ov; VTAB = 'hold'; F = null; setView('veh'); });
 function setView(v, pre) {
   VIEW = v; document.querySelectorAll('#vw button').forEach((b) => b.classList.toggle('on', b.dataset.v === v));
   $('wrap').classList.toggle('full', v === 'sum' || v === 'aud' || v === 'tpl' || v === 'fix');
@@ -1511,6 +1546,7 @@ $('dX').onclick = closeDrw; $('dim').onclick = closeDrw;
 $('main').addEventListener('click', (e) => {
   const t = e.target, c = (s) => t.closest(s);
   if (c('[data-sg]')) { GRP = c('[data-sg]').dataset.sg; loadSum(); return; }
+  if (c('[data-si]')) { openSumItem(c('[data-si]').dataset.si); return; }
   if (c('#vtabs button')) { VTAB = c('#vtabs button').dataset.t; renderVTab(); return; }
   if (c('[data-q]')) { const [ty, code, n] = c('[data-q]').dataset.q.split('|'); F = newForm(ty, code, Math.max(1, +n || 1)); VTAB = 'mv'; renderVTab(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
   if (c('[data-ty]')) { const ty = c('[data-ty]').dataset.ty; F.type = ty; F.errs = null; if (ty !== 'เบิก') F.lines.forEach((l) => { if (l.code && held(l.code) <= 0) l.code = ''; }); renderVTab(); return; }
