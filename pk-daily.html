@@ -1490,9 +1490,11 @@ function jRtWire(D,j){const R=JE.rt;
  *   ขอรถไร่ = ส่งไปกับคำขอ (pk_requests.helpers) · แก้ทีหลัง + บันทึกงาน = อัปเดตคำขอ (Edge pk-daily farmHelpers) · การ์ดมอบหมายงานคนขับอ่านค่าล่าสุด */
 function jHp(j){if(j.hnone)return {in:[],out:0,none:true};const a=(j.helpers||[]).filter(x=>HELP.some(h=>h.id===x&&h.status==='ใช้งาน')),o=+j.hout||0;return a.length||o?{in:a,out:o}:null;}
 function jHpTxt(j){const h=jHp(j);return !h?'':h.none?'ไม่มีเด็กรถ':'มีเด็กรถ '+(h.in.length+h.out)+' คน';}
+/* 13 พ.ย. คุณน้อง "มอบหมายไป 2 คน ทำไมแท็บเด็กรถในไม่ขึ้นสถานะ" → นับงานห้าง (MJ) ด้วย ไม่ใช่แค่แพลนรวม */
+function helpBusy(skipJob){const o={};const {hc}=busy();Object.keys(hc).forEach(h=>(o[h]=o[h]||[]).push(...hc[h].map(x=>"รถ "+plOf(x))));
+  MJ.forEach(x=>{if(x.id===skipJob||x.hnone)return;const lb="งานห้าง "+x.id+(x.head?" "+plOf(x.head):x.fr&&x.fr.plate?" 🚜 "+x.fr.plate:x.fr?" 🚜 รถไร่":"");(x.helpers||[]).forEach(h=>(o[h]=o[h]||[]).push(lb));});return o;}
 function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),mine=j.helpers||[],o=+j.hout||0,no=!!j.hnone;
-  const other={};MJ.forEach(x=>{if(x.id===j.id||x.hnone)return;(x.helpers||[]).forEach(h=>(other[h]=other[h]||[]).push(x.id));});
-  {const {hc}=busy();Object.keys(hc).forEach(h=>(other[h]=other[h]||[]).push(...hc[h].map(plOf)));}
+  const other=helpBusy(j.id);
   const t=jHpTxt(j),is4=j.size==='4 ล้อ';
   return '<div class="box"><span class="lb">④ เด็กรถ <span class="note">(ขึ้นการ์ดคนขับ ตรง 👷 ทีมลง)</span></span>'
     +'<span class="lb" style="font-weight:600">เด็กรถใน <span class="note">(เลือกได้หลายคน)</span></span><div class="hl">'
@@ -2742,7 +2744,7 @@ function sync(){if(!ED)return;const p=ED.p;
 /* ---------- หน้าเด็กรถใน ---------- */
 let HF='ใช้งาน';
 function renderHelpers(){
-  const {hc}=busy();
+  const hc=helpBusy();
   let h='<div class="hgrid"><div class="card"><h3>เพิ่มเด็กรถใน</h3><form class="form" id="hform">'
    +'<label>ชื่อ-นามสกุล<input class="in" id="hn" required placeholder="เช่น สมชาย ใจดี"></label>'
    +'<label>ชื่อเล่น<input class="in" id="hk" placeholder="ใช้แสดงในแพลนและรูปสรุป"></label>'
@@ -2754,14 +2756,14 @@ function renderHelpers(){
   const rows=HELP.filter(x=>HF==='ทั้งหมด'||x.status===HF);
   h+='<div><div class="chips">'+chips.map(c=>'<button class="chip'+(HF===c?' on':'')+'" data-hf="'+c+'">'+c+' <b>'+(c==='ทั้งหมด'?HELP.length:HELP.filter(x=>x.status===c).length)+'</b></button>').join('')+'</div>'
    +'<div class="list"><div class="hrow head"><span>รหัส</span><span>ชื่อ</span><span class="hide-sm">เบอร์</span><span class="hide-sm">งานวันที่เลือก</span><span>สถานะ</span></div>'
-   +rows.map(x=>{const on=hc[x.id]||[];return '<div class="hrow"><span class="code">'+x.id+'</span><span><b>'+esc(x.nick||'-')+'</b> · '+esc(x.name)+(x.note?'<div class="note">'+esc(x.note)+'</div>':'')+'</span><span class="hide-sm code">'+esc(x.phone||'-')+'</span><span class="hide-sm">'+(on.length?'รถ '+esc(on.join(', '))+(on.length>1?' <span class="warn">⚠ ซ้ำ</span>':''):'<span class="m" style="color:var(--muted)">ว่าง</span>')+'</span>'
+   +rows.map(x=>{const on=hc[x.id]||[];return '<div class="hrow"><span class="code">'+x.id+'</span><span><b>'+esc(x.nick||'-')+'</b> · '+esc(x.name)+(x.note?'<div class="note">'+esc(x.note)+'</div>':'')+'</span><span class="hide-sm code">'+esc(x.phone||'-')+'</span><span class="hide-sm">'+(on.length?esc(on.join(', '))+(on.length>1?' <span class="warn">⚠ ซ้ำ</span>':''):'<span class="m" style="color:var(--muted)">ว่าง</span>')+'</span>'
      +'<select class="in" data-hs="'+x.id+'" aria-label="สถานะ '+esc(x.name)+'">'+['ใช้งาน','พัก','ลาออก'].map(s=>'<option'+(x.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select></div>';}).join('')
    +(rows.length?'':'<div class="hrow"><span></span><span class="note">ไม่มีรายชื่อในกลุ่มนี้</span></div>')+'</div>'
    +'<p class="note">เด็กนอกไม่ต้องลงทะเบียน ใส่เป็นจำนวนคนตอนจัดงาน · เบอร์ในเดโมซ่อนไว้ 6 หลัก</p></div></div>';
   $('v-helpers').innerHTML=h;
   $('v-helpers').querySelectorAll('[data-hf]').forEach(b=>b.onclick=()=>{HF=b.dataset.hf;renderHelpers();});
   $('v-helpers').querySelectorAll('[data-hs]').forEach(s=>s.onchange=()=>{helpOf(s.dataset.hs).status=s.value;
-    if(s.value!=='ใช้งาน')Object.values(PLAN).forEach(p=>p.helpers=p.helpers.filter(z=>z!==s.dataset.hs));renderAll();toast('เปลี่ยนสถานะเป็น '+s.value+' แล้ว');});
+    if(s.value!=='ใช้งาน'){Object.values(PLAN).forEach(p=>p.helpers=p.helpers.filter(z=>z!==s.dataset.hs));MJ.forEach(x=>{if(x.helpers)x.helpers=x.helpers.filter(z=>z!==s.dataset.hs);});}renderAll();toast('เปลี่ยนสถานะเป็น '+s.value+' แล้ว');});
   $('hform').onsubmit=e=>{e.preventDefault();const n=$('hn').value.trim();if(!n){toast('ใส่ชื่อก่อน');return;}
     const id='HLP-'+String(HELP.length+1).padStart(3,'0');HELP.push({id,name:n,nick:$('hk').value.trim()||first(n),phone:$('hp').value.trim(),status:'ใช้งาน',note:$('ht').value.trim()});
     HF='ใช้งาน';renderAll();toast('เพิ่ม '+id+' '+n+' แล้ว เลือกใส่รถได้ในหน้าแพลน');};
