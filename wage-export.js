@@ -191,6 +191,30 @@
         c.font = { name: 'Tahoma', size: 10.5, bold: true, color: { argb: neg ? RED : GREEN } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F3EC' } };
         c.border = { top: { style: 'medium', color: { argb: GREEN } }, bottom: { style: 'medium', color: { argb: GREEN } } };
       });
+      /* ชีต 3: 👷 ค่าแรงเด็กรถใน (หน้า Packing · ตามรอบจ่าย) — จาก window.HELPER_PAY (wage.html helperPay(VIEW)) */
+      var HP = !CTX && window.WAGE_GROUP === 'Packing' && window.HELPER_PAY;
+      if (HP && HP.rounds && HP.rounds.length) {
+        var hs = wb.addWorksheet('ค่าแรงเด็กรถ', { views: [{ state: 'frozen', ySplit: 4 }], pageSetup: { orientation: 'portrait', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0 } });
+        hs.columns = [{ width: 22 }, { width: 11 }, { width: 18 }, { width: 8 }, { width: 62 }, { width: 12 }];
+        hs.mergeCells('A1:F1'); hs.mergeCells('A2:F2');
+        hs.getCell('A1').value = 'ค่าแรงเด็กรถใน (Packing)'; hs.getCell('A1').font = { name: 'Tahoma', size: 15, bold: true, color: { argb: GREEN } };
+        hs.getCell('A2').value = info() + ' · เด็กใน = เรทตามชนิดรถต่อคนต่อเที่ยว · เด็กนอก = คนขับเบิก (แยก) · ออกรายงาน ' + stamp(); hs.getCell('A2').font = { name: 'Tahoma', size: 10, color: { argb: 'FF6B7785' } };
+        var hh = hs.getRow(4); hh.values = ['รอบจ่าย', 'รหัส', 'เด็กรถ', 'เที่ยว', 'งาน (วันที่ · ออเดอร์ · ชนิดรถ · เรท)', 'รวม (บ.)']; hh.height = 26;
+        hh.eachCell(function (c) { c.font = { name: 'Tahoma', size: 10, bold: true, color: { argb: 'FFFFFFFF' } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: GREEN } }; c.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true }; });
+        var hr2 = 5;
+        HP.rounds.forEach(function (g) {
+          g.list.forEach(function (p, i) {
+            var row = hs.getRow(hr2++);
+            row.values = [g.label, p.id, p.nick + (p.name && p.name !== p.nick ? ' (' + p.name + ')' : ''), p.trips, p.jobs.map(function (j) { return dmy(j.date) + ' · ' + j.orderId + (j.vt ? ' · ' + j.vt : '') + ' · ' + j.rate; }).join('\n'), p.amt];
+            row.eachCell({ includeEmpty: true }, function (c, ci) { c.font = font; c.border = box; c.alignment = { vertical: 'top', wrapText: ci === 5 }; if (i % 2) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ZEBRA } }; });
+            row.getCell(4).numFmt = '#,##0'; row.getCell(6).numFmt = F_BAHT;
+          });
+          var t = hs.getRow(hr2++); t.values = [g.label, '', 'รวมเด็กใน ' + g.list.length + ' คน', g.inTrips, g.outN ? 'เด็กนอก (คนขับเบิก ไม่รวมยอดนี้): ' + g.outTrips + ' เที่ยว · ' + g.outN + ' คน · ' + g.outAmt + ' บ.' : '', g.inAmt];
+          t.eachCell({ includeEmpty: true }, function (c, ci) { if (ci > 6) return; c.font = { name: 'Tahoma', size: 10.5, bold: true, color: { argb: GREEN } }; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F3EC' } }; c.border = { top: { style: 'medium', color: { argb: GREEN } }, bottom: { style: 'medium', color: { argb: GREEN } } }; });
+          t.getCell(4).numFmt = '#,##0'; t.getCell(6).numFmt = F_BAHT; hr2++;
+        });
+        if (HP.unset) { hs.getCell('A' + hr2).value = '⚠ ยังไม่ระบุเด็กรถ ' + HP.unset + ' เที่ยว (ไม่อยู่ในยอดข้างบน)'; hs.getCell('A' + hr2).font = { name: 'Tahoma', size: 10, color: { argb: 'FFB45309' } }; }
+      }
       return wb.xlsx.writeBuffer().then(function (buf) { save(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), fname('xlsx')); });
     });
   }

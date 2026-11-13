@@ -61,6 +61,16 @@
   .sumcard.pkr{border-color:#d8b4fe;background:linear-gradient(90deg,rgba(139,92,246,.10),rgba(217,70,239,.05))}
   .sumcard.pkr .sumcode{background:linear-gradient(90deg,#8b5cf6,#d946ef);color:#fff;border-color:transparent}
   #drBody.ro #recalcOne{display:none}
+  .hlpt{display:inline-block;font-size:10.5px;padding:0 6px;border-radius:6px;background:var(--card2);border:1px solid var(--line);margin:2px 2px 0 0;white-space:nowrap}
+  .hlpt.o{background:#FFEDD5;color:#9A3412;border-color:#FED7AA}
+  #helperSum table{border-collapse:collapse;width:100%;font-size:13px}
+  #helperSum th{text-align:left;font-weight:600;color:var(--txt2);padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  #helperSum td{padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  #helperSum .num{text-align:right;font-variant-numeric:tabular-nums}
+  #helperSum .tot td{font-weight:800;background:var(--card2)}
+  .hpill{font-size:12px;font-weight:700;padding:2px 9px;border-radius:999px;background:#E0E7FF;color:#3730A3;white-space:nowrap}
+  .hpill.g{background:#DCFCE7;color:#166534}
+  @media(prefers-color-scheme:dark){.hlpt.o{background:#3b2414;color:#fdba74;border-color:#7c3a10}.hpill{background:#262a52;color:#c7d2fe}.hpill.g{background:#173524;color:#9be3b3}}
   .expc{font-size:10.5px;color:var(--txt2);line-height:1.35;white-space:nowrap}
   .expn{font-size:10.5px;color:var(--txt2);max-width:170px;white-space:normal;line-height:1.3}
   @media(prefers-color-scheme:dark){.farmchip{color:#9be3b3;background:#173524;border-color:#245a3a}.sumcard.pkr{border-color:#6d3fa8}}
@@ -220,6 +230,7 @@
       <div id="summary"></div>
     </div>
   </div>
+  <div class="card" id="helperSum" style="display:none;margin-top:14px;overflow-x:auto"></div>
 </div>
 
 <div id="ov"></div>
@@ -304,6 +315,7 @@ function applyView(){
   $('kDist').textContent=totDist.toLocaleString('th-TH',{maximumFractionDigits:1})+' กม.';
   $('kFuel').textContent=totFuel.toLocaleString('th-TH',{maximumFractionDigits:1})+' ล.';
   renderSummary(searchRows);
+  renderHelperPay(VIEW);
   updatePaidAllBtn();
 }
 /* เที่ยวนี้คิดค่าแรงด้วยค่ากลางไหม — snapshot ใหม่บอกตรง (usedCentral) · snapshot เก่าเดาจาก ระยะที่ใช้คิด ≈ ค่ากลาง และ ≠ ระยะจริง */
@@ -332,12 +344,66 @@ function expCell(e){
     +EXP_ITEMS.filter(([k])=>+e[k]>0).map(([k,l])=>'<div class="expc">'+l+' '+money(+e[k])+'</div>').join('')
     +(note?'<div class="expn" title="หมายเหตุค่าใช้จ่าย">📝 '+_escS(note)+'</div>':'');
 }
+/* 👷 ค่าแรงเด็กรถ (หน้า Packing · คุณน้อง 13 พ.ย.) — r.helpers จาก ssb-read: {st:set|none|unset, inn:[{id,name,nick}], out, rate, outRate, inAmt, outAmt, vt}
+ *   เด็กใน = เรทตามชนิดรถ (4 ล้อ / 6 ล้อขึ้นไป) ต่อคนต่อเที่ยว · เด็กนอก = คนขับเบิกไป แสดงแยก · คิดสดทุกครั้ง (แอดมินแก้เด็กรถในงาน → ยอดเปลี่ยนตาม) */
+function helpCell(h){
+  if(!h)return '<span style="color:var(--txt2)">—</span>';
+  if(h.st==='none')return '<span style="font-size:11px;color:var(--txt2)">ไม่มีเด็กรถ</span>';
+  if(h.st!=='set')return '<span style="font-size:11px;color:#B45309" title="แอดมินยังไม่ระบุเด็กรถในงานนี้ (หน้าแผนงาน Packing · กล่อง ④ เด็กรถ)">⚠ ยังไม่ระบุ</span>';
+  const inn=h.inn||[], no=+h.out||0, parts=[];
+  if(inn.length)parts.push('ใน '+inn.length+' × '+money(h.rate));
+  if(no)parts.push('นอก '+no+' × '+money(h.outRate));
+  return '<b>'+money((+h.inAmt||0)+(+h.outAmt||0))+'</b><div class="expc">'+parts.join(' + ')+'</div><div style="white-space:normal;text-align:left">'
+    +inn.map(x=>'<span class="hlpt" title="'+_escS(x.id+' · '+(x.name||''))+'">'+_escS(x.nick||x.name||x.id)+'</span>').join('')
+    +(no?'<span class="hlpt o">นอก '+no+' · คนขับเบิก</span>':'')+'</div>';
+}
+const TH_MON=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+/* รวมเด็กในตามรอบจ่าย 1–15 / 16–สิ้นเดือน (ตามวันที่ของเที่ยว) · 1 เที่ยว = 1 แรงต่อคน */
+function helperPay(rows){
+  const R={}; let unset=0;
+  rows.forEach(r=>{
+    const h=r.helpers; if(!h)return; if(h.st==='unset'){unset++;return;} if(h.st!=='set')return;
+    const d=String(r.date||'').slice(0,10), m=d.match(/^(\d{4})-(\d{2})-(\d{2})$/); if(!m)return;
+    const y=+m[1], mo=+m[2], first=+m[3]<=15, key=m[1]+'-'+m[2]+(first?'-1':'-2');
+    const g=R[key]||(R[key]={key,label:'รอบ '+(first?'1–15':'16–'+new Date(y,mo,0).getDate())+' '+TH_MON[mo-1]+' '+(y+543),hp:{},inAmt:0,inTrips:0,outN:0,outAmt:0,outTrips:0});
+    (h.inn||[]).forEach(x=>{
+      const k=x.id||('~'+(x.name||x.nick||'?')), p=g.hp[k]||(g.hp[k]={id:x.id||'',nick:x.nick||x.name||x.id,name:x.name||'',trips:0,amt:0,jobs:[]});
+      p.trips++; p.amt+=+h.rate||0; g.inAmt+=+h.rate||0; g.inTrips++;
+      p.jobs.push({date:d,orderId:r.orderId,vt:h.vt||r.vehicleType||'',rate:+h.rate||0});
+    });
+    if(+h.out>0){g.outN+=+h.out; g.outAmt+=+h.outAmt||0; g.outTrips++;}
+  });
+  const rounds=Object.keys(R).sort().map(k=>{const g=R[k];g.list=Object.keys(g.hp).sort().map(i=>g.hp[i]);return g;});
+  return {rounds,unset};
+}
+function renderHelperPay(rows){
+  const box=$('helperSum'); if(!box)return;
+  if(window.WAGE_GROUP!=='Packing'){box.style.display='none';box.innerHTML='';window.HELPER_PAY=null;return;}
+  const P=helperPay(rows); window.HELPER_PAY=P;
+  if(!P.rounds.length&&!P.unset){box.style.display='none';box.innerHTML='';return;}
+  let h='';
+  P.rounds.forEach(g=>{
+    h+='<div style="font-weight:800;font-size:14.5px;margin:2px 0 8px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">👷 ค่าแรงเด็กรถใน <span class="hpill">'+g.label+'</span><span class="hpill g">จ่ายรอบนี้ '+money(g.inAmt)+' บ.</span></div>';
+    if(g.list.length){
+      h+='<table><thead><tr><th>รหัส</th><th>เด็กรถ</th><th class="num">เที่ยว</th><th>งาน (วันที่ · ออเดอร์ · ชนิดรถ · เรท)</th><th class="num">รวม (บ.)</th></tr></thead><tbody>';
+      g.list.forEach(p=>{
+        h+='<tr><td style="white-space:nowrap">'+(_escS(p.id)||'—')+'</td><td><b>'+_escS(p.nick)+'</b>'+(p.name&&p.name!==p.nick?'<div class="expc">'+_escS(p.name)+'</div>':'')+'</td><td class="num">'+p.trips+'</td><td>'
+          +p.jobs.map(j=>'<span class="hlpt">'+fmtD(j.date).slice(0,5).replace('-','/')+' · '+_escS(j.orderId)+(j.vt?' · '+_escS(j.vt):'')+' · '+money(j.rate)+'</span>').join('')+'</td><td class="num">'+money(p.amt)+'</td></tr>';
+      });
+      h+='<tr class="tot"><td colspan="2">รวมเด็กใน '+g.list.length+' คน</td><td class="num">'+g.inTrips+'</td><td></td><td class="num">'+money(g.inAmt)+'</td></tr></tbody></table>';
+    }else h+='<div class="expc" style="margin-bottom:6px">รอบนี้ไม่มีเด็กใน</div>';
+    if(g.outN)h+='<div class="expc" style="margin:6px 0 2px;white-space:normal">เด็กนอก (คนขับเบิกไปก่อน · ไม่รวมในยอดจ่ายเด็กใน): '+g.outTrips+' เที่ยว · '+g.outN+' คน · '+money(g.outAmt)+' บ.</div>';
+    h+='<div style="height:12px"></div>';
+  });
+  if(P.unset)h+='<div style="font-size:12.5px;color:#B45309">⚠ ยังไม่ระบุเด็กรถ '+P.unset+' เที่ยว — แอดมินระบุได้ที่หน้าแผนงาน Packing (กล่อง ④ เด็กรถ) แล้วเปิดหน้านี้ใหม่</div>';
+  box.innerHTML=h; box.style.display='';
+}
 function renderTable(rows){
   SHOW_EXP=window.WAGE_GROUP==='Packing';
   if(!rows.length){$('tbl').innerHTML='<div class="msg">'+((SEARCH||ACTIVE_DEST)?'ไม่มีเที่ยวที่ตรงเงื่อนไข':'ไม่มีเที่ยวในช่วงที่เลือก')+'</div>';return;}
   const n1=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{maximumFractionDigits:1}):'—';};
   const n2=v=>{v=Number(v||0);return v?v.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';};
-  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ชนิดรถ</th><th>สวน / ปลายทาง</th><th class="num" title="จากเลขไมล์ที่คนขับกรอก">ระยะจริง (กม.)</th><th class="num" title="ค่ากลางไป-กลับ (หน้า 📍 ค่ากลาง × 2) · ป้าย ใช้คิด = เที่ยวนี้คิดค่าแรงด้วยค่ากลาง · จริง± = ระยะจริงต่างจากค่ากลาง (แดง = ต่างเกิน 10%)">ระยะกลาง (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">กม./ล.</th>'+(SHOW_EXP?'<th class="num" title="ค่าใช้จ่ายที่คนขับกรอกในเที่ยว: ทางด่วน · ค่าลงของ · เด็กลงสินค้านอก · น้ำมันเติมระหว่างทาง · ซ่อมนอก">ค่าใช้จ่าย (บ.)</th>':'')+'<th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
+  let h='<table><thead><tr><th>วันที่</th><th>ออเดอร์</th><th>คนขับ</th><th>ชนิดรถ</th><th>สวน / ปลายทาง</th><th class="num" title="จากเลขไมล์ที่คนขับกรอก">ระยะจริง (กม.)</th><th class="num" title="ค่ากลางไป-กลับ (หน้า 📍 ค่ากลาง × 2) · ป้าย ใช้คิด = เที่ยวนี้คิดค่าแรงด้วยค่ากลาง · จริง± = ระยะจริงต่างจากค่ากลาง (แดง = ต่างเกิน 10%)">ระยะกลาง (กม.)</th><th class="num">น้ำมัน (ล.)</th><th class="num">กม./ล.</th>'+(SHOW_EXP?'<th class="num" title="เด็กรถที่แอดมินระบุในงาน · ใน = เรทตามชนิดรถต่อคน · นอก = คนขับเบิกไป">👷 เด็กรถ (บ.)</th>':'')+(SHOW_EXP?'<th class="num" title="ค่าใช้จ่ายที่คนขับกรอกในเที่ยว: ทางด่วน · ค่าลงของ · เด็กลงสินค้านอก · น้ำมันเติมระหว่างทาง · ซ่อมนอก">ค่าใช้จ่าย (บ.)</th>':'')+'<th class="num">ค่าแรง</th><th>จ่ายแล้ว</th></tr></thead><tbody>';
   rows.forEach((r,i)=>{
     const place=placeOf(r.garden,r.dest)||'—';
     const kmpl=(Number(r.liters)>0&&Number(r.distActual)>0)?(Number(r.distActual)/Number(r.liters)):0;
@@ -351,7 +417,7 @@ function renderTable(rows){
     const paidCell=r.paidBy
       ? `<span style="font-size:11px;color:var(--txt2)">จ่ายที่${_escS(r.paidBy)}${r.locked?' 🔒':''}</span>`
       : `<label style="display:inline-flex;align-items:center;gap:5px;cursor:pointer" onclick="event.stopPropagation()"><input type="checkbox" ${r.locked?'checked':''} onchange="togglePaid('${r.orderId}',this.checked,this)" style="width:17px;height:17px"><span style="font-size:11px;color:${r.locked?'var(--primary)':'var(--txt2)'}">${r.locked?'จ่ายแล้ว 🔒':'ยังไม่จ่าย'}</span></label>`;
-    h+=`<tr class="row${cls}" data-i="${i}"><td style="white-space:nowrap">${fmtD(r.date)}</td><td style="white-space:nowrap">${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div>${tag}</td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}${(!usedCentral(r)&&+r.distActual>0)?USEDCHIP:''}</td><td class="num">${centralCell(r)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td>${SHOW_EXP?'<td class="num">'+expCell(r.exp)+'</td>':''}<td class="num">${wageCell}</td><td>${paidCell}</td></tr>`;
+    h+=`<tr class="row${cls}" data-i="${i}"><td style="white-space:nowrap">${fmtD(r.date)}</td><td style="white-space:nowrap">${r.orderId}<div style="font-size:10.5px;color:var(--txt2)">${r.plate||''}</div>${tag}</td><td>${r.driver||'—'}</td><td style="font-size:12px">${vtMain}${vtSub}</td><td style="font-size:12px">${place}</td><td class="num">${n1(r.distActual)}${(!usedCentral(r)&&+r.distActual>0)?USEDCHIP:''}</td><td class="num">${centralCell(r)}</td><td class="num">${n1(r.liters)}</td><td class="num">${n2(kmpl)}</td>${SHOW_EXP?'<td class="num">'+helpCell(r.helpers)+'</td><td class="num">'+expCell(r.exp)+'</td>':''}<td class="num">${wageCell}</td><td>${paidCell}</td></tr>`;
   });
   $('tbl').innerHTML=h+'</tbody></table>';
   $('tbl').querySelectorAll('tr.row').forEach(tr=>tr.onclick=()=>openDetail(rows[+tr.dataset.i].orderId));
@@ -664,6 +730,9 @@ function renderDetail(orderId,res,pending){
   if(ro)h+=`<div style="background:var(--card2);border:1px solid var(--line2);border-radius:10px;padding:8px 11px;margin-bottom:8px;font-size:12.5px">🌴 งาน Packing ใช้รถ${_escS(rr.paidBy)} — <b>ค่าแรงจ่ายที่หน้าค่าแรง${_escS(rr.paidBy)}</b> หน้านี้ดูค่าใช้จ่ายอย่างเดียว</div>`;
   if(rr.pkr&&!ro)h+=`<div style="margin-bottom:8px"><span class="pkchip">📦 งาน Packing ใช้รถไร่ (ใบขอรถ)</span></div>`;
   if(rr.exp&&(expTotal(rr.exp)||rr.exp.note))h+='<div class="sec">💸 ค่าใช้จ่ายในเที่ยว</div><div style="margin-bottom:6px">'+EXP_ITEMS.filter(([k])=>+rr.exp[k]>0).map(([k,l])=>row(l,money(+rr.exp[k])+' บ.')).join('')+(expTotal(rr.exp)?row('<b>รวม</b>','<b>'+money(expTotal(rr.exp))+' บ.</b>'):'')+(rr.exp.note?row('หมายเหตุ',_escS(String(rr.exp.note).replace(/^"+|"+$/g,''))):'')+'</div>';
+  if(rr.helpers&&rr.helpers.st){const hh=rr.helpers;h+='<div class="sec">👷 เด็กรถ</div><div style="margin-bottom:6px">'+(hh.st==='set'
+    ?((hh.inn||[]).length?row('เด็กใน '+hh.inn.length+' คน × '+money(hh.rate),money(hh.inAmt)+' บ.')+row('รายชื่อ',hh.inn.map(x=>_escS(x.nick||x.name||x.id)).join(', ')):'')+(+hh.out?row('เด็กนอก '+hh.out+' คน × '+money(hh.outRate)+' (คนขับเบิก)',money(hh.outAmt)+' บ.'):'')
+    :hh.st==='none'?row('เด็กรถ','ไม่มีเด็กรถ'):row('เด็กรถ','<span style="color:#B45309">⚠ ยังไม่ระบุ</span>'))+'</div>';}
   if(place)h+=`<div style="font-size:13px;font-weight:600;margin-bottom:8px">📍 ${place}</div>`;
   if(!ro)h+=destBlock(orderId,st);
   h+='<div id="calcSt">'+calcStatus(orderId,w,live,st,isStored,pending)+'</div>';
@@ -1003,6 +1072,6 @@ async function pickGroup(k){
   }catch(e){gpMsg('LIFF error: '+e);}
 })();
 </script>
-<script src="wage-export.js?v=20261014"></script>
+<script src="wage-export.js?v=20261113h"></script>
 </body>
 </html>
