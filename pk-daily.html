@@ -1217,11 +1217,11 @@ function frPlanList(){if(!frLive())return [];const d=$('pdate').value;return FRL
 function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTER==='job'))return '';
   const q=(Q||'').trim().toLowerCase(),dash='<span class="m">—</span>',ln=x=>'<div class="ln">'+x+'</div>';
   /* งานห้างในหน้าไม่อยู่แล้ว (ลบ/เปิดวันอื่น) → ใช้ร้าน/เวลา/พาเลท/นน./จังหวัด จากคำขอ PKR (Edge farm[].stops) */
-  const rows=L.map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),JS=!!(j&&j.stops&&j.stops.length),S=JS?j.stops:(r.stops&&r.stops.length?r.stops:null);return {r,S,JS,jn:j?String(j.note||'').trim():''};})
+  const rows=L.map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),JS=!!(j&&j.stops&&j.stops.length),S=JS?j.stops:(r.stops&&r.stops.length?r.stops:null);return {r,S,JS,jn:j?String(j.note||'').trim():'',hl:frHl(j,r)};})
     .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord].concat(S?S.map(s=>s.n||jsN(s)):[]).join(' ').toLowerCase().includes(q));
   if(!rows.length)return '';
   return '<tr class="gr"><td colspan="16"><b>🚜 รถไร่</b> <span>'+rows.length+' คัน · งานห้างที่ขอรถไร่ (แอดมินไร่จัดรถ/คนขับ · แก้ที่แดชบอร์ดไร่)</span></td></tr>'
-    +rows.map(({r,S,JS,jn})=>{const pl=String(r.plate||'').split(',').map(x=>x.trim()).filter(Boolean),f=frOf(r),done=/เสร็จ/.test(r.ost||'');
+    +rows.map(({r,S,JS,jn,hl})=>{const pl=String(r.plate||'').split(',').map(x=>x.trim()).filter(Boolean),f=frOf(r),done=/เสร็จ/.test(r.ost||'');
       const cell=fn=>S?S.map(fn).map(ln).join(''):'';
       return '<tr class="vr2 frv"'+(r.drv||pl.length?' data-frd="1" data-pl="'+esc(pl.join(','))+'" data-dn="'+esc(r.drv||'')+'" data-or="'+esc(r.ord||'')+'" title="กดดูข้อมูลคนขับ (เหมือนหน้าจัดการคนขับ)"':'')+'><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
         +'<td class="stk1">'+(r.drv?esc(r.drv):'<span class="or">รอคนขับไร่</span>')+'</td>'
@@ -1232,7 +1232,7 @@ function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTE
         +'<td class="n">'+cell(s=>esc(s.cs||'')||'<span class="m">—</span>')+'</td>'
         +'<td class="n">'+dash+'</td>'
         +'<td class="nt">'+esc(['ใบขอ '+r.rid,r.ord?r.ord+(r.ost?' · '+r.ost:''):'',r.need?'เข้าโหลด '+r.need:''].filter(Boolean).join(' · '))+'</td>'
-        +'<td class="hp"></td><td></td><td>'+tchip('ห้าง')+(done?' <small class="otn">ส่งแล้ว</small>':'')+'</td>'
+        +'<td class="hp">'+(hl.length?hl.map(h=>esc(h.t)+(h.ph?' <span class="m">'+esc(h.ph)+'</span>':'')).map(ln).join(''):dash)+'</td><td></td><td>'+tchip('ห้าง')+(done?' <small class="otn">ส่งแล้ว</small>':'')+'</td>'
         +'<td class="n stc"></td><td class="n stc"></td><td class="n stc"></td><td class="n stc tt"></td></tr>';}).join('');}
 async function frPull(){if(!frLive()||FRB)return;try{const x=await fetch(PKD_URL+'?action=farm&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());
   if(!x||!x.ok)return;const ch=JSON.stringify(x.farm)!==JSON.stringify(FRL);FRL=x.farm||[];if(ch&&(PM==='mall'?!(JE&&ED):!ED))renderPlan();}catch(e){}}
@@ -1489,6 +1489,9 @@ function jRtWire(D,j){const R=JE.rt;
  *   j.helpers=[รหัสเด็กใน] · j.hout=เด็กนอก(คน) · j.hnone=ไม่มีเด็กรถ · ไม่เลือกอะไร = ยังไม่ระบุ
  *   ขอรถไร่ = ส่งไปกับคำขอ (pk_requests.helpers) · แก้ทีหลัง + บันทึกงาน = อัปเดตคำขอ (Edge pk-daily farmHelpers) · การ์ดมอบหมายงานคนขับอ่านค่าล่าสุด */
 function jHp(j){if(j.hnone)return {in:[],out:0,none:true};const a=(j.helpers||[]).filter(x=>HELP.some(h=>h.id===x&&h.status==='ใช้งาน')),o=+j.hout||0;return a.length||o?{in:a,out:o}:null;}
+/* 👷 เด็กรถงานห้างที่ยืมรถไร่ → แถว 🚜 รถไร่ (บนจอ + ใบแจ้งงาน) โชว์ชื่อ + เบอร์ (คุณน้อง 13 พ.ย.) */
+function hlOfHp(h){if(!h)return [];if(h.none)return [{t:'ไม่มีเด็กรถ',ph:''}];return (h.in||[]).map(x=>{const hh=helpOf(x);return hh?{t:hh.nick||hh.name,ph:hh.phone||''}:{t:String(x),ph:''};}).concat(+h.out?[{t:'เด็กนอก '+h.out+' คน',ph:''}]:[]);}
+function frHl(j,r){return hlOfHp(j?jHp(j):(r&&r.helpers)||null);}
 function jHpTxt(j){const h=jHp(j);return !h?'':h.none?'ไม่มีเด็กรถ':'มีเด็กรถ '+(h.in.length+h.out)+' คน';}
 /* 13 พ.ย. คุณน้อง "มอบหมายไป 2 คน ทำไมแท็บเด็กรถในไม่ขึ้นสถานะ" → นับงานห้าง (MJ) ด้วย ไม่ใช่แค่แพลนรวม */
 function helpBusy(skipJob){const o={};const {hc}=busy();Object.keys(hc).forEach(h=>(o[h]=o[h]||[]).push(...hc[h].map(x=>"รถ "+plOf(x))));
@@ -1888,7 +1891,7 @@ function planSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=
     const rows=fr.map(({r,j,JS,S})=>{const pls=String(r.plate||'').split(',').map(s=>s.trim()).filter(Boolean),jn=j?String(j.note||'').trim():'';
       return {no:++no,plate:pls.join(' / ')||'รอทะเบียน',pls:pls.length?pls:['รอทะเบียน'],shape:'🚜 รถไร่'+(r.vt?' · '+r.vt:''),drv:r.drv||'',k:'job',status:'',
         stops:(S.length?S:[{n:r.dest}]).map(s=>({n:s.n||jsN(s),ty:JS?tyOf(s):'ห้าง',pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:0})),
-        hl:[],ht:'',note:[jn&&'📝 '+jn,'ใบขอ '+r.rid,r.ord,r.need&&'เข้าโหลด '+r.need].filter(Boolean).join(' · ')};});
+        hl:frHl(j,r),ht:'',note:[jn&&'📝 '+jn,'ใบขอ '+r.rid,r.ord,r.need&&'เข้าโหลด '+r.need].filter(Boolean).join(' · ')};});
     if(rows.length)groups.push({g:'🚜 รถไร่',rows});}
   const rows=groups.flatMap(x=>x.rows),sum=k=>rows.reduce((a,r)=>a+r.stops.reduce((b,s)=>b+s[k],0),0),job=rows.filter(r=>r.k==='job');
   const dd=ok?String(dt.getDate()).padStart(2,'0')+'.'+String(dt.getMonth()+1).padStart(2,'0')+'.'+dt.getFullYear():'';
@@ -2409,9 +2412,10 @@ function renderPlan(){
   h+='<div class="sheet"><table class="jt"><thead><tr class="g1"><th colspan="12">ใบแจ้งงาน '+esc(dateTH($('pdate').value))+'</th><th colspan="4" class="stg"><div class="stgw"><span>สถิติคนขับ '+mon+'</span><button type="button" class="stb" id="drep" title="รายงานสถิติคนขับ · เลือกเดือน/ย้อนหลัง (Excel · PDF · JPEG)" aria-label="ออกรายงานสถิติคนขับ">'+drIco('report',16)+'</button></div></th></tr><tr>'
    +['รถ','คนขับ','ลูกค้า / จุดส่ง','จังหวัด','เวลาลงสินค้า','พาเลท','ลัง','ค่าลง (บ.)','หมายเหตุ','เด็กรถ','นัดเด็กรถ','ประเภทงาน'].map((t,i)=>'<th'+(i<2?' class="stk'+i+'"':i>=4&&i<=7?' class="n"':'')+'>'+t+'</th>').join('')
    +TYPES.map(x=>'<th class="stg n"><i class="tyd" style="background:'+TYC[x]+'"></i>'+x+'</th>').join('')+'<th class="stg n">เที่ยวสะสม</th></tr></thead><tbody>';
-  ['4 ล้อ','6 ล้อ','10/22 ล้อ'].forEach(g=>{
-    const rows=VEH.filter(v=>v.g===g).filter(visible);if(!rows.length)return;
-    const gall=VEH.filter(v=>v.g===g);
+  // 🚚 รถนอก = กลุ่มล่างสุด (คุณน้อง 13 พ.ย. 'แพลนรวม รถนอกเอาไปอยู่ล่างสุด')
+  ['4 ล้อ','6 ล้อ','10/22 ล้อ'].map(g=>[g,v=>v.g===g&&!v.ext]).concat([['🚚 รถนอก',v=>!!v.ext]]).forEach(([g,fg])=>{
+    const rows=VEH.filter(fg).filter(visible);if(!rows.length)return;
+    const gall=VEH.filter(fg);
     h+='<tr class="gr"><td colspan="16"><b>'+g+'</b> <span>'+gall.length+' คัน · มีงาน '+gall.filter(v=>kind(v)==='job').length+'</span></td></tr>';
     rows.forEach(v=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver),st=d&&!v.tail?drvStat(d.code):null;
       const L=(arr,f)=>arr.map(f).map(x=>'<div class="ln">'+x+'</div>').join('');
