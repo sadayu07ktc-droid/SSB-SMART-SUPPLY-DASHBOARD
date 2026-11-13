@@ -33,6 +33,7 @@
   .seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:var(--card)}
   .seg button{border:0;padding:8px 12px;font:inherit;font-size:12.5px;cursor:pointer;background:transparent;color:var(--txt2)}
   .seg button.on{background:var(--primary);color:#fff}
+  .seg.wrap{flex-wrap:wrap;max-width:100%}.seg.wrap button{white-space:nowrap;flex:1 1 auto}   /* ชิปกรองในลิ้นชัก 📡 (6 ชิป) ขึ้นบรรทัดใหม่แทนโดนตัดบนจอแคบ */
   .btn{padding:9px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
   .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt);font-weight:500}
   .btn.danger{background:var(--danger)}
@@ -1214,6 +1215,7 @@ async function doImport(){
  * เที่ยวจริงจาก GPS: ออกเขต SSB (ป้อมยามเป็นหลัก) → สถานี → กลับเขต SSB · ตัดค่าผิดปกติ (IQR) → มัธยฐานขาไป + ขากลับ → เฉลี่ยเป็นค่าเดียว */
 const DTC_EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/dtc-central';
 let DTC=null, DTC_F='all', DTC_DAYS=90, DTC_Y=0;
+let DTC_U=null, DTC_U_BUSY=false, DTC_UKM={};   // 🆕 หมุดที่ยังไม่เคยวิ่ง (Edge action=unrun · โหลดเมื่อกดชิปครั้งแรก) · DTC_UKM = กม. ที่กรอก ต่อ poi_id
 let DTC_KIND='st', DTC_P=null, DTC_PF='all', DTC_CHG_ALL=0;   // st = โรงงาน ↔ ปลายทาง · pair = ปลายทาง ↔ ปลายทาง (งานหลายจุด · คุณน้อง 27 ต.ค.)
 /* ค้างคืนก่อนกลับโรงงาน (Edge nights: วันที่กลับ − วันที่ออก เวลาไทย · คุณน้อง 27 ต.ค.) */
 const dtcNightTx=x=>!x?'':x.mode>0?'🌙 ส่วนใหญ่ค้าง '+x.mode+' คืน':(x.max>0?'🌙 บางเที่ยวค้างคืน':'');
@@ -1281,11 +1283,12 @@ function dtcList(){
   const R=DTC.routes||[], cnt={all:R.length,has:0,none:0,bad:0};
   R.forEach(r=>{const l=dtcLvl(r);if(l==='none')cnt.none++;else{cnt.has++;if(l==='bad')cnt.bad++;}});
   cnt.night=R.filter(r=>r.nights&&r.nights.mode>0).length;
+  cnt.unrun=DTC_U?(DTC_U.pins||[]).length:'';
   let h=dtcChgBox(DTC,r=>r.station,'dtcOpen')+dtcKindSeg()+'<div class="note" style="margin-bottom:10px">ค่ากลาง = เฉลี่ยของ <b>มัธยฐานขาไป</b> (ออก SSB → สถานี) กับ <b>มัธยฐานขากลับ</b> (สถานี → เข้า SSB) · นับจาก<b>ป้อมยาม SSB</b> ถ้ารถไม่ผ่านป้อมยามใช้จุดอื่นในโรงงาน (ลานจอด/ห้องชั่ง/จุดโหลด) · ใช้<b>เที่ยววิ่งตรง</b> (ไม่จอดที่อื่นเกิน 15 นาทีระหว่างทาง) · ตัดค่าผิดปกติออกก่อน · แตะสถานีเพื่อดูเที่ยวที่เอามาคิด</div>'
     +'<div class="dr-tools"><input class="search" id="dtcQ" placeholder="🔎 ค้นสถานี…" oninput="dtcRows()" aria-label="ค้นสถานี">'
     +dtcDaySeg()+'</div>'
-    +'<div class="dr-tools"><div class="seg" role="group" aria-label="กรอง">'
-    +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง'],['night','🌙 ค้างคืน']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
+    +'<div class="dr-tools"><div class="seg wrap" role="group" aria-label="กรอง">'
+    +[['all','ทั้งหมด'],['has','มีในตาราง'],['bad','ต่างมาก'],['none','ยังไม่มีในตาราง'],['night','🌙 ค้างคืน'],['unrun','🆕 ยังไม่เคยวิ่ง']].map(f=>'<button type="button" data-df="'+f[0]+'" class="'+(DTC_F===f[0]?'on':'')+'" onclick="DTC_F=\''+f[0]+'\';dtcList()">'+f[1]+' '+cnt[f[0]]+'</button>').join('')+'</div></div>'
     +'<div class="dr-tools"><button type="button" class="btn sm ghost" onclick="dtcMonthly()">📅 รายงานรายเดือน</button>'
     +(cnt.none?'<button type="button" class="btn sm" onclick="dtcAddMissing()">➕ เพิ่มที่ยังไม่มีในตาราง ('+cnt.none+')</button>':'')
     +'<button type="button" class="btn sm" style="background:#1d6f42" onclick="dtcXDown(this)">⬇️ ดาวน์โหลด Excel</button>'
@@ -1297,14 +1300,17 @@ function dtcList(){
   $('dtcBody').scrollTop=DTC_Y;
 }
 function dtcRows(){
+  if(!$('dtcRows'))return;   // ลิ้นชักเปิดหน้ารายละเอียดอยู่ (โหลดหมุดเสร็จทีหลัง)
   const q=norm(($('dtcQ')||{}).value);
+  if(DTC_F==='unrun')return dtcUnrunRows(q);
   let R=(DTC.routes||[]).map((r,i)=>Object.assign({_i:i},r));
   if(DTC_F==='has')R=R.filter(r=>dtcLvl(r)!=='none');
   if(DTC_F==='none')R=R.filter(r=>dtcLvl(r)==='none');
   if(DTC_F==='bad')R=R.filter(r=>dtcLvl(r)==='bad');
   if(DTC_F==='night')R=R.filter(r=>r.nights&&r.nights.mode>0).sort((a,b)=>b.nights.mode-a.nights.mode||b.trips-a.trips);
   if(q)R=R.filter(r=>norm(r.station+' '+ssbPoi.text(r.station)+' '+(r.current?r.current.station+' '+r.current.by:'')).indexOf(q)>=0);
-  if(!R.length){$('dtcRows').innerHTML='<div class="empty">'+(DTC.routes&&DTC.routes.length?'ไม่พบสถานีที่ตรงเงื่อนไข':'ยังไม่มีเที่ยวจาก DTC — ระบบกำลังดึงประวัติย้อนหลัง ลองใหม่ภายหลัง')+'</div>';return;}
+  if(!R.length){$('dtcRows').innerHTML='<div class="empty">'+(DTC.routes&&DTC.routes.length?'ไม่พบสถานีที่ตรงเงื่อนไข':'ยังไม่มีเที่ยวจาก DTC — ระบบกำลังดึงประวัติย้อนหลัง ลองใหม่ภายหลัง')
+    +(q?'<br><span style="font-size:12px">หมุดที่รถยังไม่เคยวิ่งไปจะไม่อยู่ในรายการนี้</span><br><button type="button" class="btn sm ghost" style="margin-top:8px" onclick="dtcGoUnrun()">🆕 ค้นในหมุดที่ยังไม่เคยวิ่ง</button>':'')+'</div>';return;}
   $('dtcRows').innerHTML=R.map(r=>{
     const l=dtcLvl(r), one=r.out.median==null||r.back.median==null;
     const cur=l==='none'?'<span class="dpill none">ไม่มีในตาราง</span>'
@@ -1316,6 +1322,50 @@ function dtcRows(){
       +'<div class="v"><b>'+nf(r.central,0)+'</b><span>กม.</span></div>'
       +'<div class="v">'+cur+'</div></div>';
   }).join('');
+}
+/* 🆕 หมุดลูกค้า DTC ที่ยังไม่เคยวิ่ง + ยังไม่มีในตาราง (คุณน้อง 13 พ.ย. · เช่น แม็คโคร สาทร) · Edge action=unrun (คิดใน DB ส่งกลับแค่หมุดที่เข้าเงื่อนไข · โหลดเมื่อกดชิปครั้งแรก)
+ * เฉพาะหมุดลูกค้า (ทุกแบบ) / สวน / จุดรับซื้อ · DEV กรอก กม. เองทีละหมุด (ไม่กรอก = ไม่เพิ่ม) → xrt_preview/xrt_apply ชุดเดียวกับ Excel */
+function dtcGoUnrun(){const q=($('dtcQ')||{}).value||'';DTC_F='unrun';dtcList();if($('dtcQ')){$('dtcQ').value=q;dtcRows();}}
+async function dtcUnrunLoad(){
+  if(DTC_U_BUSY)return; DTC_U_BUSY=true;
+  $('dtcRows').innerHTML='<div class="ldr"><div class="ring"></div>กำลังหาหมุดที่ยังไม่เคยวิ่ง</div>';
+  try{DTC_U=await dtcGet('action=unrun');}
+  catch(e){if($('dtcRows'))$('dtcRows').innerHTML='<div class="msg">โหลดไม่ได้ — '+esc(e.message||e)+'<br><button class="btn sm" style="margin-top:10px" onclick="dtcRows()">↻ ลองใหม่</button></div>';return;}
+  finally{DTC_U_BUSY=false;}
+  const cb=document.querySelector('#dtcBody [data-df="unrun"]'); if(cb)cb.textContent='🆕 ยังไม่เคยวิ่ง '+(DTC_U.pins||[]).length;
+  dtcRows();
+}
+const dtcUnrunN=()=>Object.keys(DTC_UKM).filter(k=>DTC_UKM[k]).length;
+function dtcUnrunBtn(){const n=dtcUnrunN(),b=$('dtcUGo');if(b){b.disabled=!n;b.textContent=n?'ตรวจก่อนเพิ่ม '+n+' จุด':'กรอก กม. อย่างน้อย 1 จุด';}}
+function dtcUnrunRows(q){
+  if(!DTC_U){dtcUnrunLoad();return;}
+  const can=!!DTC_U.canAdd, all=DTC_U.pins||[];
+  const P=all.filter(x=>!q||norm(x.name+' '+x.poi_id+' '+(x.kind||'')+' '+(x.code||'')).indexOf(q)>=0);
+  let h='<div class="note" style="margin:0 0 8px">หมุด<b>ลูกค้า / สวน / จุดรับซื้อ</b> ใน DTC ที่<b>รถยังไม่เคยวิ่งไป</b> และยังไม่มีในตารางค่ากลาง (เลยไม่มีค่ากลาง DTC ให้) · '
+    +(can?'กรอก <b>ระยะ (กม.)</b> จาก SSB ถึงจุดนั้น แล้วกด "ตรวจก่อนเพิ่ม" · ไม่กรอก = ไม่เพิ่ม · ประเภทงาน/ค่าใช้จ่ายร้าน กรอกที่ฟอร์มแก้ภายหลัง':'เพิ่มเข้าตารางได้เฉพาะ DEV')+'</div>';
+  if(can)h+='<div class="dr-tools"><button type="button" class="btn sm" id="dtcUGo" onclick="dtcUnrunGo(this)"></button></div>';
+  if(!P.length)h+='<div class="empty">'+(all.length?'ไม่พบหมุดที่ตรงคำค้น':'ไม่มีหมุดลูกค้าที่ยังไม่เคยวิ่ง 🎉')+'</div>';
+  else h+=P.map(x=>{const ll=String(x.center||'').split(',').map(s=>s.trim()), geo=ll.length===2&&ll.every(s=>/^-?\d+(\.\d+)?$/.test(s));
+    return '<div class="dr-row" style="cursor:default;grid-template-columns:minmax(0,1fr) auto">'
+      +'<div style="min-width:0"><div class="st">'+esc(x.name)+' <span style="font-size:10.5px;font-weight:400;color:var(--txt2);opacity:.75;white-space:nowrap">'+esc(x.poi_id)+'</span></div>'
+      +'<div class="n">'+esc(x.kind||'')+(x.code?' · ผูก '+esc(x.code)+(x.pickup?' · '+esc(x.pickup):''):'')
+      +(geo?' · <a href="https://www.google.com/maps?q='+ll[0]+','+ll[1]+'" target="_blank" rel="noopener" style="color:var(--accent)">📍 แผนที่</a>':'')
+      +(x.first_seen&&!isNaN(Date.parse(x.first_seen))?' · ปักหมุด '+dtcTh(new Date(Date.parse(x.first_seen)+7*3600000).toISOString().slice(0,10)):'')+'</div></div>'
+      +(can?'<div class="v"><input type="number" inputmode="decimal" min="1" max="3000" step="any" placeholder="กม." aria-label="ระยะ (กม.) '+esc(x.name)+'" data-u="'+esc(x.poi_id)+'" value="'+esc(DTC_UKM[x.poi_id]||'')+'" oninput="DTC_UKM[this.dataset.u]=this.value.trim();dtcUnrunBtn()" style="width:84px;padding:7px 8px;border:1px solid var(--line2);border-radius:8px;background:var(--card);color:var(--txt);font:inherit;text-align:right"></div>':'')
+      +'</div>';}).join('');
+  $('dtcRows').innerHTML=h; dtcUnrunBtn();
+}
+async function dtcUnrunGo(b){
+  const rows=[]; let bad='';
+  ((DTC_U&&DTC_U.pins)||[]).forEach(x=>{const v=String(DTC_UKM[x.poi_id]||'').replace(/,/g,'').trim(); if(!v)return;
+    const km=Number(v); if(!(km>=1&&km<=3000)){bad=bad||x.name;return;}
+    rows.push({_line:rows.length+1,id:'',station:x.name,km:String(km),job_type:'',garden_code:x.code||'',pickup_point:x.pickup||''});});
+  if(bad){toast('ระยะของ "'+bad+'" ต้องเป็นตัวเลข 1–3,000 กม.',true);return;}
+  if(!rows.length)return;
+  const done=btnBusy(b,'กำลังตรวจ…');
+  try{const pv=await DTC_X.preview(rows); pv.missing=[]; XRT_UP={S:DTC_X,rows,name:'หมุดที่ยังไม่เคยวิ่ง (กรอก กม. เอง)'}; xrtPreview(pv);}
+  catch(e){toast('❌ '+(e.message||e),true);}
+  finally{done();}
 }
 async function dtcOpen(i){
   const r=DTC.routes[i]; if(!r)return;
@@ -1473,7 +1523,7 @@ const DTC_X={
   ],
   preview:rows=>dtcXPost('xrt_preview',rows),
   apply:rows=>dtcXPost('xrt_apply',rows),
-  onDone:()=>{load();dtcLoad();}
+  onDone:()=>{DTC_U=null;DTC_UKM={};load();dtcLoad();}
 };
 /* ➕ เพิ่มสถานี DTC ที่ยังไม่มีในตาราง (คุณน้อง 27 ต.ค.) · ระยะ = ค่ากลาง DTC · ประเภทงาน/ค่าร้าน ให้แอดมินกรอกผ่านไฟล์ภายหลัง
  * ใช้ Edge xrt_preview/xrt_apply ชุดเดียวกับ Excel (km:'DTC' · เฉพาะ DEV) · หมุดที่ผูกรหัสสวน/ลานไว้แล้ว ใส่รหัส+จุดรับให้ด้วย */
