@@ -1155,7 +1155,9 @@ function renderTpl() {
     '<div class="rpl" style="margin-top:12px">ชนิดรถของ ' + esc(TP.grp) + '</div><div class="chips" style="margin:0">' +
     chip(!TP.kind, 'data-tk=""', '⭐ ชุดตั้งต้นของกลุ่ม' + (base ? ' (' + base + ')' : ' (ยังไม่ตั้ง)')) +
     kinds.map((k) => { const own = tpRows(TP.grp, k).length; return chip(TP.kind === k, 'data-tk="' + esc(k) + '"', esc(k) + ' · ' + tpVeh(k).length + ' คัน' + (own ? ' ✓' : '')); }).join('') + '</div>' +
-    '<div class="note" style="margin-top:6px">✓ = มีชุดของตัวเองแล้ว · ไม่มี ✓ = ใช้ชุดตั้งต้นของกลุ่ม</div></div>';
+    '<div class="note" style="margin-top:6px">✓ = มีชุดของตัวเองแล้ว · ไม่มี ✓ = ใช้ชุดตั้งต้นของกลุ่ม</div>' +
+    '<div class="xa-up" style="background:#EAF4EE"><span>📊 Excel ทุกกลุ่ม ทุกชนิดรถ — แก้ในไฟล์แล้วอัปโหลดกลับ</span><button class="btn" id="tpxDl" style="background:#1d6f42;color:#fff;border-color:#1d6f42">⬇ ดาวน์โหลด Excel</button>' +
+    (canEdit() ? '<button class="btn gh" id="tpxUp">⬆ อัปโหลด</button>' : '') + '</div></div>';
   const info = !TP.own
     ? '<div class="card rq-tpl" style="display:block"><b>' + esc(TP.kind) + '</b> (' + tpVeh(TP.kind).length + ' คัน) ยังไม่มีชุดของตัวเอง — ตอนนี้ใช้<b>ชุดตั้งต้นของ ' + esc(TP.grp) + '</b> ' + inSet.length + ' รายการ (ด้านล่าง)' +
       (canEdit() ? '<div style="margin-top:8px"><button class="btn pri" id="tpNew">✚ สร้างชุดของ ' + esc(TP.kind) + ' (เริ่มจากชุดตั้งต้น)</button></div>' : '') + '</div>'
@@ -1227,7 +1229,150 @@ function tpTap(t) {
   if (c('#tpSave')) { tpSaveAsk(false); return true; }
   if (c('#tpDrop')) { tpSaveAsk(true); return true; }
   if (c('#tpFill')) { tpFill(c('#tpFill')); return true; }
+  if (c('#tpxDl')) { tpxDownload(c('#tpxDl')); return true; }
+  if (c('#tpxUp')) { if (tpNChg() && !confirm('ยังไม่ได้บันทึกที่แก้ไว้บนจอ — อัปโหลดจะโหลดข้อมูลใหม่ทับ ทิ้งไหม?')) return true; tpxPick(); return true; }
   return false;
+}
+
+// ── 📋 Excel ชุดมาตรฐาน: 1 แถว = 1 ชุด (กลุ่ม + ชนิดรถ) · ช่อง = จำนวนที่ต้องมี (ค่าที่ใช้อยู่จริง) · อัปโหลด = เทียบในเครื่อง → popup → PIN → saveTemplate ทีละชุด (เซิร์ฟเวอร์ตรวจซ้ำ) ──
+//   ช่องว่าง = คงเดิม · 0 = เอาออกจากชุด · แถวชนิดที่ยังใช้ชุดตั้งต้น ถ้าแก้ให้ต่างจากตั้งต้น = สร้างชุดของชนิดนั้น · ลบแถว ≠ ลบชุด (เลิกชุดเฉพาะทำในหน้าเว็บ)
+const TPX_SH = 'ชุดมาตรฐาน', TPX_META = [['id', 'id (ห้ามแก้)', 16], ['job_group', 'กลุ่ม', 9], ['head_kind', 'ชนิดรถ', 14], ['vehicles', 'จำนวนรถ (อ่านอย่างเดียว)', 10], ['source', 'ที่มา (อ่านอย่างเดียว)', 16]];
+function tpxSets(d) {   // ชุดทุกแถว: ตั้งต้น + ชนิดรถที่มีรถ + ชนิดที่มีชุดค้างอยู่
+  const out = [], rowsOf = (g, k) => d.templates.filter((t) => t.job_group === g && (t.head_kind || '') === k), qOf = (rs) => { const o = {}; rs.forEach((r) => (o[r.item_code] = Number(r.qty))); return o; };
+  d.groups.forEach((g) => {
+    const base = qOf(rowsOf(g, '')), ks = new Set(d.kinds[g] || []);
+    d.templates.filter((t) => t.job_group === g && t.head_kind).forEach((t) => ks.add(t.head_kind));
+    const veh = (k) => (d.kindVehicles[g + '|' + k] || []).length;
+    out.push({ id: g + '|', g, k: '', own: true, q: base, base, veh: [...ks].filter((k) => !rowsOf(g, k).length).reduce((t, k) => t + veh(k), veh('')) });
+    [...ks].sort((a, b) => a.localeCompare(b, 'th')).forEach((k) => { const r = rowsOf(g, k); out.push({ id: g + '|' + k, g, k, own: !!r.length, q: r.length ? qOf(r) : Object.assign({}, base), base, veh: veh(k) }); });
+  });
+  return out;
+}
+const tpxCols = (d) => d.items.filter((i) => d.groups.some((g) => (i.groups || []).indexOf(g) >= 0)).sort((a, b) => String(a.category || '').localeCompare(String(b.category || ''), 'th') || (a.sort || 0) - (b.sort || 0));
+async function tpxDownload(btn) {
+  if (TP.busy) return; TP.busy = true; const h = btn.innerHTML; btn.disabled = true; btn.innerHTML = '⏳ กำลังสร้าง…';
+  try {
+    await rLoad('xlsx');
+    const X = window.XLSX, d = TP.d, sets = tpxSets(d), cols = tpxCols(d);
+    const LN = 'BFBFBF', bd = { top: { style: 'thin', color: { rgb: LN } }, bottom: { style: 'thin', color: { rgb: LN } }, left: { style: 'thin', color: { rgb: LN } }, right: { style: 'thin', color: { rgb: LN } } };
+    const F = (o) => Object.assign({ name: 'Tahoma', sz: 10, color: { rgb: '1F1F1F' } }, o || {});
+    const S = { th: { font: F({ bold: true, color: { rgb: 'FFFFFF' } }), fill: { fgColor: { rgb: '1F3864' } }, border: bd, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } },
+      cat: { font: F({ sz: 8, color: { rgb: 'FFFFFF' } }), fill: { fgColor: { rgb: '2F5496' } }, border: bd, alignment: { horizontal: 'center', wrapText: true } },
+      key: { font: F({ sz: 8, color: { rgb: '808080' } }), fill: { fgColor: { rgb: 'F2F2F2' } }, border: bd, alignment: { horizontal: 'center' } },
+      idh: { font: F({ bold: true, color: { rgb: '595959' } }), fill: { fgColor: { rgb: 'D9D9D9' } }, border: bd, alignment: { horizontal: 'center', vertical: 'center', wrapText: true } },
+      ro: { font: F({ color: { rgb: '595959' } }), fill: { fgColor: { rgb: 'EDEDED' } }, border: bd },
+      base: { font: F({ bold: true, color: { rgb: '7A5A12' } }), fill: { fgColor: { rgb: 'FFF4D6' } }, border: bd },
+      ed: { font: F(), border: bd, alignment: { horizontal: 'center' } }, inh: { font: F({ color: { rgb: '8C8C8C' } }), border: bd, alignment: { horizontal: 'center' } } };
+    const cs = (v, s) => ({ v: v == null ? '' : String(v), t: 's', s });
+    const aoa = [
+      [...TPX_META.map(([, t]) => cs(t, S.idh)), ...cols.map((c) => cs(c.name + (c.unit ? ' (' + c.unit + ')' : ''), S.th))],
+      [...TPX_META.map(([k]) => cs(k, S.key)), ...cols.map((c) => cs(c.code, S.key))],
+      ...sets.map((s) => [cs(s.id, S.ro), cs(s.g, s.k ? S.ro : S.base), cs(s.k || '⭐ ชุดตั้งต้นของกลุ่ม', s.k ? S.ro : S.base), cs(s.veh, S.ro),
+        cs(!s.k ? 'ชุดตั้งต้น' : s.own ? 'ชุดของตัวเอง' : 'ใช้ชุดตั้งต้น', S.ro),
+        ...cols.map((c) => cs(s.q[c.code] > 0 ? s.q[c.code] : '',s.own ? S.ed : S.inh))]),
+    ];
+    const ws = {}; aoa.forEach((row, r) => row.forEach((cell, c) => { ws[X.utils.encode_cell({ r, c })] = cell; }));
+    ws['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: aoa.length - 1, c: aoa[0].length - 1 } });
+    ws['!cols'] = [...TPX_META.map((m) => ({ wch: m[2] })), ...cols.map(() => ({ wch: 10 }))]; ws['!rows'] = [{ hpt: 54 }, { hpt: 14 }];
+    const det = [['กลุ่ม', 'ชนิดรถ', 'ที่มา', 'จำนวนรถ', 'หมวด', 'รหัส', 'อุปกรณ์', 'จำนวน', 'หน่วย']];
+    sets.forEach((s) => cols.filter((c) => s.q[c.code] > 0).forEach((c) => det.push([s.g, s.k || 'ชุดตั้งต้นของกลุ่ม', !s.k ? 'ชุดตั้งต้น' : s.own ? 'ชุดของตัวเอง' : 'ใช้ชุดตั้งต้น', s.veh, c.category || '', c.code, c.name, s.q[c.code], c.unit || ''])));
+    const wd = {}; det.forEach((row, r) => row.forEach((v, c) => { wd[X.utils.encode_cell({ r, c })] = r ? (typeof v === 'number' ? { v, t: 'n', s: { font: F(), border: bd } } : cs(v, { font: F(), border: bd })) : cs(v, S.th); }));
+    wd['!ref'] = X.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: det.length - 1, c: 8 } }); wd['!cols'] = [9, 18, 13, 9, 14, 13, 28, 8, 8].map((w) => ({ wch: w }));
+    wd['!autofilter'] = { ref: wd['!ref'] };
+    const hp = [['วิธีใช้ — ชุดมาตรฐานอุปกรณ์ติดรถ (ดาวน์โหลด ' + rMade() + ')', ''],
+      ['1', 'แผ่น "ชุดมาตรฐาน": 1 แถว = 1 ชุด (กลุ่ม + ชนิดรถ) · ช่อง = จำนวนที่รถชนิดนั้นต้องมี'],
+      ['2', 'แถว ⭐ ชุดตั้งต้นของกลุ่ม = ใช้กับชนิดรถที่ยังไม่มีชุดของตัวเอง'],
+      ['3', 'แถว "ใช้ชุดตั้งต้น" (ตัวเลขสีเทา) = ยังไม่มีชุดของตัวเอง · ถ้าแก้ให้ต่างจากตั้งต้น ระบบจะสร้างชุดของชนิดนั้นทั้งชุด'],
+      ['4', 'ช่องว่าง = คงค่าเดิม · ใส่ 0 = เอาออกจากชุด · ลบทั้งแถว ≠ ลบชุด (เลิกชุดเฉพาะ ทำในหน้าเว็บ)'],
+      ['5', 'ห้ามแก้คอลัมน์ id และแถวที่ 2 (รหัส) · อัปโหลด → ดูสรุปก่อน → ใส่ PIN 6 หลัก → ยืนยัน'],
+      ['', ''], ['ค่าที่ใช้ได้', 'ตัวเลข 0–1,000 · ทศนิยมไม่เกิน 2 ตำแหน่ง'],
+      ['หลังบันทึก', 'ชุดของรถแต่ละคันยังไม่เปลี่ยน — กด "➕ เติมที่ขาดให้รถที่ใช้ชุดนี้" หรือ "เติมที่ขาดจากมาตรฐาน" ในแท็บ ⚙️ ของแต่ละคัน'],
+      ['แผ่น "รายละเอียด"', 'รายการเดียวกันแบบแถวยาว ไว้กรอง/อ่าน (อัปโหลดกลับแล้วไม่อ่าน)']];
+    const wh = {}; hp.forEach((row, r) => row.forEach((v, c) => { wh[X.utils.encode_cell({ r, c })] = cs(v, r ? { font: F(), border: bd, alignment: { wrapText: true, vertical: 'top' } } : S.th); }));
+    wh['!ref'] = 'A1:B' + hp.length; wh['!cols'] = [{ wch: 16 }, { wch: 100 }];
+    const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, TPX_SH); X.utils.book_append_sheet(wb, wd, 'รายละเอียด'); X.utils.book_append_sheet(wb, wh, 'วิธีใช้');
+    rSave(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/octet-stream' }), 'ชุดมาตรฐาน_' + bkk().replace(/-/g, '') + '.xlsx');
+  } catch (e) { toast('สร้างไฟล์ไม่สำเร็จ: ' + (e.message || e), true); }
+  finally { TP.busy = false; btn.disabled = false; btn.innerHTML = h; }
+}
+function tpxPick() {
+  let f = $('tpFile');
+  if (!f) { f = document.createElement('input'); f.type = 'file'; f.id = 'tpFile'; f.accept = '.xlsx,.xls'; f.style.display = 'none'; document.body.appendChild(f); f.onchange = () => { const x = f.files[0]; f.value = ''; if (x) tpxUpload(x); }; }
+  f.click();
+}
+// อ่านไฟล์ + เทียบกับข้อมูลล่าสุด (โหลด getTemplates ใหม่ 1 ครั้ง) → แผน { saves:[{g,k,items,kind:'new'|'edit'|'base', diff}], errors, same, missing }
+async function tpxUpload(file) {
+  if (TP.busy) return; TP.busy = true; toast('กำลังตรวจไฟล์ ' + file.name + ' …');
+  let plan;
+  try {
+    await rLoad('xlsx');
+    const X = window.XLSX, wb = X.read(await file.arrayBuffer(), { type: 'array' }), sn = wb.SheetNames.find((n) => String(n).trim() === TPX_SH) || wb.SheetNames[0];
+    const aoa = X.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: '' });
+    const kr = aoa.slice(0, 6).findIndex((r) => r.some((x) => String(x).trim() === 'id') && r.some((x) => String(x).trim() === 'job_group'));
+    if (kr < 0) throw new Error('ไม่พบแถวรหัส (แถวที่ 2 มี id, job_group) — ห้ามแก้/ลบแถวที่ 2 · ดาวน์โหลดไฟล์ใหม่จากหน้านี้');
+    const d = await api({ action: 'getTemplates', group: '' }); if (!d.ok) throw new Error(d.error || 'โหลดชุดล่าสุดไม่ได้');
+    TP.d = d; plan = tpxPlan(d, aoa[kr].map((x) => String(x).trim()), aoa.slice(kr + 1), kr + 2);
+  } catch (e) { TP.busy = false; toast('อ่านไฟล์ไม่ได้: ' + (e.message || e), true); return; }
+  TP.busy = false; tpxPreview(file.name, plan);
+}
+function tpxPlan(d, keys, rows, first) {
+  const sets = tpxSets(d), byId = {}; sets.forEach((s) => (byId[s.id] = s));
+  const itemOk = {}; d.items.forEach((i) => (itemOk[i.code] = i));
+  const out = { saves: [], errors: [], same: 0, unknown: [], seen: {} };
+  keys.forEach((k, c) => { if (k && TPX_META.every((m) => m[0] !== k) && !itemOk[k]) out.unknown.push(k); });
+  rows.forEach((r, i) => {
+    const line = first + i, get = (k) => { const c = keys.indexOf(k); return c < 0 ? '' : String(r[c] == null ? '' : r[c]).trim().replace(/^'/, ''); };
+    const vals = keys.map((k, c) => [k, String(r[c] == null ? '' : r[c]).trim()]).filter(([k, v]) => v !== '' && itemOk[k]);
+    if (!vals.length) return;
+    let id = get('id'); const g = get('job_group'), kk = get('head_kind').replace(/^⭐.*$/, '');
+    if (!id && g) id = g + '|' + kk;
+    const s = byId[id], nm = id.replace('|', ' · ') || '(ไม่มี id)';
+    if (!s) { out.errors.push({ line, name: nm, msg: d.groups.indexOf(id.split('|')[0]) < 0 ? 'ไม่ใช่กลุ่มของคุณ / ไม่พบกลุ่ม' : 'ไม่พบชนิดรถนี้ (ห้ามแก้คอลัมน์ id · ชนิดใหม่ต้องมีรถในทะเบียนก่อน)' }); return; }
+    if (out.seen[id]) { out.errors.push({ line, name: nm, msg: 'ชุดนี้ซ้ำกับแถว ' + out.seen[id] }); return; }
+    out.seen[id] = line;
+    const q = Object.assign({}, s.q), errs = [];
+    vals.forEach(([k, v]) => { const n = Number(v.replace(/,/g, ''));
+      if (!/^\d+(\.\d+)?$/.test(v.replace(/,/g, '')) || !isFinite(n) || n > 1000 || Math.round(n * 100) !== n * 100) { errs.push(k + ': "' + v + '" ต้องเป็นตัวเลข 0–1,000'); return; }
+      if (n === 0) delete q[k]; else q[k] = n; });
+    if (errs.length) { errs.forEach((m) => out.errors.push({ line, name: nm, msg: m })); return; }
+    const cmp = s.own ? s.q : s.base, diff = [];
+    new Set([...Object.keys(cmp), ...Object.keys(q)]).forEach((k) => { if ((cmp[k] || 0) !== (q[k] || 0)) diff.push({ code: k, old: cmp[k] || 0, new: q[k] || 0 }); });
+    if (!diff.length) { out.same++; return; }
+    out.saves.push({ g: s.g, k: s.k, line, kind: !s.k ? 'base' : s.own ? 'edit' : 'new', diff, items: Object.keys(q).filter((k) => q[k] > 0).map((k) => ({ itemCode: k, qty: q[k] })), veh: s.veh });
+  });
+  out.missing = sets.filter((s) => !out.seen[s.id]).map((s) => s.id.replace('|', ' · ') || s.id);
+  return out;
+}
+function tpxPreview(fname, p) {
+  const nm = (s) => esc(s.g + ' · ' + (s.k || 'ชุดตั้งต้นของกลุ่ม')), nN = p.saves.filter((s) => s.kind === 'new').length, nE = p.saves.length - nN;
+  $('dT').textContent = '📤 ตรวจไฟล์ชุดมาตรฐาน';
+  $('dB').innerHTML = '<div class="note">' + esc(fname) + '</div>' +
+    '<div class="xa-k"><span class="ok">สร้างชุดใหม่ <b>' + nN + '</b></span><span class="bl">แก้ <b>' + nE + '</b></span><span class="bad">ผิด <b>' + p.errors.length + '</b></span><span>ไม่เปลี่ยน <b>' + p.same + '</b></span><span>ไม่อยู่ในไฟล์ <b>' + p.missing.length + '</b></span></div>' +
+    (p.unknown.length ? '<div class="err" style="background:var(--warntint);color:#7A5A12">⚠️ ข้ามคอลัมน์ที่ไม่รู้จัก: ' + esc(p.unknown.join(', ')) + '</div>' : '') +
+    (p.errors.length ? '<div class="xa-s bad"><b>❌ ผิด (ข้ามทั้งแถว)</b><ul>' + p.errors.map((e) => '<li>แถว ' + e.line + ' <b>' + esc(e.name) + '</b>: ' + esc(e.msg) + '</li>').join('') + '</ul></div>' : '') +
+    p.saves.map((s) => '<div class="xa-s ' + (s.kind === 'new' ? 'ok' : 'bl') + '"><b>' + (s.kind === 'new' ? '🟢 สร้างชุดของ ' : '🔵 แก้ ') + nm(s) + '</b> <small>(แถว ' + s.line + ' · รถ ' + s.veh + ' คัน · รวม ' + s.items.length + ' รายการ)</small><ul>' +
+      s.diff.map((x) => '<li>' + esc(tpNm(x.code)) + ': ' + (x.old ? '<s>' + nf(x.old) + '</s>' : '–') + ' → <b>' + (x.new ? nf(x.new) : 'เอาออก') + '</b></li>').join('') + '</ul>' +
+      (s.kind === 'new' ? '<div class="note">เทียบกับชุดตั้งต้น · บันทึกแล้วชนิดนี้จะใช้ชุดของตัวเอง ไม่ตามชุดตั้งต้นอีก</div>' : '') + '</div>').join('') +
+    (p.missing.length ? '<details class="xa-s"><summary>ไม่อยู่ในไฟล์ ' + p.missing.length + ' ชุด (คงเดิม)</summary><div class="note">' + esc(p.missing.join(' · ')) + '</div></details>' : '') +
+    (p.saves.length ? '<div class="note" style="margin-top:8px">ชุดของรถแต่ละคันยังไม่เปลี่ยน — บันทึกแล้วกด "➕ เติมที่ขาดให้รถที่ใช้ชุดนี้" ในแต่ละชนิด</div><label>PIN 6 หลัก</label><input id="tpPin" type="password" inputmode="numeric" maxlength="6" autocomplete="off"><div id="tpErr"></div>' : '') +
+    '<button class="btn pri" id="tpGo" style="margin-top:12px;width:100%"' + (p.saves.length ? '' : ' disabled') + '>' + (p.saves.length ? 'ยืนยันบันทึก ' + p.saves.length + ' ชุด' + (p.errors.length ? ' (ข้ามแถวที่ผิด)' : '') : 'ไม่มีอะไรเปลี่ยน') + '</button>';
+  if (p.saves.length) $('tpGo').onclick = async () => {
+    const pin = $('tpPin').value.trim();
+    if (!/^\d{6}$/.test(pin)) { $('tpErr').innerHTML = '<div class="err">PIN ต้องเป็นตัวเลข 6 หลัก</div>'; return; }
+    if (TP.busy) return; TP.busy = true; $('tpGo').disabled = true;
+    const done = [], fail = [];
+    for (const s of p.saves) {   // ทีละชุด · PIN ผิดครั้งแรก = หยุด
+      $('tpGo').textContent = '⏳ บันทึก ' + (done.length + fail.length + 1) + '/' + p.saves.length + '…';
+      let r; try { r = await api({ action: 'saveTemplate', group: s.g, headKind: s.k || null, items: s.items, pin }, true); } catch (e) { r = { error: 'เน็ตมีปัญหา' }; }
+      if (r.ok) done.push(s); else { fail.push({ s, msg: r.pinBad ? 'PIN ไม่ถูกต้อง' : (r.error || 'ไม่สำเร็จ') + (r.errors ? ': ' + r.errors.join(', ') : '') }); if (r.pinBad || !done.length) break; }
+    }
+    TP.busy = false;
+    if (!done.length) { $('tpGo').disabled = false; $('tpGo').textContent = 'ยืนยันบันทึก ' + p.saves.length + ' ชุด'; $('tpPin').value = ''; $('tpErr').innerHTML = '<div class="err">' + esc(fail[0] ? fail[0].msg : 'ไม่สำเร็จ') + '</div>'; return; }
+    closeDrw(); RQ = null;
+    toast('บันทึกชุดมาตรฐานแล้ว ' + done.length + ' ชุด' + (fail.length ? ' · ไม่สำเร็จ ' + fail.length + ' ชุด: ' + fail.map((f) => f.s.g + ' · ' + (f.s.k || 'ตั้งต้น') + ' (' + f.msg + ')').join(', ') : ''), fail.length > 0);
+    loadTpl({ grp: TP.grp, kind: TP.kind });
+  };
+  $('dim').classList.add('open'); $('drw').classList.add('open');
 }
 
 // ── events ──
