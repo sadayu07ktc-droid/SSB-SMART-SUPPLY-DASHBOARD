@@ -285,7 +285,7 @@ function jobLayout(){
     Object.entries(SLOT_TIME).forEach(([sl,k])=>{
       const ss=plan.filter(s=>s.slot===sl);
       if(!ss.length){ L.hideTime.add(k); L.hidePt.add(SLOT_PT[sl]); return; }
-      const nm='จุด '+(ss.length>1?ss[0].seq+'–'+ss[ss.length-1].seq:ss[0].seq)+' · '+ss.map(s=>s.name).join(' + ');
+      const nm='จุด '+(ss.length>1?(ss[0].no||ss[0].seq)+'–'+(ss[ss.length-1].no||ss[ss.length-1].seq):(ss[0].no||ss[0].seq))+' · '+ss.map(s=>s.name).join(' + ');
       L.tLabel[k]='เวลาเสร็จ'+nm; L.ptLabel[SLOT_PT[sl]]='📦 '+nm;
     });
     L.tLabel.arrived_at='เวลาถึงจุดแรก (เช็คอิน)'; L.ptLabel.start='🚀 ออกจาก SSB'; L.ptLabel.dest='🏁 กลับถึง SSB';
@@ -333,7 +333,7 @@ function arrivalsSec(){
       : oc&&oc.seq===s.seq?`<span>${srcChip(oc.src)} <span class="mini">เวลาถึง ${esc(oc.at)}</span></span>`
       : !s.pin?'<span class="src no">⚠️ ไม่มีหมุด DTC — จับเวลาถึงไม่ได้</span>'
       : '<span class="mini">ยังไม่มีเวลาถึงจาก GPS</span>';
-    return `<div class="arow"><span class="sq">${s.seq}</span><div class="nm"><div><b>${esc(s.name)}</b></div>${arrive}
+    return `<div class="arow"><span class="sq">${s.no||s.seq}</span><div class="nm"><div><b>${esc(s.name)}</b></div>${arrive}
       ${l?`<span class="mini">📝 คนขับบันทึกจุดนี้ ${thShort(l.created_at)}</span>`:''}
       ${!a&&l?`<button class="btn ghost sm" data-at="${esc(l.created_at)}" data-seq="${s.seq}" onclick="gpsCheck(this)">📍 ดูพิกัดรถตอนบันทึก</button>`:''}<div class="gpsres"></div></div></div>`; }).join('');
   return `<div class="sec"><h3>📍 เวลาถึงแต่ละจุด<span class="r">รถเข้ารัศมีหมุด DTC = จดเวลาถึงให้เอง</span></h3>${rows}
