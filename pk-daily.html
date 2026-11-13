@@ -1166,6 +1166,12 @@ const frLive=()=>typeof PKD_URL!=='undefined'&&typeof MY_UID!=='undefined'&&!!MY
 let FRL=(window.__D&&window.__D.farm)||[],FRB=false;
 let FRX=new Set();   /* ref คำขอที่แอดมินลบงานทิ้งเอง → ไม่ดึงกลับ (เก็บในแพลนวันนั้น · fra) */
 const frRef=j=>j.lp?'lp:'+j.lp:'job:'+(j.uid||(j.uid=Math.random().toString(36).slice(2,10)));
+/* รหัสอ้างอิงซ้ำ (13 พ.ย. คุณน้อง: H2 ทำซ้ำจาก H1 ได้ uid เดียวกัน → คำขอรถไร่ใบเดียวขึ้น 2 แถว · ขอให้ H2 ไม่ได้ "ส่งไปแล้ว")
+ * งานต้นฉบับ (ไม่มี dupOf) ถือรหัสเดิม · งานที่ซ้ำได้รหัสใหม่ + ล้างป้ายรถไร่ที่ติดมา → ขอรถไร่แยกได้ · คืนจำนวนที่แก้ */
+function mjFixUid(){const seen={};let n=0;
+  MJ.slice().sort((a,b)=>(a.dupOf?1:0)-(b.dupOf?1:0)).forEach(j=>{if(!j.uid||j.lp)return;if(!seen[j.uid]){seen[j.uid]=1;return;}
+    delete j.uid;if(j.fr){delete j.fr;if(j.carrier==='รถไร่')j.carrier='';}frRef(j);n++;});
+  return n;}
 const frHm=s=>{const d=new Date(s);return isNaN(d)?'':String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');};
 const frOf=r=>({rid:r.rid,st:r.ord&&/เสร็จ/.test(r.ost)?'Delivered':r.st,at:frHm(r.at),by:r.by,need:r.need,note:r.note,plate:r.plate,drv:r.drv,ord:r.ord,ref:r.ref,live:1});
 const frAct=r=>r&&r.st!=='ยกเลิก';
@@ -1373,7 +1379,7 @@ function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+
   JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
 /* ⧉ Duplicate (10 พ.ย. คุณน้อง) = ร่างงานใหม่ ร้าน/เวลา/จำนวนเหมือนเดิม · ไม่เอารถ/คนขับ/คำขอรถไร่ · จุดจาก PO ล้างจำนวน (กัน PO ซ้ำ 2 คัน) · ยังไม่บันทึกจนกด บันทึกงาน */
 function dupJob(id){const src=MJ.find(x=>x.id===id);if(!src)return;
-  const j=JSON.parse(JSON.stringify(src));['fr','lp','mj','v','dupOf'].forEach(k=>delete j[k]);j.head='';j.driver='';j.id='H'+(MJN+1);j.isNew=1;j.dupOf=src.id;
+  const j=JSON.parse(JSON.stringify(src));['fr','lp','mj','v','dupOf','uid'].forEach(k=>delete j[k]);   /* uid = รหัสอ้างอิงคำขอรถไร่ (frRef) ต้องใหม่ ไม่งั้นงานซ้ำผูกคำขอเดียวกัน (13 พ.ย.) */j.head='';j.driver='';j.id='H'+(MJN+1);j.isNew=1;j.dupOf=src.id;
   let po=0;j.stops.forEach(s=>{delete s.mj;if(s.rt){s.rt.id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);delete s.rt.sent;}
     if((s.items&&s.items.length)||(s.po&&s.po.length&&!s.manual)){po++;delete s.items;s.po=[];s.pal='';s.cs='';s.kg=0;}});
   HIDELP=false;JE={j,q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});
@@ -2958,7 +2964,8 @@ function dsBadge(){const b=$('dsSt');if(!b)return;if(!DS.on){b.hidden=true;retur
 async function dsLoad(d){DS.ready=false;DS.date=d;dsBadge();
   for(let i=0;i<3;i++){try{const x=await fetch(DS_URL+'?action=get&userId='+encodeURIComponent(MY_UID)+'&date='+d+'&t='+Date.now()).then(r=>r.json());
     if(!x.ok)throw new Error(x.error||'โหลดแพลนไม่สำเร็จ');if($('pdate').value!==d)return;
-    dsApply(x.data);vstApply(x.vst);DS.ver=x.ver||0;DS.at=x.at;DS.by=x.by||'';DS.edit=x.edit!==false;DS.last=dsSnap();DS.err=0;DS.ready=true;syncMall();_rA();dsBadge();return;}
+    dsApply(x.data);vstApply(x.vst);DS.ver=x.ver||0;DS.at=x.at;DS.by=x.by||'';DS.edit=x.edit!==false;DS.last=dsSnap();DS.err=0;DS.ready=true;const nfx=mjFixUid();syncMall();_rA();dsBadge();
+    if(nfx){dsKick();toast('🔧 แยกรหัสงานที่ทำซ้ำ '+nfx+' งาน · ขอรถไร่แยกได้แล้ว');}return;}
   catch(e){if(i===2){DS.err=1;dsBadge();toast('❌ โหลดแพลนวันนี้ไม่สำเร็จ: '+(e.message||e)+' · รีเฟรชหน้าอีกครั้ง (ยังไม่บันทึกทับ)');return;}await new Promise(r=>setTimeout(r,1500));}}}
 async function dsSave(force){clearTimeout(DS.t);DS.t=null;if(!DS.on||!DS.ready||!DS.edit||DS.busy)return;
   const s=dsSnap();if(s===DS.last&&!force){dsBadge();return;}
