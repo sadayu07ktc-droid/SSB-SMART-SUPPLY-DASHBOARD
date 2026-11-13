@@ -210,9 +210,10 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .card h3{font-family:var(--display);font-size:16px;margin:0 0 10px}
 .form{display:flex;flex-direction:column;gap:9px}
 .form label{font-size:13px;font-weight:600;display:flex;flex-direction:column;gap:4px}
-.hrow{display:grid;grid-template-columns:76px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.2fr) 96px;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
+.hrow{display:grid;grid-template-columns:76px minmax(0,1.4fr) minmax(0,1fr) minmax(0,1.2fr) 132px;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}
 .hrow:first-child{border-top:0}
 .hrow.head{font-size:12px;color:var(--muted);font-weight:600;background:var(--surface2)}
+.hst{display:flex;gap:4px;align-items:center}.hst select{min-width:0;flex:1}
 .code{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px}
 /* สรุปสถานะ */
 .rgrid.r1{grid-template-columns:minmax(0,760px)}
@@ -876,7 +877,9 @@ function closePoDrawer(){const H=$('drawerHost');if(H)H.innerHTML='';}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pod]');if(!b)return;e.stopPropagation();e.preventDefault();openPoDrawer(b.dataset.pod);},true);
 document.addEventListener('keydown',e=>{const b=e.target.closest&&e.target.closest('[data-pod]');if(b&&(e.key==='Enter'||e.key===' ')){e.stopPropagation();return;}
   if(e.key==='Escape'&&$('drawerHost')&&$('drawerHost').innerHTML){e.stopPropagation();closePoDrawer();}},true);
-let HELP=__D.help.map(([id,name,nick,ph,st])=>({id,name,nick,phone:'•••-•••-'+ph,status:st||'ใช้งาน',note:''}));
+/* 📞 13 พ.ย. คุณน้อง "ทำไมต้องเบลอเบอร์ คนขับจะโทรยังไง" → เบอร์เต็ม pk_helpers.phone (boot.help[5]) · ไม่มี = ท้าย 4 ตัวเดิม */
+let HELP=__D.help.map(([id,name,nick,ph,st,full,note])=>({id,name,nick,phone:full||(ph?'•••-•••-'+ph:''),status:st||'ใช้งาน',note:note||''}));
+const hpRow=r=>({id:r.id,name:r.name||'',nick:r.nick||'',phone:r.phone||(r.phone_last4?'•••-•••-'+r.phone_last4:''),status:r.status||'ใช้งาน',note:r.note||''});
 
 /* ---------- แพลนตัวอย่าง ---------- */
 const S=id=>{const s=ST.find(x=>x.id===id)||{id,n:'(ร้าน #'+id+' ปิดใช้แล้ว)',km:null};return {id:s.id,n:s.n,km:s.km,pal:'',cs:'',at:''}};   /* ร้านในตัวอย่างถูกปิดใช้ → หน้าไม่พัง */
@@ -1233,7 +1236,7 @@ function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTE
         +'<td class="n">'+cell(s=>esc(s.cs||'')||'<span class="m">—</span>')+'</td>'
         +'<td class="n">'+dash+'</td>'
         +'<td class="nt">'+esc(['ใบขอ '+r.rid,r.ord?r.ord+(r.ost?' · '+r.ost:''):'',r.need?'เข้าโหลด '+r.need:''].filter(Boolean).join(' · '))+'</td>'
-        +'<td class="hp">'+(hl.length?hl.map(h=>esc(h.t)+(h.ph?' <span class="m">'+esc(h.ph)+'</span>':'')).map(ln).join(''):dash)+'</td><td></td><td>'+tchip('ห้าง')+(done?' <small class="otn">ส่งแล้ว</small>':'')+'</td>'
+        +'<td class="hp">'+(hl.length?hl.map(h=>esc(h.t)+(h.ph?' <span class="m">'+telA(h.ph)+'</span>':'')).map(ln).join(''):dash)+'</td><td></td><td>'+tchip('ห้าง')+(done?' <small class="otn">ส่งแล้ว</small>':'')+'</td>'
         +'<td class="n stc"></td><td class="n stc"></td><td class="n stc"></td><td class="n stc tt"></td></tr>';}).join('');}
 async function frPull(){if(!frLive()||FRB)return;try{const x=await fetch(PKD_URL+'?action=farm&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());
   if(!x||!x.ok)return;const ch=JSON.stringify(x.farm)!==JSON.stringify(FRL);FRL=x.farm||[];if(ch&&(PM==='mall'?!(JE&&ED):!ED))renderPlan();}catch(e){}}
@@ -1493,19 +1496,21 @@ function jHp(j){if(j.hnone)return {in:[],out:0,none:true};const a=(j.helpers||[]
 /* 👷 เด็กรถงานห้างที่ยืมรถไร่ → แถว 🚜 รถไร่ (บนจอ + ใบแจ้งงาน) โชว์ชื่อ + เบอร์ (คุณน้อง 13 พ.ย.) */
 function hlOfHp(h){if(!h)return [];if(h.none)return [{t:'ไม่มีเด็กรถ',ph:''}];return (h.in||[]).map(x=>{const hh=helpOf(x);return hh?{t:hh.nick||hh.name,ph:hh.phone||''}:{t:String(x),ph:''};}).concat(+h.out?[{t:'เด็กนอก '+h.out+' คน',ph:''}]:[]);}
 function frHl(j,r){return hlOfHp(j?jHp(j):(r&&r.helpers)||null);}
-function jHpTxt(j){const h=jHp(j);return !h?'':h.none?'ไม่มีเด็กรถ':'มีเด็กรถ '+(h.in.length+h.out)+' คน';}
+function jHpTxt(j){const h=jHp(j);return !h?'':h.none?'ไม่มีเด็กรถ':[h.in.map(x=>{const hh=helpOf(x);return hh?hh.nick||hh.name:x;}).join(' · '),h.out?'เด็กนอก '+h.out+' คน':''].filter(Boolean).join(' + ');}
 /* 13 พ.ย. คุณน้อง "มอบหมายไป 2 คน ทำไมแท็บเด็กรถในไม่ขึ้นสถานะ" → นับงานห้าง (MJ) ด้วย ไม่ใช่แค่แพลนรวม */
-function helpBusy(skipJob){const o={};const {hc}=busy();Object.keys(hc).forEach(h=>(o[h]=o[h]||[]).push(...hc[h].map(x=>"รถ "+plOf(x))));
-  MJ.forEach(x=>{if(x.id===skipJob||x.hnone)return;const lb="งานห้าง "+x.id+(x.head?" "+plOf(x.head):x.fr&&x.fr.plate?" 🚜 "+x.fr.plate:x.fr?" 🚜 รถไร่":"");(x.helpers||[]).forEach(h=>(o[h]=o[h]||[]).push(lb));});return o;}
+/* 13 พ.ย. คุณน้อง "งานห้าง H3 ระบุหน่อย สถานที่" → ต่อท้ายด้วยจุดส่ง (2 จุดแรก + อีก N จุด) */
+const hbW=st=>{const n=(st||[]).filter(s=>!s.rt&&s.n).map(s=>s.n);return n.length?' · '+n.slice(0,2).join(' → ')+(n.length>2?' +'+(n.length-2)+' จุด':''):'';};
+function helpBusy(skipJob){const o={};const {hc}=busy();Object.keys(hc).forEach(h=>(o[h]=o[h]||[]).push(...hc[h].map(x=>"รถ "+plOf(x)+hbW(PLAN[x]&&PLAN[x].stops))));
+  MJ.forEach(x=>{if(x.id===skipJob||x.hnone)return;const lb="งานห้าง "+x.id+(x.head?" "+plOf(x.head):x.fr&&x.fr.plate?" 🚜 "+x.fr.plate:x.fr?" 🚜 รถไร่":"")+hbW(x.stops);(x.helpers||[]).forEach(h=>(o[h]=o[h]||[]).push(lb));});return o;}
 function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),mine=j.helpers||[],o=+j.hout||0,no=!!j.hnone;
   const other=helpBusy(j.id);
   const t=jHpTxt(j),is4=j.size==='4 ล้อ';
   return '<div class="box"><span class="lb">④ เด็กรถ <span class="note">(ขึ้นการ์ดคนขับ ตรง 👷 ทีมลง)</span></span>'
     +'<span class="lb" style="font-weight:600">เด็กรถใน <span class="note">(เลือกได้หลายคน)</span></span><div class="hl">'
-    +(act.length?act.map(x=>{const on=mine.includes(x.id),el=other[x.id]||[];return '<label class="'+((el.length&&!on)||no?'dis':'')+'"><input type="checkbox" data-jh="'+esc(x.id)+'"'+(on&&!no?' checked':'')+(no?' disabled':'')+'><span>'+esc(x.nick)+' · '+esc(x.name)+'<small>'+(el.length?'อยู่งาน '+esc(el.join(', ')):'ว่าง')+'</small></span></label>';}).join(''):'<div class="note">ยังไม่มีเด็กรถใน (เพิ่มที่แท็บ เด็กรถใน)</div>')
+    +(act.length?act.map(x=>{const on=mine.includes(x.id),el=other[x.id]||[];return '<label class="'+((el.length&&!on)||no?'dis':'')+'"><input type="checkbox" data-jh="'+esc(x.id)+'"'+(on&&!no?' checked':'')+(no?' disabled':'')+'><span>'+esc(x.nick)+' · '+esc(x.name)+'<small>'+(x.phone?esc(x.phone)+' · ':'')+(el.length?'อยู่งาน '+esc(el.join(', ')):'ว่าง')+'</small></span></label>';}).join(''):'<div class="note">ยังไม่มีเด็กรถใน (เพิ่มที่แท็บ เด็กรถใน)</div>')
     +'</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="lb">เด็กนอก</span><span class="step"><button type="button" id="jhm" aria-label="ลดเด็กนอก"'+(no?' disabled':'')+'>−</button><span>'+(no?0:o)+'</span><button type="button" id="jhp" aria-label="เพิ่มเด็กนอก"'+(no?' disabled':'')+'>＋</button></span><span class="note">คน</span></div>'
     +'<label class="note" style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink)"><input type="checkbox" id="jhn"'+(no?' checked':'')+'> ไม่มีเด็กรถ (คนขับลงเอง / ร้านมีคนลงให้)</label>'
-    +'<div class="note"><b>การ์ดคนขับจะขึ้น:</b> 👷 ทีมลง · '+(t?'<b>'+esc(t)+'</b>':'ยังไม่ระบุ — ถามแอดมิน')+(j.fr&&j.fr.rid?' · กด บันทึกงาน = อัปเดตคำขอ '+esc(j.fr.rid)+' ด้วย':'')+'</div>'
+    +'<div class="note"><b>การ์ดคนขับจะขึ้น:</b> 👷 ทีมลง · '+(t?'<b>'+esc(t)+'</b>':'ยังไม่ระบุ — ถามแอดมิน')+hlOfHp(jHp(j)).filter(x=>x.ph).map(x=>'<br>📞 '+esc(x.t)+' '+telA(x.ph)+' <span class="m">(กดโทรได้)</span>').join('')+(j.fr&&j.fr.rid?' · กด บันทึกงาน = อัปเดตคำขอ '+esc(j.fr.rid)+' ด้วย':'')+'</div>'
     +'<div class="note">เรทค่าเด็กรถจากหน้าตั้งค่าค่าแรง: เด็กใน '+(is4?'350':'400')+' บ./คน · เด็กนอก 350 บ./เที่ยว (คนขับเบิกไปก่อน)</div></div>';}
 /* บันทึกงานที่ขอรถไร่แล้ว + เด็กรถเปลี่ยน → อัปเดตคำขอ (ไม่ส่ง LINE) · ไม่สำเร็จ = เตือน ลองบันทึกอีกครั้ง */
 async function jHpSync(j){if(!frLive()||!j.fr||!j.fr.rid||!/^PKR-/.test(j.fr.rid))return;const sig=JSON.stringify(jHp(j));if(j.hsent===sig)return;
@@ -2121,6 +2126,8 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const drvOf=c=>DRV.find(d=>d.code===c);
 const helpOf=id=>HELP.find(h=>h.id===id);
+/* เบอร์ → ลิงก์โทร (กดในแถวแพลนไม่เปิดลิ้นชัก) · เบอร์ไม่ครบ = ข้อความเฉยๆ */
+const telA=ph=>{const d=String(ph||'').replace(/\D/g,'');return d.length>=9?'<a href="tel:'+d+'" class="tel" onclick="event.stopPropagation()">'+esc(ph)+'</a>':esc(ph||'');};
 const first=n=>String(n||'').split(' ')[0];
 const DOW=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
 function dateTH(iso){const d=new Date(iso+'T00:00:00');if(isNaN(d))return '';return DOW[d.getDay()]+' '+d.getDate()+'.'+(d.getMonth()+1)+'.'+(d.getFullYear()+543);}
@@ -2432,7 +2439,7 @@ function renderPlan(){
       else cust=L(S,(s,i)=>'<span class="ell" title="'+esc(s.n)+'">'+esc(s.n)+'</span> '+stChip(s)+(s.rt?' <span class="rtq">'+esc(rtTxt(s.rt))+'</span>':'')+(PM==='all'&&isMall(s)?' '+mallBadge(v.head):'')+(s.tbd?' <span class="rtq" title="ยังไม่ระบุสถานที่รับ">📍 รอแจ้ง</span>':legOf(S,i).km==null?' <span class="nokm" title="ยังไม่มีค่ากลาง'+(i?' จาก '+esc(S[i-1].n):' จากโรงงาน')+'">⚠</span>':''))
         +(PM==='mall'&&nOther?'<div class="ln"><span class="m">+ งานยี่ปั๊ว/อื่นๆ '+nOther+' จุด (แพลนรวม)</span></div>':'');
       const dash='<span class="m">—</span>';
-      const hl=p.helpers.map(x=>{const hh=helpOf(x);const dup=hc[x]&&hc[x].length>1;return hh?'<span title="'+esc(hh.name)+'">'+esc(hh.nick)+'</span> <span class="m">'+esc(hh.phone)+'</span>'+(dup?' <span class="warn">⚠ซ้ำ</span>':''):esc(x);});
+      const hl=p.helpers.map(x=>{const hh=helpOf(x);const dup=hc[x]&&hc[x].length>1;return hh?'<span title="'+esc(hh.name)+'">'+esc(hh.nick)+'</span> <span class="m">'+telA(hh.phone)+'</span>'+(dup?' <span class="warn">⚠ซ้ำ</span>':''):esc(x);});
       if(p.out)hl.push('เด็กนอก '+p.out+' คน');
       const jt=jtOf(p);
       const dw=d&&dc[p.driver]&&dc[p.driver].length>1?' <span class="warn">⚠ '+dc[p.driver].length+' คัน</span>':'';
@@ -2755,25 +2762,37 @@ function renderHelpers(){
    +'<label>ชื่อเล่น<input class="in" id="hk" placeholder="ใช้แสดงในแพลนและรูปสรุป"></label>'
    +'<label>เบอร์โทร<input class="in" id="hp" inputmode="tel" placeholder="0xx-xxx-xxxx"></label>'
    +'<label>หมายเหตุ<input class="in" id="ht" placeholder="เช่น ขับรถได้ / ประจำรถพ่วง"></label>'
-   +'<button class="btn pri" type="submit">เพิ่มเข้าฐานข้อมูล</button>'
+   +'<button class="btn pri" type="submit" id="hgo">เพิ่มเข้าฐานข้อมูล</button>'
    +'<div class="note">ระบบออกรหัส HLP- ให้เอง · ลบไม่ได้ ให้เปลี่ยนเป็น “พัก” หรือ “ลาออก” แทน เพื่อให้ประวัติงานและค่าแรงย้อนหลังยังอยู่ · แก้ได้เฉพาะแอดมิน Packing</div></form></div>';
   const chips=['ใช้งาน','พัก','ลาออก','ทั้งหมด'];
   const rows=HELP.filter(x=>HF==='ทั้งหมด'||x.status===HF);
   h+='<div><div class="chips">'+chips.map(c=>'<button class="chip'+(HF===c?' on':'')+'" data-hf="'+c+'">'+c+' <b>'+(c==='ทั้งหมด'?HELP.length:HELP.filter(x=>x.status===c).length)+'</b></button>').join('')+'</div>'
    +'<div class="list"><div class="hrow head"><span>รหัส</span><span>ชื่อ</span><span class="hide-sm">เบอร์</span><span class="hide-sm">งานวันที่เลือก</span><span>สถานะ</span></div>'
-   +rows.map(x=>{const on=hc[x.id]||[];return '<div class="hrow"><span class="code">'+x.id+'</span><span><b>'+esc(x.nick||'-')+'</b> · '+esc(x.name)+(x.note?'<div class="note">'+esc(x.note)+'</div>':'')+'</span><span class="hide-sm code">'+esc(x.phone||'-')+'</span><span class="hide-sm">'+(on.length?esc(on.join(', '))+(on.length>1?' <span class="warn">⚠ ซ้ำ</span>':''):'<span class="m" style="color:var(--muted)">ว่าง</span>')+'</span>'
-     +'<select class="in" data-hs="'+x.id+'" aria-label="สถานะ '+esc(x.name)+'">'+['ใช้งาน','พัก','ลาออก'].map(s=>'<option'+(x.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select></div>';}).join('')
+   +rows.map(x=>{const on=hc[x.id]||[];return '<div class="hrow"><span class="code">'+x.id+'</span><span><b>'+esc(x.nick||'-')+'</b> · '+esc(x.name)+(x.note?'<div class="note">'+esc(x.note)+'</div>':'')+'</span><span class="hide-sm code">'+(x.phone?telA(x.phone):'-')+'</span><span class="hide-sm">'+(on.length?on.map(esc).join('<br>')+(on.length>1?' <span class="warn">⚠ ซ้ำ</span>':''):'<span class="m" style="color:var(--muted)">ว่าง</span>')+'</span>'
+     +'<span class="hst"><select class="in" data-hs="'+x.id+'" aria-label="สถานะ '+esc(x.name)+'">'+['ใช้งาน','พัก','ลาออก'].map(s=>'<option'+(x.status===s?' selected':'')+'>'+s+'</option>').join('')+'</select><button class="ib" type="button" data-he="'+x.id+'" aria-label="แก้ไข '+esc(x.name)+'" title="แก้ไขชื่อเล่น / เบอร์ / หมายเหตุ">✏️</button></span></div>';}).join('')
    +(rows.length?'':'<div class="hrow"><span></span><span class="note">ไม่มีรายชื่อในกลุ่มนี้</span></div>')+'</div>'
-   +'<p class="note">เด็กนอกไม่ต้องลงทะเบียน ใส่เป็นจำนวนคนตอนจัดงาน · เบอร์ในเดโมซ่อนไว้ 6 หลัก</p></div></div>';
+   +'<p class="note">เด็กนอกไม่ต้องลงทะเบียน ใส่เป็นจำนวนคนตอนจัดงาน · กดเบอร์เพื่อโทร</p></div></div>';
   $('v-helpers').innerHTML=h;
   $('v-helpers').querySelectorAll('[data-hf]').forEach(b=>b.onclick=()=>{HF=b.dataset.hf;renderHelpers();});
-  $('v-helpers').querySelectorAll('[data-hs]').forEach(s=>s.onchange=()=>{helpOf(s.dataset.hs).status=s.value;
-    if(s.value!=='ใช้งาน'){Object.values(PLAN).forEach(p=>p.helpers=p.helpers.filter(z=>z!==s.dataset.hs));MJ.forEach(x=>{if(x.helpers)x.helpers=x.helpers.filter(z=>z!==s.dataset.hs);});}renderAll();toast('เปลี่ยนสถานะเป็น '+s.value+' แล้ว');});
-  $('hform').onsubmit=e=>{e.preventDefault();const n=$('hn').value.trim();if(!n){toast('ใส่ชื่อก่อน');return;}
-    const id='HLP-'+String(HELP.length+1).padStart(3,'0');HELP.push({id,name:n,nick:$('hk').value.trim()||first(n),phone:$('hp').value.trim(),status:'ใช้งาน',note:$('ht').value.trim()});
-    HF='ใช้งาน';renderAll();toast('เพิ่ม '+id+' '+n+' แล้ว เลือกใส่รถได้ในหน้าแพลน');};
+  /* 👷 13 พ.ย. บันทึกลง pk_helpers จริง (Edge saveHelper · ADMIN_PK/DEV) · สำเร็จแล้วค่อยเปลี่ยนในหน้า · พลาด = toast ค่าเดิม */
+  $('v-helpers').querySelectorAll('[data-hs]').forEach(s=>s.onchange=async()=>{const id=s.dataset.hs,h=helpOf(id),old=h.status,v=s.value;s.disabled=true;
+    try{const r=await lpCall({action:'saveHelper',id,status:v});Object.assign(h,hpRow(r.helper));}
+    catch(e){s.value=old;s.disabled=false;toast('❌ เปลี่ยนสถานะไม่สำเร็จ: '+(e.message||e));return;}
+    if(v!=='ใช้งาน'){Object.values(PLAN).forEach(p=>p.helpers=p.helpers.filter(z=>z!==id));MJ.forEach(x=>{if(x.helpers)x.helpers=x.helpers.filter(z=>z!==id);});}renderAll();toast('✅ '+(h.nick||h.name)+' เป็น '+v+' แล้ว');});
+  $('v-helpers').querySelectorAll('[data-he]').forEach(b=>b.onclick=()=>helpEdit(b.dataset.he));
+  $('hform').onsubmit=async e=>{e.preventDefault();const n=$('hn').value.trim(),btn=$('hgo');if(!n){toast('ใส่ชื่อก่อน');return;}
+    btn.disabled=true;try{const r=await lpCall({action:'saveHelper',name:n,nick:$('hk').value.trim()||first(n),phone:$('hp').value.trim(),note:$('ht').value.trim()});
+      const x=hpRow(r.helper);HELP.push(x);HELP.sort((a,c)=>a.id.localeCompare(c.id));HF='ใช้งาน';renderAll();toast('✅ เพิ่ม '+x.id+' '+x.name+' แล้ว เลือกใส่รถได้ในหน้าแพลน');}
+    catch(err){btn.disabled=false;toast('❌ เพิ่มไม่สำเร็จ: '+(err.message||err));}};
 }
 
+/* ✏️ แก้เด็กรถรายคน: ชื่อ / ชื่อเล่น / เบอร์ / หมายเหตุ → saveHelper */
+async function helpEdit(id){const h=helpOf(id);if(!h)return;const ph=/•/.test(h.phone)?'':h.phone;
+  const fl=(k,l,v,ex)=>'<label style="display:flex;flex-direction:column;gap:3px;font-size:13px;margin-top:8px;text-align:left">'+l+'<input class="in" id="he'+k+'" value="'+esc(v||'')+'"'+(ex||'')+'></label>';
+  const p=askModal({title:'แก้ไข '+id,icon:'✏️',html:fl('N','ชื่อ-นามสกุล',h.name)+fl('K','ชื่อเล่น',h.nick)+fl('P','เบอร์โทร (เต็ม · คนขับกดโทรได้)',ph,' inputmode="tel" placeholder="0xx-xxx-xxxx"')+fl('T','หมายเหตุ',h.note),ok:'บันทึก',cancel:'ยกเลิก'});
+  const el={n:$('heN'),k:$('heK'),p:$('heP'),t:$('heT')};if(!(await p))return;
+  const body={action:'saveHelper',id,name:el.n.value.trim(),nick:el.k.value.trim(),note:el.t.value.trim()};if(el.p.value.trim()!==ph)body.phone=el.p.value.trim();
+  try{const r=await lpCall(body);Object.assign(h,hpRow(r.helper));renderAll();toast('✅ บันทึก '+id+' แล้ว');}catch(e){toast('❌ บันทึกไม่สำเร็จ: '+(e.message||e));}}
 /* ---------- รูปสรุปสถานะรถ (การ์ดทันสมัย · วงกลม เขียว/เหลือง/แดง) ---------- */
 let WITHJOB=true,IMG='',RCV=null;
 /* เขียว = พร้อมใช้งาน มีคนขับ · เหลือง = พร้อม แต่ไม่มีคนขับ · แดง = ซ่อม · เทา = งดวิ่ง / หางสำรอง */
