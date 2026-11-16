@@ -1502,6 +1502,18 @@ function jHpTxt(j){const h=jHp(j);return !h?'':h.none?'ไม่มีเด็�
 const hbW=st=>{const n=(st||[]).filter(s=>!s.rt&&s.n).map(s=>s.n);return n.length?' · '+n.slice(0,2).join(' → ')+(n.length>2?' +'+(n.length-2)+' จุด':''):'';};
 function helpBusy(skipJob){const o={};const {hc}=busy();Object.keys(hc).forEach(h=>(o[h]=o[h]||[]).push(...hc[h].map(x=>"รถ "+plOf(x)+hbW(PLAN[x]&&PLAN[x].stops))));
   MJ.forEach(x=>{if(x.id===skipJob||x.hnone)return;const lb="งานห้าง "+x.id+(x.head?" "+plOf(x.head):x.fr&&x.fr.plate?" 🚜 "+x.fr.plate:x.fr?" 🚜 รถไร่":"")+hbW(x.stops);(x.helpers||[]).forEach(h=>(o[h]=o[h]||[]).push(lb));});return o;}
+/* 👷 16 พ.ย. คุณน้อง "ถ้ามีทีมลง ควรดึงฐานมาโชว์ แอดมินจะได้เอ๊ะ ถ้าไม่มีทีมลง": ทีมลงจากฐานร้าน (pk_store_info ← Edge pk-daily team)
+   = กติกาเดียวกับการ์ดคนขับ (order-actions/admin-decide/order-submit pkTeam): ร้านมีทีมลง → ใช้ทีมร้าน + เบอร์ · ร้านเขียน "ใช้เด็กรถ" / ไม่มีข้อมูล → เด็กรถที่เลือกด้านบน */
+function teamOf(id){const T=(typeof __D!=='undefined'&&__D.team)||{},t=T[String(id)];if(!t||!t[0])return null;const ph=t[1]||[];
+  if(!ph.length&&/ใช้เด็กรถ/.test(t[0]))return {self:1};
+  const nm=t[0].replace(/0\d{1,2}[-\s]?\d{3}[-\s]?\d{3,4}/g,' ').split('/').map(s=>s.replace(/\s+/g,' ').trim()).filter(Boolean);
+  return {txt:nm.join(' / ')||'ทีมลงของร้าน',ppl:ph.map((d,i)=>({t:nm.length===ph.length?nm[i]:(nm[0]||'ทีมลง'),ph:d.length===10?d.slice(0,3)+'-'+d.slice(3,6)+'-'+d.slice(6):d}))};}
+function jTeamNote(j,t,hp){const seen={},warn=s=>'<b style="color:#B45309">⚠️ '+s+'</b>';
+  return (j.stops||[]).filter(s=>!s.rt&&s.n&&!s.tbd).filter(s=>{const k=s.id||s.n;if(seen[k])return false;return seen[k]=1;}).map(s=>{const tm=s.id?teamOf(s.id):null;
+    const who=tm&&!tm.self?'<b>'+esc(tm.txt)+'</b> <span class="m">(ฐานร้าน)</span>'+tm.ppl.map(p=>'<br>📞 '+esc(p.t)+' '+telA(p.ph)+' <span class="m">(กดโทรได้)</span>').join('')
+      :tm?'ใช้เด็กรถ <span class="m">(ฐานร้าน)</span> — '+(t?'<b>'+esc(t)+'</b>'+hp:warn('ยังไม่ระบุ เลือกเด็กรถด้านบน'))
+      :t?'<b>'+esc(t)+'</b> <span class="m">(แอดมินระบุ · ร้านไม่มีทีมลงในฐาน)</span>'+hp:warn('ร้านไม่มีทีมลงในฐาน — เลือกเด็กรถด้านบน');
+    return '<br>📍 '+esc(s.n)+' · 👷 '+who;}).join('');}
 function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),mine=j.helpers||[],o=+j.hout||0,no=!!j.hnone;
   const other=helpBusy(j.id);
   const t=jHpTxt(j),is4=j.size==='4 ล้อ';
@@ -1510,7 +1522,9 @@ function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),m
     +(act.length?act.map(x=>{const on=mine.includes(x.id),el=other[x.id]||[];return '<label class="'+((el.length&&!on)||no?'dis':'')+'"><input type="checkbox" data-jh="'+esc(x.id)+'"'+(on&&!no?' checked':'')+(no?' disabled':'')+'><span>'+esc(x.nick)+' · '+esc(x.name)+'<small>'+(x.phone?esc(x.phone)+' · ':'')+(el.length?'อยู่งาน '+esc(el.join(', ')):'ว่าง')+'</small></span></label>';}).join(''):'<div class="note">ยังไม่มีเด็กรถใน (เพิ่มที่แท็บ เด็กรถใน)</div>')
     +'</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="lb">เด็กนอก</span><span class="step"><button type="button" id="jhm" aria-label="ลดเด็กนอก"'+(no?' disabled':'')+'>−</button><span>'+(no?0:o)+'</span><button type="button" id="jhp" aria-label="เพิ่มเด็กนอก"'+(no?' disabled':'')+'>＋</button></span><span class="note">คน</span></div>'
     +'<label class="note" style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink)"><input type="checkbox" id="jhn"'+(no?' checked':'')+'> ไม่มีเด็กรถ (คนขับลงเอง / ร้านมีคนลงให้)</label>'
-    +'<div class="note"><b>การ์ดคนขับจะขึ้น:</b> 👷 ทีมลง · '+(t?'<b>'+esc(t)+'</b>':'ยังไม่ระบุ — ถามแอดมิน')+hlOfHp(jHp(j)).filter(x=>x.ph).map(x=>'<br>📞 '+esc(x.t)+' '+telA(x.ph)+' <span class="m">(กดโทรได้)</span>').join('')+(j.fr&&j.fr.rid?' · กด บันทึกงาน = อัปเดตคำขอ '+esc(j.fr.rid)+' ด้วย':'')+'</div>'
+    +(()=>{const hp=hlOfHp(jHp(j)).filter(x=>x.ph).map(x=>'<br>📞 '+esc(x.t)+' '+telA(x.ph)+' <span class="m">(กดโทรได้)</span>').join(''),fr=j.fr&&j.fr.rid?'<br><span class="m">กด บันทึกงาน = อัปเดตคำขอ '+esc(j.fr.rid)+' ด้วย</span>':'',tn=jTeamNote(j,t,hp);
+      return tn?'<div class="note"><b>การ์ดคนขับจะขึ้น (👷 ทีมลง รายจุดส่ง):</b>'+tn+fr+'</div>'
+        :'<div class="note"><b>การ์ดคนขับจะขึ้น:</b> 👷 ทีมลง · '+(t?'<b>'+esc(t)+'</b>':'ยังไม่ระบุ — ถามแอดมิน')+hp+fr+'</div>';})()
     +'<div class="note">เรทค่าเด็กรถจากหน้าตั้งค่าค่าแรง: เด็กใน '+(is4?'350':'400')+' บ./คน · เด็กนอก 350 บ./เที่ยว (คนขับเบิกไปก่อน)</div></div>';}
 /* บันทึกงานที่ขอรถไร่แล้ว + เด็กรถเปลี่ยน → อัปเดตคำขอ (ไม่ส่ง LINE) · ไม่สำเร็จ = เตือน ลองบันทึกอีกครั้ง */
 async function jHpSync(j){if(!frLive()||!j.fr||!j.fr.rid||!/^PKR-/.test(j.fr.rid))return;const sig=JSON.stringify(jHp(j));if(j.hsent===sig)return;
