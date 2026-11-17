@@ -245,11 +245,19 @@ body.calc #calcBox{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,
 body.calc #roleBar,body.calc #dates,body.calc .planneronly,body.calc #poBox,body.calc .poday,body.calc .tnew,body.calc #addTruck,body.calc .grip,body.calc select[data-move],body.calc #vPOs td:last-child,body.calc .viewer thead th:last-child{display:none!important}
 .cbox{display:flex;flex-direction:column;gap:10px;min-width:0}
 .crows{display:flex;flex-direction:column;gap:8px}
-.crow{display:grid;grid-template-columns:minmax(0,1fr) 132px 36px;grid-template-areas:"p q x" "d d d";gap:6px 8px;align-items:center;border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:8px 10px}
-@media (max-width:520px){.crow{grid-template-columns:minmax(0,1fr) 36px;grid-template-areas:"p x" "q q" "d d"}}
+.crow{display:grid;grid-template-columns:minmax(0,1fr) 92px 132px 36px;grid-template-areas:"p l q x" "d d d d";gap:6px 8px;align-items:center;border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:8px 10px}
+@media (max-width:520px){.crow{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr) 36px;grid-template-areas:"p p x" "l q q" "d d d"}}
+.crow [data-cp]{grid-area:p}.cl{grid-area:l;position:relative;display:block}.cl input.cin{width:100%;text-align:right;padding-right:40px;font-family:var(--f-mono)}
+.cl span{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}.cl.chg input.cin{border-color:var(--warn);background:var(--warntint)}
 .cin{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink);min-height:40px}
 .crow select{grid-area:p}.cq{grid-area:q;position:relative;display:block}.cq input.cin{width:100%;text-align:right;padding-right:46px;font-family:var(--f-mono)}
 .ctb td:last-child{min-width:110px}
+.ub{display:inline-block;width:46px;height:6px;border-radius:3px;background:var(--line);overflow:hidden;vertical-align:middle;margin-right:5px}.ub i{display:block;height:100%;border-radius:3px}
+.ubn{font-size:12px;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}.ubn.over{color:var(--bad);font-weight:700}
+.ctb td.cu{white-space:nowrap;line-height:1.7}.ctb td:first-child{min-width:86px}
+.cutil{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0 2px}.cutil>div{display:flex;flex-direction:column;gap:1px;min-width:0}.cutil .ub{width:100%;margin:0 0 3px}.cutil small{font-size:11px;color:var(--muted);font-weight:400}
+.cutil .ubn{font-size:13px;font-weight:600}
+@media (max-width:520px){.cutil{grid-template-columns:1fr}}
 .cq span{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
 .cx{grid-area:x;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--muted);font-size:16px}
 .cx:hover{color:var(--bad);border-color:var(--bad)}
@@ -512,7 +520,8 @@ const ONE_L = new Set(["1l", "oka", "soy"]);   // สินค้า 1 ลิต
 function palletize(po, lay1L) {
   const P = A.pallet, units = [], partial = [];
   po.lines.forEach((ln) => {
-    const s = skuOf(ln.p), lay = lay1L && ONE_L.has(s.k) ? lay1L : s.lay, per = s.per * lay, br = brandOf(ln.p, s);
+    // ln.lay = จำกัดชั้นต่อพาเลทเอง (โหมดคำนวณ · ปลายทางบางที่จำกัดความสูง) · ไม่ใส่ = ตามแม่แบบ
+    const s = skuOf(ln.p), lay = ln.lay > 0 ? Math.floor(ln.lay) : lay1L && ONE_L.has(s.k) ? lay1L : s.lay, per = s.per * lay, br = brandOf(ln.p, s);
     const full = Math.floor(ln.q / per), loose = ln.q - full * per;
     for (let i = 0; i < full; i++) units.push({ segs: [{ s, q: per, lay, br }], tall: lay > s.lay });
     if (loose > 0) partial.push({ s, q: loose, lay: Math.ceil(loose / s.per), br });
@@ -2380,24 +2389,45 @@ if (CALC) {
   A.custMaxKg = 0; opt.drvMode = "manual";
   document.title = "คำนวณรถ · Loading Planner";
   document.querySelector(".top > div").innerHTML = '<div class="eyebrow">Loading Planner · คำนวณรถ</div><h1>ใส่จำนวนลัง / ถัง / ปี๊บ แล้วระบบเลือกรถให้</h1><div class="note">ขนาดลัง น้ำหนัก ชั้นต่อพาเลท = แม่แบบที่คลังกรอก ชุดเดียวกับหน้าจัด PO 7-11 · คำนวณอย่างเดียว ไม่บันทึก ไม่ส่งงาน</div>';
-  const OPTS = GR.map(([g, f]) => `<optgroup label="${g}">` + A.sku.filter(f).map((s) => `<option value="${s.k}">${esc(s.name)} · ${s.kg} กก./${unitOf(s)}</option>`).join("") + "</optgroup>").join("");
-  $("calcBox").innerHTML = `<div class="cbox"><h2>สินค้าที่จะขึ้นรถ</h2><div class="crows" id="cRows"></div>
+  // ช่องสินค้า = พิมพ์ค้นได้ (datalist) · พิมพ์บางคำ เช่น "ปี๊บ 18" / "โอก้า" / รหัส 159224 แล้วเลือกจากรายการ หรือกด Enter = ตัวแรกที่ตรง
+  const labelOf = (s) => `${s.name} · ${s.kg} กก./${unitOf(s)}`;
+  const grpOf = (s) => (GR.find(([, f]) => f(s)) || [""])[0];
+  const OPTS = GR.flatMap(([, f]) => A.sku.filter(f)).concat(A.sku.filter((s) => !grpOf(s))).map((s) => `<option value="${esc(labelOf(s))}">${esc(grpOf(s))}${/^\d+$/.test(s.k) ? " · " + s.k : ""}</option>`).join("");
+  const findSku = (txt) => { const v = String(txt || "").trim().toLowerCase(); if (!v) return null;
+    const ex = A.sku.find((s) => labelOf(s).toLowerCase() === v || s.name.toLowerCase() === v || s.k === v); if (ex) return ex;
+    const tk = v.split(/[\s·*]+/).filter(Boolean); return A.sku.find((s) => tk.every((t) => (s.name + " " + s.k + " " + grpOf(s)).toLowerCase().includes(t))) || null; };
+  $("calcBox").innerHTML = `<div class="cbox"><h2>สินค้าที่จะขึ้นรถ</h2><datalist id="cSkuList">${OPTS}</datalist><div class="crows" id="cRows"></div>
     <div class="row"><button class="btn gh" type="button" id="cAdd">＋ เพิ่มสินค้า</button><button class="btn gh" type="button" id="cClr">ล้างทั้งหมด</button></div>
     <div class="row"><label class="note"><input type="checkbox" id="cCap"> ส่ง 7-11 · เพดานน้ำหนักลูกค้า 20 ตัน</label><label class="note"><input type="checkbox" id="cStack"> ซ้อนพาเลท 2 ชั้นได้</label><label class="note"><input type="checkbox" id="cBal" checked> ⚖️ วางของหนักใกล้เพลาท้าย</label></div></div>
     <div class="cbox" id="cSum"></div>`;
-  const det = (i) => { const r = rows[i], s = skuBy(r.k), q = Math.floor(+r.q || 0), u = unitOf(s), per = s.per * s.lay, f = Math.floor(q / per), lo = q - f * per, el = $("cd" + i); if (!el) return;
-    el.innerHTML = `<i style="background:${s.color}"></i>` + (q ? (f ? `<b>${f}</b> พาเลทเต็ม` : "") + (f && lo ? " + " : "") + (lo ? `เศษ <b>${lo}</b> ${u}` : "") + ` · ${per} ${u}/พาเลท (${s.per}×${s.lay} ชั้น) · <span class="mono">${nf(q * s.kg)}</span> กก.` : `ใส่จำนวน${u}`); };
+  // ชั้นต่อพาเลท: ว่าง = ตามแม่แบบ · ใส่เลข = จำกัดเอง (ปลายทางบางที่จำกัดความสูง)
+  const layOf = (r) => { const s = skuBy(r.k), n = Math.floor(+r.lay || 0); return n > 0 ? n : s.lay; };
+  const det = (i) => { const r = rows[i], s = skuBy(r.k), q = Math.floor(+r.q || 0), u = unitOf(s), L = layOf(r), per = s.per * L, f = Math.floor(q / per), lo = q - f * per, el = $("cd" + i); if (!el) return;
+    const hh = A.pallet.h + L * s.h, chg = L !== s.lay;
+    el.innerHTML = `<i style="background:${s.color}"></i>` + (q ? (f ? `<b>${f}</b> พาเลทเต็ม` : "") + (f && lo ? " + " : "") + (lo ? `เศษ <b>${lo}</b> ${u}` : "") + " · " : `ใส่จำนวน${u} · `) +
+      `${per} ${u}/พาเลท (${s.per}×${L} ชั้น${chg ? ` <b style="color:var(--warn)">ปรับจาก ${s.lay}</b>` : ""}) · สูง <span class="mono">${nf(hh)}</span> ซม.${hh > A.pallet.maxH ? ` <b style="color:var(--warn)">เกินมาตรฐาน ${A.pallet.maxH}</b>` : ""}${q ? ` · <span class="mono">${nf(q * s.kg)}</span> กก.` : ""}`;
+    const lb = $("cl" + i); if (lb) lb.parentNode.classList.toggle("chg", chg); };
   const drawRows = () => {
-    $("cRows").innerHTML = rows.length ? rows.map((r, i) => `<div class="crow"><select class="cin" id="cp${i}" data-cp="${i}" aria-label="สินค้าแถว ${i + 1}">${OPTS}</select>
+    $("cRows").innerHTML = rows.length ? rows.map((r, i) => `<div class="crow"><input class="cin" id="cp${i}" data-cp="${i}" list="cSkuList" autocomplete="off" placeholder="พิมพ์ชื่อสินค้า เช่น ปี๊บ 18 / โอก้า / 1L" aria-label="สินค้าแถว ${i + 1} (พิมพ์ค้นได้)">
+      <label class="cl" title="ชั้นต่อพาเลท · แม่แบบ ${skuBy(r.k).lay} ชั้น · ปลายทางจำกัดชั้น = ใส่เลขน้อยลง"><input class="cin" id="cl${i}" data-cl="${i}" type="number" inputmode="numeric" min="1" max="20" step="1" value="${layOf(r)}" aria-label="ชั้นต่อพาเลท แถว ${i + 1}"><span>ชั้น</span></label>
       <label class="cq"><input class="cin" id="cq${i}" data-cq="${i}" type="number" inputmode="numeric" min="0" step="1" value="${r.q || ""}" placeholder="0" aria-label="จำนวน${unitOf(skuBy(r.k))}"><span>${unitOf(skuBy(r.k))}</span></label>
       <button class="cx" type="button" data-cx="${i}" aria-label="ลบแถว ${i + 1}">✕</button><div class="cdet" id="cd${i}"></div></div>`).join("") : '<div class="note">ยังไม่มีสินค้า · กด ＋ เพิ่มสินค้า</div>';
-    rows.forEach((r, i) => { $("cp" + i).value = r.k; det(i); });
+    rows.forEach((r, i) => { const el = $("cp" + i); el.value = el.title = labelOf(skuBy(r.k)); det(i); });
   };
   const recalc = () => { clearTimeout(tmr);
-    CP.lines = rows.filter((r) => Math.floor(+r.q || 0) > 0).map((r) => ({ p: skuBy(r.k).name, q: Math.floor(+r.q) }));
+    CP.lines = rows.filter((r) => Math.floor(+r.q || 0) > 0).map((r) => ({ p: skuBy(r.k).name, q: Math.floor(+r.q), lay: layOf(r) }));
     delete CP._u; CP._lay = 0; mode = "auto"; sel = 0; build(); renderAll(); };
-  $("cRows").addEventListener("change", (e) => { const i = e.target.dataset.cp; if (i == null) return; rows[+i].k = e.target.value; drawRows(); recalc(); });
+  // เลือกสินค้า: เลือกจากรายการ/พิมพ์ชื่อเต็ม = เปลี่ยนทันที · พิมพ์บางคำแล้วออกจากช่อง/Enter = ตัวแรกที่ตรง · ไม่ตรงเลย = กลับเป็นค่าเดิม
+  const pickSku = (el, loose) => { const i = +el.dataset.cp, s = loose ? findSku(el.value) : A.sku.find((x) => labelOf(x) === el.value);
+    if (!s) { if (loose) { el.value = labelOf(skuBy(rows[i].k)); toastMsg("ไม่พบสินค้าที่พิมพ์ · ลองพิมพ์คำสั้นลง เช่น ปี๊บ / ถัง / 1L / โอก้า"); } return; }
+    const ch = rows[i].k !== s.k; rows[i].k = s.k; if (ch) rows[i].lay = ""; drawRows(); if (ch) recalc(); const q = $("cq" + i); if (q && ch) q.focus(); };
+  $("cRows").addEventListener("input", (e) => { if (e.target.dataset.cp != null) pickSku(e.target, false); });
+  $("cRows").addEventListener("change", (e) => { if (e.target.dataset.cp != null) pickSku(e.target, true); });
+  $("cRows").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.dataset.cp != null) { e.preventDefault(); pickSku(e.target, true); } });
+  $("cRows").addEventListener("focusin", (e) => { if (e.target.dataset.cp != null) e.target.select(); });
   $("cRows").addEventListener("input", (e) => { const i = e.target.dataset.cq; if (i == null) return; rows[+i].q = e.target.value; det(+i); clearTimeout(tmr); tmr = setTimeout(recalc, 350); });
+  $("cRows").addEventListener("input", (e) => { const i = e.target.dataset.cl; if (i == null) return; const n = Math.floor(+e.target.value || 0); rows[+i].lay = n > 0 ? Math.min(20, n) : ""; det(+i); clearTimeout(tmr); tmr = setTimeout(recalc, 350); });
+  $("cRows").addEventListener("change", (e) => { const i = e.target.dataset.cl; if (i != null) e.target.value = layOf(rows[+i]); });
   $("cRows").addEventListener("click", (e) => { const b = e.target.closest("[data-cx]"); if (!b) return; rows.splice(+b.dataset.cx, 1); drawRows(); recalc(); });
   $("cAdd").onclick = () => { rows.push({ k: A.sku[0].k, q: "" }); drawRows(); const n = $("cq" + (rows.length - 1)); if (n) n.focus(); };
   $("cClr").onclick = () => { rows = []; drawRows(); recalc(); };
@@ -2409,14 +2439,23 @@ if (CALC) {
     if (!units.length) { el.innerHTML = '<h2>ผลคำนวณ</h2><div class="crec e"><small>ยังไม่มีของ</small><span class="note">เพิ่มสินค้าและจำนวนทางซ้าย ระบบจะเลือกรถ + ผัง 3D ให้ทันที</span></div>'; return; }
     const grp = {}; act.forEach((t) => { const n = A.types.find((x) => x.k === t.type).name; grp[n] = (grp[n] || 0) + 1; });
     const kg = units.reduce((a, u) => a + u.kg, 0), maxH = Math.max(...units.map((u) => u.h)), one = act.length === 1, cur = one ? act[0].type : "";
+    // 📦 Cube Utilization = ปริมาตรของ (พาเลท 100×120 × สูงรวมพาเลท) ÷ ปริมาตรกระบะ (ยาว×กว้าง×สูง) · ⚖️ Weight Utilization = น้ำหนัก ÷ บรรทุกได้
+    const vol = units.reduce((a, u) => a + A.pallet.w * A.pallet.l * u.h, 0) / 1e6, cubeOf = (ty) => ty.beds.reduce((a, b) => a + b.L * b.W * b.H, 0) / 1e6;
     const cmp = A.types.map((ty) => { const r = place(ty, units, opt.stack), cap = payCap(ty), H = Math.min(...ty.beds.map((b) => b.H)), cp = r.floor * (opt.stack ? 2 : 1), why = [];
       if (r.over.length) why.push(`พาเลท ${units.length} เกินที่วาง ${cp}`); if (kg > cap) why.push(`หนัก ${nf(kg)} เกิน ${nf(cap)} กก.`); if (maxH > H) why.push(`พาเลทสูง ${nf(maxH)} ซม. เกินกระบะ ${H}`);
-      return { ty, why, cp, cap }; });
+      return { ty, why, cp, cap, cu: vol / cubeOf(ty), wu: kg / cap, fu: units.length / cp }; });
+    const pc = (x) => Math.round(x * 100), ubar = (x, lbl) => `<span class="ub"><i style="width:${Math.min(100, pc(x))}%;background:${x > 1 ? "var(--bad)" : x >= 0.85 ? "var(--ok)" : x >= 0.5 ? "var(--warn)" : "var(--muted)"}"></i></span><span class="ubn${x > 1 ? " over" : ""}">${lbl} ${pc(x)}%</span>`;
+    const actCube = act.reduce((a, t) => a + cubeOf(A.types.find((x) => x.k === t.type)), 0), actCap = act.reduce((a, t) => a + payCap(A.types.find((x) => x.k === t.type)), 0),
+      actPos = act.reduce((a, t) => a + evalTruck(t).capPos, 0), CU = actCube ? vol / actCube : 0, WU = actCap ? kg / actCap : 0, FU = actPos ? units.length / actPos : 0;
+    const bound = Math.max(CU, WU, FU) === WU ? "⚖️ น้ำหนักเต็มก่อน (Weigh-out · ของหนัก)" : Math.max(CU, WU, FU) === FU ? "🟫 ที่วางพาเลทเต็มก่อน (ซ้อนพาเลทไม่ได้)" : "📦 ปริมาตรเต็มก่อน (Cube-out · ของเบา/เกะกะ)";
     const bad = act.map(evalTruck).filter((r) => r.over.length || r.overKg).length;
     el.innerHTML = `<h2>ผลคำนวณ</h2><div class="crec${one ? "" : " m"}"><small>${one ? "รถที่แนะนำ" : "คันเดียวไม่พอ · ต้องใช้ " + act.length + " คัน"}</small>
       <b>${esc(Object.entries(grp).map(([n, c]) => n + (c > 1 ? " × " + c : "")).join(" + "))}</b>
-      <span class="note">${nf(units.length)} พาเลท · ${nf(kg)} กก. (รวมไม้พาเลท)${mode === "manual" ? " · ✋ เปลี่ยนชนิดรถเองอยู่" : ""}${bad ? ` · <b style="color:var(--bad)">⛔ ${bad} คันบรรทุกเกิน</b>` : ""}</span></div>
-      <table class="ctb"><thead><tr><th>คันเดียว</th><th class="r">วางได้</th><th class="r">บรรทุกได้</th><th>ผล</th></tr></thead><tbody>${cmp.map((c) => `<tr class="${c.ty.k === cur ? "on" : ""}"><td><b>${esc(c.ty.name)}</b>${c.ty.noAuto ? '<span class="why" style="color:var(--muted)">ระบบไม่เลือกให้เอง</span>' : ""}</td><td class="r">${c.cp} พาเลท</td><td class="r">${nf(c.cap)} กก.</td>
+      <span class="note">${nf(units.length)} พาเลท · ${nf(kg)} กก. (รวมไม้พาเลท)${mode === "manual" ? " · ✋ เปลี่ยนชนิดรถเองอยู่" : ""}${bad ? ` · <b style="color:var(--bad)">⛔ ${bad} คันบรรทุกเกิน</b>` : ""}</span>
+      <div class="cutil"><div>${ubar(CU, "📦 ปริมาตร")}<small>Cube Utilization · ${nf(vol, 1)} / ${nf(actCube, 1)} ลบ.ม.</small></div><div>${ubar(WU, "⚖️ น้ำหนัก")}<small>Weight Utilization · ${nf(kg)} / ${nf(actCap)} กก.</small></div><div>${ubar(FU, "🟫 พื้นพาเลท")}<small>${nf(units.length)} / ${nf(actPos)} ช่อง</small></div></div>
+      <span class="note">${bound} · ค่าสูงสุดของ 3 ตัวนี้ = <strong>Load Factor ${pc(Math.max(CU, WU, FU))}%</strong> (ยิ่งใกล้ 100% ยิ่งคุ้ม)</span></div>
+      <table class="ctb"><thead><tr><th>คันเดียว</th><th class="r">วางได้</th><th class="r">บรรทุกได้</th><th>ใช้รถ</th><th>ผล</th></tr></thead><tbody>${cmp.map((c) => `<tr class="${c.ty.k === cur ? "on" : ""}"><td><b>${esc(c.ty.name)}</b>${c.ty.noAuto ? '<span class="why" style="color:var(--muted)">ระบบไม่เลือกให้เอง</span>' : ""}</td><td class="r">${c.cp} พาเลท</td><td class="r">${nf(c.cap)} กก.</td>
+        <td class="cu">${ubar(c.cu, "📦")}<br>${ubar(c.wu, "⚖️")}</td>
         <td>${c.why.length ? `<span class="chip c-bad">ไม่พอ</span><span class="why">${c.why.join(" · ")}</span>` : `<span class="chip c-ok">พอ</span>`}${one && c.ty.k !== cur ? ` <button type="button" data-ctry="${c.ty.k}">ลองดู 3D</button>` : ""}</td></tr>`).join("")}</tbody></table>
       ${missHtml()}<div class="note">🚛 ${fleetSrc()}</div>
       <div class="note">กดการ์ดรถด้านล่างเพื่อดูผัง 3D แต่ละคัน · ลากพาเลทในภาพเพื่อย้ายได้ · ลองแก้ตัวเลขรถ/เพลาได้ใน ⚙️ ท้ายหน้า (ไม่บันทึก)</div>`;
