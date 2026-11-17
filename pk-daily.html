@@ -297,8 +297,10 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .mpsum .mpbar{height:8px;border-radius:6px;background:var(--line);overflow:hidden;margin:6px 0 8px}.mpsum .mpbar i{display:block;height:100%;background:var(--good,#2D6A4F);border-radius:6px}
 .mpsum.w .mpbar i{background:#D97706}.mpsum.bad .mpbar i{background:var(--bad,#B91C1C)}.mpsum.bad{border-color:#F3B4B4}
 .mpk{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.mpk small{display:block;color:var(--muted);font-size:11.5px}.mpk b{font-size:17px}
-#lpmHost.lpm{display:flex!important;position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,calc(100vw - 32px));height:min(90vh,940px);min-height:0;max-height:calc(100vh - 24px);border-radius:18px;z-index:81;box-shadow:0 30px 80px -20px rgba(0,0,0,.55)}
+#lpmHost.lpm,#jobHost.lpm{display:flex!important;position:fixed;inset:auto;left:50%;top:50%;transform:translate(-50%,-50%);width:min(760px,calc(100vw - 32px));height:min(90vh,940px);min-height:0;max-height:calc(100vh - 24px);border-radius:18px;z-index:81;box-shadow:0 30px 80px -20px rgba(0,0,0,.55)}
 .lpms{position:fixed;inset:0;z-index:80;background:rgba(12,24,18,.55)}
+/* 17 พ.ย. คุณน้อง: ฟอร์มงานห้าง = popup กลางจอ (เดิม drawer แผงซ้าย มองยาก) · รายละเอียด PO ที่เปิดจากในฟอร์ม ต้องอยู่เหนือ popup */
+body:has(#jobHost) #drawerHost .drawer.pod,body:has(#lpmHost) #drawerHost .drawer.pod{z-index:86}body:has(#jobHost) #drawerHost .scrim,body:has(#lpmHost) #drawerHost .scrim{z-index:85}
 .frb{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
 .btn.frq2{background:#EAF4EC;color:#1B4332;border-color:#9CC8A8}.btn.frq2:hover{background:#DCEEE0}
 .btn.frx{color:var(--bad,#DC2626)}.dsst{font-size:12px;font-weight:600;color:var(--muted,#6b7280);white-space:nowrap;align-self:center}.dsst.w{color:#b45309}.dsst.e{color:#b91c1c}
@@ -522,7 +524,7 @@ input.t24{font-variant-numeric:tabular-nums;letter-spacing:.02em;cursor:pointer}
   .lp:not(.ed){display:none}
   .lp.ed{position:fixed;inset:0;height:auto;z-index:41;border-radius:0;border:0}}
 @media (max-width:900px){.stats{grid-template-columns:minmax(0,1fr)}}
-.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:13.5px;z-index:60;max-width:calc(100% - 32px);box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:13.5px;z-index:95;max-width:calc(100% - 32px);box-shadow:0 10px 30px -10px rgba(0,0,0,.5)}
 @media (max-width:900px){
   .vr{grid-template-columns:22px 1fr auto;gap:4px 10px;align-items:start}
   .vr .cell{grid-column:2 / 4}
@@ -1367,7 +1369,7 @@ function renderMall(){frApply();
   if(!js.length)h+='<tr><td colspan="10" class="note" style="padding:18px">ยังไม่มีงานห้าง · กด ＋ เพิ่มงานห้าง</td></tr>';
   h+='</tbody></table></div><p class="note">งานที่ใส่รถแล้วจะโผล่ในแพลนรวมทันที แต่คนขับ/คลัง/บัญชี ยังไม่ได้รับจนกว่าจะกดแจกงาน</p>';
   const _sk=scSave();$('v-plan').innerHTML='<div class="split'+(HIDELP?' nolp':'')+'"><aside class="lp" id="lp" aria-label="งานห้างที่เลือก / รายการรถ"></aside><div id="rp" style="min-width:0">'+h+'</div></div>';
-  scLoad(_sk);if(JE)drawJob();else renderList();
+  scLoad(_sk);renderList();if(JE)drawJob();
   $('rlog').onclick=openLog;$('jadd').onclick=()=>openJob(null);$('jexp').onclick=openMallExport;if($('jdelall'))$('jdelall').onclick=askDelUnsent;
   $('v-plan').querySelectorAll('[data-jdel]').forEach(b=>{b.onclick=e=>{e.stopPropagation();askDelJob(b.dataset.jdel);};b.onkeydown=e=>e.stopPropagation();});
   $('v-plan').querySelectorAll('[data-jdup]').forEach(b=>{b.onclick=e=>{e.stopPropagation();dupJob(b.dataset.jdup);};b.onkeydown=e=>e.stopPropagation();});
@@ -1379,16 +1381,22 @@ function renderMall(){frApply();
   if($('frmulti'))$('frmulti').onclick=frAskMulti;if($('frmclr'))$('frmclr').onclick=()=>{FRSEL.clear();renderPlan();};
   $('v-plan').querySelectorAll('tr[data-j]').forEach(r=>{r.onclick=e=>{if(e.target.closest('.frck'))return;openJob(r.dataset.j);};r.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openJob(r.dataset.j);}};});
   wireSub();pmChips(mallTodo(dfx));updBar();lpShow();}
-function openJob(id){HIDELP=false;const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'พ่วง',stops:[],head:'',driver:'',note:'',isNew:1};
-  JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});}
+function openJob(id){const j=id?MJ.find(x=>x.id===id):{id:'H'+(MJN+1),size:'พ่วง',stops:[],head:'',driver:'',note:'',isNew:1};
+  JE={j:JSON.parse(JSON.stringify(j)),q:''};renderPlan();}
 /* ⧉ Duplicate (10 พ.ย. คุณน้อง) = ร่างงานใหม่ ร้าน/เวลา/จำนวนเหมือนเดิม · ไม่เอารถ/คนขับ/คำขอรถไร่ · จุดจาก PO ล้างจำนวน (กัน PO ซ้ำ 2 คัน) · ยังไม่บันทึกจนกด บันทึกงาน */
 function dupJob(id){const src=MJ.find(x=>x.id===id);if(!src)return;
   const j=JSON.parse(JSON.stringify(src));['fr','lp','mj','v','dupOf','uid','hsent'].forEach(k=>delete j[k]);   /* uid = รหัสอ้างอิงคำขอรถไร่ (frRef) ต้องใหม่ ไม่งั้นงานซ้ำผูกคำขอเดียวกัน (13 พ.ย.) */j.head='';j.driver='';j.id='H'+(MJN+1);j.isNew=1;j.dupOf=src.id;
   let po=0;j.stops.forEach(s=>{delete s.mj;if(s.rt){s.rt.id='r'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);delete s.rt.sent;}
     if((s.items&&s.items.length)||(s.po&&s.po.length&&!s.manual)){po++;delete s.items;s.po=[];s.pal='';s.cs='';s.kg=0;}});
-  HIDELP=false;JE={j,q:''};renderPlan();const lp=$('lp');if(lp&&lp.getBoundingClientRect().top<0)lp.scrollIntoView({block:'start'});
+  JE={j,q:''};renderPlan();
   toast('⧉ ทำซ้ำจาก '+src.id+' · ใส่รถ/คนขับ แล้วกด บันทึกงาน'+(po?' · '+po+' จุดมาจาก PO ล้างจำนวนแล้ว ใส่ใหม่':''));}
-function closeJob(){JE=null;renderPlan();}
+function closeJob(){JE=null;jobUnmount();renderPlan();}
+function jobHost(){let h=$('jobHost');if(h)return h;
+  const ov=document.createElement('div');ov.id='jobScrim';ov.className='lpms';
+  ov.onclick=()=>{if(!JE)return jobUnmount();syncJ();const j=JE.j,o=MJ.find(x=>x.id===j.id);   /* กดนอกกรอบ: ยังไม่แก้ = ปิด · แก้แล้ว = เตือน กันงานหาย */
+    if(j.isNew?(j.stops.length||j.head||String(j.note||'').trim()):JSON.stringify(j)!==JSON.stringify(o))toast('มีที่แก้ยังไม่บันทึก · กด บันทึกงาน หรือ ยกเลิก');else closeJob();};
+  document.body.appendChild(ov);h=document.createElement('aside');h.id='jobHost';h.className='lp ed lpm';h.setAttribute('role','dialog');h.setAttribute('aria-modal','true');document.body.appendChild(h);return h;}
+function jobUnmount(){['jobScrim','jobHost'].forEach(i=>{const e=$(i);if(e)e.remove();});}
 function syncJ(){if(!JE)return;const j=JE.j;
   document.querySelectorAll('[data-jat]').forEach(i=>j.stops[+i.dataset.jat].at=i.value);
   document.querySelectorAll('[data-jpal]').forEach(i=>j.stops[+i.dataset.jpal].pal=i.value);
@@ -1567,8 +1575,8 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   h+='<div class="box"><label for="jnt">หมายเหตุถึงคนขับ / คลัง</label><textarea class="in" id="jnt" rows="2" placeholder="เช่น วางบิล + เอกสาร CO/COA, นัดลงตามคิว">'+esc(j.note)+'</textarea></div>';
   h+='</div><div class="df">'+(j.isNew?'':'<button class="btn ghost" id="jdel" style="color:var(--bad)">ลบงาน</button><button class="btn ghost" id="jdup" title="สร้างงานใหม่จากงานนี้">⧉ ทำซ้ำ</button>'
     +(j.lp?'':'<button class="btn ghost" id="jmv" title="ย้ายงานนี้ไปแพลนวันส่งอื่น (คำขอรถไร่ + ออเดอร์ไร่ย้ายตาม)">📅 ย้ายวัน</button>'))+'<button class="btn ghost" id="jc">ยกเลิก</button><button class="btn pri mallb" id="jsv">บันทึกงาน</button></div></aside>';
-  const D=$('lp');if(!D)return;const st=D.querySelector('.db')?D.querySelector('.db').scrollTop:0;
-  D.innerHTML=h;D.classList.add('ed');if(D.querySelector('.db'))D.querySelector('.db').scrollTop=st;
+  const fresh=!$('jobHost'),D=jobHost();const st=D.querySelector('.db')?D.querySelector('.db').scrollTop:0;
+  D.innerHTML=h;D.classList.add('ed');if(D.querySelector('.db'))D.querySelector('.db').scrollTop=st;if(fresh&&$('jx'))$('jx').focus();
   const re=()=>{syncJ();drawJob();};
   $('jx').onclick=$('jc').onclick=closeJob;
   D.querySelectorAll('[data-sz]').forEach(b=>b.onclick=()=>{syncJ();if(j.size===b.dataset.sz)return;j.size=b.dataset.sz;if(j.head){j.head='';j.driver='';toast('เปลี่ยนขนาดรถแล้ว ต้องใส่รถใหม่');}drawJob();});
@@ -2413,7 +2421,7 @@ async function drGo(type,kind,b,close){if(drGo.busy)return;drGo.busy=1;const t0=
 /* ---------- หน้าแพลน: แผงซ้าย + ใบงานเต็ม ---------- */
 let HIDELP=false;
 function renderPlan(){
-  lpShow();if(PM==='mall'){renderMall();return;}
+  if(!JE||PM!=='mall')jobUnmount();lpShow();if(PM==='mall'){renderMall();return;}
   if(frLive())frAdopt();   /* 12 พ.ย. คำขอรถไร่ที่ไม่มีงานในหน้า → ดึงกลับเป็นงานห้าง (แพลนรวมได้ชิปห้าง/ขากลับเหมือนงานอื่น) */
   if(ED)sync();
   const c=counts(),{dc,hc}=busy();
@@ -2558,7 +2566,7 @@ async function loadLive(){if(typeof MY_UID==='undefined'||!MY_UID)return;
   try{const r=await fetch('https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/manage-drivers?action=getDrivers&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(x=>x.json());
     if(!r||!r.ok)return;const m={};(r.drivers||[]).forEach(d=>String(d.plates||d.plate||'').split(',').forEach(p=>{const k=npl(p);if(k&&!m[k])m[k]=d;}));
     (r.fleet||[]).forEach(f=>{const k=npl(f.k);if(k&&!m[k])m[k]=f;});   /* รถใน GPS ที่ยังไม่มีคนขับผูก (manage-drivers v7) */
-    LIVE=m;LIVE_AT=Date.now();if(!JE&&(!ED||ED.modal))renderList();}catch(e){}}
+    LIVE=m;LIVE_AT=Date.now();if(!ED||ED.modal)renderList();}catch(e){}}
 function liveOf(v){if(!LIVE)return null;for(const p of v.plate.split(',')){const d=LIVE[npl(p)];if(d)return d;}return null;}
 /* สถานะเดียวกับหน้า Command: อยู่ที่โรงงาน (≤2 กม.) · วิ่งออกไป/วิ่งกลับ · จอดไม่ดับเครื่อง · จอดดับเครื่อง · ออฟไลน์ */
 function gpsOf(v){const d=liveOf(v);if(!d)return {k:'none',t:LIVE?'ไม่พบใน GPS':'',d:null};
@@ -2575,7 +2583,7 @@ function gpsRow(g){if(!LIVE||!g.t)return '';const d=g.d;
     +[where,far,d&&d.ping&&d.ping!=='—'?'<span class="gt">'+esc(d.ping.slice(0,5))+' น.</span>':''].filter(Boolean).map(x=>x.startsWith('<')?x:esc(x)).join(' · ')+'</span></div>';}
 /* แผงซ้ายตอนยังไม่เลือกรถ: การ์ดรถเรียงตามเวลาที่ต้องถึงจุดแรก */
 function renderList(){
-  const lp=$('lp');if(!lp)return;if(JE&&PM==='mall'||ED&&!ED.modal)return;lp.classList.remove('ed');
+  const lp=$('lp');if(!lp)return;if(ED&&!ED.modal)return;lp.classList.remove('ed');
   const G={};VEH.forEach(v=>{if(!v.tail)G[v.head]=gpsOf(v);});
   const vs=VEH.filter(v=>visible(v)&&(!GF||(G[v.head]&&G[v.head].k===GF))),order={job:0,wait:1,nod:2,rep:3,off:4,tail:5};
   vs.sort((a,b)=>{const ka=kind(a),kb=kind(b);if(ka!==kb)return order[ka]-order[kb];
