@@ -13,9 +13,10 @@
   :root{--bg:#eceef1;--card:#fff;--card2:#f5f6f8;--line:#e6e8ec;--line2:#d5d9df;--txt:#14201a;--txt2:#66707b;--txt3:#9aa2ab;
     --primary:#1B4332;--pri2:#2d6a4f;--pri3:#52b788;--pri4:#b7e4c7;--pri1:#e8f5ee;--onpri:#fff;--gold:#C9A227;
     --warn:#8a530a;--warn1:#fef3dc;--warn2:#f3d79c;--danger:#c0392b;--danger1:#fdecea;--pk:#a855f7;--pk1:rgba(168,85,247,.08);
+    --hv:#c2410c;--lt:#0284c7;
     --radius:10px;--ease:cubic-bezier(.2,.8,.2,1)}
   @media(prefers-color-scheme:dark){:root{--bg:#0e1311;--card:#161d1a;--card2:#1d2622;--line:#26302b;--line2:#34403a;--txt:#e7ece9;--txt2:#93a19a;--txt3:#6a7771;
-    --primary:#2f8a5e;--pri2:#52b788;--pri3:#2d6a4f;--pri4:#24503b;--pri1:#16291f;--gold:#e0bf55;--warn:#f0b866;--warn1:#2c2210;--warn2:#5a4216;--danger:#ef8b80;--danger1:#2c1714;--pk1:rgba(168,85,247,.14)}}
+    --primary:#2f8a5e;--pri2:#52b788;--pri3:#2d6a4f;--pri4:#24503b;--pri1:#16291f;--gold:#e0bf55;--warn:#f0b866;--warn1:#2c2210;--warn2:#5a4216;--danger:#ef8b80;--danger1:#2c1714;--pk1:rgba(168,85,247,.14);--hv:#ea580c;--lt:#0ea5e9}}
   *{box-sizing:border-box}
   html,body{overflow-x:clip}
   body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,"Segoe UI","Noto Sans Thai",sans-serif;line-height:1.5;padding:18px 14px 60px}
@@ -184,7 +185,16 @@
   .drow{display:flex;justify-content:space-between;gap:12px;padding:5px 0;font-size:13px}
   .drow>span:last-child{text-align:right;font-variant-numeric:tabular-nums}
   .drow .l{color:var(--txt2)}
-  .sec{margin:12px 0 4px;font-size:12px;font-weight:600;color:var(--pri2)}
+  /* หัวกลุ่มในลิ้นชัก = แถบสีประจำกลุ่ม (--sc) · หนัก=ส้มอิฐ / เบา=ฟ้า ทึบทั้งคู่ (คุณน้อง 17 พ.ย.) */
+  .sec{margin:14px 0 6px;font-size:12.5px;font-weight:600;color:var(--sc,var(--pri2));background:var(--card2);background:color-mix(in srgb,var(--sc,var(--pri2)) 11%,var(--card));border-left:3px solid var(--sc,var(--pri2));padding:5px 10px;border-radius:0 8px 8px 0}
+  .wt{display:inline-block;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;line-height:20px;color:#fff;white-space:nowrap}
+  .wt.hv{background:var(--hv)}.wt.lt{background:var(--lt)}
+  .wv-h{color:var(--hv);font-weight:600}.wv-l{color:var(--lt);font-weight:600}
+  .leg{border-left:3px solid var(--line2);padding-left:9px!important;margin:3px 0}.leg.hv{border-left-color:var(--hv)}.leg.lt{border-left-color:var(--lt)}
+  .wbtn{border:1.5px solid var(--line2);background:var(--card);color:var(--txt2);border-radius:999px;padding:3px 14px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer}
+  .wbtn.hv{color:var(--hv);border-color:var(--hv)}.wbtn.lt{color:var(--lt);border-color:var(--lt)}
+  .wbtn.on.hv{background:var(--hv);color:#fff}.wbtn.on.lt{background:var(--lt);color:#fff}
+  .wbtn:disabled{cursor:default}.wbtn:disabled:not(.on){opacity:.4}
   .bd>.sec:first-child{margin-top:0}
   .big{display:flex;justify-content:space-between;align-items:baseline;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
   .big .amt{font-size:20px;font-weight:600}
@@ -875,7 +885,7 @@ function loadEditBlock(orderId,w,raw,st){
   if(!raw||(w.jobType||'')!=='Packing') return '';
   const pts=LOAD_POINTS.filter(p=>raw[p[1]]&&raw[p[2]]); if(!pts.length) return '';
   const locked=!!(st&&st.locked);
-  const btn=(p,v)=>{const on=raw[p[1]]===v;return '<button class="btn '+(on?'':'ghost')+'" style="padding:4px 12px;font-size:12.5px"'+(on||locked?' disabled':'')+' onclick="setLoadState(\''+orderId+'\',\''+p[0]+'\',\''+v+'\',\''+p[3]+'\',this)">'+v+'</button>';};
+  const btn=(p,v)=>{const on=raw[p[1]]===v;return '<button type="button" class="wbtn '+(v==='หนัก'?'hv':'lt')+(on?' on':'')+'" aria-pressed="'+on+'"'+(on||locked?' disabled':'')+' onclick="setLoadState(\''+orderId+'\',\''+p[0]+'\',\''+v+'\',\''+p[3]+'\',this)">'+v+'</button>';};
   return '<div style="border:1px solid var(--line2);border-radius:10px;padding:9px 11px;margin:8px 0 10px"><div style="font-size:12.5px;font-weight:700;margin-bottom:6px">สภาพรถแต่ละช่วง'+(locked?' <span style="font-weight:400;color:var(--txt2)">· จ่ายแล้ว แก้ไม่ได้</span>':'')+'</div>'
     +pts.map(p=>'<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:3px 0;font-size:13px"><span>'+p[3]+'</span><span style="display:flex;gap:6px">'+btn(p,'หนัก')+btn(p,'เบา')+'</span></div>').join('')+'</div>';
 }
@@ -1030,7 +1040,9 @@ function renderDetail(orderId,res,pending){
   // ① ค่าวิ่งตามขา
   let b='';
   // 🆕 2026-11-05 รูทหลายจุด: โชว์ชื่อช่วง + ชนิดรถรายขา (เดี่ยว = 10 ล้อ)
-  (w.legs||[]).forEach(l=>b+=row((l.name?`<b>${_escS(l.name)}</b>${l.veh?` <span style="color:var(--txt2);font-size:11px">${l.veh==='เดี่ยว'?'10 ล้อ':_escS(l.veh)}</span>`:''}<br>`:'')+`${l.weight} ${l.distKm} กม. × ${l.pct}% ÷ 50`,money(l.runWage)+' บ.'));
+  (w.legs||[]).forEach(l=>{const wc=l.weight==='หนัก'?' hv':l.weight==='เบา'?' lt':'';
+    b+=`<div class="drow leg${wc}"><span class="l">`+(l.name?`<b style="color:var(--txt)">${_escS(l.name)}</b>${l.veh?` <span style="color:var(--txt2);font-size:11px">${l.veh==='เดี่ยว'?'10 ล้อ':_escS(l.veh)}</span>`:''}<br>`:'')
+      +`${wtPill(l.weight)} ${l.distKm} กม. × ${l.pct}% ÷ 50</span><span style="white-space:nowrap">${money(l.runWage)} บ.</span></div>`;});
   if(!ro)b+=loadEditBlock(orderId,w,res.raw,st);
   h+=sec(IC.route,'ค่าวิ่งตามขา',money(P.run),b||'<div class="m">ไม่มีข้อมูลขา</div>',true);
   // ② ค่าเพิ่มอื่นๆ (ขึ้น-ลง · ผ้าใบ · ฮุคลิฟท์ · ให้เพิ่ม · Hardship · ค่ารอ · โบนัส)
@@ -1078,40 +1090,43 @@ function renderDetail(orderId,res,pending){
 }
 
 // จัดกลุ่มข้อมูลดิบเป็นหมวด ให้แอดมินไล่ตรวจง่าย
+/* หนัก/เบา → ป้ายสีทึบ (หนัก=ส้มอิฐ · เบา=ฟ้า) · ค่าอื่น = ข้อความเดิม */
+function wtPill(v){const s=String(v==null?'':v).trim();return s==='หนัก'?'<span class="wt hv">หนัก</span>':s==='เบา'?'<span class="wt lt">เบา</span>':_escS(s||'—');}
 function renderRaw(raw,row){
   const SKIP={'Order ID':1,'Ref ID':1,'Timestamp':1,'ประเภทงาน':1,'LINE UID':1,'LINE UID คนขับ':1,'userId':1,'สถานะ':1,'ชื่อคนขับ':1,'ทะเบียนรถ':1};
   const isUrl=v=>/^https?:\/\//.test(String(v));
   const fmtN=v=>{const s=String(v).replace(/,/g,'');return (s!==''&&/^\-?\d+(\.\d+)?$/.test(s))?Number(s).toLocaleString('th-TH'):v;};
   const used={}; let h='';
+  const SEC=(t,c)=>'<div class="sec" style="--sc:'+c+'">'+t+'</div>';
   const groups=[
-    {t:'🛞 เลขไมล์ / เลขดุม',      test:k=>/เลขไมล์|เลขดุม|ไมล์|ดุม/.test(k)},
-    {t:'⚖️ น้ำหนัก (กก.)',        test:k=>/น้ำหนัก|สุทธิ/.test(k)},
-    {t:'⛽ น้ำมัน',               test:k=>/น้ำมัน|ลิตร/.test(k)},
-    {t:'💸 ค่าใช้จ่ายรายเที่ยว',   test:k=>/^ค่า|ทางด่วน|ซ่อม|ลงของ|เด็ก/.test(k)},
-    {t:'🚗 สภาพรถ (เบา/หนัก)',    test:k=>/สภาพรถ/.test(k)}
+    {t:'🛞 เลขไมล์ / เลขดุม',      c:'#2563eb', test:k=>/เลขไมล์|เลขดุม|ไมล์|ดุม/.test(k)},
+    {t:'⚖️ น้ำหนัก (กก.)',        c:'#7c3aed', test:k=>/น้ำหนัก|สุทธิ/.test(k)},
+    {t:'⛽ น้ำมัน',               c:'#d97706', test:k=>/น้ำมัน|ลิตร/.test(k)},
+    {t:'💸 ค่าใช้จ่ายรายเที่ยว',   c:'#db2777', test:k=>/^ค่า|ทางด่วน|ซ่อม|ลงของ|เด็ก/.test(k)},
+    {t:'🚗 สภาพรถ (เบา/หนัก)',    c:'#0d9488', test:k=>/สภาพรถ/.test(k), wt:1}
   ];
   groups.forEach(g=>{
     const ks=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k])&&g.test(k));
     if(!ks.length)return;
-    h+='<div class="sec" style="color:var(--txt2)">'+g.t+'</div>';
-    ks.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});
+    h+=SEC(g.t,g.c);
+    ks.forEach(k=>{used[k]=1;h+=row(k,g.wt?wtPill(raw[k]):fmtN(raw[k]));});
   });
   // 📏 ระยะทาง — จับ ระยะเบา/ระยะหนัก/%วิ่งหนัก + คำนวณ "รวมระยะทาง"
   const distKeys=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k])&&/ระยะเบา|ระยะหนัก|%วิ่งหนัก/.test(k));
   if(distKeys.length){
-    h+='<div class="sec" style="color:var(--txt2)">📏 ระยะทาง (กม.)</div>';
+    h+=SEC('📏 ระยะทาง (กม.)','#4f46e5');
     let sum=0,hasDist=false;
-    distKeys.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));
+    distKeys.forEach(k=>{used[k]=1;const wc=/หนัก/.test(k)?'wv-h':/เบา/.test(k)?'wv-l':'';h+=row(wc?'<span class="'+wc+'">'+k+'</span>':k,wc?'<span class="'+wc+'">'+fmtN(raw[k])+'</span>':fmtN(raw[k]));
       if(/ระยะ/.test(k)&&/เบา|หนัก/.test(k)){const n=parseFloat(String(raw[k]).replace(/,/g,''));if(!isNaN(n)){sum+=n;hasDist=true;}}});
     if(hasDist)h+=row('รวมระยะทาง (กม.)','<b>'+sum.toLocaleString('th-TH',{maximumFractionDigits:1})+'</b>','font-weight:700;color:var(--txt)');
   }
   const rest=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k]));
-  if(rest.length){h+='<div class="sec" style="color:var(--txt2)">📝 อื่นๆ</div>';rest.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});}
+  if(rest.length){h+=SEC('📝 อื่นๆ','#64748b');rest.forEach(k=>{used[k]=1;h+=row(k,fmtN(raw[k]));});}
   const photos=Object.keys(raw).filter(k=>!SKIP[k]&&isUrl(raw[k]));
   // ⚠️ 12 พ.ย. กรอกลิตรน้ำมันโรงงานแต่ไม่มีรูปบิล → แอดมินตามคนขับ (ฟอร์มคนขับบังคับรูปตั้งแต่ 12 พ.ย.)
   const fLit=parseFloat(String(raw['ลิตรน้ำมัน(โรงงาน)']==null?'':raw['ลิตรน้ำมัน(โรงงาน)']).replace(/,/g,''));
   const noFuelPhoto=fLit>0&&!isUrl(raw['รูปน้ำมัน(โรงงาน)']);
-  if(photos.length||noFuelPhoto)h+='<div class="sec" style="color:var(--txt2)">📷 รูปถ่าย</div>';
+  if(photos.length||noFuelPhoto)h+=SEC('📷 รูปถ่าย','#0891b2');
   photos.forEach(k=>h+=`<div class="drow"><span class="l">${k}</span><a href="${raw[k]}" target="_blank" style="color:var(--primary);font-weight:600">เปิดรูป ↗</a></div>`+(k==='รูปน้ำมัน(โรงงาน)'?fuelBillRow():''));
   if(noFuelPhoto)h+=`<div class="drow"><span class="l">🧾 เลขบิลน้ำมัน (โรงงาน)</span><span style="color:#b45309;font-weight:600">⚠️ กรอกน้ำมัน ${fLit.toLocaleString('th-TH',{maximumFractionDigits:2})} ลิตร แต่ไม่มีรูปบิล</span></div>`;
   return h;
