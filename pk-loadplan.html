@@ -11,7 +11,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 <style>
-/* Layout: แถบวันที่ส่ง + โหมด · ซ้าย = รายการรถ (แถบเต็ม %) · ขวา = 3D คันที่เลือก · ล่าง = PO ต่อคัน + ค่าสมมติแก้ได้ */
+/* Layout: แถบวันที่ส่ง + โหมด · ซ้าย = รายการรถ (แถบเต็ม %) · ขวา = 3D คันที่เลือก · ล่าง = PO ต่อคัน + ⚙️ ตัวเลขที่ใช้คิด (ลองแก้ชั่วคราวได้) */
 :root{
   --bg:#f3f5f2; --surface:#ffffff; --surface2:#f8faf7; --line:#dfe5dd; --ink:#17251d; --muted:#5f6f66;
   --brand:#1B4332; --brand2:#2d6a4f; --gold:#C9A227; --goldtint:#fbf3d6; --onbrand:#ffffff;
@@ -276,9 +276,9 @@ body.calc #roleBar,body.calc #dates,body.calc .planneronly,body.calc #poBox,body
 <body>
 <div class="wrap">
   <div class="top">
-    <div><div class="eyebrow">Loading Planner · เดโม · ⚠️ ขนาด/น้ำหนักเป็นตัวเลขสมมติ</div>
+    <div><div class="eyebrow">Loading Planner · ขนาดรถจากทะเบียนรถ · สินค้าจากฐานข้อมูลสินค้า Packing</div>
       <h1>จัด PO 7-11 ลงรถ + ผัง 3D</h1>
-      <div class="note">ไฟล์ "Plan 7-11 ต.ค. 2569" 39 PO · เลือกวันส่ง → ระบบจัดรถให้ หรือแอดมินจัดเอง · แก้ตัวเลขสมมติได้ที่ท้ายหน้า</div></div>
+      <div class="note">ไฟล์ "Plan 7-11 ต.ค. 2569" 39 PO · เลือกวันส่ง → ระบบจัดรถให้ หรือแอดมินจัดเอง · ดูตัวเลขรถ/สินค้าที่ใช้คิดได้ที่ ⚙️ ท้ายหน้า</div></div>
     <div class="row" id="dates"></div>
   </div>
   <div class="rolebar" role="tablist" aria-label="มุมมองผู้ใช้" id="roleBar">
@@ -325,7 +325,7 @@ body.calc #roleBar,body.calc #dates,body.calc .planneronly,body.calc #poBox,body
   <div class="toast" id="toast" hidden></div>
   <div class="drw" id="drw" hidden><div class="drwbg" data-dclose></div><aside class="drwbox" role="dialog" aria-modal="true" aria-labelledby="drT" id="drBox"></aside></div>
   <div class="modal" id="qModal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="qmT" id="qmBox"></div></div>
-  <details class="card notfarm" id="asmBox"><summary>⚙️ ตัวเลขสมมติ (แก้แล้วจัดใหม่ทันที) · ของจริงจะมาจากไฟล์แม่แบบที่แอดมินกรอก</summary><div class="asm" id="asm"></div></details>
+  <details class="card notfarm" id="asmBox"><summary>⚙️ ตัวเลขที่ใช้คิด · รถ = ทะเบียนรถ · สินค้า = ฐานข้อมูลสินค้า Packing (ดึงอัตโนมัติ) · แก้ในนี้ = ลองชั่วคราว ไม่บันทึก</summary><div class="asm" id="asm"></div></details>
 </div>
 
 <script type="text/plain" id="lpMain">
@@ -339,7 +339,7 @@ const nf = (n, d) => Number(n || 0).toLocaleString("en-US", { minimumFractionDig
 const TH_M = ["", "ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
 const thd = (s) => { const m = String(s || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? (+m[1]) + " " + TH_M[+m[2]] : s; };
 
-// ── ค่าสมมติ (แก้ได้ในหน้า) ──
+// ── ค่าตั้งต้น/ค่าสำรอง (รถ → ทับด้วย pk-fleet types · สินค้า → ทับด้วย pk-fleet sku = pk_products · ลองแก้ใน ⚙️ ได้ ไม่บันทึก) ──
 const A = {
   pallet: { w: 100, l: 120, h: 15, kg: 35, maxH: 150 },   // แม่แบบ 26 ต.ค.: ไม้ LOSCAM 35 กก.
   sku: [
@@ -496,16 +496,33 @@ const skuKey = (x) => String(x || "").replace(/\([^)]*\)/g, "").replace(/\s+/g, 
 const UNK_SKU = new Set();
 const skuOf = (name) => {
   const k = skuKey(name);
-  const s = A.sku.find((x) => skuKey(x.name) === k) || A.sku.find((x) => x.re && x.re.test(name));
+  const s = A.sku.find((x) => skuKey(x.name) === k || (x.dbName && skuKey(x.dbName) === k)) || A.sku.find((x) => x.re && x.re.test(name));
   if (s) return s;
   UNK_SKU.add(String(name || "").replace(/\s+/g, " ").trim());
   return A.sku.find((x) => x.k === "1l");
 };
+// 📦 ทับแม่แบบสินค้าด้วยฐานข้อมูลสินค้า Packing (pk_products ผ่าน Edge pk-fleet) · 17 พ.ย. คุณน้อง "อัพเดทไฟล์แล้ว ทำไมยังเป็นตัวเลขสมมติ"
+//   จับคู่: รหัส 7-11 → ชื่อตรงตัว (ไม่สนวงเล็บ/ช่องว่าง) → ชื่อตัดคำ "ขวด/น้ำมัน" → ไม่เจอ = เพิ่มสินค้าใหม่ · ตัวที่ฐานไม่มี = คงแม่แบบ 26 ต.ค.
+const SKU_DB = (() => {
+  const f = FLEET && Array.isArray(FLEET.sku) ? FLEET.sku : []; if (!f.length) return null;
+  const k2 = (x) => skuKey(x).replace(/ขวด|น้ำมัน|ลิตร/g, "");
+  const hex = (hue) => { const ch = (n) => { const k = (n + hue / 30) % 12; return Math.round(255 * (0.5 - 0.225 * Math.max(-1, Math.min(k - 3, 9 - k, 1)))).toString(16).padStart(2, "0"); }; return "#" + ch(0) + ch(8) + ch(4); };   // hsl(hue,45%,50%)
+  let nNew = 0, nUpd = 0;
+  f.forEach((d, i) => {
+    const tpl = A.sku.filter((x) => x.src !== "db");   // ชื่อซ้ำในฐาน (เช่น ไชโย กับ ไชโย (SB)) = คนละรายการ ห้ามทับกันเอง
+    const s = A.sku.find((x) => x.k === d.k) || tpl.find((x) => skuKey(x.name) === skuKey(d.name)) || tpl.find((x) => k2(x.name) === k2(d.name));
+    const v = { w: d.w, l: d.l, h: d.h, kg: d.kg, per: d.per, lay: d.lay, unit: d.unit, brand: d.brand, code: d.k, dbName: d.name, src: "db" };
+    if (s) { Object.assign(s, v); delete s.note; nUpd++; }
+    else { A.sku.push({ k: d.k, name: d.name, color: hex((i * 47) % 360), ...v }); nNew++; }
+  });
+  return { n: f.length, nNew, nUpd, miss: Array.isArray(FLEET.skuMissing) ? FLEET.skuMissing : [], tpl: A.sku.filter((s) => s.src !== "db") };
+})();
+const skuSrc = () => SKU_DB ? `สินค้า ${SKU_DB.n} รายการจากฐานข้อมูลสินค้า Packing อัตโนมัติ${SKU_DB.tpl.length ? ` · ไม่มีในฐาน ใช้แม่แบบ 26 ต.ค.: ${SKU_DB.tpl.map((s) => esc(s.name)).join(", ")}` : ""}${SKU_DB.miss.length ? ` · ⚠️ ในฐานยังขาดข้อมูล ${SKU_DB.miss.length} รายการ (ยังเลือกไม่ได้): ${SKU_DB.miss.map((m) => esc(m.name) + " [" + m.no.join("/") + "]").join(", ")}` : ""}` : "⚠️ ดึงฐานข้อมูลสินค้าไม่ได้ · ใช้แม่แบบ 26 ต.ค. ในหน้า";
 // ค่ากลาง DTC จากหน้าแม่ (central_distances · แก้ได้เฉพาะ DEV) ทับระยะตั้งต้นจากแม่แบบ
 if (window.__LP && window.__LP.dcKm) Object.entries(window.__LP.dcKm).forEach(([c, km]) => { if (A.dc[c] && +km > 0) { A.dc[c].fileKm = A.dc[c].km; A.dc[c].km = +km; A.dc[c].src = "dtc"; } });
 // ตราสินค้าบนลัง: ดูจากชื่อสินค้าใน PO ก่อน (ไชโย/ทับทิม/โอก้า/โบนัส) · ไม่ระบุ = ตราตามแม่แบบสินค้า
 const brandOf = (name, s) => { const t = String(name || "") + " "; const f = (x) => /ไชโย/.test(x) ? "chaiyo" : /ทับทิม/.test(x) ? "tubtim" : /โอก้า/.test(x) ? "oka" : /โบนัส/.test(x) ? "bonus" : "";
-  return f(t) || f(s && s.name) || "tubtim"; };
+  return f(t) || f(s && s.name) || (s && s.brand ? "b:" + s.brand : "tubtim"); };
 
 // วันส่ง dd/mm/yy → เรียงตามปฏิทิน · เปิดมา = วันส่งแรกที่ยังไม่ผ่าน (ไม่มี = วันล่าสุด)
 const dKey = (s) => { const m = String(s || "").match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); return m ? (m[3].length === 2 ? "20" + m[3] : m[3]) + m[2].padStart(2, "0") + m[1].padStart(2, "0") : String(s); };
@@ -1097,7 +1114,7 @@ function showTruckDrawer(ti) {
     <div class="drax">${r.ax.loads.map((l) => `<span>${esc(l.n)}</span><span class="bar"><i class="${l.pct > 100 ? "x" : l.pct > 92 ? "w" : ""}" style="width:${Math.min(100, l.pct)}%"></i></span><span class="num">${nf(l.pct)}%</span>`).join("")}</div>
     <div><b>รายการสินค้า</b> <span class="note">${t.items.length} PO · กก. = น้ำหนักสินค้า ไม่รวมพาเลทไม้</span></div>
     ${pos}
-    <div class="row" style="gap:6px">${t.driver && !bad.length ? `<button class="btn ${stN === "sent" ? "sec " : ""}" data-dnotify="${ti}">${stN === "sent" ? "ดูการ์ดที่แจ้ง" : "📲 แจ้งคนขับคันนี้"}</button>` : ""}<span class="note">${bad.length ? "น้ำหนักไม่ผ่าน → ให้ planner ย้าย PO ก่อนแจ้ง" : "น้ำหนักพาเลทเป็นค่าสมมติ"}</span></div>`;
+    <div class="row" style="gap:6px">${t.driver && !bad.length ? `<button class="btn ${stN === "sent" ? "sec " : ""}" data-dnotify="${ti}">${stN === "sent" ? "ดูการ์ดที่แจ้ง" : "📲 แจ้งคนขับคันนี้"}</button>` : ""}<span class="note">${bad.length ? "น้ำหนักไม่ผ่าน → ให้ planner ย้าย PO ก่อนแจ้ง" : "น้ำหนักรายเพลาเป็นค่าประมาณ"}</span></div>`;
   $("drw").hidden = false;
   const c = $("drBox").querySelector("[data-dclose]"); if (c) c.focus();
 }
@@ -1644,7 +1661,7 @@ const paintCarton = (top, col, brand, size) => (c, w, h) => {
     c.fillStyle = col; c.fillRect(w * 0.36, 0, w * 0.28, h); c.fillStyle = "rgba(255,255,255,.25)"; c.fillRect(w * 0.36, 0, w * 0.04, h);   // เทปสีตามสินค้า → มองจากด้านบนก็แยกสินค้าได้
     c.strokeStyle = "rgba(110,75,35,.35)"; c.lineWidth = 2 * u; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
   } else {
-    const B = BRAND[brand] || BRAND.tubtim, ink = col;
+    const B = BRAND[brand] || (/^b:/.test(brand || "") ? { n: brand.slice(2), t: "#c4161c" } : BRAND.tubtim), ink = col;
     // มุมสามเหลี่ยมซ้ายบน + ไอคอนข้อควรระวัง 4 ช่อง (กันฝน · ระวังแตก · ห้ามซ้อนเกิน) แบบลังจริง
     c.fillStyle = ink; c.beginPath(); c.moveTo(0, 0); c.lineTo(w * 0.27, 0); c.lineTo(0, h * 0.27); c.closePath(); c.fill();
     for (let i = 0; i < 4; i++) { const ix = w * (0.5 + i * 0.115), iy = h * 0.05, is = w * 0.085;
@@ -2095,8 +2112,8 @@ function renderViewer() {
 function renderAsm() {
   const num = (path, v, step) => `<input type="number" step="${step || 1}" value="${v}" data-asm="${path}">`;
   $("asm").innerHTML = `
-  <div><h3>พาเลท</h3><table><tr><th>กว้าง</th><th>ยาว</th><th>สูง</th><th>กก.</th><th>สูงสุดรวมของ</th></tr><tr><td>${num("pallet.w", A.pallet.w)}</td><td>${num("pallet.l", A.pallet.l)}</td><td>${num("pallet.h", A.pallet.h)}</td><td>${num("pallet.kg", A.pallet.kg)}</td><td>${num("pallet.maxH", A.pallet.maxH)}</td></tr></table></div>
-  <div><h3>สินค้า (ซม. / กก.)</h3><div class="tscroll"><table><tr><th>สินค้า</th><th>สูงลัง</th><th>กก./ลัง</th><th>ลัง/ชั้น</th><th>ชั้น</th></tr>${A.sku.map((s, i) => `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color}"></i> ${esc(s.name)}${s.note ? `<div class="note">${esc(s.note)}</div>` : ""}</td><td>${num("sku." + i + ".h", s.h)}</td><td>${num("sku." + i + ".kg", s.kg, 0.01)}</td><td>${num("sku." + i + ".per", s.per)}</td><td>${num("sku." + i + ".lay", s.lay)}</td></tr>`).join("")}</table></div></div>
+  <div><h3>พาเลท</h3><p class="note">พาเลทไม้ LOSCAM ตามแม่แบบคลัง 26 ต.ค.</p><table><tr><th>กว้าง</th><th>ยาว</th><th>สูง</th><th>กก.</th><th>สูงสุดรวมของ</th></tr><tr><td>${num("pallet.w", A.pallet.w)}</td><td>${num("pallet.l", A.pallet.l)}</td><td>${num("pallet.h", A.pallet.h)}</td><td>${num("pallet.kg", A.pallet.kg)}</td><td>${num("pallet.maxH", A.pallet.maxH)}</td></tr></table></div>
+  <div><h3>สินค้า (ซม. / กก.)</h3><p class="note">📦 ${skuSrc()}</p><div class="tscroll"><table><tr><th>สินค้า</th><th>สูงลัง</th><th>กก./ลัง</th><th>ลัง/ชั้น</th><th>ชั้น</th></tr>${A.sku.map((s, i) => `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color}"></i> ${esc(s.name)}${s.note ? `<div class="note">${esc(s.note)}</div>` : ""}</td><td>${num("sku." + i + ".h", s.h)}</td><td>${num("sku." + i + ".kg", s.kg, 0.01)}</td><td>${num("sku." + i + ".per", s.per)}</td><td>${num("sku." + i + ".lay", s.lay)}</td></tr>`).join("")}</table></div></div>
   <div><h3>รถ (กระบะใน ซม. · บรรทุกได้ กก.)</h3><p class="note">🚛 ${fleetSrc()}</p><div class="tscroll"><table><tr><th>ประเภท</th><th>ช่วง</th><th>ยาว</th><th>กว้าง</th><th>สูง</th><th>บรรทุก</th></tr>${A.types.map((t, i) => t.beds.map((b, j) => `<tr><td>${j ? "" : esc(t.name)}</td><td>${esc(b.n)}</td><td>${num("types." + i + ".beds." + j + ".L", b.L)}</td><td>${num("types." + i + ".beds." + j + ".W", b.W)}</td><td>${num("types." + i + ".beds." + j + ".H", b.H)}</td><td>${j ? "" : num("types." + i + ".pay", t.pay, 100)}</td></tr>`).join("")).join("")}</table></div><p class="note">พาเลทวางพื้นได้ = (กว้าง ÷ 120) × (ยาว ÷ 100) ต่อช่วง</p></div>
   <div><h3>คลัง (ระยะเที่ยวเดียว กม.)</h3><div class="tscroll"><table><tr><th>คลัง</th><th>นัดลง</th><th>ระยะ</th></tr>${Object.keys(A.dc).map((k) => `<tr><td><span class="mono">${k}</span> ${esc(A.dc[k].n)} ${A.dc[k].src === "dtc" ? `<span class="chip c-ok" title="central_distances · แม่แบบ ${nf(A.dc[k].fileKm || 0)} กม.">ค่ากลาง DTC</span>` : '<span class="chip c-gold">แม่แบบคลัง</span>'}</td><td class="mono">${esc(A.dc[k].t)}${A.dc[k].t2 ? " / " + esc(A.dc[k].t2) : ""}</td><td>${num("dc." + k + ".km", A.dc[k].km)}</td></tr>`).join("")}</table></div></div>
   <div><h3>น้ำหนักลงเพลา (กก.) · รวมทั้งคัน/รถเปล่า = ทะเบียนรถ · แบ่งรายเพลา + พิกัดรายเพลา = ประมาณ</h3><div class="tscroll"><table><tr><th>รถ / เพลา</th><th>รถเปล่า</th><th>พิกัด</th></tr>${A.types.map((t) => { const c = A.axle[t.k]; return `<tr><td colspan="2"><b>${esc(t.name)}</b></td><td>รวมทั้งคัน ${num("axle." + t.k + ".gvw", c.gvw, 100)}</td></tr>` + c.groups.map((g, i) => `<tr><td>${esc(g.n)}</td><td>${num("axle." + t.k + ".groups." + i + ".tare", g.tare, 100)}</td><td>${num("axle." + t.k + ".groups." + i + ".lim", g.lim, 100)}</td></tr>`).join(""); }).join("")}</table></div></div>
@@ -2382,20 +2399,21 @@ window.addEventListener("pointerup", (e) => {
  *   ไม่มีคนขับ/เวลา/คลัง · ไม่ใช้กฎ 7-11 ข้อ 13 · เพดาน 20 ตันติ๊กเอง · ไม่บันทึก ไม่ส่งอะไรออก */
 if (CALC) {
   const CP = POS[0];
-  const unitOf = (s) => /^ปี๊บ/.test(s.name) ? "ปี๊บ" : /^ถัง/.test(s.name) ? "ถัง" : /^ถุง18L/.test(s.name) ? "ถุง" : "ลัง";
+  const unitOf = (s) => s.unit ? s.unit : /^ปี๊บ/.test(s.name) ? "ปี๊บ" : /^ถัง/.test(s.name) ? "ถัง" : /^ถุง18L/.test(s.name) ? "ถุง" : "ลัง";
   const skuBy = (k) => A.sku.find((x) => x.k === k) || A.sku[0];
   const GR = [["ทับทิม", (s) => /ทับทิม/.test(s.name) && !/ถั่วเหลือง/.test(s.name)], ["โบนัส", (s) => /โบนัส/.test(s.name)], ["ถั่วเหลือง", (s) => /ถั่วเหลือง/.test(s.name)], ["โอก้า", (s) => /โอก้า/.test(s.name)]];
   let rows = CP.lines.map((l) => ({ k: (A.sku.find((x) => x.name === l.p) || A.sku[0]).k, q: l.q })), tmr = 0;
   A.custMaxKg = 0; opt.drvMode = "manual";
   document.title = "คำนวณรถ · Loading Planner";
-  document.querySelector(".top > div").innerHTML = '<div class="eyebrow">Loading Planner · คำนวณรถ</div><h1>ใส่จำนวนลัง / ถัง / ปี๊บ แล้วระบบเลือกรถให้</h1><div class="note">ขนาดลัง น้ำหนัก ชั้นต่อพาเลท = แม่แบบที่คลังกรอก ชุดเดียวกับหน้าจัด PO 7-11 · คำนวณอย่างเดียว ไม่บันทึก ไม่ส่งงาน</div>';
+  document.querySelector(".top > div").innerHTML = '<div class="eyebrow">Loading Planner · คำนวณรถ</div><h1>ใส่จำนวนลัง / ถัง / ปี๊บ แล้วระบบเลือกรถให้</h1><div class="note">ขนาดลัง น้ำหนัก ชั้นต่อพาเลท = ฐานข้อมูลสินค้า Packing (ดึงอัตโนมัติ) · รถ = ทะเบียนรถ · คำนวณอย่างเดียว ไม่บันทึก ไม่ส่งงาน</div>';
   // ช่องสินค้า = พิมพ์ค้นได้ (datalist) · พิมพ์บางคำ เช่น "ปี๊บ 18" / "โอก้า" / รหัส 159224 แล้วเลือกจากรายการ หรือกด Enter = ตัวแรกที่ตรง
   const labelOf = (s) => `${s.name} · ${s.kg} กก./${unitOf(s)}`;
-  const grpOf = (s) => (GR.find(([, f]) => f(s)) || [""])[0];
-  const OPTS = GR.flatMap(([, f]) => A.sku.filter(f)).concat(A.sku.filter((s) => !grpOf(s))).map((s) => `<option value="${esc(labelOf(s))}">${esc(grpOf(s))}${/^\d+$/.test(s.k) ? " · " + s.k : ""}</option>`).join("");
+  const grpOf = (s) => /ถั่วเหลือง/.test(s.name) ? "ถั่วเหลือง" : s.brand || (GR.find(([, f]) => f(s)) || [""])[0];   // กลุ่ม = ตราในฐานข้อมูลสินค้า
+  const GORD = ["ทับทิม", "โบนัส", "ถั่วเหลือง", "โอก้า", "ไชโย"], gi = (s) => { const i = GORD.indexOf(grpOf(s)); return i < 0 ? 99 : i; };
+  const OPTS = A.sku.map((s, i) => [s, i]).sort((a, b) => gi(a[0]) - gi(b[0]) || String(grpOf(a[0])).localeCompare(String(grpOf(b[0])), "th") || a[1] - b[1]).map(([s]) => `<option value="${esc(labelOf(s))}">${esc(grpOf(s))}${s.code || /^\d+$/.test(s.k) ? " · " + esc(s.code || s.k) : ""}</option>`).join("");
   const findSku = (txt) => { const v = String(txt || "").trim().toLowerCase(); if (!v) return null;
-    const ex = A.sku.find((s) => labelOf(s).toLowerCase() === v || s.name.toLowerCase() === v || s.k === v); if (ex) return ex;
-    const tk = v.split(/[\s·*]+/).filter(Boolean); return A.sku.find((s) => tk.every((t) => (s.name + " " + s.k + " " + grpOf(s)).toLowerCase().includes(t))) || null; };
+    const ex = A.sku.find((s) => labelOf(s).toLowerCase() === v || s.name.toLowerCase() === v || s.k === v || s.code === v); if (ex) return ex;
+    const tk = v.split(/[\s·*]+/).filter(Boolean); return A.sku.find((s) => tk.every((t) => (s.name + " " + s.k + " " + (s.code || "") + " " + grpOf(s)).toLowerCase().includes(t))) || null; };
   $("calcBox").innerHTML = `<div class="cbox"><h2>สินค้าที่จะขึ้นรถ</h2><datalist id="cSkuList">${OPTS}</datalist><div class="crows" id="cRows"></div>
     <div class="row"><button class="btn gh" type="button" id="cAdd">＋ เพิ่มสินค้า</button><button class="btn gh" type="button" id="cClr">ล้างทั้งหมด</button></div>
     <div class="row"><label class="note"><input type="checkbox" id="cCap"> ส่ง 7-11 · เพดานน้ำหนักลูกค้า 20 ตัน</label><label class="note"><input type="checkbox" id="cStack"> ซ้อนพาเลท 2 ชั้นได้</label><label class="note"><input type="checkbox" id="cBal" checked> ⚖️ วางของหนักใกล้เพลาท้าย</label></div></div>
@@ -2457,7 +2475,7 @@ if (CALC) {
       <table class="ctb"><thead><tr><th>คันเดียว</th><th class="r">วางได้</th><th class="r">บรรทุกได้</th><th>ใช้รถ</th><th>ผล</th></tr></thead><tbody>${cmp.map((c) => `<tr class="${c.ty.k === cur ? "on" : ""}"><td><b>${esc(c.ty.name)}</b>${c.ty.noAuto ? '<span class="why" style="color:var(--muted)">ระบบไม่เลือกให้เอง</span>' : ""}</td><td class="r">${c.cp} พาเลท</td><td class="r">${nf(c.cap)} กก.</td>
         <td class="cu">${ubar(c.cu, "📦")}<br>${ubar(c.wu, "⚖️")}</td>
         <td>${c.why.length ? `<span class="chip c-bad">ไม่พอ</span><span class="why">${c.why.join(" · ")}</span>` : `<span class="chip c-ok">พอ</span>`}${one && c.ty.k !== cur ? ` <button type="button" data-ctry="${c.ty.k}">ลองดู 3D</button>` : ""}</td></tr>`).join("")}</tbody></table>
-      ${missHtml()}<div class="note">🚛 ${fleetSrc()}</div>
+      ${missHtml()}<div class="note">🚛 ${fleetSrc()}</div><div class="note">📦 ${skuSrc()}</div>
       <div class="note">กดการ์ดรถด้านล่างเพื่อดูผัง 3D แต่ละคัน · ลากพาเลทในภาพเพื่อย้ายได้ · ลองแก้ตัวเลขรถ/เพลาได้ใน ⚙️ ท้ายหน้า (ไม่บันทึก)</div>`;
   };
   $("cSum").addEventListener("click", (e) => { const b = e.target.closest("[data-ctry]"); if (!b || !trucks[sel]) return;
