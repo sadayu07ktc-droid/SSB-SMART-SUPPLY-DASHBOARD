@@ -517,7 +517,7 @@ const SKU_DB = (() => {
   });
   return { n: f.length, nNew, nUpd, miss: Array.isArray(FLEET.skuMissing) ? FLEET.skuMissing : [], tpl: A.sku.filter((s) => s.src !== "db") };
 })();
-const skuSrc = () => SKU_DB ? `สินค้า ${SKU_DB.n} รายการจากฐานข้อมูลสินค้า Packing อัตโนมัติ${SKU_DB.tpl.length ? ` · ไม่มีในฐาน ใช้แม่แบบ 26 ต.ค.: ${SKU_DB.tpl.map((s) => esc(s.name)).join(", ")}` : ""}${SKU_DB.miss.length ? ` · ⚠️ ในฐานยังขาดข้อมูล ${SKU_DB.miss.length} รายการ (ยังเลือกไม่ได้): ${SKU_DB.miss.map((m) => esc(m.name) + " [" + m.no.join("/") + "]").join(", ")}` : ""}` : "⚠️ ดึงฐานข้อมูลสินค้าไม่ได้ · ใช้แม่แบบ 26 ต.ค. ในหน้า";
+const skuSrc = () => SKU_DB ? `สินค้า ${SKU_DB.n} รายการจากฐานข้อมูลสินค้า Packing อัตโนมัติ${SKU_DB.tpl.length ? ` · ไม่มีในฐาน ใช้แม่แบบ 26 ต.ค.: ${SKU_DB.tpl.map((s) => esc(s.name)).join(", ")}` : ""}${SKU_DB.miss.length ? ` · ⚠️ ในฐานยังขาดข้อมูล ${SKU_DB.miss.length} รายการ (ยังเลือกไม่ได้): ${SKU_DB.miss.map((m) => esc(m.name) + " [" + m.no.join("/") + "]").join(", ")} · <a href="pk-products.html?gap=1" target="_blank" rel="opener">✏️ แอดมินกรอกที่หน้าฐานข้อมูลสินค้า</a>` : ""}` : "⚠️ ดึงฐานข้อมูลสินค้าไม่ได้ · ใช้แม่แบบ 26 ต.ค. ในหน้า";
 // ค่ากลาง DTC จากหน้าแม่ (central_distances · แก้ได้เฉพาะ DEV) ทับระยะตั้งต้นจากแม่แบบ
 if (window.__LP && window.__LP.dcKm) Object.entries(window.__LP.dcKm).forEach(([c, km]) => { if (A.dc[c] && +km > 0) { A.dc[c].fileKm = A.dc[c].km; A.dc[c].km = +km; A.dc[c].src = "dtc"; } });
 // ตราสินค้าบนลัง: ดูจากชื่อสินค้าใน PO ก่อน (ไชโย/ทับทิม/โอก้า/โบนัส) · ไม่ระบุ = ตราตามแม่แบบสินค้า

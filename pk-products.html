@@ -182,6 +182,18 @@
   .chip{flex:none}.chip b{font-weight:700;font-size:11.5px;min-width:18px;text-align:center;padding:0 6px;border-radius:999px;background:var(--line)}
   .chip.on b{background:rgba(255,255,255,.25)}
   .chip.warnc b{background:rgba(184,134,11,.18);color:var(--warn)} .chip.on.warnc b{color:#fff}
+  /* ✏️ กรอกด่วน (ชิป ⚠ ข้อมูลไม่ครบ · 17 พ.ย.) */
+  .qfhead{margin:12px 0 8px;font-size:13px;color:var(--txt2);line-height:1.55}.qfhead b{display:block;font-size:15px;color:var(--txt)}
+  .qf{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))}
+  .qfc{border:1px solid var(--line2);border-radius:14px;padding:12px;background:var(--card)}
+  .qfc.dirty{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary) inset}
+  .qfg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+  .qfg label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--txt2)}
+  .qfg input{font:inherit;font-size:14px;padding:7px 9px;border-radius:9px;border:1px solid var(--line2);background:var(--field,var(--card));color:var(--txt);min-width:0}
+  .qfg label.miss{color:var(--warn);font-weight:600}.qfg label.miss input{border-color:var(--warn);background:rgba(184,134,11,.08)}
+  .qfg input.bad{border-color:var(--danger)}
+  .qfg label.wide{grid-column:1/-1}
+  .qfr{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:12.5px;color:var(--txt2)}.qfr .qfcalc{flex:1;min-width:0}
   .ptab{margin-top:10px;max-height:calc(100vh - 290px);min-height:260px;overflow:auto}
   .ptab table{font-size:12.5px}
   .ptab th{z-index:1;background:var(--card2)}
@@ -236,7 +248,7 @@
   <main class="main"><div class="wrap">
     <div class="bar">
       <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='pk-plan.html'" aria-label="กลับ">←</button>
-      <div><h1>ฐานข้อมูลสินค้า</h1><div class="sub">รหัส 7-11 · ขนาดลัง · น้ำหนัก · การเรียงพาเลท — ใช้คิดพาเลท/น้ำหนักตอนจัดรถ <span style="opacity:.6">· build 2026-11-10a</span></div></div>
+      <div><h1>ฐานข้อมูลสินค้า</h1><div class="sub">รหัส 7-11 · ขนาดลัง · น้ำหนัก · การเรียงพาเลท — ใช้คิดพาเลท/น้ำหนักตอนจัดรถ <span style="opacity:.6">· build 2026-11-17a</span></div></div>
     </div>
     <div class="road" aria-hidden="true"></div>
     <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
@@ -247,7 +259,7 @@
 <script>
 const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-products';
 const LIFF_ID='2010274217-Ot7vGhri';
-let MY_UID='', R=null, F={q:'',c:'all'}, SAVING=false;
+let MY_UID='', R=null, F={q:'',c:/[?&]gap=1/.test(location.search)?'gap':'all'}, SAVING=false;   /* ?gap=1 = เปิดมาที่โหมดกรอกข้อมูลที่ขาด */
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 function toast(t,err){const e=$('toast');e.textContent=String(t);e.className='toast on'+(err||/ไม่สำเร็จ|ไม่ได้|❌/.test(String(t))?' err':'');clearTimeout(toast._t);toast._t=setTimeout(()=>e.className='toast',3400);}
@@ -314,6 +326,8 @@ function render(){
     +Object.keys(brands).sort((a,b)=>a.localeCompare(b,'th')).map(b=>chip('b:'+b,esc(b),brands[b])).join('')
     +Object.keys(groups).sort((a,b)=>a.localeCompare(b,'th')).map(g=>chip('g:'+g,esc(g),groups[g])).join('')
     +(off?chip('off','เลิกใช้',off):'')+'</div>';
+  const QFM=F.c==='gap'&&ed;   /* ⚠ ข้อมูลไม่ครบ + แก้ได้ = โหมดกรอกด่วน (ช่องกรอกในการ์ด ไม่ต้องเปิดฟอร์มทีละตัว) */
+  if(QFM) h+=qfHtml(L); else {
   h+='<div class="tw ptab"><table><thead><tr><th>รหัส 7-11</th><th class="hide-m">รหัสสินค้า</th><th>ชื่อสินค้า</th><th class="c">หน่วย</th><th class="hide-m">ขนาดลัง ก×ย×ส (มม.)</th><th class="n">กก./หน่วย</th><th class="n">ต่อชั้น × ชั้น</th><th class="n">ต่อพาเลท</th><th class="n hide-m">พาเลทเต็ม</th><th class="hide-m">ใช้กับ</th></tr></thead><tbody>';
   if(!L.length) h+='<tr><td colspan="10" class="msg">'+(F.q?'ไม่พบสินค้าที่ค้นหา':'ไม่มีรายการ')+'</td></tr>';
   L.forEach(r=>{
@@ -331,6 +345,7 @@ function render(){
       +'<td class="hide-m">'+esc(r.channels||'')+'</td></tr>';
   });
   h+='</tbody></table></div><div class="note" style="margin-top:8px">พาเลทเต็ม = จำนวนชั้น × สูงลัง + ไม้พาเลท '+PAL.h_cm+' ซม. · น้ำหนัก = หน่วยต่อพาเลท × กก./หน่วย (QC) + ไม้พาเลท '+PAL.kg+' กก. · ขนาดลังเป็นมิลลิเมตร'+(ed?' · กดแถวเพื่อแก้ไข':' · ดูได้อย่างเดียว (แก้ได้เฉพาะแอดมิน Packing / DEV)')+'</div></div>';
+  }
   const sc=document.querySelector('.ptab'),top=sc?sc.scrollTop:0, hadQ=document.activeElement&&document.activeElement.id==='q';
   $('body').innerHTML=h;
   const nsc=document.querySelector('.ptab'); if(nsc&&top) nsc.scrollTop=top;
@@ -341,6 +356,70 @@ function render(){
   if($('bAdd'))$('bAdd').onclick=()=>openForm(null);
   $('bDl').onclick=e=>xrtDownload(XSPEC(),e.currentTarget);
   if($('bUp'))$('bUp').onclick=()=>$('xf').click();
+  if(QFM) qfBind();
+}
+
+/* ── ✏️ กรอกด่วน: เฉพาะสินค้าที่ข้อมูลยังไม่ครบ · ช่องเหลือง = ยังไม่มี · บันทึกส่งเฉพาะช่องที่เปลี่ยน (Edge คิดหน่วยต่อพาเลทให้เอง) ──
+ *   ลิงก์ตรง: pk-products.html?gap=1 (จากคำเตือนใน Loading Planner) */
+const QK=[['case_w_mm','กว้างลัง','มม.'],['case_l_mm','ยาวลัง','มม.'],['case_h_mm','สูงลัง','มม.'],['weight_per_unit','กก./หน่วย (QC)','กก.'],['per_layer','หน่วยต่อชั้น','เช่น 14'],['layers','จำนวนชั้น','เช่น 4'],['per_pallet','หน่วยต่อพาเลท','ว่าง = ต่อชั้น × ชั้น',0,1]];   /* [5]=ไม่บังคับ (ไม่ขึ้นเหลือง) */
+const qfVal=v=>v==null?'':String(v);
+function qfHtml(L){
+  let h='<div class="qfhead"><b>✏️ กรอกข้อมูลที่ขาด · '+L.length+' รายการ</b>ช่องสีเหลือง = ยังไม่มี · ขนาดลังเป็น<b style="display:inline;font-size:inherit">มิลลิเมตร</b> · หน่วยต่อพาเลทคิดให้เอง (ต่อชั้น × ชั้น) · ครบแล้วการ์ดจะหายไป และหน้า Loading Planner ใช้ได้ภายใน ~10 นาที</div><div class="qf">';
+  if(!L.length) h+='<div class="msg">✅ ข้อมูลครบทุกรายการแล้ว</div>';
+  L.forEach(r=>{
+    const g=gaps(r), fs=(g.includes('รหัส 7-11')?[['sap_code','รหัส 7-11','เช่น 104884','wide']]:[]).concat(QK);
+    h+='<div class="qfc" data-qid="'+esc(r.product_id)+'"><div class="pn">'+esc(r.name)+'<small>'+[r.sap_code||r.product_id,r.brand,r.main_unit].filter(Boolean).map(esc).join(' · ')+' <span class="tag out" data-qtag>ขาด '+esc(g.join(', '))+'</span></small></div><div class="qfg">'
+      +fs.map(([k,l,ph,w,opt])=>'<label class="'+(has(r[k])||opt?'':'miss')+(w?' wide':'')+'">'+esc(l)+'<input data-q="'+k+'" value="'+esc(qfVal(r[k]))+'" placeholder="'+esc(ph)+'"'+(k==='sap_code'?'':' inputmode="decimal"')+' aria-label="'+esc(l+' · '+r.name)+'"></label>').join('')
+      +'</div><div class="qfr"><span class="qfcalc"></span><button class="btn sm" data-qsave>บันทึก</button></div></div>';
+  });
+  return h+'</div>'+(L.length>1?'<div class="row" style="margin-top:12px;display:flex;gap:8px;align-items:center"><span class="note" id="qN"></span><span class="grow" style="flex:1"></span><button class="btn" id="qAll">💾 บันทึกทั้งหมดที่แก้</button></div>':'')+'<div class="note" style="margin-top:8px">อยากแก้ช่องอื่น (ชื่อ ยี่ห้อ ข้อควรระวัง ฯลฯ) → กดชิป "ทั้งหมด" แล้วกดแถวสินค้า</div></div>';
+}
+function qfVals(c){const o={};c.querySelectorAll('[data-q]').forEach(i=>o[i.dataset.q]=i.value.trim().replace(/,/g,''));return o;}
+function qfDiff(c){const r=R.rows.find(x=>x.product_id===c.dataset.qid)||{},v=qfVals(c),o={};Object.keys(v).forEach(k=>{if((v[k]!==''||k==='per_pallet')&&v[k]!==qfVal(r[k]))o[k]=v[k];});return o;}   /* ช่องว่าง = ไม่แตะ · ยกเว้นต่อพาเลท ลบได้ (ให้คิดจาก ต่อชั้น × ชั้น) */
+function qfBad(d){
+  for(const [k,x] of Object.entries(d)){ if(k==='sap_code'||(k==='per_pallet'&&x==='')) continue; if(!(+x>0)) return 'ช่อง '+(QK.find(q=>q[0]===k)||[k,k])[1]+' ต้องเป็นตัวเลขมากกว่า 0';
+    if(/^case_/.test(k)&&+x<60) return 'ขนาดลังต้องเป็นมิลลิเมตร เช่น 240 (ไม่ใช่ 24 ซม.)';
+    if((k==='per_layer'||k==='layers'||k==='per_pallet')&&!Number.isInteger(+x)) return 'ต่อชั้น / จำนวนชั้น / ต่อพาเลท ต้องเป็นจำนวนเต็ม'; }
+  return '';
+}
+function qfCalc(c){
+  const r0=R.rows.find(x=>x.product_id===c.dataset.qid)||{},v=qfVals(c),n=k=>v[k]!==''?+v[k]:(has(r0[k])?+r0[k]:null);
+  const r={case_h_mm:n('case_h_mm'),layers:n('layers'),per_layer:n('per_layer'),per_pallet:n('per_pallet'),weight_per_unit:n('weight_per_unit')},pp=perPal(r),mis=r.per_pallet&&r.per_layer&&r.layers&&r.per_pallet!==r.per_layer*r.layers,ph=palH(r),pk=palKg(r),d=qfDiff(c),bad=qfBad(d);
+  c.querySelectorAll('[data-q]').forEach(i=>{const x=i.value.trim();i.classList.toggle('bad',!!x&&!!qfBad({[i.dataset.q]:x.replace(/,/g,'')}));});
+  c.querySelector('.qfcalc').innerHTML='พาเลทเต็ม <b>'+(pp?nf(pp,0)+' '+esc(r0.main_unit||'หน่วย'):'—')+'</b> · สูง <b'+(ph>PAL.maxH_cm?' style="color:var(--warn)" title="เกิน '+PAL.maxH_cm+' ซม."':'')+'>'+(ph?(ph>PAL.maxH_cm?'⚠ ':'')+nf(ph,1)+' ซม.':'—')+'</b> · หนัก <b>'+(pk?nf(pk,1)+' กก.':'—')+'</b>'+(mis?'<div style="color:var(--warn)">⚠ ต่อพาเลท '+r.per_pallet+' ไม่เท่ากับ '+r.per_layer+' × '+r.layers+' = '+(r.per_layer*r.layers)+' — แก้ช่องให้ตรงกัน (หรือลบช่องต่อพาเลทให้คิดเอง)</div>':'')+(bad?'<div style="color:var(--danger)">⚠ '+esc(bad)+'</div>':'');
+  c.classList.toggle('dirty',Object.keys(d).length>0);
+  const qn=$('qN'); if(qn){const k=document.querySelectorAll('.qfc.dirty').length;qn.textContent=k?'แก้ไว้ '+k+' รายการ ยังไม่บันทึก':'';}
+}
+async function qfSave(c,b,quiet){
+  const d=qfDiff(c); if(!Object.keys(d).length){ if(!quiet) toast('ไม่มีอะไรเปลี่ยน'); return 0; }
+  const bad=qfBad(d); if(bad){ toast('⚠️ '+bad,1); const i=c.querySelector('[data-q].bad'); if(i) i.focus(); return -1; }
+  const done=btnBusy(b,'กำลังบันทึก…');
+  try{
+    const x=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'save',userId:MY_UID,row:Object.assign({product_id:c.dataset.qid},d)})}).then(y=>y.json());
+    if(!x.ok) throw new Error(x.error||'บันทึกไม่สำเร็จ');
+    const r=R.rows.find(y=>y.product_id===c.dataset.qid); Object.keys(d).forEach(k=>r[k]=k==='sap_code'?d[k]:d[k]===''?null:+d[k]);
+    if(!('per_pallet' in d)&&has(r.per_layer)&&has(r.layers)&&!has(r.per_pallet)) r.per_pallet=r.per_layer*r.layers;   /* เหมือน Edge: ไม่ได้ส่งต่อพาเลท + เดิมว่าง = คิดให้ */
+    const g=gaps(r);
+    if(!g.length){ c.remove(); if(!quiet) toast('✅ บันทึกแล้ว · '+r.name+' ข้อมูลครบ');
+      if(!document.querySelector('.qfc')){ const q=document.querySelector('.qf'); if(q) q.innerHTML='<div class="msg">✅ ข้อมูลครบทุกรายการแล้ว</div>'; } }
+    else { c.querySelectorAll('[data-q]').forEach(i=>i.parentNode.classList.toggle('miss',!has(r[i.dataset.q]))); c.querySelector('[data-qtag]').textContent='ขาด '+g.join(', '); qfCalc(c); if(!quiet) toast('✅ บันทึกแล้ว · ยังขาด '+g.join(', ')); }
+    return 1;
+  }catch(e){ toast('❌ '+(e.message||e),1); return -1; }
+  finally{ done(); }
+}
+function qfBind(){
+  document.querySelectorAll('.qfc').forEach(c=>{
+    c.querySelectorAll('[data-q]').forEach(i=>{ i.addEventListener('input',()=>qfCalc(c)); i.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); const b=c.querySelector('[data-qsave]'); qfSave(c,b); } }); });
+    const b=c.querySelector('[data-qsave]'); b.onclick=()=>qfSave(c,b); qfCalc(c);
+  });
+  const all=$('qAll'); if(all) all.onclick=async()=>{
+    if(SAVING) return; const cs=[...document.querySelectorAll('.qfc.dirty')]; if(!cs.length){ toast('ยังไม่ได้แก้รายการไหน'); return; }
+    SAVING=true; const done=btnBusy(all,'กำลังบันทึก…'); let ok=0, fail=0;
+    try{ for(const c of cs){ const r=await qfSave(c,c.querySelector('[data-qsave]'),1); if(r>0) ok++; else if(r<0){ fail++; break; } } }
+    finally{ SAVING=false; done(); }
+    toast(fail?'บันทึกได้ '+ok+' รายการ · หยุดที่รายการที่ผิด แก้แล้วกดอีกครั้ง':'✅ บันทึกแล้ว '+ok+' รายการ', !!fail);
+    if(!fail) await load();
+  };
 }
 
 /* ── ฟอร์มเพิ่ม/แก้ไข ── */
