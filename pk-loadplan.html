@@ -238,6 +238,31 @@ details.card summary{cursor:pointer;font-weight:700}
 .btn:disabled{opacity:.45;cursor:not-allowed}
 .lpmsg{margin:40px auto;max-width:460px;text-align:center;line-height:1.7}
 .pendbox{margin-top:10px;border:1px dashed #d9b44a;background:var(--goldtint);border-radius:12px;padding:8px 10px;display:flex;flex-direction:column;gap:6px}
+/* 🧮 17 พ.ย. คุณน้อง: โหมดคำนวณรถ (?calc=1 · เมนูแอดมิน Packing "Loading Planner") = ใส่จำนวนลัง/ถัง/ปี๊บ → ระบบจัดรถ + 3D ตัวเดียวกัน · ไม่บันทึก ไม่ส่งงาน */
+#calcBox{display:none}
+body.calc #calcBox{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px}
+@media (max-width:900px){body.calc #calcBox{grid-template-columns:minmax(0,1fr)}}
+body.calc #roleBar,body.calc #dates,body.calc .planneronly,body.calc #poBox,body.calc .poday,body.calc .tnew,body.calc #addTruck,body.calc .grip,body.calc select[data-move],body.calc #vPOs td:last-child,body.calc .viewer thead th:last-child{display:none!important}
+.cbox{display:flex;flex-direction:column;gap:10px;min-width:0}
+.crows{display:flex;flex-direction:column;gap:8px}
+.crow{display:grid;grid-template-columns:minmax(0,1fr) 132px 36px;grid-template-areas:"p q x" "d d d";gap:6px 8px;align-items:center;border:1px solid var(--line);background:var(--surface2);border-radius:12px;padding:8px 10px}
+@media (max-width:520px){.crow{grid-template-columns:minmax(0,1fr) 36px;grid-template-areas:"p x" "q q" "d d"}}
+.cin{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:8px 10px;font:inherit;font-size:14px;background:var(--surface);color:var(--ink);min-height:40px}
+.crow select{grid-area:p}.cq{grid-area:q;position:relative;display:block}.cq input.cin{width:100%;text-align:right;padding-right:46px;font-family:var(--f-mono)}
+.ctb td:last-child{min-width:110px}
+.cq span{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
+.cx{grid-area:x;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--muted);font-size:16px}
+.cx:hover{color:var(--bad);border-color:var(--bad)}
+.cdet{grid-area:d;font-size:12.5px;color:var(--muted)}.cdet i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.btn.gh{background:var(--surface);color:var(--ink);border:1px solid var(--line)}
+.crec{border:2px solid var(--ok);background:var(--oktint);border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.crec.m{border-color:var(--warn);background:var(--warntint)}.crec.e{border-color:var(--line);background:var(--surface2)}
+.crec small{font-weight:700;color:var(--ok);font-size:12.5px}.crec.m small{color:var(--warn)}.crec.e small{color:var(--muted)}
+.crec b{font-size:24px;line-height:1.25}
+.ctb{width:100%;border-collapse:collapse;font-size:13px}.ctb th,.ctb td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.ctb th{font-size:12px;color:var(--muted);font-weight:600}.ctb td.r{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ctb tr.on td{background:var(--oktint)}.ctb .why{display:block;font-size:11.5px;color:var(--bad)}
+.ctb button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:2px 8px;font:inherit;font-size:12px;cursor:pointer;color:var(--brand2);white-space:nowrap}
 </style>
 </head>
 <body>
@@ -253,6 +278,7 @@ details.card summary{cursor:pointer;font-weight:700}
     <button role="tab" data-role="puy">② พี่ปุ๋ย · จัดรถ PK<small>เช็คน้ำหนัก · หารถ · แจ้งคนขับ</small></button>
     <button role="tab" data-role="farm">③ แอดมินไร่<small>อนุมัติให้ยืมรถไร่</small><span id="farmBadge"></span></button>
   </div>
+  <div class="card" id="calcBox"></div>
   <div class="card planneronly" id="plannerBox"></div>
   <div class="card farmonly" id="farmBox"></div>
   <div class="row planneronly">
@@ -287,7 +313,7 @@ details.card summary{cursor:pointer;font-weight:700}
     </div>
     <div class="rightcol notpuy" id="rightCol"></div>
   </div>
-  <div class="card notfarm notpuy"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>PO ของวันส่งนี้ <span id="poAllCount" class="muted"></span></h2><button class="pchip onlyun" data-onlyun aria-pressed="false" title="ซ่อน PO ที่อยู่บนรถแล้ว">เฉพาะยังไม่จัด</button></div><div class="tscroll"><table><thead><tr><th>PO / SO</th><th>คลัง</th><th>นัดลง</th><th>สินค้า</th><th class="r">ลัง</th><th class="r">พาเลท</th><th class="r">กก.</th><th>อยู่คัน</th></tr></thead><tbody id="poAll"></tbody></table></div></div>
+  <div class="card notfarm notpuy poday"><div class="row" style="justify-content:space-between;margin-bottom:8px"><h2>PO ของวันส่งนี้ <span id="poAllCount" class="muted"></span></h2><button class="pchip onlyun" data-onlyun aria-pressed="false" title="ซ่อน PO ที่อยู่บนรถแล้ว">เฉพาะยังไม่จัด</button></div><div class="tscroll"><table><thead><tr><th>PO / SO</th><th>คลัง</th><th>นัดลง</th><th>สินค้า</th><th class="r">ลัง</th><th class="r">พาเลท</th><th class="r">กก.</th><th>อยู่คัน</th></tr></thead><tbody id="poAll"></tbody></table></div></div>
   <div class="toast" id="toast" hidden></div>
   <div class="drw" id="drw" hidden><div class="drwbg" data-dclose></div><aside class="drwbox" role="dialog" aria-modal="true" aria-labelledby="drT" id="drBox"></aside></div>
   <div class="modal" id="qModal" hidden><div class="mbox" role="dialog" aria-modal="true" aria-labelledby="qmT" id="qmBox"></div></div>
@@ -296,6 +322,7 @@ details.card summary{cursor:pointer;font-weight:700}
 
 <script type="text/plain" id="lpMain">
 const POS=window.__LP.pos;   /* PO จากหน้าแม่ (Edge pk-daily lpPos) */
+const CALC=!!window.__LP.calc;   /* 🧮 โหมดคำนวณรถ (?calc=1) · POS = PO สมมติ 1 ใบจากช่องกรอก */
 const DRIVERS=[];   /* ฝังในแพลนห้าง: planner ไม่เลือกคนขับ · พี่ปุ๋ยแจ้งรถ+คนขับ แล้วแอดมินใส่ในแพลนห้าง */
 const ACTUAL={"09/10/26":15,"10/10/26":4};
 const $ = (id) => document.getElementById(id);
@@ -460,7 +487,7 @@ function poInfo(po) {
     // ข้อ 13: PO ไม่พอ 1 คัน → เรียง 1L สูงขึ้นทีละชั้น (ต้องมี 1L ใน PO · พาเลทสูงไม่เกินกระบะ · น้ำหนักไม่เกินเพดาน)
     const big = A.types[0], bedH = Math.min(...big.beds.map((b) => b.H)), base = (A.sku.find((x) => x.k === "1l") || {}).lay || 4;
     const fits = (u) => !place(big, u, opt.stack).over.length;
-    if (!fits(po._u) && po.lines.some((ln) => ONE_L.has(skuOf(ln.p).k))) {
+    if (!CALC && !fits(po._u) && po.lines.some((ln) => ONE_L.has(skuOf(ln.p).k))) {   /* โหมดคำนวณ: ไม่ใช้กฎ 7-11 ข้อ 13 */
       for (let L = base + 1; L <= base + 2; L++) {
         const u = palletize(po, L);
         if (u.some((x) => x.h > bedH)) break;
@@ -777,7 +804,12 @@ function renderKpis() {
   const pal = items.reduce((a, i) => a + i.units.length, 0), kg = items.reduce((a, i) => a + i.units.reduce((b, u) => b + u.kg, 0), 0);
   const ev = act.map(evalTruck), fillAvg = ev.length ? ev.reduce((a, r) => a + Math.min(1, r.pos / r.capPos), 0) / ev.length : 0;
   const unassigned = items.filter((i) => !assign[i.id]).length, real = ACTUAL[date];
-  $("kpis").innerHTML = `
+  $("kpis").innerHTML = CALC ? `
+    <div class="kpi"><b>${nf(items.reduce((a, i) => a + i.units.reduce((b, u) => b + u.segs.reduce((c, g) => c + g.q, 0), 0), 0))}</b><span>ลัง / ถัง / ปี๊บ</span></div>
+    <div class="kpi"><b>${nf(pal)}</b><span>พาเลท (รวมเศษ)</span></div>
+    <div class="kpi"><b>${nf(kg / 1000, 1)} ตัน</b><span>รวมน้ำหนักพาเลท</span></div>
+    <div class="kpi"><b>${act.length} คัน</b><span>ที่ระบบเลือก</span></div>
+    <div class="kpi"><b>${nf(fillAvg * 100)}%</b><span>เฉลี่ยพื้นที่พาเลทที่ใช้</span></div>` : `
     <div class="kpi"><b>${new Set(items.map((i) => i.po)).size} PO</b><span>${new Set(items.map((i) => i.dc)).size} คลัง</span></div>
     <div class="kpi"><b>${nf(items.reduce((a, i) => a + i.units.reduce((b, u) => b + u.segs.reduce((c, g) => c + g.q, 0), 0), 0))}</b><span>ลัง</span></div>
     <div class="kpi"><b>${nf(pal)}</b><span>พาเลท (รวมเศษ)</span></div>
@@ -790,6 +822,7 @@ function renderKpis() {
     r.ax.loads.filter((l) => l.pct > 100).forEach((l) => w.push(`<div class="warn b">คัน #${t.id}: ${esc(l.n)} รับ ${nf(l.kg)} กก. เกินพิกัด ${nf(l.lim)} · ลองย้ายพาเลทหนักไปช่วงอื่น</div>`));
     if (r.ax.gvwPct > 100) w.push(`<div class="warn b">คัน #${t.id}: น้ำหนักรวมทั้งคัน ${nf(r.ax.total)} กก. เกิน ${nf(r.ax.gvw)}</div>`);
     if (r.overKg) w.push(`<div class="warn b">คัน #${t.id}: น้ำหนัก ${nf(r.kg)} กก. เกิน ${nf(r.payMax)} (เผื่อ ${A.payBuf}%)</div>`);
+    if (CALC) return;   /* โหมดคำนวณ: ไม่มีคนขับ/เวลาขึ้นของ */
     if (!t.driver && !t.short && !t.open) w.push(`<div class="warn">คัน #${t.id}: ไม่มีคนขับ ${r.type.drv} ว่าง → ต้องใช้รถนอก</div>`);
     if (t.afterHours) w.push(`<div class="warn">คัน #${t.id}: รอบขึ้นของ ${hm(t.slot)} เลยเวลาขึ้นของปกติ (${hm(A.dayEnd)}) · เพิ่มช่องขึ้นของ หรือย้ายไปขึ้นของวันก่อน</div>`);
     if (t.late) w.push(`<div class="warn">คัน #${t.id} → ${esc(A.dc[t.dc] ? A.dc[t.dc].n : t.dc)}: ขึ้นของ ${hm(t.slot)} ช้ากว่าที่ควร (${hm(t.latestLoad)})</div>`);
@@ -1182,8 +1215,8 @@ function renderTrucks() {
   $("trucks").innerHTML = trucks.map((t, i) => {
     const r = evalTruck(t), dc = A.dc[t.dc], bad = r.over.length || r.overKg;
     return `<button class="tc ${bad ? "badc" : ""}" aria-pressed="${i === sel}" data-sel="${i}">
-      <div class="hd"><b>${t.items.length && ROLE === "puy" ? `<span class="tgrip" data-tgrip="${i}" title="ลากไปวางบนคนขับ (คิวด้านล่าง หรือรายชื่อในกล่องจองรถ)" aria-label="ลากคัน #${t.id} ไปวางบนคนขับ">⠿</span>` : ""}#${t.id} · ${esc(r.type.name)}</b>${t.short ? '<span class="chip c-bad">⛔ ขาดรถ</span>' : `<span class="mono">${t.items.length ? hmDay(t.slot) : "—"}</span>${t.round === 2 ? "<span class=\"chip c-info\">รอบ 2</span>" : ""}${t.farm ? "<span class=\"chip c-ok\">🌴 รถไร่</span>" : ""}`}</div>
-      <div class="note">${t.items.length ? esc(t.dcs.map((d) => d + " " + (A.dc[d] ? A.dc[d].n : "")).join(" + ")) + " · นัดลง " + (dc ? dc.t : "") : "ยังว่าง"} · ${t.driver ? (t.pinned ? "📌 " : t.qFar && !t.farm && !t.driver.outs && t.round !== 2 ? "🧭 " : "") + esc(t.driver.name) + " " + esc(t.driver.plate.split(",")[0]) + (t.ready ? " · รถถึง " + hmDay(t.ready) : "") + (t.pinned && ROLE === "puy" ? `<span class="unpin" data-unpin="${esc(tkey(t))}" title="ให้ระบบเลือกคนขับเอง" aria-label="เลิกปักหมุดคนขับ">✕</span>` : "") : '<span class="muted">ทะเบียน/คนขับ ใส่ในแพลนห้าง</span>'}</div>
+      <div class="hd"><b>${t.items.length && ROLE === "puy" ? `<span class="tgrip" data-tgrip="${i}" title="ลากไปวางบนคนขับ (คิวด้านล่าง หรือรายชื่อในกล่องจองรถ)" aria-label="ลากคัน #${t.id} ไปวางบนคนขับ">⠿</span>` : ""}#${t.id} · ${esc(r.type.name)}</b>${CALC ? "" : t.short ? '<span class="chip c-bad">⛔ ขาดรถ</span>' : `<span class="mono">${t.items.length ? hmDay(t.slot) : "—"}</span>${t.round === 2 ? "<span class=\"chip c-info\">รอบ 2</span>" : ""}${t.farm ? "<span class=\"chip c-ok\">🌴 รถไร่</span>" : ""}`}</div>
+      <div class="note">${CALC ? `${r.pos + r.over.length} พาเลท · ${nf(r.kg)} กก.` : t.items.length ? esc(t.dcs.map((d) => d + " " + (A.dc[d] ? A.dc[d].n : "")).join(" + ")) + " · นัดลง " + (dc ? dc.t : "") : "ยังว่าง"}${CALC ? "" : " · "}${CALC ? "" : t.driver ? (t.pinned ? "📌 " : t.qFar && !t.farm && !t.driver.outs && t.round !== 2 ? "🧭 " : "") + esc(t.driver.name) + " " + esc(t.driver.plate.split(",")[0]) + (t.ready ? " · รถถึง " + hmDay(t.ready) : "") + (t.pinned && ROLE === "puy" ? `<span class="unpin" data-unpin="${esc(tkey(t))}" title="ให้ระบบเลือกคนขับเอง" aria-label="เลิกปักหมุดคนขับ">✕</span>` : "") : '<span class="muted">ทะเบียน/คนขับ ใส่ในแพลนห้าง</span>'}</div>
       <div class="bars">${barRow("พาเลท", r.pos + r.over.length, r.capPos, (r.pos + r.over.length) + "/" + r.capPos)}${barRow("สินค้า", r.kg, r.payMax)}${barRow("สูงสุด", r.maxH, r.bedH, nf(r.maxH) + " ซม.")}${barRow("เพลา", r.ax.worst, 100, nf(r.ax.worst) + "%")}</div>
     </button>`;
   }).join("") + (ROLE === "planner" ? '<div class="tnew" id="tNew">＋ ลาก PO มาวางตรงนี้ = รถคันใหม่ (เลือกขนาดที่พอให้เอง)</div>' : trucks.length ? "" : '<div class="note" style="padding:10px">ยังไม่มีรถ</div>');
@@ -2280,6 +2313,63 @@ window.addEventListener("pointerup", (e) => {
   if (!tDrag) return; const d = tDrag; tDrag = null; d.ghost.remove(); if (d.over) d.over.classList.remove("dropok");
   const tg = tTarget(e); if (tg) pinTruck(d.t, tg.dataset.drvdrop);
 });
+/* ── 🧮 โหมดคำนวณรถ (17 พ.ย. คุณน้อง: เลือกน้ำมัน + จำนวนลัง/ถัง/ปี๊บ → ควรใส่รถอะไร · 3D เหมือนหน้าจัด PO) ──
+ *   ช่องกรอก → PO สมมติ 1 ใบ (POS[0]) → itemsOf/autoPlan ตัวเดิม (เกินพ่วง = ตัดเป็นหลายคัน · คันสุดท้ายลดเป็นรถเล็กสุดที่พอ)
+ *   ไม่มีคนขับ/เวลา/คลัง · ไม่ใช้กฎ 7-11 ข้อ 13 · เพดาน 20 ตันติ๊กเอง · ไม่บันทึก ไม่ส่งอะไรออก */
+if (CALC) {
+  const CP = POS[0];
+  const unitOf = (s) => /^ปี๊บ/.test(s.name) ? "ปี๊บ" : /^ถัง/.test(s.name) ? "ถัง" : /^ถุง18L/.test(s.name) ? "ถุง" : "ลัง";
+  const skuBy = (k) => A.sku.find((x) => x.k === k) || A.sku[0];
+  const GR = [["ทับทิม", (s) => /ทับทิม/.test(s.name) && !/ถั่วเหลือง/.test(s.name)], ["โบนัส", (s) => /โบนัส/.test(s.name)], ["ถั่วเหลือง", (s) => /ถั่วเหลือง/.test(s.name)], ["โอก้า", (s) => /โอก้า/.test(s.name)]];
+  let rows = CP.lines.map((l) => ({ k: (A.sku.find((x) => x.name === l.p) || A.sku[0]).k, q: l.q })), tmr = 0;
+  A.custMaxKg = 0; opt.drvMode = "manual";
+  document.title = "คำนวณรถ · Loading Planner";
+  document.querySelector(".top > div").innerHTML = '<div class="eyebrow">Loading Planner · คำนวณรถ</div><h1>ใส่จำนวนลัง / ถัง / ปี๊บ แล้วระบบเลือกรถให้</h1><div class="note">ขนาดลัง น้ำหนัก ชั้นต่อพาเลท = แม่แบบที่คลังกรอก ชุดเดียวกับหน้าจัด PO 7-11 · คำนวณอย่างเดียว ไม่บันทึก ไม่ส่งงาน</div>';
+  const OPTS = GR.map(([g, f]) => `<optgroup label="${g}">` + A.sku.filter(f).map((s) => `<option value="${s.k}">${esc(s.name)} · ${s.kg} กก./${unitOf(s)}</option>`).join("") + "</optgroup>").join("");
+  $("calcBox").innerHTML = `<div class="cbox"><h2>สินค้าที่จะขึ้นรถ</h2><div class="crows" id="cRows"></div>
+    <div class="row"><button class="btn gh" type="button" id="cAdd">＋ เพิ่มสินค้า</button><button class="btn gh" type="button" id="cClr">ล้างทั้งหมด</button></div>
+    <div class="row"><label class="note"><input type="checkbox" id="cCap"> ส่ง 7-11 · เพดานน้ำหนักลูกค้า 20 ตัน</label><label class="note"><input type="checkbox" id="cStack"> ซ้อนพาเลท 2 ชั้นได้</label><label class="note"><input type="checkbox" id="cBal" checked> ⚖️ วางของหนักใกล้เพลาท้าย</label></div></div>
+    <div class="cbox" id="cSum"></div>`;
+  const det = (i) => { const r = rows[i], s = skuBy(r.k), q = Math.floor(+r.q || 0), u = unitOf(s), per = s.per * s.lay, f = Math.floor(q / per), lo = q - f * per, el = $("cd" + i); if (!el) return;
+    el.innerHTML = `<i style="background:${s.color}"></i>` + (q ? (f ? `<b>${f}</b> พาเลทเต็ม` : "") + (f && lo ? " + " : "") + (lo ? `เศษ <b>${lo}</b> ${u}` : "") + ` · ${per} ${u}/พาเลท (${s.per}×${s.lay} ชั้น) · <span class="mono">${nf(q * s.kg)}</span> กก.` : `ใส่จำนวน${u}`); };
+  const drawRows = () => {
+    $("cRows").innerHTML = rows.length ? rows.map((r, i) => `<div class="crow"><select class="cin" id="cp${i}" data-cp="${i}" aria-label="สินค้าแถว ${i + 1}">${OPTS}</select>
+      <label class="cq"><input class="cin" id="cq${i}" data-cq="${i}" type="number" inputmode="numeric" min="0" step="1" value="${r.q || ""}" placeholder="0" aria-label="จำนวน${unitOf(skuBy(r.k))}"><span>${unitOf(skuBy(r.k))}</span></label>
+      <button class="cx" type="button" data-cx="${i}" aria-label="ลบแถว ${i + 1}">✕</button><div class="cdet" id="cd${i}"></div></div>`).join("") : '<div class="note">ยังไม่มีสินค้า · กด ＋ เพิ่มสินค้า</div>';
+    rows.forEach((r, i) => { $("cp" + i).value = r.k; det(i); });
+  };
+  const recalc = () => { clearTimeout(tmr);
+    CP.lines = rows.filter((r) => Math.floor(+r.q || 0) > 0).map((r) => ({ p: skuBy(r.k).name, q: Math.floor(+r.q) }));
+    delete CP._u; CP._lay = 0; mode = "auto"; sel = 0; build(); renderAll(); };
+  $("cRows").addEventListener("change", (e) => { const i = e.target.dataset.cp; if (i == null) return; rows[+i].k = e.target.value; drawRows(); recalc(); });
+  $("cRows").addEventListener("input", (e) => { const i = e.target.dataset.cq; if (i == null) return; rows[+i].q = e.target.value; det(+i); clearTimeout(tmr); tmr = setTimeout(recalc, 350); });
+  $("cRows").addEventListener("click", (e) => { const b = e.target.closest("[data-cx]"); if (!b) return; rows.splice(+b.dataset.cx, 1); drawRows(); recalc(); });
+  $("cAdd").onclick = () => { rows.push({ k: A.sku[0].k, q: "" }); drawRows(); const n = $("cq" + (rows.length - 1)); if (n) n.focus(); };
+  $("cClr").onclick = () => { rows = []; drawRows(); recalc(); };
+  $("cCap").onchange = (e) => { A.custMaxKg = e.target.checked ? 20000 : 0; recalc(); };
+  $("cStack").onchange = (e) => { opt.stack = e.target.checked; recalc(); };
+  $("cBal").onchange = (e) => { opt.balance = e.target.checked; recalc(); };
+  const calcSum = () => {
+    const el = $("cSum"), units = (build.items || []).flatMap((i) => i.units), act = trucks.filter((t) => t.items.length); if (!el) return;
+    if (!units.length) { el.innerHTML = '<h2>ผลคำนวณ</h2><div class="crec e"><small>ยังไม่มีของ</small><span class="note">เพิ่มสินค้าและจำนวนทางซ้าย ระบบจะเลือกรถ + ผัง 3D ให้ทันที</span></div>'; return; }
+    const grp = {}; act.forEach((t) => { const n = A.types.find((x) => x.k === t.type).name; grp[n] = (grp[n] || 0) + 1; });
+    const kg = units.reduce((a, u) => a + u.kg, 0), maxH = Math.max(...units.map((u) => u.h)), one = act.length === 1, cur = one ? act[0].type : "";
+    const cmp = A.types.map((ty) => { const r = place(ty, units, opt.stack), cap = payCap(ty), H = Math.min(...ty.beds.map((b) => b.H)), cp = r.floor * (opt.stack ? 2 : 1), why = [];
+      if (r.over.length) why.push(`พาเลท ${units.length} เกินที่วาง ${cp}`); if (kg > cap) why.push(`หนัก ${nf(kg)} เกิน ${nf(cap)} กก.`); if (maxH > H) why.push(`พาเลทสูง ${nf(maxH)} ซม. เกินกระบะ ${H}`);
+      return { ty, why, cp, cap }; });
+    const bad = act.map(evalTruck).filter((r) => r.over.length || r.overKg).length;
+    el.innerHTML = `<h2>ผลคำนวณ</h2><div class="crec${one ? "" : " m"}"><small>${one ? "รถที่แนะนำ" : "คันเดียวไม่พอ · ต้องใช้ " + act.length + " คัน"}</small>
+      <b>${esc(Object.entries(grp).map(([n, c]) => n + (c > 1 ? " × " + c : "")).join(" + "))}</b>
+      <span class="note">${nf(units.length)} พาเลท · ${nf(kg)} กก. (รวมไม้พาเลท)${mode === "manual" ? " · ✋ เปลี่ยนชนิดรถเองอยู่" : ""}${bad ? ` · <b style="color:var(--bad)">⛔ ${bad} คันบรรทุกเกิน</b>` : ""}</span></div>
+      <table class="ctb"><thead><tr><th>คันเดียว</th><th class="r">วางได้</th><th class="r">บรรทุกได้</th><th>ผล</th></tr></thead><tbody>${cmp.map((c) => `<tr class="${c.ty.k === cur ? "on" : ""}"><td><b>${esc(c.ty.name)}</b>${c.ty.noAuto ? '<span class="why" style="color:var(--muted)">ระบบไม่เลือกให้เอง</span>' : ""}</td><td class="r">${c.cp} พาเลท</td><td class="r">${nf(c.cap)} กก.</td>
+        <td>${c.why.length ? `<span class="chip c-bad">ไม่พอ</span><span class="why">${c.why.join(" · ")}</span>` : `<span class="chip c-ok">พอ</span>`}${one && c.ty.k !== cur ? ` <button type="button" data-ctry="${c.ty.k}">ลองดู 3D</button>` : ""}</td></tr>`).join("")}</tbody></table>
+      <div class="note">กดการ์ดรถด้านล่างเพื่อดูผัง 3D แต่ละคัน · ลากพาเลทในภาพเพื่อย้ายได้ · ตัวเลขรถ/เพลาแก้ได้ใน ⚙️ ท้ายหน้า</div>`;
+  };
+  $("cSum").addEventListener("click", (e) => { const b = e.target.closest("[data-ctry]"); if (!b || !trucks[sel]) return;
+    mode = "manual"; trucks.forEach((x) => (x.manual = true)); trucks[sel].type = b.dataset.ctry; build(); renderAll(); toastMsg("ลองใส่ " + A.types.find((x) => x.k === b.dataset.ctry).name + " · แก้จำนวนสินค้า = ระบบเลือกใหม่"); });
+  const _renderAll = renderAll; renderAll = function () { _renderAll(); calcSum(); };
+  drawRows();
+}
 build(); renderAll(); renderAsm();
 // กล่อง PO: จอกว้าง (≥1240) อยู่คอลัมน์ขวา · จอแคบ กลับไปอยู่ใต้รายการรถเหมือนเดิม
 (function () {
@@ -2294,17 +2384,25 @@ build(); renderAll(); renderAsm();
 (function () {
   const emb = window.parent !== window;
   const msg = (h) => { document.querySelector(".wrap").innerHTML = '<div class="card lpmsg">' + h + "</div>"; };
-  function run(pos, dcKm) {
+  function run(pos, dcKm, calc) {
     if (window.__LP) return;
     if (!Array.isArray(pos) || !pos.length) { msg("ยังไม่มี PO ให้จัด"); return; }
-    window.__LP = { pos, dcKm: dcKm && typeof dcKm === "object" ? dcKm : null };
+    window.__LP = { pos, dcKm: dcKm && typeof dcKm === "object" ? dcKm : null, calc: !!calc };
     const s = document.createElement("script"); s.textContent = document.getElementById("lpMain").textContent; document.body.appendChild(s);
   }
   window.addEventListener("message", (e) => {
     if (e.origin !== location.origin || e.source !== window.parent) return;
     const d = e.data || {}; if (d.type === "lp-init") run(d.pos, d.dcKm);
   });
+  /* 🧮 เมนูแอดมิน Packing "Loading Planner" = ?calc=1 (เปิดตรง ไม่ต้องมีหน้าแม่ · ไม่โหลดข้อมูลจากระบบ) · ตัวอย่างเริ่มต้น 3 รายการ */
+  const calc = !emb && /[?&]calc=1(?!\d)/.test(location.href);
   if (emb) window.parent.postMessage({ type: "lp-ready" }, location.origin);
+  else if (calc) {
+    document.body.classList.add("calc");
+    const d = new Date(Date.now() + 7 * 3600e3), dd = (n) => String(n).padStart(2, "0");
+    run([{ po: "คำนวณ", so: "", dc: "", date: dd(d.getUTCDate()) + "/" + dd(d.getUTCMonth() + 1) + "/" + String(d.getUTCFullYear()).slice(2),
+      lines: [{ p: "ขวด 1L*12 ทับทิม E", q: 450 }, { p: "ปี๊บ 18L ทับทิม", q: 120 }, { p: "ถัง 18L โบนัส", q: 80 }] }], null, true);
+  }
   else msg('หน้านี้เปิดจาก <b>แพลนรถ Packing</b> → ชิป 🏬 แพลนห้าง → 📦 จัด PO ลงรถ');
 })();
 </script>
