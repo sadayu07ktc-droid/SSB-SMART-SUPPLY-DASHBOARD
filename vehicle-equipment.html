@@ -432,7 +432,7 @@ function renderVehItem(d) {
   (d.checks || []).forEach((k) => {
     const bad = k.lines.some((l) => (l.condition && l.condition !== 'ปกติ') || (l.qty_expected != null && l.qty_found != null && Number(l.qty_found) < Number(l.qty_expected)));
     const ls = k.lines.map((l) => (k.lines.length > 1 ? 'ชิ้นที่ ' + (l.unit_no || 1) + ': ' : '') + (l.qty_found != null ? 'เจอ ' + nf(l.qty_found) + (l.qty_expected != null ? ' / ' + nf(l.qty_expected) : '') + ' ' + u + ' ' : '') +
-      (l.condition ? '<span class="b ' + (l.condition === 'ปกติ' ? 'ok' : l.condition === 'ชำรุด' ? 'warn' : 'bad') + '">' + esc(l.condition) + '</span>' : '') + (l.value_text ? ' ' + esc(l.value_text) : '') +
+      (l.condition ? '<span class="b ' + (l.condition === 'ปกติ' ? 'ok' : l.condition === 'ชำรุด' ? 'warn' : 'bad') + '">' + esc(l.condition) + '</span>' : '') + (l.value_text && String(l.value_text) !== String(l.qty_found) ? ' ' + esc(l.value_text) : '') +
       (l.fail_parts && l.fail_parts.length ? ' · ส่วนที่ผิดปกติ: ' + l.fail_parts.map(esc).join(', ') : '') + (l.serial_no ? ' · SN ' + esc(l.serial_no) : '') + (l.expiry_date ? ' · หมดอายุ ' + dTxt(l.expiry_date) : '') +
       (l.note ? '<div class="sm">“' + esc(l.note) + '”</div>' : '') + (l.admin_note ? '<div class="sm">แอดมิน: ' + esc(l.admin_note) + '</div>' : '')).join('<br>');
     const ph = k.lines.map((l) => l.photo_url).filter(Boolean);
@@ -452,7 +452,7 @@ function renderVehItem(d) {
   const lastMv = (d.moves || []).find((m) => !m.reversed && Number(m.qty) > 0), lastCk = (d.checks || [])[0];
   const units = (d.units || []), ux = d.unit_expiry || [];
   $('dB').innerHTML =
-    '<div class="sm" style="margin-bottom:6px">' + (GICON[v.job_group] || '🚚') + ' <b style="color:var(--text,#1f2a24);font-size:15px">' + esc(v.plate) + '</b> · ' + esc(v.job_group) + ' · 👤 ' + esc((v.drivers || []).map((x) => x.name).join(', ') || v.driver_name || 'รถสแปร์') + '</div>' +
+    '<div class="sm" style="margin-bottom:6px">' + (GICON[v.job_group] || '🚚') + ' <b style="color:var(--text,#1f2a24);font-size:15px">' + esc(String(v.plate || '').split(/\s*[,/]\s*/).filter(Boolean).join(' / ')) + '</b> · ' + esc(v.job_group) + ' · 👤 ' + esc((v.drivers || []).map((x) => x.name).join(', ') || v.driver_name || 'รถสแปร์') + '</div>' +
     '<div class="sm" style="margin-bottom:8px">' + esc(it.category || '') + (it.active === false ? ' · <span class="b gr">เลิกใช้</span>' : '') + (it.in_ledger ? '' : ' · ไม่ใช่ของเบิก (เช็คอย่างเดียว)') + '</div>' +
     '<div class="si-k"><span>ต้องมี <b>' + (need ? nf(need) : '–') + '</b></span><span>เบิกไปแล้ว <b>' + nf(have) + '</b> ' + u + '</span>' +
     (need ? '<span>' + (df < 0 ? '<b class="neg">ขาด ' + nf(-df) + '</b>' : df > 0 ? '<b class="pos">เกิน ' + nf(df) + '</b>' : '<b class="zero">ครบ</b>') + '</span>' : '') +
