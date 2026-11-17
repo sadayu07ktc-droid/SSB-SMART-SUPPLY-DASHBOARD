@@ -428,6 +428,17 @@ const FLEET = (() => {
   return f;
 })();
 const fleetSrc = () => FLEET ? `ขนาด/บรรทุกจากทะเบียนรถ Packing อัตโนมัติ · ใช้คันเล็กสุดของแต่ละชนิด (${A.types.filter((t) => t.ref).map((t) => esc(t.name) + " " + esc(t.ref)).join(" · ")})${A.types.some((t) => t.noDim) ? " · ยังไม่กรอกขนาด: " + A.types.filter((t) => t.noDim).map((t) => esc(t.name) + " " + t.noDim + " คัน").join(", ") : ""}` : "⚠️ ดึงทะเบียนรถไม่ได้ · ใช้ค่าสำรองในหน้า (ทะเบียน 17 พ.ย. 69)";
+// ⚠️ รถในทะเบียนที่ยังไม่มีขนาด/น้ำหนัก → แพลนยังไม่นับคันนั้น (เตือนทั้งโหมดคำนวณ + แพลน)
+const FLEET_MISS = FLEET && Array.isArray(FLEET.missing) ? FLEET.missing : [];
+const plateKey = (p) => String(p || "").split(",")[0].replace(/[\s-]/g, "");
+const missOf = (plate) => FLEET_MISS.find((m) => plateKey(m.plate) === plateKey(plate) && plateKey(plate));
+const missHtml = () => {
+  if (!FLEET_MISS.length) return "";
+  const nm = (m) => m.spare ? "หางสำรอง" : (A.types.find((t) => t.k === m.k) || {}).name || "";
+  const use = FLEET_MISS.filter((m) => !m.spare), sp = FLEET_MISS.filter((m) => m.spare);
+  const li = (m) => `<b>${esc(m.plate.replace(/,/g, " + "))}</b> ${esc(nm(m))} · ขาด${esc(m.no.join("+"))}`;
+  return `<div class="warn">⚠️ รถยังไม่มีขนาดในทะเบียน ${FLEET_MISS.length} คัน${use.length ? " → แพลนยังไม่นับคันนี้" : ""}: ${use.map(li).join(" · ")}${sp.length ? `${use.length ? "<br>" : ""}${sp.map(li).join(" · ")} (ไม่ได้ใช้ในแพลน)` : ""}<br><a href="cost-base.html" target="_blank" rel="noopener">กรอกที่ 🏭 ฐานต้นทุนรถ › ทะเบียนรถ</a> · กรอกแล้วแพลนอัปเดตเองภายใน ~10 นาที</div>`;
+};
 const FRONT_AXLE_X = -120, BED_GAP = 90;   // ซม. · ตรงกับภาพ 3D (ล้อหน้าใต้หัวรถ / ช่องว่างหัว-หาง)
 function bedOffsets(type) { let x = type.semi ? type.semi.off : 0; return type.beds.map((b) => { const o = x; x += b.L + BED_GAP; return o; }); }
 // คานรับน้ำหนักแบบง่าย: สินค้าแต่ละช่วงแบ่งลงเพลาตามระยะจากจุดศูนย์ถ่วง (หัว = เพลาหน้า+เพลาท้ายหัว · หางพ่วงเต็ม = เพลาหน้า+ท้ายของหาง)
@@ -845,6 +856,7 @@ function renderKpis() {
     if (r.overKg) w.push(`<div class="warn b">คัน #${t.id}: น้ำหนัก ${nf(r.kg)} กก. เกิน ${nf(r.payMax)} (เผื่อ ${A.payBuf}%)</div>`);
     if (CALC) return;   /* โหมดคำนวณ: ไม่มีคนขับ/เวลาขึ้นของ */
     if (!t.driver && !t.short && !t.open) w.push(`<div class="warn">คัน #${t.id}: ไม่มีคนขับ ${r.type.drv} ว่าง → ต้องใช้รถนอก</div>`);
+    if (t.driver && missOf(t.driver.plate)) w.push(`<div class="warn">คัน #${t.id}: รถ ${esc(t.driver.plate.split(",")[0])} (${esc(t.driver.name)}) ยังไม่มีขนาดในทะเบียน → แพลนใช้ขนาด${esc(r.type.name)}คันเล็กสุดแทน ต้องเช็คเองว่าใส่ได้</div>`);
     if (t.afterHours) w.push(`<div class="warn">คัน #${t.id}: รอบขึ้นของ ${hm(t.slot)} เลยเวลาขึ้นของปกติ (${hm(A.dayEnd)}) · เพิ่มช่องขึ้นของ หรือย้ายไปขึ้นของวันก่อน</div>`);
     if (t.late) w.push(`<div class="warn">คัน #${t.id} → ${esc(A.dc[t.dc] ? A.dc[t.dc].n : t.dc)}: ขึ้นของ ${hm(t.slot)} ช้ากว่าที่ควร (${hm(t.latestLoad)})</div>`);
   });
@@ -854,6 +866,7 @@ function renderKpis() {
   const openN = act.filter((t) => t.open).length;
 
   if (unassigned) w.push(`<div class="warn">⏳ Pending ${unassigned} PO (ยังไม่ได้อยู่คันไหน)</div>`);
+  if (!CALC && FLEET_MISS.length) w.push(missHtml());
   if (UNK_SKU.size) w.push(`<div class="warn">⚠️ สินค้าไม่มีในแม่แบบ ${UNK_SKU.size} รายการ → คิดขนาดเป็นลัง 1L*12 ไปก่อน: ${[...UNK_SKU].map(esc).join(" · ")}</div>`);
   const sh = act.filter((t) => t.short);
   if (sh.length) w.unshift(`<div class="warn b">⛔ พี่ปุ๋ยให้รถไม่พอ ขาด ${sh.length} คัน (${sh.map((t) => "#" + t.id).join(" ")}) · ${nf(sh.reduce((a, t) => a + t.items.reduce((b, i) => b + i.units.length, 0), 0))} พาเลทยังไม่มีรถ · ดูทางแก้ในกล่องจองรถด้านบน</div>`);
@@ -2384,7 +2397,7 @@ if (CALC) {
       <span class="note">${nf(units.length)} พาเลท · ${nf(kg)} กก. (รวมไม้พาเลท)${mode === "manual" ? " · ✋ เปลี่ยนชนิดรถเองอยู่" : ""}${bad ? ` · <b style="color:var(--bad)">⛔ ${bad} คันบรรทุกเกิน</b>` : ""}</span></div>
       <table class="ctb"><thead><tr><th>คันเดียว</th><th class="r">วางได้</th><th class="r">บรรทุกได้</th><th>ผล</th></tr></thead><tbody>${cmp.map((c) => `<tr class="${c.ty.k === cur ? "on" : ""}"><td><b>${esc(c.ty.name)}</b>${c.ty.noAuto ? '<span class="why" style="color:var(--muted)">ระบบไม่เลือกให้เอง</span>' : ""}</td><td class="r">${c.cp} พาเลท</td><td class="r">${nf(c.cap)} กก.</td>
         <td>${c.why.length ? `<span class="chip c-bad">ไม่พอ</span><span class="why">${c.why.join(" · ")}</span>` : `<span class="chip c-ok">พอ</span>`}${one && c.ty.k !== cur ? ` <button type="button" data-ctry="${c.ty.k}">ลองดู 3D</button>` : ""}</td></tr>`).join("")}</tbody></table>
-      <div class="note">🚛 ${fleetSrc()}</div>
+      ${missHtml()}<div class="note">🚛 ${fleetSrc()}</div>
       <div class="note">กดการ์ดรถด้านล่างเพื่อดูผัง 3D แต่ละคัน · ลากพาเลทในภาพเพื่อย้ายได้ · ลองแก้ตัวเลขรถ/เพลาได้ใน ⚙️ ท้ายหน้า (ไม่บันทึก)</div>`;
   };
   $("cSum").addEventListener("click", (e) => { const b = e.target.closest("[data-ctry]"); if (!b || !trucks[sel]) return;
