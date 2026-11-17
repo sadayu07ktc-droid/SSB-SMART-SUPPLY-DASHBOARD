@@ -296,6 +296,7 @@ body.calc #roleBar,body.calc #dates,body.calc .planneronly,body.calc #poBox,body
     <label class="note" title="กฎ 7-11 ข้อ 1–2: 1 คัน = 1 PO รวม PO ไม่ได้"><input type="checkbox" id="optOnePO" checked disabled> 1 คัน = 1 PO (กฎ 7-11)</label>
     <label class="note"><input type="checkbox" id="optStack"> คลังยอมให้ซ้อนพาเลท 2 ชั้น</label>
     <label class="note"><input type="checkbox" id="optBal" checked> ⚖️ วางของหนักใกล้เพลาท้าย</label>
+    <label class="note" title="PO ใหญ่ที่ต้องใช้หลายคัน: แบ่งพาเลทให้ใกล้กันทุกคัน (เดิม = คันแรกเต็ม คันท้ายได้เศษ)"><input type="checkbox" id="optEven"> ⚖️ PO หลายคัน เกลี่ยเท่าๆ กัน</label>
     <span class="note" id="modeNote"></span>
   </div>
   <div class="strip notfarm" id="kpis"></div>
@@ -646,9 +647,9 @@ function itemsOf(dPOs) {
       chunks.push(units.slice(0, take));
       units = units.slice(take);
     }
-    // ⚖️ โหมดคำนวณ + ติ๊ก "เกลี่ยเท่าๆ กัน": จำนวนคันเท่าเดิม แต่แบ่งพาเลทให้ใกล้กันทุกคัน (เดิม = คันแรกเต็ม คันท้ายได้เศษ)
+    // ⚖️ ติ๊ก "เกลี่ยเท่าๆ กัน" (โหมดคำนวณ + หน้าจัด PO · PO ใหญ่เกิน 1 คัน): จำนวนคันเท่าเดิม แต่แบ่งพาเลทให้ใกล้กันทุกคัน (เดิม = คันแรกเต็ม คันท้ายได้เศษ)
     //   ลองทีละแบบ: ตัดต่อเนื่อง (สินค้าเดียวกันอยู่คันเดียวกัน) → สลับทีละพาเลท (น้ำหนักใกล้กันขึ้น) · ใส่ไม่ได้ = เพิ่มอีกคันแล้วลองใหม่
-    if (CALC && opt.even && chunks.length > 1) {
+    if (opt.even && chunks.length > 1) {
       const all = po._u.slice();
       for (let n = chunks.length; n <= chunks.length + 2; n++) {
         const seq = Array.from({ length: n }, (_, i) => all.slice(Math.round((i * all.length) / n), Math.round(((i + 1) * all.length) / n)));
@@ -890,7 +891,7 @@ function renderTop() {
   $("dates").innerHTML = dates.map((d) => `<button class="pchip" aria-pressed="${d === date}" data-date="${d}">ส่ง ${thd(d)}</button>`).join("");
   document.querySelectorAll("#modeSeg button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.mode === mode)));
   $("modeNote").textContent = mode === "auto" ? "ระบบรวม PO คลังเดียวกัน เลือกรถให้พอดีน้ำหนัก/พาเลท แล้วเรียงรอบขึ้นของ" : "ลาก ⠿ ที่ PO ไปวางบนการ์ดรถ หรือวางช่องประ = รถคันใหม่ · เลือกคันจากตารางด้านล่างก็ได้";
-  $("optOnePO").checked = opt.onePO; $("optStack").checked = opt.stack; $("optBal").checked = opt.balance;
+  $("optOnePO").checked = opt.onePO; $("optStack").checked = opt.stack; $("optBal").checked = opt.balance; $("optEven").checked = !!opt.even;
 }
 function renderKpis() {
   const items = build.items, act = trucks.filter((t) => t.items.length);
@@ -2308,7 +2309,7 @@ document.addEventListener("change", (e) => {
     if (mode === "auto") { mode = "manual"; trucks.forEach((x) => (x.manual = true)); }
     tk.type = el.value; build(); renderAll(); toastMsg("คัน #" + tk.id + " เปลี่ยนเป็น " + A.types.find((x) => x.k === el.value).name); return; }
   if (el.id === "addSel" && el.value) { if (mode === "auto") { mode = "manual"; trucks.forEach((t) => (t.manual = true)); } const t = { id: newId(), type: el.value.slice(4), items: [], manual: true }; trucks.push(t); sel = trucks.length - 1; build(); renderAll(); return; }
-  if (el.id === "optOnePO" || el.id === "optStack" || el.id === "optBal") { opt.onePO = true; opt.stack = $("optStack").checked; opt.balance = $("optBal").checked; POS.forEach((p) => delete p._u); build(); renderAll(); return; }
+  if (el.id === "optOnePO" || el.id === "optStack" || el.id === "optBal" || el.id === "optEven") { opt.onePO = true; opt.stack = $("optStack").checked; opt.balance = $("optBal").checked; opt.even = $("optEven").checked; POS.forEach((p) => delete p._u); build(); renderAll(); return; }
   if (el.dataset.asm) {
     const path = el.dataset.asm.split("."), v = parseFloat(el.value); if (!(v >= 0)) return;
     let o = A; for (let i = 0; i < path.length - 1; i++) o = o[path[i]]; o[path[path.length - 1]] = v;
