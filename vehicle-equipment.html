@@ -128,6 +128,15 @@ a.lk{color:var(--green2);font-weight:600}
 .drw .sh{font-weight:700;font-size:13px;margin:12px 0 2px}
 .sv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:5px 0;cursor:pointer;font:inherit;color:inherit}
 .sv:hover{border-color:var(--green)} .sv .gi{font-size:18px} .sv .q{margin-left:auto;font-weight:700;white-space:nowrap}
+/* 📦 รายคัน → จิ้มรายการ: ประวัติ */
+.vi-tl{position:relative;margin:4px 0 0;padding-left:16px;border-left:2px solid var(--line)}
+.vi-e{position:relative;padding:6px 0 8px}
+.vi-e::before{content:'';position:absolute;left:-22px;top:11px;width:10px;height:10px;border-radius:50%;background:#fff;border:2px solid var(--muted)}
+.vi-e.in::before{border-color:var(--ok);background:var(--ok)} .vi-e.out::before{border-color:var(--bad);background:var(--bad)} .vi-e.warn::before{border-color:var(--warn);background:var(--warn)}
+.vi-e .d{font-size:12px;color:var(--muted)} .vi-e .h{font-weight:700} .vi-e.off{opacity:.5}
+.vi-e .fx-ph{width:64px;height:64px}
+.vi-u{display:flex;justify-content:space-between;gap:8px;border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin:5px 0;font-size:13px}
+.vi-f{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 0} .vi-f button{border:1px solid var(--line);background:#fff;border-radius:99px;padding:3px 10px;font:inherit;font-size:12.5px;cursor:pointer} .vi-f button.on{background:var(--green);border-color:var(--green);color:#fff}
 /* 🔍 ฟอร์มสุ่มตรวจ แบบมือถือ (ปุ่มใหญ่เหมือนฟอร์มคนขับ) */
 .af{padding:12px 14px;margin-bottom:8px}.af.af-ok{border-left:5px solid var(--ok)}.af.af-bad{border-left:5px solid var(--bad);background:#FFF9F9}
 .af-h{display:flex;align-items:center;gap:8px;font-size:16px}.af-h b{flex:1;min-width:0}
@@ -266,7 +275,7 @@ async function openVeh(id, keepTab) {
   let d; try { d = await api({ action: 'getVehicle', vehicleId: id }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
   if (CUR !== id) return;
   if (!d.ok) { $('main').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; }
-  V = d; if (!F) F = newForm('เบิก'); renderVeh();
+  V = d; VI = {}; if (!F) F = newForm('เบิก'); renderVeh();
   history.replaceState(null, '', '?vehicle=' + id);
 }
 const ledger = () => (V.items || []).filter((i) => i.in_ledger);
@@ -298,7 +307,7 @@ function holdHTML() {
     rows.map((i) => { const df = Number(i.qty_on_hand) - Number(i.qty_required || 0), sh = i.is_required && df < 0;
       const found = i.found_qty == null && !i.found_condition ? '<span class="sm">–</span>' : (i.found_qty != null ? nf(i.found_qty) + ' ' : '') + (i.found_condition && i.found_condition !== 'ปกติ' ? '<span class="b bad">' + esc(i.found_condition) + '</span>' : '<span class="b ok">ปกติ</span>') + (i.mismatch ? ' <span class="b warn" title="ผลตรวจไม่ตรงยอดเบิก">≠</span>' : '');
       const ser = [i.last_serial ? 'SN ' + esc(i.last_serial) : '', i.last_expiry ? 'หมด ' + dTxt(i.last_expiry) : ''].filter(Boolean).join('<br>') || '<span class="sm">–</span>';
-      return '<tr class="' + (sh ? 'short' : '') + '"><td><div class="nm">' + esc(i.name) + '</div><div class="sm">' + esc(i.category || '') + (i.item_active === false ? ' · เลิกใช้' : '') + '</div></td>' +
+      return '<tr class="si' + (sh ? ' short' : '') + '" data-vi="' + esc(i.code) + '" title="ดูประวัติรายการนี้ของคันนี้"><td><div class="nm">' + esc(i.name) + ' <span class="si-go">›</span></div><div class="sm">' + esc(i.category || '') + (i.item_active === false ? ' · เลิกใช้' : '') + '</div></td>' +
         '<td class="n">' + (i.is_required ? nf(i.qty_required) : '<span class="sm">–</span>') + '</td><td class="n">' + nf(i.qty_on_hand) + ' <span class="sm">' + esc(i.unit || '') + '</span></td>' +
         '<td class="n">' + (!i.is_required ? '' : df < 0 ? '<span class="neg">ขาด ' + nf(-df) + '</span>' : df > 0 ? '<span class="pos">+' + nf(df) + '</span>' : '<span class="zero">ครบ</span>') + '</td>' +
         '<td>' + found + '</td><td class="sm">' + ser + '</td><td class="sm">' + esc(i.in_use_label || '–') + (i.lifespan_warn ? ' <span class="b warn">' + (i.lifespan_warn === 'over' ? 'เกินอายุเฉลี่ย' : 'ใกล้อายุเฉลี่ย') + '</span>' : '') + '</td>' +
@@ -394,6 +403,72 @@ function checksHTML() {
       '<td>' + (k.problem_count ? '<span class="b bad">' + k.problem_count + ' ข้อ</span>' : '<span class="b ok">ไม่มี</span>') + '</td><td class="sm">' + esc(k.driver_name || '') + '</td><td class="n">' + (k.odometer != null ? nf(k.odometer) : '–') + (k.flag_odometer ? ' <span class="b bad">ถอยหลัง</span>' : '') + '</td>' +
       '<td><a class="lk" href="fm-tr-10.html?vehicle=' + V.vehicle.id + '&month=' + String(k.check_date).slice(0, 7) + '">ดูใบ</a></td></tr>').join('') + '</tbody></table>' : '<div class="msg">ยังไม่มีเช็คลิสต์</div>') + '</div>';
 }
+
+// ── รายคัน → จิ้มรายการ: ลิ้นชักประวัติของรายการนี้ในคันนี้ (getVehicleItem · โหลดตอนจิ้ม · แคชจนกว่าจะโหลดคันใหม่) ──
+let VI = {}, VIF = 'all';
+const CK_KIND = { daily: 'คนขับเช็ครายวัน', admin: 'แอดมินบันทึก', audit: 'สุ่มตรวจ', monthly: 'คนขับเช็ครายเดือน (FM-TR-16)' };
+async function openVehItem(code) {
+  const i = (V.items || []).find((x) => x.code === code) || { name: code }, vid = V.vehicle.id, key = vid + '|' + code;
+  $('dT').textContent = '📦 ' + i.name; VIF = 'all';
+  $('dB').innerHTML = '<div class="ldr"><i></i>กำลังโหลดประวัติ</div>';
+  $('dim').classList.add('open'); $('drw').classList.add('open');
+  if (!VI[key]) { let d; try { d = await api({ action: 'getVehicleItem', vehicleId: vid, itemCode: code }); } catch (e) { d = { error: 'เน็ตมีปัญหา' }; }
+    if (!d.ok) { $('dB').innerHTML = '<div class="msg">' + esc(d.error || 'โหลดไม่ได้') + '</div>'; return; } VI[key] = d; }
+  if ($('dT').textContent !== '📦 ' + i.name || !V || V.vehicle.id !== vid) return;   // ปิด/เปิดอันอื่นไปแล้ว
+  renderVehItem(VI[key]);
+}
+function renderVehItem(d) {
+  const it = d.item, v = d.vehicle, u = esc(it.unit || ''), have = Number(d.on_hand.qty) || 0, need = d.required && d.required.active ? Number(d.required.qty) : 0, df = have - need;
+  const ev = [];
+  (d.moves || []).forEach((m) => {
+    const q = Number(m.qty) || 0, cls = m.move_type === 'ชำรุด' || m.move_type === 'เปลี่ยน' ? 'warn' : q > 0 ? 'in' : q < 0 ? 'out' : '';
+    const qt = m.move_type === 'เปลี่ยน' ? '⇄ ' + nf(m.affected_qty || 1) : m.move_type === 'ชำรุด' ? '⚠ ' + nf(m.affected_qty || 1) : (q > 0 ? '+' : '') + nf(q);
+    const det = [m.return_reason ? 'เหตุผล: ' + esc(RR[m.return_reason] || m.return_reason) : '', m.serial_no ? 'SN ' + esc(m.serial_no) : '', m.old_serial_no ? 'ตัวเก่า ' + esc(m.old_serial_no) : '',
+      m.expiry_date ? 'หมดอายุ ' + dTxt(m.expiry_date) : '', m.doc_no ? '📄 ' + esc(m.doc_no) : '', m.receiver_name ? 'ผู้รับ ' + esc(m.receiver_name) : m.driver_name ? '👤 ' + esc(m.driver_name) : '', m.note ? esc(m.note) : ''].filter(Boolean).join(' · ');
+    ev.push({ k: 'mv', d: String(m.move_date).slice(0, 10), t: m.created_at || '', cls: cls + (m.reversed ? ' off' : ''),
+      h: '🔁 ' + esc(m.move_type) + ' <span class="' + (q > 0 ? 'pos' : q < 0 ? 'neg' : 'zero') + '">' + qt + ' ' + u + '</span>' + (m.reverses_id ? ' <span class="b gr">กลับรายการ</span>' : m.reversed ? ' <span class="b gr">ถูกกลับแล้ว</span>' : ''),
+      b: (det ? '<div class="sm">' + det + '</div>' : '') + (m.photo_url ? '<div class="fx-phs">' + fxPh([m.photo_url]) + '</div>' : ''), by: m.created_by });
+  });
+  (d.checks || []).forEach((k) => {
+    const bad = k.lines.some((l) => (l.condition && l.condition !== 'ปกติ') || (l.qty_expected != null && l.qty_found != null && Number(l.qty_found) < Number(l.qty_expected)));
+    const ls = k.lines.map((l) => (k.lines.length > 1 ? 'ชิ้นที่ ' + (l.unit_no || 1) + ': ' : '') + (l.qty_found != null ? 'เจอ ' + nf(l.qty_found) + (l.qty_expected != null ? ' / ' + nf(l.qty_expected) : '') + ' ' + u + ' ' : '') +
+      (l.condition ? '<span class="b ' + (l.condition === 'ปกติ' ? 'ok' : l.condition === 'ชำรุด' ? 'warn' : 'bad') + '">' + esc(l.condition) + '</span>' : '') + (l.value_text ? ' ' + esc(l.value_text) : '') +
+      (l.fail_parts && l.fail_parts.length ? ' · ส่วนที่ผิดปกติ: ' + l.fail_parts.map(esc).join(', ') : '') + (l.serial_no ? ' · SN ' + esc(l.serial_no) : '') + (l.expiry_date ? ' · หมดอายุ ' + dTxt(l.expiry_date) : '') +
+      (l.note ? '<div class="sm">“' + esc(l.note) + '”</div>' : '') + (l.admin_note ? '<div class="sm">แอดมิน: ' + esc(l.admin_note) + '</div>' : '')).join('<br>');
+    const ph = k.lines.map((l) => l.photo_url).filter(Boolean);
+    ev.push({ k: 'ck', d: k.check_date, t: '', cls: bad ? 'out' : 'in', h: '📋 ' + esc(CK_KIND[k.kind] || k.kind) + (k.status ? ' <span class="sm">· ' + esc(k.status) + '</span>' : ''),
+      b: '<div>' + ls + '</div>' + (ph.length ? '<div class="fx-phs">' + fxPh(ph) + '</div>' : ''), by: k.driver_name || k.reviewed_by });
+  });
+  (d.repairs || []).forEach((r) => {
+    ev.push({ k: 'fx', d: r.check_date, t: '', cls: r.status === 'closed' ? 'in' : 'warn', h: '🔧 แจ้งซ่อม <span class="sm">· ' + esc(r.status_label) + '</span>',
+      b: '<div class="sm">' + [r.parts && r.parts.length ? 'ส่วนที่เสีย: ' + r.parts.map(esc).join(', ') : '', r.note ? '“' + esc(r.note) + '”' : '', r.action ? 'สั่งแก้: ' + esc(r.action) : '',
+        r.fixed_at ? 'แก้แล้ว ' + fxDT(r.fixed_at) + (r.fix_note ? ' (' + esc(r.fix_note) + ')' : '') : '', r.closed_at ? 'ปิดเคส ' + fxDT(r.closed_at) + (r.close_note ? ' (' + esc(r.close_note) + ')' : '') : '']
+        .filter(Boolean).join('<br>') + '</div>' + (r.photo_url || (r.fix_photos || []).length ? '<div class="fx-phs">' + fxPh([r.photo_url].concat(r.fix_photos || [])) + '</div>' : '') +
+        '<a class="lk" href="?view=fix&id=' + r.id + '">เปิดเคส →</a>', by: r.reported_by });
+  });
+  ev.sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : a.t < b.t ? 1 : a.t > b.t ? -1 : 0));
+  const cnt = { all: ev.length, mv: 0, ck: 0, fx: 0 }; ev.forEach((e) => cnt[e.k]++);
+  const show = ev.filter((e) => VIF === 'all' || e.k === VIF);
+  const lastMv = (d.moves || []).find((m) => !m.reversed && Number(m.qty) > 0), lastCk = (d.checks || [])[0];
+  const units = (d.units || []), ux = d.unit_expiry || [];
+  $('dB').innerHTML =
+    '<div class="sm" style="margin-bottom:6px">' + (GICON[v.job_group] || '🚚') + ' <b style="color:var(--text,#1f2a24);font-size:15px">' + esc(v.plate) + '</b> · ' + esc(v.job_group) + ' · 👤 ' + esc((v.drivers || []).map((x) => x.name).join(', ') || v.driver_name || 'รถสแปร์') + '</div>' +
+    '<div class="sm" style="margin-bottom:8px">' + esc(it.category || '') + (it.active === false ? ' · <span class="b gr">เลิกใช้</span>' : '') + (it.in_ledger ? '' : ' · ไม่ใช่ของเบิก (เช็คอย่างเดียว)') + '</div>' +
+    '<div class="si-k"><span>ต้องมี <b>' + (need ? nf(need) : '–') + '</b></span><span>เบิกไปแล้ว <b>' + nf(have) + '</b> ' + u + '</span>' +
+    (need ? '<span>' + (df < 0 ? '<b class="neg">ขาด ' + nf(-df) + '</b>' : df > 0 ? '<b class="pos">เกิน ' + nf(df) + '</b>' : '<b class="zero">ครบ</b>') + '</span>' : '') +
+    '<span>เบิกล่าสุด <b>' + (lastMv ? dTxt(String(lastMv.move_date).slice(0, 10)) : '–') + '</b></span><span>ตรวจล่าสุด <b>' + (lastCk ? dTxt(lastCk.check_date) : '–') + '</b></span>' +
+    (d.on_hand.serial_no ? '<span>SN <b>' + esc(d.on_hand.serial_no) + '</b></span>' : '') + (d.on_hand.expiry_date ? '<span>หมดอายุ <b>' + dTxt(d.on_hand.expiry_date) + '</b></span>' : '') + '</div>' +
+    (d.required && d.required.note ? '<div class="note" style="margin-top:6px">หมายเหตุชุดที่ต้องมี: ' + esc(d.required.note) + '</div>' : '') +
+    (ux.length ? '<div class="sh">🧯 วันหมดอายุรายชิ้น</div>' + ux.map((x) => '<div class="vi-u"><span>ชิ้นที่ ' + x.unit_no + (x.serial_no ? ' · SN ' + esc(x.serial_no) : '') + '</span><span class="' + (x.expired ? 'neg' : '') + '">' + (x.expiry_date ? dTxt(x.expiry_date) + (x.expired ? ' (หมดแล้ว)' : x.days_left != null ? ' (อีก ' + x.days_left + ' วัน)' : '') : '–') + '</span></div>').join('') : '') +
+    (units.length ? '<div class="sh">⏳ ชิ้นที่ใช้ / อายุการใช้งาน</div>' + units.map((x) => '<div class="vi-u"><span>ชิ้นที่ ' + x.seq + (x.serial_no ? ' · SN ' + esc(x.serial_no) : '') + '<div class="sm">' + (x.start_known === false ? 'ก่อน ' : '') + dTxt(x.start_date) + ' → ' + (x.end_date ? dTxt(x.end_date) + (x.end_reason ? ' · ' + esc(x.end_reason) : '') : 'ยังใช้อยู่') +
+      (x.first_damage_date ? ' · เริ่มชำรุด ' + dTxt(x.first_damage_date) : '') + '</div></span><b style="white-space:nowrap">' + (x.start_known === false ? '≥ ' : '') + nf(x.days) + ' วัน</b></div>').join('') : '') +
+    '<div class="vi-f" id="viF">' + [['all', 'ทั้งหมด'], ['mv', '🔁 เบิก-คืน'], ['ck', '📋 ผลเช็ค'], ['fx', '🔧 แจ้งซ่อม']].filter(([k]) => k === 'all' || cnt[k]).map(([k, t]) => '<button data-vf="' + k + '" class="' + (VIF === k ? 'on' : '') + '">' + t + ' ' + cnt[k] + '</button>').join('') + '</div>' +
+    (show.length ? '<div class="vi-tl">' + show.map((e) => '<div class="vi-e ' + e.cls + '"><div class="d">' + dTxt(e.d) + (e.by ? ' · ' + esc(e.by) : '') + '</div><div class="h">' + e.h + '</div>' + e.b + '</div>').join('') + '</div>'
+      : '<div class="msg">ยังไม่มีประวัติของรายการนี้ในคันนี้</div>') +
+    (canEdit() && it.in_ledger ? '<div class="fx-bt"><button class="btn pri sm" data-vq="เบิก|' + esc(it.code) + '|' + (df < 0 ? -df : 1) + '">เบิก</button>' + (have > 0 ? '<button class="btn gh sm" data-vq="คืน|' + esc(it.code) + '|1">คืน</button>' : '') + '</div>' : '');
+  $('viF') && ($('viF').onclick = (e) => { const b = e.target.closest('[data-vf]'); if (!b) return; VIF = b.dataset.vf; renderVehItem(d); });
+}
+$('drw').addEventListener('click', (e) => { const b = e.target.closest('[data-vq]'); if (!b) return; const [ty, code, n] = b.dataset.vq.split('|'); closeDrw(); F = newForm(ty, code, Math.max(1, +n || 1)); VTAB = 'mv'; renderVTab(); window.scrollTo({ top: 0, behavior: 'smooth' }); });
 
 // ── สรุปอุปกรณ์ (getSummary) ──
 async function loadSum() {
@@ -1549,6 +1624,7 @@ $('main').addEventListener('click', (e) => {
   if (c('[data-si]')) { openSumItem(c('[data-si]').dataset.si); return; }
   if (c('#vtabs button')) { VTAB = c('#vtabs button').dataset.t; renderVTab(); return; }
   if (c('[data-q]')) { const [ty, code, n] = c('[data-q]').dataset.q.split('|'); F = newForm(ty, code, Math.max(1, +n || 1)); VTAB = 'mv'; renderVTab(); window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  if (c('[data-vi]') && !c('button,a')) { openVehItem(c('[data-vi]').dataset.vi); return; }
   if (c('[data-ty]')) { const ty = c('[data-ty]').dataset.ty; F.type = ty; F.errs = null; if (ty !== 'เบิก') F.lines.forEach((l) => { if (l.code && held(l.code) <= 0) l.code = ''; }); renderVTab(); return; }
   if (c('[data-rr]')) { F.reason = c('[data-rr]').dataset.rr; renderVTab(); return; }
   if (c('#fAdd')) { F.lines.push({ code: '', qty: 1, serial: '', exp: '', old: '' }); renderVTab(); return; }
