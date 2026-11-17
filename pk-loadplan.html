@@ -414,6 +414,20 @@ const A = {
       { n: "เพลาท้าย (ล้อคู่)", at: "bed0", tare: 1500, lim: 6500 }] },
   },
 };
+// 🚛 ทับค่าข้างบนด้วยทะเบียนรถ Packing (Edge pk-fleet) · ขนาด = คันวางพาเลทได้น้อยสุดในชนิด · บรรทุก = น้อยสุด · รถเปล่า = หนักสุด (แบ่งลงเพลาตามสัดส่วนเดิม)
+const FLEET = (() => {
+  const f = window.__LP.fleet; if (!f || !f.types) return null;
+  Object.entries(f.types).forEach(([k, v]) => {
+    const t = A.types.find((x) => x.k === k); if (!t || !v || !Array.isArray(v.beds) || v.beds.length !== t.beds.length) return;
+    v.beds.forEach((b, i) => { const d = t.beds[i]; if (b.L > 0 && b.W > 0) { d.L = b.L; d.W = b.W; } if (b.H > 0) d.H = b.H; });
+    if (v.pay > 0) t.pay = v.pay;
+    const ax = A.axle[k];
+    if (ax) { if (v.gvw > 0) ax.gvw = v.gvw; if (v.tare > 0) { const sum = ax.groups.reduce((a, g) => a + g.tare, 0); ax.groups.forEach((g) => (g.tare = Math.round((g.tare * v.tare) / sum / 10) * 10)); } }
+    t.ref = String(v.ref || ""); t.fleetN = v.n || 0; t.noDim = v.nNoDim || 0;
+  });
+  return f;
+})();
+const fleetSrc = () => FLEET ? `ขนาด/บรรทุกจากทะเบียนรถ Packing อัตโนมัติ · ใช้คันเล็กสุดของแต่ละชนิด (${A.types.filter((t) => t.ref).map((t) => esc(t.name) + " " + esc(t.ref)).join(" · ")})${A.types.some((t) => t.noDim) ? " · ยังไม่กรอกขนาด: " + A.types.filter((t) => t.noDim).map((t) => esc(t.name) + " " + t.noDim + " คัน").join(", ") : ""}` : "⚠️ ดึงทะเบียนรถไม่ได้ · ใช้ค่าสำรองในหน้า (ทะเบียน 17 พ.ย. 69)";
 const FRONT_AXLE_X = -120, BED_GAP = 90;   // ซม. · ตรงกับภาพ 3D (ล้อหน้าใต้หัวรถ / ช่องว่างหัว-หาง)
 function bedOffsets(type) { let x = type.semi ? type.semi.off : 0; return type.beds.map((b) => { const o = x; x += b.L + BED_GAP; return o; }); }
 // คานรับน้ำหนักแบบง่าย: สินค้าแต่ละช่วงแบ่งลงเพลาตามระยะจากจุดศูนย์ถ่วง (หัว = เพลาหน้า+เพลาท้ายหัว · หางพ่วงเต็ม = เพลาหน้า+ท้ายของหาง)
@@ -2029,7 +2043,7 @@ function renderViewer() {
   const ax = r.ax, tone = axTone(ax.worst);
   $("vChips").insertAdjacentHTML("beforeend", `<span class="chip c-${tone === "bad" ? "bad" : tone === "warn" ? "warn" : "ok"}">⚖️ เพลา ${tone === "bad" ? "เกินพิกัด" : tone === "warn" ? "ใกล้เต็ม" : "ปกติ"}</span>`);
   const cgTxt = r.type.beds.map((b, bi) => ax.cg[bi] == null ? "" : `${b.n} ${nf(ax.cg[bi] / 100, 1)} ม. จากหน้ากระบะ (กึ่งกลาง ${nf(b.L / 200, 1)} ม.)`).filter(Boolean).join(" · ");
-  $("axlePanel").innerHTML = `<div class="axle"><div class="row" style="justify-content:space-between"><b>⚖️ น้ำหนักลงเพลา</b><span class="note">รถเปล่า (ทะเบียนรถ) + สินค้า · แบ่งรายเพลาโดยประมาณ</span></div>
+  $("axlePanel").innerHTML = `<div class="axle"><div class="row" style="justify-content:space-between"><b>⚖️ น้ำหนักลงเพลา</b><span class="note">รถเปล่า${r.type.ref ? " (อิง " + esc(r.type.ref) + ")" : ""} + สินค้า · แบ่งรายเพลาโดยประมาณ</span></div>
     <div class="axgrid">${ax.loads.map((l) => `<span>${esc(l.n)}</span><span class="bar"><i class="${axTone(l.pct) === "bad" ? "x" : axTone(l.pct) === "warn" ? "w" : ""}" style="width:${Math.min(100, l.pct)}%"></i></span><span class="num">${nf(l.kg)} / ${nf(l.lim)}</span>`).join("")}
     <span><b>รวมทั้งคัน</b></span><span class="bar"><i class="${axTone(ax.gvwPct) === "bad" ? "x" : axTone(ax.gvwPct) === "warn" ? "w" : ""}" style="width:${Math.min(100, ax.gvwPct)}%"></i></span><span class="num"><b>${nf(ax.total)} / ${nf(ax.gvw)}</b></span></div>
     <div class="note">จุดศูนย์ถ่วงสินค้า: ${esc(cgTxt || "—")}</div>${r.over.length ? `<div class="note" style="color:var(--bad);font-weight:600">⚠️ ยังไม่นับพาเลทที่ล้น ${r.over.length} พาเลท (${nf(r.over.reduce((a, u) => a + u.kg, 0))} กก.) เพราะวางในรถไม่ได้</div>` : ""}</div>`;
@@ -2040,9 +2054,9 @@ function renderAsm() {
   $("asm").innerHTML = `
   <div><h3>พาเลท</h3><table><tr><th>กว้าง</th><th>ยาว</th><th>สูง</th><th>กก.</th><th>สูงสุดรวมของ</th></tr><tr><td>${num("pallet.w", A.pallet.w)}</td><td>${num("pallet.l", A.pallet.l)}</td><td>${num("pallet.h", A.pallet.h)}</td><td>${num("pallet.kg", A.pallet.kg)}</td><td>${num("pallet.maxH", A.pallet.maxH)}</td></tr></table></div>
   <div><h3>สินค้า (ซม. / กก.)</h3><div class="tscroll"><table><tr><th>สินค้า</th><th>สูงลัง</th><th>กก./ลัง</th><th>ลัง/ชั้น</th><th>ชั้น</th></tr>${A.sku.map((s, i) => `<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:${s.color}"></i> ${esc(s.name)}${s.note ? `<div class="note">${esc(s.note)}</div>` : ""}</td><td>${num("sku." + i + ".h", s.h)}</td><td>${num("sku." + i + ".kg", s.kg, 0.01)}</td><td>${num("sku." + i + ".per", s.per)}</td><td>${num("sku." + i + ".lay", s.lay)}</td></tr>`).join("")}</table></div></div>
-  <div><h3>รถ (กระบะใน ซม. · บรรทุกได้ กก.)</h3><div class="tscroll"><table><tr><th>ประเภท</th><th>ช่วง</th><th>ยาว</th><th>กว้าง</th><th>สูง</th><th>บรรทุก</th></tr>${A.types.map((t, i) => t.beds.map((b, j) => `<tr><td>${j ? "" : esc(t.name)}</td><td>${esc(b.n)}</td><td>${num("types." + i + ".beds." + j + ".L", b.L)}</td><td>${num("types." + i + ".beds." + j + ".W", b.W)}</td><td>${num("types." + i + ".beds." + j + ".H", b.H)}</td><td>${j ? "" : num("types." + i + ".pay", t.pay, 100)}</td></tr>`).join("")).join("")}</table></div><p class="note">พาเลทวางพื้นได้ = (กว้าง ÷ 120) × (ยาว ÷ 100) ต่อช่วง</p></div>
+  <div><h3>รถ (กระบะใน ซม. · บรรทุกได้ กก.)</h3><p class="note">🚛 ${fleetSrc()}</p><div class="tscroll"><table><tr><th>ประเภท</th><th>ช่วง</th><th>ยาว</th><th>กว้าง</th><th>สูง</th><th>บรรทุก</th></tr>${A.types.map((t, i) => t.beds.map((b, j) => `<tr><td>${j ? "" : esc(t.name)}</td><td>${esc(b.n)}</td><td>${num("types." + i + ".beds." + j + ".L", b.L)}</td><td>${num("types." + i + ".beds." + j + ".W", b.W)}</td><td>${num("types." + i + ".beds." + j + ".H", b.H)}</td><td>${j ? "" : num("types." + i + ".pay", t.pay, 100)}</td></tr>`).join("")).join("")}</table></div><p class="note">พาเลทวางพื้นได้ = (กว้าง ÷ 120) × (ยาว ÷ 100) ต่อช่วง</p></div>
   <div><h3>คลัง (ระยะเที่ยวเดียว กม.)</h3><div class="tscroll"><table><tr><th>คลัง</th><th>นัดลง</th><th>ระยะ</th></tr>${Object.keys(A.dc).map((k) => `<tr><td><span class="mono">${k}</span> ${esc(A.dc[k].n)} ${A.dc[k].src === "dtc" ? `<span class="chip c-ok" title="central_distances · แม่แบบ ${nf(A.dc[k].fileKm || 0)} กม.">ค่ากลาง DTC</span>` : '<span class="chip c-gold">แม่แบบคลัง</span>'}</td><td class="mono">${esc(A.dc[k].t)}${A.dc[k].t2 ? " / " + esc(A.dc[k].t2) : ""}</td><td>${num("dc." + k + ".km", A.dc[k].km)}</td></tr>`).join("")}</table></div></div>
-  <div><h3>น้ำหนักลงเพลา (กก.) · ⚠️ สมมติ ต้องยืนยันพิกัดจริง</h3><div class="tscroll"><table><tr><th>รถ / เพลา</th><th>รถเปล่า</th><th>พิกัด</th></tr>${A.types.map((t) => { const c = A.axle[t.k]; return `<tr><td colspan="2"><b>${esc(t.name)}</b></td><td>รวมทั้งคัน ${num("axle." + t.k + ".gvw", c.gvw, 100)}</td></tr>` + c.groups.map((g, i) => `<tr><td>${esc(g.n)}</td><td>${num("axle." + t.k + ".groups." + i + ".tare", g.tare, 100)}</td><td>${num("axle." + t.k + ".groups." + i + ".lim", g.lim, 100)}</td></tr>`).join(""); }).join("")}</table></div></div>
+  <div><h3>น้ำหนักลงเพลา (กก.) · รวมทั้งคัน/รถเปล่า = ทะเบียนรถ · แบ่งรายเพลา + พิกัดรายเพลา = ประมาณ</h3><div class="tscroll"><table><tr><th>รถ / เพลา</th><th>รถเปล่า</th><th>พิกัด</th></tr>${A.types.map((t) => { const c = A.axle[t.k]; return `<tr><td colspan="2"><b>${esc(t.name)}</b></td><td>รวมทั้งคัน ${num("axle." + t.k + ".gvw", c.gvw, 100)}</td></tr>` + c.groups.map((g, i) => `<tr><td>${esc(g.n)}</td><td>${num("axle." + t.k + ".groups." + i + ".tare", g.tare, 100)}</td><td>${num("axle." + t.k + ".groups." + i + ".lim", g.lim, 100)}</td></tr>`).join(""); }).join("")}</table></div></div>
   <div><h3>กฎ</h3><table><tr><td>ความเร็วเฉลี่ย (กม./ชม.)</td><td>${num("speed", A.speed)}</td></tr><tr><td>เผื่อถึงก่อนนัด (ชม.)</td><td>${num("bufH", A.bufH, 0.5)}</td></tr><tr><td>ขึ้นของต่อคัน (นาที)</td><td>${num("loadMin", A.loadMin, 15)}</td></tr><tr><td>ช่องขึ้นของพร้อมกัน</td><td>${num("bays", A.bays)}</td></tr><tr><td>เผื่อน้ำหนัก (%)</td><td>${num("payBuf", A.payBuf)}</td></tr><tr><td>วิ่งไกล = ระยะตั้งแต่ (กม.) · ใช้คิว</td><td>${num("farKm", A.farKm, 10)}</td></tr></table></div>`;
 }
 document.addEventListener("keydown", (e) => {
@@ -2370,7 +2384,8 @@ if (CALC) {
       <span class="note">${nf(units.length)} พาเลท · ${nf(kg)} กก. (รวมไม้พาเลท)${mode === "manual" ? " · ✋ เปลี่ยนชนิดรถเองอยู่" : ""}${bad ? ` · <b style="color:var(--bad)">⛔ ${bad} คันบรรทุกเกิน</b>` : ""}</span></div>
       <table class="ctb"><thead><tr><th>คันเดียว</th><th class="r">วางได้</th><th class="r">บรรทุกได้</th><th>ผล</th></tr></thead><tbody>${cmp.map((c) => `<tr class="${c.ty.k === cur ? "on" : ""}"><td><b>${esc(c.ty.name)}</b>${c.ty.noAuto ? '<span class="why" style="color:var(--muted)">ระบบไม่เลือกให้เอง</span>' : ""}</td><td class="r">${c.cp} พาเลท</td><td class="r">${nf(c.cap)} กก.</td>
         <td>${c.why.length ? `<span class="chip c-bad">ไม่พอ</span><span class="why">${c.why.join(" · ")}</span>` : `<span class="chip c-ok">พอ</span>`}${one && c.ty.k !== cur ? ` <button type="button" data-ctry="${c.ty.k}">ลองดู 3D</button>` : ""}</td></tr>`).join("")}</tbody></table>
-      <div class="note">กดการ์ดรถด้านล่างเพื่อดูผัง 3D แต่ละคัน · ลากพาเลทในภาพเพื่อย้ายได้ · ตัวเลขรถ/เพลาแก้ได้ใน ⚙️ ท้ายหน้า</div>`;
+      <div class="note">🚛 ${fleetSrc()}</div>
+      <div class="note">กดการ์ดรถด้านล่างเพื่อดูผัง 3D แต่ละคัน · ลากพาเลทในภาพเพื่อย้ายได้ · ลองแก้ตัวเลขรถ/เพลาได้ใน ⚙️ ท้ายหน้า (ไม่บันทึก)</div>`;
   };
   $("cSum").addEventListener("click", (e) => { const b = e.target.closest("[data-ctry]"); if (!b || !trucks[sel]) return;
     mode = "manual"; trucks.forEach((x) => (x.manual = true)); trucks[sel].type = b.dataset.ctry; build(); renderAll(); toastMsg("ลองใส่ " + A.types.find((x) => x.k === b.dataset.ctry).name + " · แก้จำนวนสินค้า = ระบบเลือกใหม่"); });
@@ -2391,11 +2406,16 @@ build(); renderAll(); renderAsm();
 (function () {
   const emb = window.parent !== window;
   const msg = (h) => { document.querySelector(".wrap").innerHTML = '<div class="card lpmsg">' + h + "</div>"; };
+  /* 🚛 ขนาด/บรรทุกรถจากทะเบียนรถ Packing อัตโนมัติ (Edge pk-fleet · แคช 10 นาที) · รอไม่เกิน 4 วิ · ไม่ได้ = ใช้ค่าสำรองที่ฝังในหน้า */
+  const fleet = Promise.race([
+    fetch("https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-fleet").then((r) => (r.ok ? r.json() : null)).then((j) => (j && j.ok && j.types ? j : null)).catch(() => null),
+    new Promise((r) => setTimeout(() => r(null), 4000)),
+  ]);
   function run(pos, dcKm, calc) {
     if (window.__LP) return;
     if (!Array.isArray(pos) || !pos.length) { msg("ยังไม่มี PO ให้จัด"); return; }
-    window.__LP = { pos, dcKm: dcKm && typeof dcKm === "object" ? dcKm : null, calc: !!calc };
-    const s = document.createElement("script"); s.textContent = document.getElementById("lpMain").textContent; document.body.appendChild(s);
+    window.__LP = { pos, dcKm: dcKm && typeof dcKm === "object" ? dcKm : null, calc: !!calc, fleet: null };
+    fleet.then((f) => { window.__LP.fleet = f; const s = document.createElement("script"); s.textContent = document.getElementById("lpMain").textContent; document.body.appendChild(s); });
   }
   window.addEventListener("message", (e) => {
     if (e.origin !== location.origin || e.source !== window.parent) return;
