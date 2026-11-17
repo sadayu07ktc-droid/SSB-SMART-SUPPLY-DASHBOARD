@@ -43,7 +43,9 @@
   tr.add td:first-child{box-shadow:inset 3px 0 var(--primary)} tr.chg td:first-child{box-shadow:inset 3px 0 var(--warn)}
   td.cf{background:rgba(184,134,11,.13)}
   .how{font-size:10.5px;color:var(--txt2);display:block}
-  .st-Waiting{color:var(--warn);border-color:var(--warn)} .st-Planned,.st-Loading{color:var(--accent);border-color:var(--accent)} .st-Delivered{color:var(--primary);border-color:var(--primary)} .st-ยกเลิก{color:var(--danger);border-color:var(--danger)}
+  /* 17 พ.ย. คุณน้อง "สถานะ ควรเป็นสี" · เดิม .tag (เทา) อยู่ทีหลังเลยทับสีหมด → ใช้ .tag.st-* ให้ชนะ + พื้นสีอ่อน */
+  .tag.st-Waiting,.tag.st-Planned,.tag.st-Loading,.tag.st-Delivered,.tag.st-ยกเลิก{font-size:11.5px;font-weight:600;padding:2px 9px;--c:var(--txt2);color:var(--c);border-color:color-mix(in srgb,var(--c) 45%,transparent);background:color-mix(in srgb,var(--c) 13%,transparent)}
+  .tag.st-Waiting{--c:var(--warn)} .tag.st-Planned{--c:var(--accent)} .tag.st-Loading{--c:#8b5cf6} .tag.st-Delivered{--c:var(--primary)} .tag.st-ยกเลิก{--c:var(--danger)}
   .dlg{position:fixed;inset:0;background:rgba(10,20,30,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:40}
   .dlg-in{background:var(--card);border-radius:16px;padding:18px;width:100%;max-width:420px;box-shadow:0 12px 40px rgba(0,0,0,.25)}
   .dlg-in.wide{max-width:760px;max-height:90vh;display:flex;flex-direction:column;padding:16px 16px 12px}
@@ -395,7 +397,7 @@ function trCard(){
       +rs.map(r=>'<tr><td>'+thDate(r.want_date)+'</td><td>'+esc(r.destination||r.customer_name)+'</td><td>'+esc(r.vehicle_type||'')+(r.vehicle_count>1?' ×'+esc(r.vehicle_count):'')+'</td>'
         +'<td>'+(r.load_time?'โหลด '+esc(r.load_time):'')+(r.unload_time?'<span class="how">ลง '+esc(r.unload_time)+'</span>':'')+'</td>'
         +'<td>'+esc(r.item_names||'')+(r.item_qty?'<span class="how">'+esc(r.item_qty)+'</span>':'')+'</td><td>'+esc(r.requester_name||'')+'</td>'
-        +'<td><span class="tag st-'+esc(r.status)+'">'+esc(TR_LABEL[r.status]||r.status)+'</span>'+(r.driver_name?'<span class="how">'+esc(r.driver_name)+' '+esc(r.plate||'')+'</span>':'')+'</td>'
+        +'<td><span class="tag st-'+esc(r.status)+'">'+esc(TR_LABEL[r.status]||r.status)+'</span>'+(r.driver_name?'<span class="how">'+esc(r.driver_name)+' '+esc(String(r.plate||'').replace(/,\s*/g,', '))+'</span>':'')+'</td>'
         +'<td>'+(r.status==='Waiting'&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:4px 10px;font-size:12px" onclick="trCancel(this,\''+esc(r.request_id)+'\')">ยกเลิก</button>':'')+'</td></tr>').join('')+'</table></div>'
       :'<div class="note" style="margin-top:8px">ยังไม่มีคำขอ</div>')+'</div>';
 }
