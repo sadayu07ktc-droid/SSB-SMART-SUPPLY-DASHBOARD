@@ -258,6 +258,7 @@ body.calc #roleBar,body.calc #dates,body.calc .planneronly,body.calc #poBox,body
 .cutil{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:4px 0 2px}.cutil>div{display:flex;flex-direction:column;gap:1px;min-width:0}.cutil .ub{width:100%;margin:0 0 3px}.cutil small{font-size:11px;color:var(--muted);font-weight:400}
 .cutil .ubn{font-size:13px;font-weight:600}
 @media (max-width:520px){.cutil{grid-template-columns:1fr}}
+.ceven{margin-top:8px;padding-top:8px;border-top:1px dashed var(--line,#ddd);display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}.ceven label{font-weight:600;display:inline-flex;gap:6px;align-items:center;cursor:pointer}.ceven input{width:18px;height:18px;accent-color:var(--brand,#2f7d4f)}.cper{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px}.crec .cper span{display:inline-block;font-size:12.5px;color:var(--txt,inherit);padding:3px 9px;border-radius:999px;background:rgba(0,0,0,.05)}
 .cq span{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:13px;pointer-events:none}
 .cx{grid-area:x;width:36px;height:36px;border-radius:10px;border:1px solid var(--line);background:var(--surface);cursor:pointer;color:var(--muted);font-size:16px}
 .cx:hover{color:var(--bad);border-color:var(--bad)}
@@ -636,14 +637,29 @@ function evalTruck(t) {
 function itemsOf(dPOs) {
   // งาน = PO (ถ้าใหญ่เกินรถพ่วง 1 คัน ตัดเป็นหลายก้อน)
   const big = A.types[0]; const items = [];
+  const fitBig = (us) => !place(big, us, opt.stack).over.length && us.reduce((a, u) => a + u.kg, 0) <= payCap(big);
   dPOs.forEach((po) => {
-    let units = po._u.slice();
+    let units = po._u.slice(); const chunks = [];
     while (units.length) {
       let take = units.length;
-      while (take > 1 && (place(big, units.slice(0, take), opt.stack).over.length || units.slice(0, take).reduce((a, u) => a + u.kg, 0) > payCap(big))) take--;
-      items.push({ id: po.po + (items.filter((x) => x.po === po.po).length ? "-" + (items.filter((x) => x.po === po.po).length + 1) : ""), po: po.po, so: po.so, dc: po.dcCode, units: units.slice(0, take), poRef: po });
+      while (take > 1 && !fitBig(units.slice(0, take))) take--;
+      chunks.push(units.slice(0, take));
       units = units.slice(take);
     }
+    // ⚖️ โหมดคำนวณ + ติ๊ก "เกลี่ยเท่าๆ กัน": จำนวนคันเท่าเดิม แต่แบ่งพาเลทให้ใกล้กันทุกคัน (เดิม = คันแรกเต็ม คันท้ายได้เศษ)
+    //   ลองทีละแบบ: ตัดต่อเนื่อง (สินค้าเดียวกันอยู่คันเดียวกัน) → สลับทีละพาเลท (น้ำหนักใกล้กันขึ้น) · ใส่ไม่ได้ = เพิ่มอีกคันแล้วลองใหม่
+    if (CALC && opt.even && chunks.length > 1) {
+      const all = po._u.slice();
+      for (let n = chunks.length; n <= chunks.length + 2; n++) {
+        const seq = Array.from({ length: n }, (_, i) => all.slice(Math.round((i * all.length) / n), Math.round(((i + 1) * all.length) / n)));
+        const rr = Array.from({ length: n }, (_, i) => all.filter((_, j) => j % n === i));
+        const kgOf = (c) => c.reduce((a, u) => a + u.kg, 0), spread = (cs) => Math.max(...cs.map(kgOf)) - Math.min(...cs.map(kgOf));
+        const fits = [seq, rr].filter((cs) => cs.every((c) => c.length && fitBig(c))), avg = kgOf(all) / n;
+        const ok = fits[0] === seq && spread(seq) <= avg * 0.1 ? seq : fits.sort((a, b) => spread(a) - spread(b))[0];   // ต่อเนื่องก่อน ถ้าน้ำหนักต่างกันไม่เกิน 10%
+        if (ok) { chunks.splice(0, chunks.length, ...ok); break; }
+      }
+    }
+    chunks.forEach((c, i) => items.push({ id: po.po + (i ? "-" + (i + 1) : ""), po: po.po, so: po.so, dc: po.dcCode, units: c, poRef: po }));
   });
   return items;
 }
@@ -2471,13 +2487,16 @@ if (CALC) {
       <b>${esc(Object.entries(grp).map(([n, c]) => n + (c > 1 ? " × " + c : "")).join(" + "))}</b>
       <span class="note">${nf(units.length)} พาเลท · ${nf(kg)} กก. (รวมไม้พาเลท)${mode === "manual" ? " · ✋ เปลี่ยนชนิดรถเองอยู่" : ""}${bad ? ` · <b style="color:var(--bad)">⛔ ${bad} คันบรรทุกเกิน</b>` : ""}</span>
       <div class="cutil"><div>${ubar(CU, "📦 ปริมาตร")}<small>Cube Utilization · ${nf(vol, 1)} / ${nf(actCube, 1)} ลบ.ม.</small></div><div>${ubar(WU, "⚖️ น้ำหนัก")}<small>Weight Utilization · ${nf(kg)} / ${nf(actCap)} กก.</small></div><div>${ubar(FU, "🟫 พื้นพาเลท")}<small>${nf(units.length)} / ${nf(actPos)} ช่อง</small></div></div>
-      <span class="note">${bound} · ค่าสูงสุดของ 3 ตัวนี้ = <strong>Load Factor ${pc(Math.max(CU, WU, FU))}%</strong> (ยิ่งใกล้ 100% ยิ่งคุ้ม)</span></div>
+      <span class="note">${bound} · ค่าสูงสุดของ 3 ตัวนี้ = <strong>Load Factor ${pc(Math.max(CU, WU, FU))}%</strong> (ยิ่งใกล้ 100% ยิ่งคุ้ม)</span>
+      ${one && !opt.even ? "" : `<div class="ceven"><label><input type="checkbox" id="cEven"${opt.even ? " checked" : ""}> ⚖️ เกลี่ยของให้เท่าๆ กันทุกคัน</label><span class="note">${opt.even ? "แบ่งพาเลทให้ใกล้กันทุกคัน (จำนวนคันเท่าเดิม)" : "ตอนนี้ = คันแรกๆ เต็ม คันท้ายได้ที่เหลือ"}</span>
+        <div class="cper">${act.map((t, i) => { const us = t.items.flatMap((x) => x.units), ty = A.types.find((x) => x.k === t.type); return `<span>#${i + 1} ${esc(ty.name)} · <strong>${us.length}</strong> พาเลท · ${nf(us.reduce((a, u) => a + u.kg, 0))} กก.</span>`; }).join("")}</div></div>`}</div>
       <table class="ctb"><thead><tr><th>คันเดียว</th><th class="r">วางได้</th><th class="r">บรรทุกได้</th><th>ใช้รถ</th><th>ผล</th></tr></thead><tbody>${cmp.map((c) => `<tr class="${c.ty.k === cur ? "on" : ""}"><td><b>${esc(c.ty.name)}</b>${c.ty.noAuto ? '<span class="why" style="color:var(--muted)">ระบบไม่เลือกให้เอง</span>' : ""}</td><td class="r">${c.cp} พาเลท</td><td class="r">${nf(c.cap)} กก.</td>
         <td class="cu">${ubar(c.cu, "📦")}<br>${ubar(c.wu, "⚖️")}</td>
         <td>${c.why.length ? `<span class="chip c-bad">ไม่พอ</span><span class="why">${c.why.join(" · ")}</span>` : `<span class="chip c-ok">พอ</span>`}${one && c.ty.k !== cur ? ` <button type="button" data-ctry="${c.ty.k}">ลองดู 3D</button>` : ""}</td></tr>`).join("")}</tbody></table>
       ${missHtml()}<div class="note">🚛 ${fleetSrc()}</div><div class="note">📦 ${skuSrc()}</div>
       <div class="note">กดการ์ดรถด้านล่างเพื่อดูผัง 3D แต่ละคัน · ลากพาเลทในภาพเพื่อย้ายได้ · ลองแก้ตัวเลขรถ/เพลาได้ใน ⚙️ ท้ายหน้า (ไม่บันทึก)</div>`;
   };
+  $("cSum").addEventListener("change", (e) => { if (e.target.id === "cEven") { opt.even = e.target.checked; recalc(); } });
   $("cSum").addEventListener("click", (e) => { const b = e.target.closest("[data-ctry]"); if (!b || !trucks[sel]) return;
     mode = "manual"; trucks.forEach((x) => (x.manual = true)); trucks[sel].type = b.dataset.ctry; build(); renderAll(); toastMsg("ลองใส่ " + A.types.find((x) => x.k === b.dataset.ctry).name + " · แก้จำนวนสินค้า = ระบบเลือกใหม่"); });
   const _renderAll = renderAll; renderAll = function () { _renderAll(); calcSum(); };
