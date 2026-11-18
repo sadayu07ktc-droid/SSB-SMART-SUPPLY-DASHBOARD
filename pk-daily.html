@@ -3267,13 +3267,15 @@ function ypMatchPo(p){const o=p&&p.po;if(!o)return null;
   if(br.length<2)return C.length===1?C[0]:null;
   const sc=C.map(x=>{const t=String(x.n).trim().split(/\s+/),r=ypLoose(t.length>1?t.slice(1).join(''):'');return {x,s:!r?0:r===br?2:ypCov(r,br)};}).sort((a,b)=>b.s-a.s);
   return sc[0].s>=0.6&&(!sc[1]||sc[0].s>sc[1].s)?sc[0].x:null;}
-/* 18 พ.ย. คุณน้อง: ราคา /N = แถม N เฉลี่ยลงราคาแล้ว (ส่งรวม q ไม่ส่งเพิ่ม) → คิดราคาใหม่ต่อลังให้เลย = ราคาเดิม × (q−N) ÷ q */
+/* 18 พ.ย. คุณน้อง: ราคา /N = แถมที่เฉลี่ยลงราคาแล้ว (ส่งรวม q ไม่ส่งเพิ่ม) → คิดราคาใหม่ต่อลังให้เลย = ราคาเดิม × (q−แถม) ÷ q
+   แถม = N ต่อทุก 100 ลัง · ครบ 50 ได้ครึ่ง (300/2 → 6 · 250/2 → 5 · 50/2 → 1) · เศษไม่ครบ 50 ไม่นับ (เซลส์จะพิมพ์แถมเพิ่มเอง) */
 function ypNum(x){const v=parseFloat(String(x==null?'':x).replace(/[, ]/g,''));return isFinite(v)?v:NaN;}
-function ypAvgPrice(i){const p=ypNum(i.price),q=+i.q,n=+i.avg;return p>0&&n>0&&q>n?Math.round(p*(q-n)/q*100)/100:null;}
+function ypFreeOf(i){const q=+i.q,n=+i.avg;return q>0&&n>0?Math.floor(q/50)*n/2:0;}
+function ypAvgPrice(i){const p=ypNum(i.price),q=+i.q,fr=ypFreeOf(i);return p>0&&fr>0&&q>fr?Math.round(p*(q-fr)/q*100)/100:null;}
 function ypBaht(v){return v.toLocaleString('en-US',{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2});}
-function ypPriceCell(i,u){const np=ypAvgPrice(i);if(!np)return esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':'');
-  const p=ypNum(i.price),q=+i.q,n=+i.avg;
-  return '<b class="ypavg">'+ypBaht(np)+'</b><div class="note">ต่อ'+esc(u)+' · เดิม '+ypBaht(p)+'<br>แถม '+comma(n)+' เฉลี่ยใน '+comma(q)+'<br>'+ypBaht(p)+'×'+comma(q-n)+'÷'+comma(q)+'</div>';}
+function ypPriceCell(i,u){const np=ypAvgPrice(i);if(!np)return esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+(+i.q<50?' · ไม่ครบ 50 '+esc(u||'ลัง')+' ยังไม่แถม':' เฉลี่ยราคาแล้ว')+'</div>':'');
+  const p=ypNum(i.price),q=+i.q,n=+i.avg,fr=ypFreeOf(i);
+  return '<b class="ypavg">'+ypBaht(np)+'</b><div class="note">ต่อ'+esc(u)+' · เดิม '+ypBaht(p)+'<br>แถม '+comma(fr)+' (/'+comma(n)+' ต่อ 100) เฉลี่ยใน '+comma(q)+'<br>'+ypBaht(p)+'×'+comma(q-fr)+'÷'+comma(q)+'</div>';}
 function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop),inP=ypInPlan(m.mid);
   const sumQ=its.reduce((a,i)=>a+(i.u==='ถัง'?0:(+i.q||0)),0),qT=ypQty(p),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+(p.dlvFrom?' · แจ้งตามมา':'')+'</span>':p.waitDate?'<span class="w">⏳ '+(p.po?'รอเซลส์นัดส่ง/รับ':'รอแจ้งวันเข้ารับ')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
     ((p.cs||0)-(+p.pb||0)||(!p.tk&&!p.pb)?'<span class="i">📦 '+comma((p.cs||0)-(+p.pb||0))+' ลัง'+((p.free||0)-(+p.pbFree||0)?' (แถมจริง '+comma((p.free||0)-(+p.pbFree||0))+')':'')+'</span>':''),(p.pb?'<span class="i">🥫 '+comma(p.pb)+' ปี๊บ'+(p.pbFree?' (แถมจริง '+comma(p.pbFree)+')':'')+'</span>':''),(p.tk?'<span class="i">🛢️ '+comma(p.tk)+' ถัง'+(p.tkFree?' (แถมจริง '+comma(p.tkFree)+')':'')+'</span>':''),p.coa?'<span class="r">📄 ต้องมี COA</span>':'',p.receipt?'<span class="w">📃 ใบเสร็จ</span>':'',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':'',p.prepay?'<span class="w">💳 โอนเงินก่อน</span>':'',
