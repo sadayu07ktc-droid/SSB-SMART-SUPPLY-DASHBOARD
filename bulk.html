@@ -7,7 +7,7 @@
 <title>แพลนส่งมอบ Bulk · SSB</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=Sarabun:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
 <script src="ssb-read.js?v=20261014b"></script>
 <script src="ssb-pin-gate.js?v=20261014b"></script>
@@ -300,6 +300,118 @@ body::after{width:52vw;height:52vw;right:-14vw;bottom:-18vw;background:radial-gr
   .main{padding:12px 10px 40px}
 }
 @media(prefers-reduced-motion:reduce){.nav-i,.nav-toggle,.nav-toggle svg,.dash.nav-collapsed .side{transition:none}.nav-i:hover,.nav-toggle:hover{transform:none}}
+/* ───────── ตารางแผน Bulk (คนจัดรถกรอกเอง) + ใบขนส่ง FM-TR-01 · 2026-11-18 ───────── */
+.sec{border-bottom:1px solid var(--line)}
+.sechd{display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;padding:12px 16px}
+.sechd .sp,.ptools .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.anote{margin:0 16px 10px;padding:8px 12px;border-radius:10px;background:var(--warnTint);color:var(--warn);font-size:12.5px}
+.atbl table{min-width:1220px}
+.atbl tr.off td{color:var(--muted)}.atbl tr.off td.cust{text-decoration:line-through}
+.atbl tr.hl td{background:var(--warnTint)}.atbl tr.nw td{background:var(--infoTint)}
+td.nt{font-size:12px;color:var(--muted);max-width:220px}
+td.sm{font-size:12px}
+.tag{display:inline-block;font-size:11px;font-weight:700;border-radius:7px;padding:1px 7px;white-space:nowrap;background:var(--surface2);color:var(--muted)}
+.tag.bad{color:var(--bad);background:var(--badTint)}.tag.warn{color:var(--warn);background:var(--warnTint)}.tag.info{color:var(--info);background:var(--infoTint)}
+.tag.po{color:var(--goldInk);background:var(--goldTint)}.tag.okk{color:var(--ok);background:var(--okTint)}.tag.wait{color:var(--brandInk);background:var(--tint)}
+.ptools{display:flex;align-items:center;gap:6px 8px;flex-wrap:wrap;padding:10px 16px;border-bottom:1px solid var(--line)}
+.fchip{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--field);color:var(--ink);border-radius:999px;padding:4px 11px;cursor:pointer}
+.fchip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.fchip .n{font-family:var(--f-num);margin-left:5px;opacity:.75}
+.fchip:focus-visible,.tgl:focus-visible,.seg button:focus-visible,.lnk:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+.docinfo{flex-basis:100%;font-size:12px}
+.lnk{font:inherit;font-size:12px;background:none;border:0;padding:0;color:var(--brandInk);text-decoration:underline;cursor:pointer}
+.ptbl{min-width:1320px}
+.ptbl td{vertical-align:top}
+th.sel,td.sel{width:34px;text-align:center}
+td.sel input,th.sel input{width:17px;height:17px;accent-color:var(--brand2);cursor:pointer}
+.ptbl tr.picked td{background:var(--tint)}
+.tgl{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--field);color:var(--ok);font-weight:800;cursor:pointer;padding:0}
+.tgl.on{background:var(--okTint);border-color:var(--ok)}
+.tgl:disabled{cursor:default;opacity:.7}
+.kd{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:0 6px;white-space:nowrap;color:var(--brandInk);background:var(--tint)}
+.kd.outside{color:var(--info);background:var(--infoTint)}.kd.pickup{color:var(--goldInk);background:var(--goldTint)}
+.docno{font-family:var(--f-num);font-weight:700;color:var(--brandInk)}
+.btn.sm.pri,.btn.sm.gold{font-weight:700}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;align-self:flex-start}
+.seg button{font:inherit;font-size:13.5px;font-weight:600;padding:8px 16px;border:0;border-right:1px solid var(--line);background:var(--surface);color:var(--muted);cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--brand);color:#fff}
+.tf{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.tf>label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.tf>label small{font-size:11px}
+.tf .full{grid-column:1/-1}
+.tf input:not([type=checkbox]):not([type=radio]),.tf select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:7px 10px;width:100%;min-width:0}
+.tf input:disabled,.tf select:disabled{opacity:.75}
+.tf input:focus-visible,.tf select:focus-visible{outline:2px solid var(--brand2);outline-offset:1px}
+.tf .hint{font-size:11.5px;color:var(--brandInk)}
+.ckrow{display:flex;gap:4px 16px;flex-wrap:wrap;align-items:center;font-size:13px}
+.ckrow .ck{padding:3px 0;align-items:center}
+.lbx{font-size:12.5px;font-weight:700;color:var(--muted)}
+input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:3px 8px}
+.fs{border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;margin:0}
+.fs legend,.fs summary{font-size:13px;font-weight:700;color:var(--brandInk);padding:0 6px;cursor:default}
+.fs summary{cursor:pointer}
+.prevl{font-size:13px;line-height:1.7;margin:4px 0}
+#printArea{display:none}
+@media(max-width:640px){.tf{grid-template-columns:1fr}.seg button{padding:8px 11px}}
+/* ใบขนส่ง FM-TR-01 Rev.05 · A4 ตั้ง · ตามไฟล์ Excel "ใบขนส่ง ใบ 5 ส่วน" */
+@media print{
+  @page{size:A4 portrait;margin:9mm 10mm}
+  html,body{background:#fff!important}
+  body::before,body::after,.dash::before{display:none!important}
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block}
+}
+.fm{width:190mm;font-family:"Sarabun","IBM Plex Sans Thai",Tahoma,sans-serif;font-size:10.5pt;line-height:1.35;color:#000;break-after:page;page-break-after:always}
+.fm:last-child{break-after:auto;page-break-after:auto}
+.fbox{border:1.4px solid #000}
+.frow{display:flex}
+.fhead{border-bottom:1.4px solid #000;min-height:31mm}
+.fco{flex:1;position:relative;padding:2mm 3mm}
+.fname{font-weight:700;font-size:13pt;text-align:center}
+.flogo{position:absolute;left:8mm;top:11mm;font:italic 700 34pt/1 "Times New Roman",serif;letter-spacing:1px}
+.ftitle{position:absolute;right:3mm;top:10mm;display:flex;flex-direction:column;align-items:flex-end;gap:2mm;font-size:10.5pt}
+.fm table{min-width:0;width:auto;font-size:inherit;border-collapse:collapse}
+.fm th,.fm td{background:none;color:#000;font-size:inherit;white-space:normal;vertical-align:middle;border:0}
+.fdoc{width:84mm;flex:none;border-left:1.4px solid #000!important}
+.fdoc th{text-align:left;font-weight:700;padding:1.6mm 2mm;border-bottom:1px solid #000;white-space:nowrap}
+.fdoc td{padding:1.6mm 2mm;border-bottom:1px solid #000;border-left:1px solid #000;text-align:center;min-width:22mm;font-weight:700}
+.fdoc tr:last-child th,.fdoc tr:last-child td{border-bottom:0}
+.fdoc td.dno{font-size:12pt;letter-spacing:.5px}
+.fsec{border-bottom:1.4px solid #000;padding:2mm 3mm}
+.fsec.last{border-bottom:0}
+.fsec.s1{border-bottom:1.4px solid #000;padding-top:3mm}
+.fsec.s1b{display:flex;flex-direction:column;gap:3mm;padding:4mm 3mm 5mm}
+.fl{margin:1.3mm 0;white-space:nowrap}
+.fl.c,.fst.c{text-align:center}
+.fl.ind{padding-left:58mm}.fl.ind2{padding-left:24mm}.fl.ind3{padding-left:38mm}
+.fl .ml{margin-left:8mm}
+.fl b.bill{font-size:12pt;margin:0 3mm}
+.uv{display:inline-block;border-bottom:1px solid #000;padding:0 1.5mm;text-align:center;font-weight:600;min-width:12mm}
+.dt{display:inline-block;border-bottom:1px dotted #000;height:1em;vertical-align:baseline;margin:0 .5mm}
+.xb{display:inline-flex;align-items:center;justify-content:center;width:4.6mm;height:4.6mm;border:1px solid #000;font-weight:800;font-size:10pt;line-height:1;vertical-align:-1mm;margin-right:1mm}
+.fck{display:grid;grid-template-columns:1fr 1fr;gap:3mm 10mm;padding:0 6mm}
+.fsig{display:flex;justify-content:space-between;align-items:flex-start;padding-left:8mm}
+.sg{padding-top:6mm}
+.fprev{width:78mm;min-height:30mm;border:1.4px solid #000;padding:2mm 4mm}
+.fprev>b{display:block;text-align:center;font-weight:400;margin-bottom:1.5mm}
+.fprev div{margin:1.2mm 0}.fprev span{display:inline-block;width:10mm;text-align:center}
+.fst{font-weight:700;margin-bottom:1mm}
+.ftop{display:flex;justify-content:space-between;align-items:flex-end;font-size:8.5pt;margin-bottom:1mm}
+.fhead2{border-bottom:1.4px solid #000}
+.fco2{flex:1;text-align:center;padding:2mm;display:flex;flex-direction:column;gap:1.5mm}
+.fside{width:62mm;display:flex;flex-direction:column;gap:3mm;padding:0 0 2mm 0}
+.fbx{border:1.4px solid #000;border-top:0;border-right:0;padding:1.6mm 3mm;font-weight:700;text-align:center}
+.fside>div:last-child{padding-left:4mm}
+.f4{display:grid;grid-template-columns:1fr 92mm;gap:4mm;margin:1mm 0 2mm}
+.f4 .ci{margin:1.3mm 0}
+.ftank{border-collapse:collapse;width:100%;margin-top:1.5mm}
+.ftank th,.ftank td{border:1px solid #000;text-align:center;font-weight:400;font-size:9pt;padding:1mm}
+.ftank td{height:11mm}
+.fst2{justify-content:space-between;align-items:stretch;margin:-2mm -3mm 2mm;border-bottom:1.4px solid #000}
+.fst2>b{padding:1.6mm 3mm;flex:1;text-align:center}
+.fst2 .fbx2{border-left:1.4px solid #000}
+.ffoot{text-align:right;font-size:8.5pt;margin-top:1mm}
 </style>
 </head>
 <body>
@@ -316,7 +428,7 @@ body::after{width:52vw;height:52vw;right:-14vw;bottom:-18vw;background:radial-gr
   <main class="main"><div class="wrap">
   <div class="top">
     <button class="back" type="button" onclick="goBack()" aria-label="กลับ">←</button>
-    <div><h1>แพลนส่งมอบ Bulk</h1><div class="sub">FM-MK-04 จาก SAP B1 · 1 แพลน = 1 วันที่ส่ง · อัปโหลดวันที่ส่งเดิมซ้ำ = Revised</div></div>
+    <div><h1>แพลนส่งมอบ Bulk</h1><div class="sub">แผนแอดมิน → ตารางแผน (คนจัดรถ) → แจกงาน · ใบขนส่ง FM-TR-01 · 1 แพลน = 1 วันที่ส่ง</div></div>
   </div>
   <div class="road" aria-hidden="true"></div>
   <div class="ticker" id="ticker" hidden>
@@ -332,15 +444,14 @@ body::after{width:52vw;height:52vw;right:-14vw;bottom:-18vw;background:radial-gr
       </div>
       <div class="acts" id="acts"></div>
     </div>
+    <div class="sec" id="adminBox"></div>
+    <div class="sechd"><h2>🗂️ ตารางแผน</h2><span class="sub" id="planSub"></span></div>
     <div class="ver" id="ver"></div>
     <div class="vbar" id="vbar" hidden></div>
     <div class="kpis" id="kpis"></div>
-    <div class="tbl"><table>
-      <thead><tr><th>#</th><th>ลูกค้า</th><th>สถานที่ส่ง</th><th>สินค้า</th><th class="r">จำนวน (กก.)</th><th>บิล</th><th>ใบขนย้าย</th><th>ทะเบียน · คนขับ</th><th>สถานะ</th><th>หมายเหตุ</th></tr></thead>
-      <tbody id="rows"></tbody>
-    </table></div>
-    <div class="panel" id="panel" hidden></div>
-    <div class="note">คนขับจับคู่จาก <b>ทะเบียนหัว</b> ในไฟล์กับตารางคนขับ (กลุ่ม Bulk ก่อน) · ทะเบียนไม่พบ = รับไฟล์ไม่ได้ ให้แก้ใน SAP แล้วอัปโหลดใหม่ · CO ✓ = มีใบขนย้าย · 1 รายการ = 1 เที่ยว · แจกงานแล้ว อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้คนขับอัตโนมัติ <span style="opacity:.6">· build 2026-11-05a</span></div>
+    <div class="ptools" id="planTools"></div>
+    <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-18a</span></div>
   </div>
   </div></main>
 </div>
@@ -368,7 +479,7 @@ const NAV_IC={plan:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0
   usercog:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a5 5 0 0 1 5-5h4"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13.7 14.5l1.7 1M20.6 18.5l1.7 1M13.7 19.5l1.7-1M20.6 15.5l1.7-1"/>'};
 function navItems(me){
   const out=[{sec:'งาน Bulk'},
-    {ic:'plan',t:'แพลนส่งมอบ',s:'อัปโหลด · แจกงาน',on:1,act:'navTop()'},{ic:'pulse',t:'สถานะเที่ยว',act:'navStatus()'},{ic:'clock',t:'แพลนย้อนหลัง',act:'openHistory()'},
+    {ic:'plan',t:'แพลนส่งมอบ',s:'แผนแอดมิน · ตารางแผน',on:1,act:'navTop()'},{ic:'pulse',t:'สถานะเที่ยว',act:'navStatus()'},{ic:'clock',t:'แพลนย้อนหลัง',act:'openHistory()'},
     {ic:'report',t:'รายงาน',s:'Excel · PDF · JPEG',act:'navReport()'},{ic:'pin',t:'ลูกค้า Bulk',s:'พิกัด · ตาชั่ง',act:'openCustomers()'}];
   // บัญชี/แอดมินพันตัน ใช้เฉพาะงาน Bulk ตามริชเมนู ไม่โชว์ลิงก์ระบบขนส่ง
   if(me&&me.type!=='ACC_BULK'&&me.type!=='YARD_BULK') out.push({sec:'ระบบขนส่ง'},
@@ -450,15 +561,39 @@ function goBack(){ if(history.length>1) history.back(); else location.href=DASH;
 function gate(t,s){ $('gate').hidden=false; $('app').hidden=true; $('gateT').textContent=t; $('gateS').textContent=s||''; }
 
 async function post(body){ const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},body))}); return r.json(); }
+/* ═════════ ตารางแผน Bulk (คนจัดรถกรอกเอง) · 2026-11-18 · Edge bulk-board ═════════
+   คุณน้อง 18 พ.ย. 69: เลิกอัปโหลด FM-MK-04 จาก SAP → แอดมินส่ง "แผนแอดมิน" (Excel) → คนจัดรถกด "+ ลงแผน" ลงตารางแผน
+   เที่ยว = รถบริษัท (แจกงาน/การ์ดไลน์) · รถนอก (เก็บไว้คิดค่าขนส่ง) · ลูกค้ารับเอง (ใบขนส่งอย่างเดียว)
+   พิมพ์ใบขนส่งน้ำมัน FM-TR-01 (ใบ 5 ส่วน) · เลขที่ใบระบบรัน · สินค้าย้อนหลัง 3 ครั้งตามทะเบียน
+   แจกงาน / ส่งแผนให้บัญชี = Edge bulk-plan (dispatch / publish) */
+const BOARD='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/bulk-board';
+async function postB(body){ const r=await fetch(BOARD,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},body))}); return r.json(); }
+const KIND={company:'รถบริษัท',outside:'รถนอก',pickup:'ลูกค้ารับเอง'};
+let FILT='all', SEL=new Set(), VIEWING=null, ADM_OPEN=true;
+try{ ADM_OPEN=localStorage.getItem('bulk_adm_open')!=='0'; }catch(e){}
+const isCo=j=>(j&&j.kind||'company')==='company';
+// จำนวน: "30" = ตัน · "10 ถัง" / "40,000 ลิตร" / "4 ตู้" = ตามที่เขียน (= Edge qtyT)
+const qtyTx=j=>{ const t=String(j&&j.qty_text||'').trim(); if(!t) return fmt(j&&j.qty_kg)+' กก.'; const m=t.match(/^\s*[\d.,]+/); if(!m) return t;
+  const rest=t.slice(m[0].length).trim(); return /^(ถัง|ลิตร|ตู้|กก|ตัน|kg|ton)/i.test(rest)?t:m[0].trim()+' ตัน'+(rest?' '+rest:''); };
+const tonOf=t=>{ const s=String(t||''), m=s.match(/^\s*([\d.,]+)/); if(!m) return 0; return /^(ถัง|ลิตร|ตู้|กก|kg)/i.test(s.slice(m[0].length).trim())?0:(parseFloat(m[1].replace(/,/g,''))||0); };
+const nrm=s=>String(s||'').toLowerCase().replace(/[\s*.\-()]/g,'');
+const tons=n=>(Math.round(n*1000)/1000).toLocaleString('en-US');
+const docNext=()=>{ const d=DATA&&DATA.doc; return d?d.yymm+('000'+(d.next||1)).slice(-4):''; };
+
 async function load(date){
-  const r=await fetch(EDGE+'?action=getPlan&userId='+encodeURIComponent(MY_UID)+(date?'&date='+encodeURIComponent(date):''));
-  const d=await r.json();
-  if(!d.ok){ gate(d.denied?'🔒 ไม่มีสิทธิ์ดูแพลน Bulk':'โหลดไม่สำเร็จ', d.error||''); return; }
-  DATA=d; VIEW=null; $('gate').hidden=true; $('app').hidden=false; render();
-  runGo();
+  try{
+    const r=await fetch(BOARD+'?action=board&userId='+encodeURIComponent(MY_UID)+(date?'&date='+encodeURIComponent(date):''));
+    const d=await r.json();
+    if(!d.ok){ if(!DATA) gate(d.denied?'🔒 ไม่มีสิทธิ์ดูแพลน Bulk':'โหลดไม่สำเร็จ', d.error||''); else toast(d.error||'โหลดไม่สำเร็จ',true); return; }
+    const same=DATA&&DATA.sendDate===d.sendDate;
+    DATA=d;
+    if(!same){ VIEW=null; SEL=new Set(); }
+    else { const ids=new Set(d.jobs.filter(j=>!j.cancelled).map(j=>j.id)); [...SEL].forEach(id=>{ if(!ids.has(id)) SEL.delete(id); }); }
+    $('gate').hidden=true; $('app').hidden=false; render();
+    runGo();
+  }catch(e){ if(!DATA) gate('โหลดไม่สำเร็จ',String(e.message||e)); else toast('โหลดข้อมูลไม่สำเร็จ — ลองใหม่',true); }
 }
-/* ── ปุ่มริชเมนู Bulk (บัญชี/พันตัน) → ?go= เปิดตรงส่วนนั้น (ทำครั้งเดียวตอนเปิดหน้า) · 2026-10-15 ──
-   today = แพลนล่าสุด · status = สถานะเที่ยว · history = เลือกแพลนย้อนหลัง · report = รายงาน · customers = ลูกค้า Bulk */
+/* ── ปุ่มริชเมนู Bulk (บัญชี/พันตัน) → ?go= เปิดตรงส่วนนั้น (ทำครั้งเดียวตอนเปิดหน้า) · 2026-10-15 ── */
 let GO=(new URLSearchParams(location.search).get('go')||'').toLowerCase();
 function runGo(){
   const g=GO; GO=''; if(!g) return;
@@ -469,15 +604,15 @@ function runGo(){
   if(g==='status'){ const t=$('ticker').hidden?$('kpis'):$('ticker'); setTimeout(()=>t.scrollIntoView({behavior:'smooth',block:'start'}),60); return; }
 }
 function openHistory(){
-  const d=DATA, cur=d.plan&&d.plan.send_date;
+  const d=DATA, cur=d.sendDate;
   let m=$('dlgHist'); if(!m){ m=document.createElement('div'); m.id='dlgHist'; m.className='dlg'; document.body.appendChild(m); }
   const close=()=>{ m.hidden=true; m.innerHTML=''; };
   m.onmousedown=e=>{ if(e.target===m) close(); };
   m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="hT">
-    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">แพลนส่งมอบ 30 วันล่าสุด</div><h2 id="hT" style="color:#fff">📅 แพลนย้อนหลัง</h2></div>
+    <div class="dlghd"><div><div class="sub">แพลนส่งมอบ 30 วันล่าสุด</div><h2 id="hT" style="color:#fff">📅 แพลนย้อนหลัง</h2></div>
       <button type="button" class="dlgx" aria-label="ปิด" id="hX">✕</button></div>
-    <div class="dlgbd"><div class="plist" style="max-height:60vh;margin:0">${d.plans.length?d.plans.map(x=>`<button type="button" class="${x.send_date===cur?'on':''}" data-d="${x.send_date}">
-      ส่ง ${thDate(x.send_date)} · ${revName(x.rev)}<small>${x.dispatched_at?'แจกแล้ว':'ยังไม่แจก'}${x.load_date?' · โหลด '+thDate(x.load_date):''}</small></button>`).join('')
+    <div class="dlgbd"><div class="plist" style="max-height:60vh;margin:0">${d.dates.length?d.dates.map(x=>{ const pl=d.plans.find(y=>y.send_date===x);
+      return `<button type="button" class="${x===cur?'on':''}" data-d="${x}">ส่ง ${thDate(x)}<small>${pl?(pl.dispatched_at?'แจกแล้ว':'ยังไม่แจก')+(pl.load_date?' · โหลด '+thDate(pl.load_date):''):'มีแต่แผนแอดมิน'}</small></button>`; }).join('')
       :'<div class="sub" style="padding:12px">ยังไม่มีแพลน</div>'}</div></div></div>`;
   m.hidden=false; $('hX').onclick=close;
   m.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{ close(); load(b.dataset.d); });
@@ -487,217 +622,543 @@ function openHistory(){
 function render(){
   const d=DATA, p=d.plan, me=d.me;
   drawWho(me);
-  $('planSel').innerHTML=d.plans.length?d.plans.map(x=>`<option value="${x.send_date}"${p&&p.send_date===x.send_date?' selected':''}>ส่ง ${thDate(x.send_date)} · ${revName(x.rev)}${x.dispatched_at?' · แจกแล้ว':''}</option>`).join(''):'<option>ยังไม่มีแพลน</option>';
-  $('planSel').disabled=!d.plans.length;
+  $('planSel').innerHTML=d.dates.length?d.dates.map(x=>{ const pl=d.plans.find(y=>y.send_date===x);
+    return `<option value="${x}"${x===d.sendDate?' selected':''}>ส่ง ${thDate(x)}${pl&&pl.dispatched_at?' · แจกแล้ว':''}</option>`; }).join(''):'<option>ยังไม่มีแพลน</option>';
+  $('planSel').disabled=!d.dates.length;
   $('acts').innerHTML=`<button class="btn" type="button" id="custBtn">📍 ลูกค้า Bulk</button>`
-    +(p?`<button class="btn" type="button" id="repBtn">🖨️ รายงาน (Excel / PDF / JPEG)</button>`:'')
-    +(me.canEdit?`<label class="btn up" for="fileIn"><span class="upic" aria-hidden="true">⬆</span>อัปโหลดแพลน (Excel)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>
-    ${p&&!p.dispatched_at?`<button class="btn pri" type="button" id="dispBtn">📤 แจกงานทั้งแพลน</button>`:''}`:'');
-  $('custBtn').addEventListener('click',openCustomers);
-  if($('repBtn')) $('repBtn').addEventListener('click',bulkReport);
-  if(me.canEdit) $('fileIn').addEventListener('change',onFile);
-  if($('dispBtn')) $('dispBtn').addEventListener('click',askDispatch);
-  if(!p){ buildTicker(null,[]); $('vbar').hidden=true; $('meta').innerHTML=''; $('ver').innerHTML=''; $('kpis').innerHTML='';
-    $('rows').innerHTML=`<tr><td colspan="10" class="empty">ยังไม่มีแพลน Bulk${me.canEdit?' — กด "⬆️ อัปโหลดแพลน" แล้วเลือกไฟล์ FM-MK-04 จาก SAP B1':''}</td></tr>`; return; }
-  $('meta').innerHTML=`<span>โหลด <b>${thDate(p.load_date)}</b></span><span>ส่ง <b>${thDate(p.send_date)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`;
-  const lastRev=d.revs.length?d.revs[d.revs.length-1].rev:0;
-  const viewing=VIEW&&VIEW.planId===p.id&&VIEW.rev.rev!==lastRev?VIEW.rev:null;   // ดูฉบับย้อนหลังอยู่
-  $('ver').innerHTML='<span class="sub">ฉบับ:</span>'+d.revs.map(v=>{ const df=v.diff||{}, on=viewing?v.rev===viewing.rev:v.rev===lastRev;
-    return `<button type="button" class="v${on?' on':''}" data-rev="${v.rev}" title="กดเพื่อดูฉบับนี้${v.file_name?' · ไฟล์ '+esc(v.file_name):''}">${revName(v.rev)} · ${thTime(v.uploaded_at)} · ${esc(v.uploaded_by_name||'')}${v.rev?` · แก้ ${(df.chg||[]).length} เพิ่ม ${(df.add||[]).length} ตัด ${(df.del||[]).length}`:` · ${(df.add||[]).length} รายการ`}${v.rev===lastRev?' (ล่าสุด)':''}</button>`; }).join('')
-    +(p.dispatched_at?`<span class="v ok">แจกงานแล้ว ${thTime(p.dispatched_at)} · ฉบับต่อไปส่งใบงานให้คนขับอัตโนมัติ</span>`:'');
+    +(p?`<button class="btn" type="button" id="repBtn">🖨️ รายงาน</button>`:'')
+    +(me.canEdit?`<button class="btn" type="button" id="dayBtn">📅 วันส่งใหม่</button>
+      <label class="btn up" for="fileIn"><span class="upic" aria-hidden="true">⬆</span>อัปโหลดแผนแอดมิน (Excel)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>`:'');
+  $('custBtn').onclick=openCustomers;
+  if($('repBtn')) $('repBtn').onclick=bulkReport;
+  if($('dayBtn')) $('dayBtn').onclick=()=>askDay();
+  if($('fileIn')) $('fileIn').addEventListener('change',onAdminFile);
+  const ld=(p&&p.load_date)||(d.admin&&d.admin.load_date);
+  $('meta').innerHTML=d.sendDate?`<span>โหลด <b>${thDate(ld)}</b></span><span>ส่ง <b>${thDate(d.sendDate)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`:'';
+  renderRevs(); renderAdmin(); renderPlan();
+}
+
+/* ── ฉบับที่ส่งให้บัญชี (bulk_plan_revs) + สถานะอีเมล ── */
+function renderRevs(){
+  const d=DATA, p=d.plan, me=d.me;
+  VIEWING=null;
+  if(!p){ $('ver').innerHTML=''; $('vbar').hidden=true; return; }
+  const lastRev=d.revs.length?d.revs[d.revs.length-1].rev:-1;
+  VIEWING=VIEW&&VIEW.planId===p.id&&VIEW.rev.rev!==lastRev?VIEW.rev:null;
+  $('ver').innerHTML='<span class="sub">ส่งแผนให้บัญชี:</span>'+(d.revs.length?d.revs.map(v=>{ const df=v.diff||{}, on=VIEWING?v.rev===VIEWING.rev:v.rev===lastRev;
+    return `<button type="button" class="v${on?' on':''}" data-rev="${v.rev}" title="กดเพื่อดูแผนตอนส่งฉบับนี้">${revName(v.rev)} · ${thTime(v.uploaded_at)} · ${esc(v.uploaded_by_name||'')}${v.rev?` · แก้ ${(df.chg||[]).length} เพิ่ม ${(df.add||[]).length} ตัด ${(df.del||[]).length}`:''}${v.rev===lastRev?' (ล่าสุด)':''}</button>`; }).join('')
+      :'<span class="v">ยังไม่เคยส่ง</span>')
+    +(p.dispatched_at?`<span class="v ok">แจกงานแล้ว ${thTime(p.dispatched_at)} · แก้เที่ยวรถบริษัท = ส่งการ์ดให้คนขับทันที</span>`:'');
   $('ver').querySelectorAll('button[data-rev]').forEach(b=>b.onclick=()=>openRev(p.id,+b.dataset.rev,lastRev));
-  if($('dispBtn')&&viewing) $('dispBtn').hidden=true;
-  // ไฟล์ต้นฉบับ + สถานะอีเมลบัญชี ของฉบับที่กำลังดู
-  const cur=d.revs.find(v=>v.rev===(viewing?viewing.rev:lastRev));
+  const cur=d.revs.find(v=>v.rev===(VIEWING?VIEWING.rev:lastRev));
   if(cur){ const ms=String(cur.mail_status||''), m=ms.match(/^sent:(\d+)\+(\d+)/);
     const mailTx=m?`✉️ อีเมลถึงบัญชีแล้ว ${m[1]} คน${+m[2]?' · CC '+m[2]:''} · ${thTime(cur.mail_at)}`
-      :ms==='pending'?'⏳ กำลังส่งอีเมลถึงบัญชี…':ms.indexOf('failed')===0?'⚠️ อีเมลส่งไม่สำเร็จ: '+esc(ms.slice(7)):'✉️ ฉบับนี้ยังไม่มีการส่งอีเมล (อัปโหลดก่อนเปิดระบบเมล)';
-    $('ver').insertAdjacentHTML('beforeend',`<div class="revinfo">${cur.file_path?`<button type="button" class="btn sm" id="dlBtn">📎 ไฟล์ต้นฉบับ ${revName(cur.rev)}</button>`:'<span class="sub">ไม่มีไฟล์ต้นฉบับเก็บไว้</span>'}
-      <span class="${ms.indexOf('failed')===0?'mfail':'sub'}">${mailTx}</span>${me.canEdit&&ms!=='pending'?`<button type="button" class="btn sm" id="reMail">${m?'ส่งอีเมลซ้ำ':'ส่งอีเมล'}</button>`:''}</div>`);
-    if($('dlBtn')) $('dlBtn').onclick=()=>downloadRev(p.id,cur.rev);
+      :ms==='pending'?'⏳ กำลังส่งอีเมลถึงบัญชี…':ms.indexOf('failed')===0?'⚠️ อีเมลส่งไม่สำเร็จ: '+esc(ms.slice(7)):'✉️ ฉบับนี้ยังไม่มีการส่งอีเมล';
+    $('ver').insertAdjacentHTML('beforeend',`<div class="revinfo"><span class="${ms.indexOf('failed')===0?'mfail':'sub'}">${mailTx}</span>${me.canEdit&&ms!=='pending'?`<button type="button" class="btn sm" id="reMail">${m?'ส่งอีเมลซ้ำ':'ส่งอีเมล'}</button>`:''}</div>`);
     if($('reMail')) $('reMail').onclick=()=>resendMail(p.id,cur.rev);
   }
-  // ฉบับย้อนหลัง: ใช้แถวตอนอัปโหลด (ไม่มีสถานะเที่ยว) + ป้ายสิ่งที่เปลี่ยนในฉบับนั้น
-  let jobs=d.jobs, df=null;
-  if(viewing){ df=viewing.diff||{}; jobs=(viewing.rows||[]).map(r=>Object.assign({},r,{status:'_snap',cancelled:false})); }
-  $('vbar').hidden=!viewing;
-  if(viewing){ const dl=(df.del||[]);
-    $('vbar').innerHTML=`<div>👁️ กำลังดู <b>${revName(viewing.rev)}</b> (ย้อนหลัง) · อัปโหลด ${thTime(viewing.uploaded_at)} โดย ${esc(viewing.uploaded_by_name||'—')}${viewing.file_name?' · ไฟล์ '+esc(viewing.file_name):''}
-      <div class="sub">เป็นข้อมูลตามไฟล์ตอนอัปโหลดฉบับนั้น · สถานะเที่ยวดูได้ที่ฉบับล่าสุด${dl.length?` · ตัดออกในฉบับนี้: ${dl.map(x=>'#'+x.no+' '+esc(x.cust)).join(', ')}`:''}</div></div>
-      <button class="btn" type="button" id="vBack">กลับไปฉบับล่าสุด</button>`;
+  $('vbar').hidden=!VIEWING;
+  if(VIEWING){ const dl=((VIEWING.diff||{}).del||[]);
+    $('vbar').innerHTML=`<div>👁️ กำลังดู <b>${revName(VIEWING.rev)}</b> (แผนตอนส่งให้บัญชี) · ${thTime(VIEWING.uploaded_at)} โดย ${esc(VIEWING.uploaded_by_name||'—')}
+      <div class="sub">ดูอย่างเดียว · สถานะ/แก้ไขเที่ยวดูที่ตารางปัจจุบัน${dl.length?` · ตัดออกในฉบับนี้: ${dl.map(x=>'#'+x.no+' '+esc(x.cust)).join(', ')}`:''}</div></div>
+      <button class="btn" type="button" id="vBack">กลับไปตารางปัจจุบัน</button>`;
     $('vBack').onclick=()=>{ VIEW=null; render(); };
   }
-  const live=jobs.filter(j=>!j.cancelled), cnt=f=>live.filter(f).length;
-  $('kpis').innerHTML=[['เที่ยว',live.length],['รวม (กก.)',fmt(live.reduce((s,j)=>s+Number(j.qty_kg||0),0))],['คนขับ',new Set(live.map(j=>j.driver_uid)).size]]
-    .concat(viewing?[]:[['รอคนขับรับ',cnt(j=>j.status==='sent')],['กำลังโหลด',cnt(j=>j.status==='accepted'||j.status==='weighed')],['ออกจาก SSB',cnt(j=>j.status==='gate_out')],['ส่งแล้ว',cnt(j=>j.status==='delivered')]])
-    .map(k=>`<div class="kpi"><div class="k">${k[0]}</div><div class="v">${k[1]}</div></div>`).join('');
-  const chgNo={}, addNo={}; if(df&&viewing.rev){ (df.chg||[]).forEach(c=>chgNo[c.no]=c.txt); (df.add||[]).forEach(a=>addNo[a.no]=1); }
-  let html='', last=null;
-  const order=jobs.slice().sort((a,b)=>(a.prod_group||'').localeCompare(b.prod_group||'')||a.line_no-b.line_no);
-  REP_VIEW={plan:p, rev:viewing?viewing.rev:lastRev, old:!!viewing, jobs:order.filter(j=>!j.cancelled), chg:chgNo, add:addNo};   // รายงาน = ตรงกับที่เห็นบนจอ (ไม่รวมเที่ยวที่ตัดออก)
-  order.forEach(j=>{
-    if(j.prod_group!==last){ last=j.prod_group; const sum=live.filter(x=>x.prod_group===j.prod_group).reduce((s,x)=>s+Number(x.qty_kg||0),0);
-      html+=`<tr class="grp"><td colspan="10">หัวจ่าย ${esc(j.prod_group||'—')} · ${esc(GROUPS[j.prod_group]||'')} · รวม <span class="num">${fmt(sum)}</span> กก.</td></tr>`; }
-    const stc=j.status==='_snap'?(chgNo[j.line_no]!=null?`<span class="chip s-accepted">แก้ในฉบับนี้</span><span class="chg">${esc(chgNo[j.line_no])}</span>`:addNo[j.line_no]?'<span class="chip s-sent">เพิ่มในฉบับนี้</span>':'<span class="sub">—</span>')
-      :j.cancelled?'<span class="chip s-cx">ตัดออก</span>':(j.needs_ack&&j.status==='sent'?'<span class="chip s-accepted">แก้ไข · รอคนขับรับใบงานใหม่</span>':`<span class="chip s-${j.status}">${ST[j.status]||j.status}</span>`);
-    if(j.status==='_snap') j.change_txt='';
-    html+=`<tr class="${j.cancelled?'cx':''}"><td class="num">${j.line_no}</td>
-      <td class="cust">${esc(j.cust_name)}<small>${esc(j.cust_code)}</small></td><td>${esc(j.dest)}</td>
-      <td class="prod">${esc(j.prod_name)}<small>${esc(j.prod_code)}</small></td><td class="r num">${fmt(j.qty_kg)}</td><td>${esc(j.bill)}</td>
-      <td>${j.co?'<span class="co y">✓ มี</span>':'<span class="co n">✗</span>'}</td>
-      <td><span class="num">${esc(j.plate||'—')}</span> · ${esc(j.driver_name||'—')}</td>
-      <td>${stc}${j.change_txt?`<span class="chg">${esc(j.change_txt)}</span>`:''}</td><td>${esc(j.note||'—')}</td></tr>`;
-  });
-  $('rows').innerHTML=html||'<tr><td colspan="10" class="empty">แพลนนี้ไม่มีรายการ</td></tr>';
-  buildTicker(viewing?null:p, viewing?[]:live);
 }
-$('planSel').addEventListener('change',e=>{ $('panel').hidden=true; load(e.target.value); });
 
-/* ── อัปโหลด: อ่านไฟล์ FM-MK-04 ในเบราว์เซอร์ → preview → ยืนยัน → commit ── */
-function loadXLSX(){ return window.XLSX?Promise.resolve(window.XLSX):new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('โหลดตัวอ่าน Excel ไม่ได้ — ลองใหม่อีกครั้ง')); document.head.appendChild(s); }); }
-const cell=v=>String(v==null?'':v).trim();
-function parseFM(aoa){
-  const out=[]; let pend=[], dl='', ds='';
-  aoa.forEach(row=>{
-    const a=cell(row[0]), f=cell(row[5]);
-    const m=a.match(/วันที่\s*([\d\/]+).*ส่งสินค้า\s*วันที่\s*([\d\/]+)/); if(m){ dl=m[1]; ds=m[2]; return; }
-    const g=f.match(/รวม\s*จำนวนที่ต้องส่ง\s*(FG-[A-Z]+)/); if(g){ pend.forEach(r=>r.g=g[1]); pend=[]; return; }
-    if(/^\d+$/.test(a) && cell(row[1])){
-      const co=cell(row[11]);
-      const r={no:+a, code:cell(row[1]), cust:cell(row[2]), dest:cell(row[3]), pcode:cell(row[4]), prod:cell(row[5]),
-        qty:cell(row[7]), bill:cell(row[9]), plate:cell(row[10]), co:co==='✓'||co==='/'||co.toUpperCase()==='P',
-        note:[cell(row[13]),cell(row[14])].filter(Boolean).join(' · '), g:''};
-      out.push(r); pend.push(r);
-    }
-  });
-  return {rows:out, dl, ds};
+/* ── 📥 แผนแอดมิน ── */
+function adminPlanned(){   // admin_key → {n เที่ยว, ton}
+  const m={}; (DATA.jobs||[]).forEach(j=>{ if(j.cancelled||!j.admin_key) return; const x=m[j.admin_key]=m[j.admin_key]||{n:0,ton:0}; x.n++; x.ton+=tonOf(j.qty_text); }); return m;
 }
-async function onFile(e){
+const offTag=t=>/ยกเลิก|เลื่อน/.test(String(t||''));
+function tagHtml(t){ t=String(t||'').trim(); if(!t) return '';
+  const c=/ยกเลิก/.test(t)?'bad':/เลื่อน/.test(t)?'warn':/^\d{6,}$/.test(t)?'po':'info';
+  return `<span class="tag ${c}">${esc(c==='po'?'PO '+t:t)}</span>`; }
+function plannedHtml(r,x){
+  if(!x) return offTag(r.tag)?'<span class="sub">—</span>':'<span class="tag wait">ยังไม่ลง</span>';
+  if(r.qty_ton){ const full=x.ton>=r.qty_ton-0.0005;
+    return `<span class="tag ${full?'okk':'warn'}">${full?'✓ ครบ':'ลงแล้ว '+tons(x.ton)+'/'+tons(r.qty_ton)+' ตัน'} · ${x.n} เที่ยว</span>`; }
+  return `<span class="tag okk">✓ ${x.n} เที่ยว</span>`;
+}
+function renderAdmin(){
+  const d=DATA, a=d.admin, box=$('adminBox'), me=d.me, p=d.plan;
+  if(!d.sendDate){ box.innerHTML=`<div class="empty">ยังไม่มีแผน${me.canEdit?' — กด "⬆ อัปโหลดแผนแอดมิน" แล้วเลือกไฟล์ที่แอดมินส่งมา หรือ "📅 วันส่งใหม่" เพื่อกรอกเอง':''}</div>`; return; }
+  if(!a){ box.innerHTML=`<div class="sechd"><h2>📥 แผนแอดมิน</h2><span class="sub">วันส่งนี้ยังไม่มีไฟล์แผนแอดมิน${me.canEdit?' — อัปโหลดได้ หรือกด "+ เพิ่มเที่ยว" กรอกเองในตารางแผน':''}</span></div>`; return; }
+  const pl=adminPlanned(), rows=a.rows||[], df=a.diff||{}, chg={}, add={};
+  (df.chg||[]).forEach(c=>chg[c.key]=c.txt); if(a.rev) (df.add||[]).forEach(x=>add[x.key]=1);
+  const todo=rows.filter(r=>!pl[r.key]&&!offTag(r.tag)), done=rows.filter(r=>pl[r.key]).length;
+  const gone=(df.del||[]).filter(x=>pl[x.key]);
+  const ed=me.canEdit&&p&&!VIEWING;
+  let h=`<div class="sechd"><h2>📥 แผนแอดมิน</h2>
+    <span class="sub">${revName(a.rev)} · ${thTime(a.uploaded_at)} · ${esc(a.uploaded_by_name||'')}${a.file_name?' · '+esc(a.file_name):''}</span>
+    ${(d.adminRevs||[]).length>1?`<span class="sub" title="${esc(d.adminRevs.map(v=>revName(v.rev)+' '+thTime(v.uploaded_at)+(v.rev?' แก้ '+((v.diff||{}).chg||[]).length+' เพิ่ม '+((v.diff||{}).add||[]).length+' ตัด '+((v.diff||{}).del||[]).length:'')).join('\n'))}">· อัปโหลด ${d.adminRevs.length} ครั้ง</span>`:''}
+    <span class="tag ${todo.length?'wait':'okk'}">ลงแผนแล้ว ${done}/${rows.length} แถว</span>
+    <span class="sp">${ed&&todo.length?`<button type="button" class="btn sm" id="addAll">➕ ลงแผนทุกแถวที่ยังไม่ลง (${todo.length})</button>`:''}
+      <button type="button" class="btn sm" id="admTg" aria-expanded="${ADM_OPEN}">${ADM_OPEN?'▴ ซ่อน':'▾ แสดง'}รายการ</button></span></div>`;
+  if(a.rev&&((df.chg||[]).length||(df.add||[]).length||(df.del||[]).length))
+    h+=`<div class="anote">แผนแอดมิน ${revName(a.rev)} เปลี่ยนจากฉบับก่อน: แก้ ${(df.chg||[]).length} · เพิ่ม ${(df.add||[]).length} · ตัดออก ${(df.del||[]).length}${(df.del||[]).length?' ('+df.del.map(x=>esc(x.cust+' '+x.prod)).join(', ')+')':''}
+      ${gone.length?`<br><b>⚠️ ตัดออกจากแผนแอดมินแล้ว แต่ยังอยู่ในตารางแผน:</b> ${gone.map(x=>esc(x.cust+' '+x.prod)).join(', ')} — ตรวจแล้วยกเลิกเที่ยวเอง`:''}</div>`;
+  if(ADM_OPEN) h+=`<div class="tbl atbl"><table><thead><tr><th>#</th><th>บริษัท</th><th>สถานที่</th><th>ชนิดน้ำมัน</th><th class="r">จำนวน</th><th>บิล</th><th>สถานะ/PO</th><th>CO</th><th>เลขที่ SO</th><th class="r">ราคา</th><th>หมายเหตุ</th><th>เวลา</th><th>ตารางแผน</th><th></th></tr></thead><tbody>`
+    +rows.map((r,i)=>{ const x=pl[r.key], off=offTag(r.tag);
+      return `<tr class="${off?'off':''}${chg[r.key]!=null?' hl':''}${add[r.key]?' nw':''}"><td class="num">${r.no}</td>
+        <td class="cust">${esc(r.cust)}${add[r.key]?' <span class="tag info">ใหม่</span>':''}${chg[r.key]!=null?`<span class="chg">${esc(chg[r.key])}</span>`:''}</td>
+        <td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td>${esc(r.bill)}</td><td>${tagHtml(r.tag)}</td>
+        <td>${r.co?'<span class="co y">✓</span>':'<span class="co n">✗</span>'}</td><td class="num sm">${esc(r.so)}</td><td class="r num">${esc(r.price)}</td>
+        <td class="nt">${esc(r.note)}</td><td class="nt">${esc(r.time)}</td><td>${plannedHtml(r,x)}${off&&x?' <span class="tag bad">แอดมิน'+(/ยกเลิก/.test(r.tag)?'ยกเลิก':'เลื่อนส่ง')+'</span>':''}</td>
+        <td>${ed?`<button type="button" class="btn sm" data-add="${i}">+ ลงแผน</button>`:''}</td></tr>`; }).join('')+'</tbody></table></div>';
+  box.innerHTML=h;
+  $('admTg').onclick=()=>{ ADM_OPEN=!ADM_OPEN; try{ localStorage.setItem('bulk_adm_open',ADM_OPEN?'1':'0'); }catch(e){} renderAdmin(); };
+  if($('addAll')) $('addAll').onclick=()=>addAllAdmin(todo);
+  box.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>openTrip(null,preFromAdmin(rows[+b.dataset.add])));
+}
+function custMatch(name){
+  const n=nrm(name); if(!n) return '';
+  // ตรงตัวเท่านั้น (ชื่อ/ชื่อย่อที่เคยผูก) — เดาจากคำที่คล้ายกันพลาดได้ เช่น วันไทย ≠ วันไทยฟู้ดส์ · ไม่ตรง = ให้คนจัดรถเลือกเอง แล้วระบบจำชื่อย่อไว้
+  const c=(DATA.customers||[]).find(c=>nrm(c.cust_name)===n||(c.aliases||[]).some(a=>nrm(a)===n));
+  return c?c.cust_code:'';
+}
+function preFromAdmin(r){
+  const x=adminPlanned()[r.key]; let q=r.qty;
+  if(r.qty_ton&&x&&x.ton) q=String(Math.max(0,Math.round((r.qty_ton-x.ton)*1000)/1000));
+  const pick=/รับเอง/.test(r.place);
+  return {kind:pick?'pickup':'company', carrier:pick?'รับเอง':'', custName:r.cust, custCode:custMatch(r.cust), dest:r.place, prod:r.prod, qtyText:q, bill:r.bill||'A',
+    co:!!r.co, soNo:r.so, price:r.price, note:r.note, deliverTime:r.time, adminKey:r.key};
+}
+async function addAllAdmin(todo){
+  if(!(await askYes('ลงแผนทุกแถว',`สร้างเที่ยวในตารางแผน ${todo.length} เที่ยว (1 แถว = 1 เที่ยว · ยังไม่มีคนขับ) — แบ่งเที่ยว/จัดรถทีหลังได้ · ข้ามแถวที่ยกเลิก/เลื่อนส่ง`,'สร้าง '+todo.length+' เที่ยว'))) return;
+  let ok=0, bad=0;
+  for(const r of todo){ toast('กำลังสร้างเที่ยว '+(ok+bad+1)+'/'+todo.length+' …');
+    try{ const x=await postB({action:'saveTrip',planId:DATA.plan.id,trip:preFromAdmin(r)}); if(x.ok) ok++; else { bad++; console.warn(r.cust,x.error); } }catch(e){ bad++; } }
+  toast('สร้างเที่ยวแล้ว '+ok+' เที่ยว'+(bad?' · ไม่สำเร็จ '+bad:''),!!bad);
+  load(DATA.sendDate);
+}
+
+/* ── 🗂️ ตารางแผน ── */
+const PCOLS=16;
+function renderPlan(){
+  const d=DATA, p=d.plan, me=d.me;
+  $('thead').innerHTML=`<tr><th class="sel"><input type="checkbox" id="selAll" aria-label="เลือกทั้งหมด"></th><th>#</th><th>รอบ</th><th>บริษัท</th><th>สถานที่</th><th>ชนิดน้ำมัน</th><th class="r">จำนวน</th><th>บิล</th>
+    <th>ขนส่ง · คนขับ · ทะเบียน</th><th title="มีใบขนย้าย">CO</th><th>ปิด CO</th><th>โหลดแล้ว</th><th>เวลาส่ง</th><th>เลขที่ใบขนส่ง</th><th>สถานะ</th><th></th></tr>`;
+  if(!p){ $('planSub').textContent=''; $('kpis').innerHTML=''; $('planTools').innerHTML='';
+    $('rows').innerHTML=`<tr><td colspan="${PCOLS}" class="empty">ยังไม่มีตารางแผนของวันส่งนี้</td></tr>`; buildTicker(null,[]); REP_VIEW=null; return; }
+  let jobs=d.jobs, df=null;
+  if(VIEWING){ df=VIEWING.diff||{}; jobs=(VIEWING.rows||[]).map(r=>Object.assign({},r,{status:'_snap',cancelled:false})); }
+  const live=jobs.filter(j=>!j.cancelled), cnt=f=>live.filter(f).length;
+  const noDrv=j=>isCo(j)&&!j.driver_name;
+  $('planSub').textContent='โหลด '+thDate(p.load_date)+' · ส่ง '+thDate(p.send_date);
+  $('kpis').innerHTML=[['เที่ยว',live.length],['รวม (ตัน)',tons(live.reduce((s,j)=>s+tonOf(j.qty_text),0))],['รถบริษัท',cnt(isCo)],['รถนอก',cnt(j=>j.kind==='outside')],['ลูกค้ารับเอง',cnt(j=>j.kind==='pickup')],
+    ['ยังไม่จัดรถ',cnt(noDrv)],['ออกใบขนส่งแล้ว',cnt(j=>j.doc_no)]]
+    .concat(VIEWING?[]:[['รอคนขับรับ',cnt(j=>j.status==='sent')],['ออกจาก SSB',cnt(j=>j.status==='gate_out')],['ส่งแล้ว',cnt(j=>j.status==='delivered')]])
+    .map(k=>`<div class="kpi"><div class="k">${k[0]}</div><div class="v">${k[1]}</div></div>`).join('');
+  const F={all:['ทั้งหมด',()=>true],company:['รถบริษัท',isCo],outside:['รถนอก',j=>j.kind==='outside'],pickup:['รับเอง',j=>j.kind==='pickup'],nodrv:['ยังไม่จัดรถ',noDrv],nodoc:['ยังไม่ออกใบ',j=>!j.doc_no]};
+  if(!F[FILT]) FILT='all';
+  const ed=me.canEdit&&!VIEWING;
+  $('planTools').innerHTML=Object.keys(F).map(k=>`<button type="button" class="fchip${FILT===k?' on':''}" data-f="${k}" aria-pressed="${FILT===k}">${F[k][0]}<span class="n">${cnt(F[k][1])}</span></button>`).join('')
+    +(ed?`<span class="sp"><button type="button" class="btn sm" id="tAdd">+ เพิ่มเที่ยว</button>
+      <button type="button" class="btn sm" id="tPrint"${SEL.size?'':' disabled'}>🖨️ พิมพ์ใบขนส่ง${SEL.size?' ('+SEL.size+')':''}</button>
+      ${!p.dispatched_at?`<button type="button" class="btn sm pri" id="tDisp">📤 แจกงานรถบริษัท</button>`:''}
+      <button type="button" class="btn sm gold" id="tPub">✉️ ส่งแผนให้บัญชี</button></span>`:'')
+    +`<div class="docinfo sub">เลขที่ใบขนส่งถัดไป <b class="num">${esc(docNext())}</b>${d.doc&&d.doc.next==null?' (เดือนนี้ยังไม่เคยออก)':''}${me.isDev&&!VIEWING?' · <button type="button" class="lnk" id="tDoc">ตั้งเลขถัดไป</button>':''}</div>`;
+  $('planTools').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{ FILT=b.dataset.f; renderPlan(); });
+  if($('tAdd')) $('tAdd').onclick=()=>openTrip(null,null);
+  if($('tPrint')) $('tPrint').onclick=()=>printTrips([...SEL]);
+  if($('tDisp')) $('tDisp').onclick=askDispatch;
+  if($('tPub')) $('tPub').onclick=askPublish;
+  if($('tDoc')) $('tDoc').onclick=askDocNext;
+  const admin=d.admin, akeys={}; if(admin) (admin.rows||[]).forEach(r=>akeys[r.key]=r);
+  const chgNo={}, addNo={}; if(df&&VIEWING.rev){ (df.chg||[]).forEach(c=>chgNo[c.no]=c.txt); (df.add||[]).forEach(a=>addNo[a.no]=1); }
+  const shown=jobs.filter(j=>j.cancelled?FILT==='all':F[FILT][1](j)).sort((a,b)=>(a.cancelled?1:0)-(b.cancelled?1:0)||a.line_no-b.line_no);
+  const tg=(j,f,on)=>`<button type="button" class="tgl${on?' on':''}" data-flag="${f}" data-id="${j.id}" aria-pressed="${!!on}"${ed&&!j.cancelled?'':' disabled'} title="${f==='co'?'มีใบขนย้าย':f==='co_closed'?'ปิด CO แล้ว':'โหลดแล้ว'}">${on?'✓':''}</button>`;
+  $('rows').innerHTML=shown.map(j=>{
+    const st=j.status==='_snap'?(chgNo[j.line_no]!=null?`<span class="chip s-accepted">แก้ในฉบับนี้</span><span class="chg">${esc(chgNo[j.line_no])}</span>`:addNo[j.line_no]?'<span class="chip s-sent">เพิ่มในฉบับนี้</span>':'<span class="sub">—</span>')
+      :j.cancelled?'<span class="chip s-cx">ยกเลิก</span>'
+      :!isCo(j)?(j.loaded?'<span class="chip s-delivered">โหลดแล้ว</span>':'<span class="sub">—</span>')
+      :!j.driver_name?'<span class="chip s-new">รอจัดรถ</span>'
+      :(j.needs_ack&&j.status==='sent'?'<span class="chip s-accepted">แก้ไข · รอรับใหม่</span>':`<span class="chip s-${j.status}">${ST[j.status]||j.status}</span>`);
+    const ak=j.admin_key&&admin?akeys[j.admin_key]:null;
+    const warn=j.status==='_snap'||j.cancelled?'':(j.admin_key&&admin&&!ak?'<span class="ina">ไม่อยู่ในแผนแอดมินล่าสุด</span>':ak&&offTag(ak.tag)?'<span class="ina">แอดมิน: '+esc(ak.tag)+'</span>':'');
+    const who=isCo(j)?(j.driver_name?`${esc(j.driver_name)} · <span class="num">${esc(j.plate||'—')}</span>`:'<span class="sub">ยังไม่เลือกคนขับ</span>')
+      :`<span class="kd ${j.kind}">${esc(j.carrier||KIND[j.kind])}</span> ${esc(j.driver_name||'')}${j.plate?' · <span class="num">'+esc(j.plate)+'</span>':''}`;
+    return `<tr class="${j.cancelled?'cx':''}${SEL.has(j.id)?' picked':''}">
+      <td class="sel">${j.status==='_snap'||j.cancelled?'':`<input type="checkbox" data-sel="${j.id}"${SEL.has(j.id)?' checked':''} aria-label="เลือกเที่ยว #${j.line_no}">`}</td>
+      <td class="num">${j.line_no}</td><td class="num">${j.round_no||''}</td>
+      <td class="cust">${esc(j.cust_name)}${j.cust_code?`<small>${esc(j.cust_code)}</small>`:''}${warn}</td><td>${esc(j.dest)}</td>
+      <td class="prod">${esc(j.prod_name)}</td><td class="r num">${esc(qtyTx(j).replace(/ ตัน$/,''))}</td><td>${esc(j.bill)}</td>
+      <td>${isCo(j)?'<span class="kd company">บริษัท</span> ':''}${who}</td>
+      <td>${tg(j,'co',j.co)}</td><td>${tg(j,'co_closed',j.co_closed)}</td><td>${tg(j,'loaded',j.loaded)}</td>
+      <td class="nt">${esc(j.deliver_time||'')}</td><td>${j.doc_no?`<span class="docno">${esc(j.doc_no)}</span>${j.printed_at?'<small class="sub" style="display:block">พิมพ์ '+thTime(j.printed_at)+'</small>':''}`:'<span class="sub">—</span>'}</td>
+      <td>${st}${j.change_txt&&j.status!=='_snap'?`<span class="chg">${esc(j.change_txt)}</span>`:''}${j.note?`<small class="sub nt" style="display:block">📝 ${esc(j.note)}</small>`:''}</td>
+      <td>${j.status==='_snap'?'':`<button type="button" class="btn sm" data-ed="${j.id}" aria-label="${ed&&!j.cancelled?'แก้':'ดู'}เที่ยว #${j.line_no}">${ed&&!j.cancelled?'✎ แก้':'ดู'}</button>`}</td></tr>`;
+  }).join('')||`<tr><td colspan="${PCOLS}" class="empty">${jobs.length?'ไม่มีเที่ยวในตัวกรองนี้':'ยังไม่มีเที่ยว'+(ed?' — กด "+ ลงแผน" ที่แผนแอดมิน หรือ "+ เพิ่มเที่ยว"':'')}</td></tr>`;
+  const all=shown.filter(j=>!j.cancelled&&j.status!=='_snap');
+  $('selAll').checked=all.length>0&&all.every(j=>SEL.has(j.id)); $('selAll').disabled=!all.length;
+  $('selAll').onchange=e=>{ all.forEach(j=>e.target.checked?SEL.add(j.id):SEL.delete(j.id)); renderPlan(); };
+  REP_VIEW={plan:p, rev:VIEWING?VIEWING.rev:(d.revs.length?d.revs[d.revs.length-1].rev:null), old:!!VIEWING, jobs:live.slice().sort((a,b)=>a.line_no-b.line_no), chg:chgNo, add:addNo};
+  buildTicker(VIEWING?null:p, VIEWING?[]:live.filter(j=>isCo(j)&&j.driver_name));
+}
+$('rows').addEventListener('change',e=>{ const id=e.target.getAttribute&&e.target.getAttribute('data-sel'); if(id==null) return;
+  e.target.checked?SEL.add(+id):SEL.delete(+id); renderPlan(); });
+$('rows').addEventListener('click',async e=>{
+  const ed=e.target.closest('[data-ed]'); if(ed){ const j=DATA.jobs.find(x=>x.id===+ed.dataset.ed); if(j) openTrip(j,null); return; }
+  const f=e.target.closest('[data-flag]'); if(!f||f.disabled) return;
+  const j=DATA.jobs.find(x=>x.id===+f.dataset.id); if(!j) return;
+  const k=f.dataset.flag, v=!j[k]; f.disabled=true;
+  try{ const r=await postB({action:'flag',id:j.id,field:k,value:v});
+    if(r.ok){ Object.assign(j,r.trip); renderPlan(); }
+    else { toast(r.error||'บันทึกไม่สำเร็จ',true); f.disabled=false; }
+  }catch(err){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่',true); load(DATA.sendDate); }
+});
+$('planSel').addEventListener('change',e=>load(e.target.value));
+
+/* ── ✎ เพิ่ม/แก้เที่ยว ── */
+const F5_DEF={coa:false,coNo:'',bags:'',bagTo:'',cond:'',n2:false,flush:false,flushTxt:'',leaveBy:'',arriveBy:'',prevManual:false,prev:['','','']};
+function openTrip(j,pre){
+  const d=DATA, me=d.me, p=d.plan;
+  if(!p){ toast('ยังไม่มีแพลนของวันส่งนี้ — กด "📅 วันส่งใหม่" ก่อน',true); return; }
+  const ro=!me.canEdit||!!(j&&j.cancelled);
+  const t=j?{id:j.id,kind:j.kind||'company',custName:j.cust_name||'',custCode:j.cust_code||'',dest:j.dest||'',prod:j.prod_name||'',
+      qtyText:j.qty_text||(j.qty_kg?String(j.qty_kg/1000):''),bill:j.bill||'',co:!!j.co,coClosed:!!j.co_closed,loaded:!!j.loaded,soNo:j.so_no||'',price:j.price||'',
+      roundNo:j.round_no||'',deliverTime:j.deliver_time||'',note:j.note||'',carrier:j.carrier||'',driverName:j.driver_name||'',plate:j.plate||'',adminKey:j.admin_key||''}
+    :Object.assign({kind:'company',custName:'',custCode:'',dest:'',prod:'',qtyText:'',bill:'A',co:false,coClosed:false,loaded:false,soNo:'',price:'',roundNo:'',deliverTime:'',note:'',
+      carrier:'',driverName:'',plate:'',adminKey:''},pre||{});
+  const f5=Object.assign({},F5_DEF,(j&&j.form5)||{}); f5.prev=[0,1,2].map(i=>(f5.prev||[])[i]||'');
+  const dv=t.kind==='company'&&t.driverName?(d.drivers.find(x=>x.name===t.driverName)||null):null;
+  let m=$('dlgTrip'); if(!m){ m=document.createElement('div'); m.id='dlgTrip'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; document.removeEventListener('keydown',onKey); };
+  const onKey=e=>{ if(e.key==='Escape') close(); };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  const o=(v,l,sel)=>`<option value="${esc(v)}"${sel?' selected':''}>${esc(l)}</option>`;
+  const drvOpts=o('','— ยังไม่เลือกคนขับ —',!dv)+d.drivers.map(x=>o(x.code,x.name+' · '+(x.plate||'ไม่มีทะเบียน')+(x.linked?(x.active?'':' · LINE ยังไม่ Active'):' · ยังไม่ผูก LINE'),dv&&dv.code===x.code)).join('');
+  const custOpts=o('','— ไม่ผูกรหัส —',!t.custCode)+(d.customers||[]).map(c=>o(c.cust_code,c.cust_name+' ('+c.cust_code+')',c.cust_code===t.custCode)).join('');
+  const dis=ro?' disabled':'';
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="tT">
+    <div class="dlghd"><div><div class="sub">ส่ง ${thDate(p.send_date)} · โหลด ${thDate(p.load_date)}${j?' · เที่ยว #'+j.line_no:''}${j&&j.doc_no?' · ใบขนส่ง '+esc(j.doc_no):''}</div>
+      <h2 id="tT" style="color:#fff">${j?(ro?'ดูเที่ยว':'แก้เที่ยว'):'เพิ่มเที่ยว'}${t.adminKey?' <span style="font-size:12px;font-weight:500;opacity:.85">· จากแผนแอดมิน</span>':''}</h2></div>
+      <button type="button" class="dlgx" aria-label="ปิด" id="tX">✕</button></div>
+    <div class="dlgbd">
+      <div class="seg" role="radiogroup" aria-label="ประเภทรถ" id="tKind">${Object.keys(KIND).map(k=>`<button type="button" role="radio" data-k="${k}" aria-checked="${t.kind===k}" class="${t.kind===k?'on':''}"${dis}>${KIND[k]}</button>`).join('')}</div>
+      <div class="sub" id="tKindHint"></div>
+      <div class="tf">
+        <label>บริษัท (ลูกค้า) *<input id="tCust" list="tCustL" value="${esc(t.custName)}"${dis}><datalist id="tCustL">${(d.customers||[]).flatMap(c=>[c.cust_name].concat(c.aliases||[])).filter((v,i,a)=>v&&a.indexOf(v)===i).map(v=>`<option value="${esc(v)}">`).join('')}</datalist></label>
+        <label>รหัสลูกค้า <small>(ใช้เช็คอินถึงลูกค้าอัตโนมัติ)</small><select id="tCode"${dis}>${custOpts}</select></label>
+        <label>สถานที่จัดส่ง<input id="tDest" value="${esc(t.dest)}"${dis}></label>
+        <label>ชนิดน้ำมัน *<input id="tProd" value="${esc(t.prod)}"${dis}></label>
+        <label>จำนวน *<input id="tQty" value="${esc(t.qtyText)}" placeholder="30 = ตัน · หรือ 10 ถัง / 40,000 ลิตร"${dis}><small class="hint" id="tQtyH"></small></label>
+        <label>บิล<input id="tBill" value="${esc(t.bill)}"${dis}></label>
+        <label>รอบ<input id="tRound" type="number" min="1" max="20" inputmode="numeric" value="${esc(t.roundNo)}"${dis}></label>
+        <label>เวลาส่งสินค้า<input id="tTime" value="${esc(t.deliverTime)}" placeholder="ถึง 08.00 น."${dis}></label>
+        <label>เลขที่ SO<input id="tSo" value="${esc(t.soNo)}"${dis}></label>
+        <label>ราคา<input id="tPrice" value="${esc(t.price)}"${dis}></label>
+        <label class="full">หมายเหตุ<input id="tNote" value="${esc(t.note)}"${dis}></label>
+        <div class="full ckrow"><label class="ck"><input type="checkbox" id="tCo"${t.co?' checked':''}${dis}> มีใบขนย้าย (CO)</label>
+          <label class="ck"><input type="checkbox" id="tCoC"${t.coClosed?' checked':''}${dis}> ปิด CO แล้ว</label>
+          <label class="ck"><input type="checkbox" id="tLoaded"${t.loaded?' checked':''}${dis}> โหลดแล้ว</label></div>
+      </div>
+      <fieldset class="fs"><legend>🚛 รถ / คนขับ</legend><div class="tf">
+        <label class="kco">คนขับ (กลุ่ม Bulk)<select id="tDrv"${dis}>${drvOpts}</select></label>
+        <label class="kno">บริษัทขนส่ง<input id="tCar" list="tCarL" value="${esc(t.kind==='company'?'':t.carrier)}"${dis}><datalist id="tCarL">${(d.carriers||[]).filter(c=>c!=='บริษัท').map(c=>`<option value="${esc(c)}">`).join('')}</datalist></label>
+        <label class="kno">ชื่อคนขับ<input id="tDName" value="${esc(t.kind==='company'?'':t.driverName)}"${dis}></label>
+        <label>ทะเบียนรถ<input id="tPlate" value="${esc(t.plate)}" placeholder="85-4549/5322"${dis}></label>
+      </div></fieldset>
+      <details class="fs" open><summary>📄 ใบขนส่งน้ำมัน FM-TR-01 (ใบ 5 ส่วน)</summary><div class="tf" style="margin-top:10px">
+        <label>ออกจากโรงงานก่อนเวลา<input id="fLeave" value="${esc(f5.leaveBy)}"${dis}></label>
+        <label>ส่งถึงลูกค้าก่อนเวลา<input id="fArr" value="${esc(f5.arriveBy)}" placeholder="เว้นว่าง = ใช้เวลาส่งสินค้า"${dis}></label>
+        <div class="full ckrow"><span class="lbx">เอกสารแนบ</span><label class="ck"><input type="checkbox" id="fCoa"${f5.coa?' checked':''}${dis}> ใบ COA</label>
+          <label class="ck">ใบ CO (ตามช่อง CO) เลขที่ <input id="fCoNo" class="mini" value="${esc(f5.coNo)}"${dis}></label>
+          <label class="ck">ถุงกรอง <input id="fBags" class="mini" style="width:56px" value="${esc(f5.bags)}"${dis}> ใบ · ผู้รับ <input id="fBagTo" class="mini" value="${esc(f5.bagTo)}"${dis}></label></div>
+        <div class="full ckrow"><span class="lbx">สภาพรถ</span>
+          <label class="ck"><input type="radio" name="fCond" value="ok"${f5.cond==='ok'?' checked':''}${dis}> ปกติ ไม่เป็นสนิม สีไม่ลอกร่อน</label>
+          <label class="ck"><input type="radio" name="fCond" value="rust"${f5.cond==='rust'?' checked':''}${dis}> เป็นสนิม สีลอกร่อน</label>
+          <label class="ck"><input type="radio" name="fCond" value=""${!f5.cond?' checked':''}${dis}> ไม่ติ๊ก (ให้ติ๊กมือ)</label></div>
+        <div class="full ckrow"><label class="ck"><input type="checkbox" id="fN2"${f5.n2?' checked':''}${dis}> เติมไนโตรเจน</label>
+          <label class="ck"><input type="checkbox" id="fFlush"${f5.flush?' checked':''}${dis}> ฟลัสล้างวิ่ง <input id="fFlushT" class="mini" value="${esc(f5.flushTxt)}" placeholder="PO วันไทย"${dis}></label></div>
+        <div class="full"><div class="lbx">ชนิดสินค้าที่บรรทุกย้อนหลัง (3 ครั้งล่าสุดของทะเบียนนี้)</div>
+          <div id="fPrevAuto" class="prevl sub">—</div>
+          <label class="ck"><input type="checkbox" id="fPrevM"${f5.prevManual?' checked':''}${dis}> แก้เอง</label>
+          <div id="fPrevBox" class="ckrow"${f5.prevManual?'':' hidden'}>${[0,1,2].map(i=>`<label class="ck">${i+1}. <input class="mini" id="fPrev${i}" value="${esc(f5.prev[i])}"${dis}></label>`).join('')}</div></div>
+      </div></details>
+    </div>
+    <div class="dlgft">${j&&!ro?`<button type="button" class="btn danger" id="tDel" style="margin-right:auto">${j.status==='new'&&!j.doc_no&&!j.sent_at?'ลบเที่ยว':'ยกเลิกเที่ยว'}</button>`:''}
+      <button type="button" class="btn" id="tNo">ปิด</button>
+      ${ro?'':`<button type="button" class="btn" id="tSave">บันทึก</button><button type="button" class="btn pri" id="tSaveP">บันทึก + พิมพ์ใบขนส่ง</button>`}</div></div>`;
+  m.hidden=false; document.addEventListener('keydown',onKey);
+  $('tX').onclick=close; $('tNo').onclick=close;
+  let kind=t.kind;
+  const KH={company:'รถบริษัท = แจกงานให้คนขับ Bulk (การ์ดไลน์ · ฟอร์มคนขับ · คิดค่าแรง)'+(p.dispatched_at?' · แพลนนี้แจกงานแล้ว → บันทึกแล้วส่งการ์ดให้คนขับทันที':''),
+    outside:'รถนอก = ลงแผน + ใบขนส่ง · เก็บไว้คิดค่าขนส่ง (ไม่ส่งไลน์ ไม่คิดค่าแรง)',pickup:'ลูกค้ารับเอง = ออกใบขนส่ง (ใบ 5 ส่วน) อย่างเดียว'};
+  const applyKind=()=>{ m.querySelectorAll('#tKind button').forEach(b=>{ const on=b.dataset.k===kind; b.classList.toggle('on',on); b.setAttribute('aria-checked',on); });
+    m.querySelectorAll('.kco').forEach(x=>x.hidden=kind!=='company'); m.querySelectorAll('.kno').forEach(x=>x.hidden=kind==='company');
+    $('tKindHint').textContent=KH[kind];
+    if(kind==='pickup'&&!$('tCar').value) $('tCar').value='รับเอง'; if(kind==='outside'&&$('tCar').value==='รับเอง') $('tCar').value=''; };
+  m.querySelectorAll('#tKind button').forEach(b=>b.onclick=()=>{ kind=b.dataset.k; applyKind(); });
+  applyKind();
+  const qh=()=>{ const v=$('tQty').value.trim(), n=tonOf(v); $('tQtyH').textContent=!v?'':n?'= '+tons(n)+' ตัน ('+fmt(n*1000)+' กก.)':'ไม่ใช่ตัน — เก็บตามที่เขียน'; };
+  $('tQty').oninput=qh; qh();
+  $('tCust').addEventListener('change',()=>{ const c=custMatch($('tCust').value); if(c&&!$('tCode').value) $('tCode').value=c; });
+  let lastAuto=dv?dv.plate:'';
+  $('tDrv').onchange=()=>{ const x=d.drivers.find(y=>y.code===$('tDrv').value); const pl=$('tPlate');
+    if(x&&(!pl.value||pl.value===lastAuto)){ pl.value=x.plate||''; lastAuto=pl.value; prevLoad(); } };
+  $('fPrevM').onchange=()=>{ $('fPrevBox').hidden=!$('fPrevM').checked; if($('fPrevM').checked&&PREV_AUTO.length&&![0,1,2].some(i=>$('fPrev'+i).value)) PREV_AUTO.slice(0,3).forEach((x,i)=>$('fPrev'+i).value=x.prod||''); };
+  let PREV_AUTO=[], pt=0;
+  const prevLoad=()=>{ clearTimeout(pt); pt=setTimeout(async()=>{ const pl=$('tPlate')&&$('tPlate').value.trim(); const box=$('fPrevAuto'); if(!box) return;
+    if(!pl){ box.textContent='ใส่ทะเบียนรถก่อน'; PREV_AUTO=[]; return; }
+    box.textContent='กำลังหา…';
+    try{ const r=await fetch(BOARD+'?action=prevCargo&userId='+encodeURIComponent(MY_UID)+'&plate='+encodeURIComponent(pl)+(j&&j.doc_no?'&doc='+j.doc_no:'')).then(x=>x.json());
+      if(!$('fPrevAuto')) return;
+      PREV_AUTO=r.ok?r.rows||[]:[];
+      box.innerHTML=r.ok?(PREV_AUTO.length?PREV_AUTO.slice(0,3).map((x,i)=>`${i+1}. <b>${esc(x.prod)}</b> <span class="num">${esc(x.doc_no)}</span>${x.ship_date?' · '+thDate(x.ship_date):''}${x.cust?' · '+esc(x.cust):''}`).join('<br>'):'ไม่พบประวัติของทะเบียน '+esc(r.key||pl)+' — ติ๊ก "แก้เอง" แล้วกรอก หรือเว้นว่างให้เขียนมือ'):esc(r.error||'หาไม่สำเร็จ');
+    }catch(e){ box.textContent='หาไม่สำเร็จ'; } },350); };
+  $('tPlate').addEventListener('input',prevLoad); prevLoad();
+  const collect=()=>({ id:j?j.id:undefined, kind, adminKey:t.adminKey, custName:$('tCust').value.trim(), custCode:$('tCode').value, dest:$('tDest').value.trim(), prod:$('tProd').value.trim(),
+    qtyText:$('tQty').value.trim(), bill:$('tBill').value.trim(), roundNo:$('tRound').value, deliverTime:$('tTime').value.trim(), soNo:$('tSo').value.trim(), price:$('tPrice').value.trim(),
+    note:$('tNote').value.trim(), co:$('tCo').checked, coClosed:$('tCoC').checked, loaded:$('tLoaded').checked,
+    driverCode:kind==='company'?$('tDrv').value:'', carrier:kind==='company'?'บริษัท':$('tCar').value.trim(), driverName:kind==='company'?'':$('tDName').value.trim(), plate:$('tPlate').value.trim(),
+    form5:{coa:$('fCoa').checked, coNo:$('fCoNo').value.trim(), bags:$('fBags').value.trim(), bagTo:$('fBagTo').value.trim(), cond:(m.querySelector('[name=fCond]:checked')||{}).value||'',
+      n2:$('fN2').checked, flush:$('fFlush').checked, flushTxt:$('fFlushT').value.trim(), leaveBy:$('fLeave').value.trim(), arriveBy:$('fArr').value.trim(),
+      prevManual:$('fPrevM').checked, prev:[0,1,2].map(i=>$('fPrev'+i).value.trim())} });
+  const save=async(andPrint,btn)=>{
+    const body=collect(); const h=btn.textContent; btn.disabled=true; btn.textContent='กำลังบันทึก…';
+    try{ const r=await postB({action:'saveTrip',planId:p.id,trip:body});
+      if(!r.ok){ toast(r.error||'บันทึกไม่สำเร็จ',true); btn.disabled=false; btn.textContent=h; return; }
+      const l=r.line; const lt=l&&!l.error&&(l.pushed||l.skipped)?(l.pushed?' · ส่งการ์ดให้คนขับแล้ว':'')+(l.skipped?' · คนขับยังไม่ Active ใน LINE (ไม่ได้ส่งการ์ด)':''):l&&l.error?' · ⚠️ ส่งการ์ดไลน์ไม่สำเร็จ':'';
+      toast('บันทึกเที่ยว #'+r.trip.line_no+' แล้ว'+lt); close();
+      await load(DATA.sendDate);
+      if(andPrint) printTrips([r.trip.id]);
+    }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); btn.disabled=false; btn.textContent=h; load(DATA.sendDate); }
+  };
+  if($('tSave')) $('tSave').onclick=()=>save(false,$('tSave'));
+  if($('tSaveP')) $('tSaveP').onclick=()=>save(true,$('tSaveP'));
+  if($('tDel')) $('tDel').onclick=async()=>{
+    const hard=j.status==='new'&&!j.doc_no&&!j.sent_at;
+    if(!(await askYes(hard?'ลบเที่ยว #'+j.line_no:'ยกเลิกเที่ยว #'+j.line_no,(hard?'ลบออกจากตารางแผน':'เที่ยวนี้จะขึ้นว่ายกเลิก (เก็บเลขที่ใบขนส่งไว้)')+(isCo(j)&&j.driver_uid&&['sent','accepted','weighed'].indexOf(j.status)>=0?' · คนขับจะได้การ์ดยกเลิกงาน':''),hard?'ลบ':'ยกเลิกเที่ยว'))) return;
+    try{ const r=await postB({action:'deleteTrip',id:j.id}); if(!r.ok){ toast(r.error||'ไม่สำเร็จ',true); return; }
+      toast(r.deleted?'ลบเที่ยว #'+j.line_no+' แล้ว':'ยกเลิกเที่ยว #'+j.line_no+' แล้ว'); SEL.delete(j.id); close(); load(DATA.sendDate);
+    }catch(e){ toast('ไม่แน่ใจว่าสำเร็จ — โหลดข้อมูลใหม่',true); load(DATA.sendDate); } };
+  (ro?$('tNo'):$('tCust')).focus();
+}
+
+/* ── อัปโหลดแผนแอดมิน (Excel ที่แอดมินส่ง) ──
+   A1 แผนการส่งมอบ SSB · A2 "รายการโหลดสินค้าประจำ วันที่ 18 พฤศจิกายน 69 ส่งสินค้าวันที่ 19 พฤศจิกายน 69" · หัวตาราง "บริษัท"
+   A บริษัท · B สถานที่ · C ชนิดน้ำมัน · D จำนวน · E บิล · F สถานะ (Update/ยกเลิก/เลื่อนส่ง/เลข PO) · G CO (P=มี O=ไม่มี) · H SO · I ราคา · J หมายเหตุ · K เวลา */
+function loadXLSX(){ return window.XLSX?Promise.resolve(window.XLSX):new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'; s.onload=()=>res(window.XLSX); s.onerror=()=>rej(new Error('โหลดตัวอ่าน Excel ไม่ได้ — ลองใหม่อีกครั้ง')); document.head.appendChild(s); }); }
+const cell=v=>String(v==null?'':v).replace(/\s+/g,' ').trim();
+const TH_M=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const TH_MS=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+function thIso(dd,mm,yy){
+  let mo=+mm; if(!(mo>=1)){ const s=String(mm).trim(); mo=TH_M.indexOf(s)+1||TH_MS.indexOf(s)+1||TH_MS.map(x=>x.replace(/\./g,'')).indexOf(s.replace(/\./g,''))+1; }
+  let y=+yy; if(y<100) y+=2500; if(y>2400) y-=543;
+  return mo&&+dd&&y?y+'-'+('0'+mo).slice(-2)+'-'+('0'+(+dd)).slice(-2):'';
+}
+function parseAdminPlan(aoa){
+  let hdr=-1, dl='', ds='';
+  const D='(\\d{1,2})\\s*([ก-๙.]+|\\d{1,2})\\s*[/\\s]?\\s*(\\d{2,4})';
+  aoa.forEach((row,i)=>{ const a=cell(row[0]);
+    const m=a.replace(/\//g,' ').match(new RegExp('วันที่\\s*'+D+'.*?ส่งสินค้า\\s*วันที่\\s*'+D));
+    if(m&&!ds){ dl=thIso(m[1],m[2],m[3]); ds=thIso(m[4],m[5],m[6]); }
+    if(hdr<0&&a==='บริษัท') hdr=i; });
+  const rows=[];
+  if(hdr>=0) aoa.slice(hdr+1).forEach(r=>{ const cust=cell(r[0]); if(!cust||/^รวม/.test(cust)) return;
+    rows.push({cust, place:cell(r[1]), prod:cell(r[2]), qty:cell(r[3]), bill:cell(r[4]), tag:cell(r[5]), co:/^[P✓/]$/i.test(cell(r[6])), so:cell(r[7]), price:cell(r[8]), note:cell(r[9]), time:cell(r[10])}); });
+  return {rows, dl, ds, hdr};
+}
+async function onAdminFile(e){
   const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
   toast('กำลังอ่านไฟล์ '+f.name+' …');
   try{
     const buf=await f.arrayBuffer();
     const X=await loadXLSX(), wb=X.read(buf,{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
-    const p=parseFM(X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
-    if(!p.rows.length){ toast('ไม่พบรายการในไฟล์ — ต้องเป็นรูปแบบ FM-MK-04 (แผนการส่งมอบ SSB)',true); return; }
-    PENDING={sendDate:p.ds, loadDate:p.dl, fileName:f.name, rows:p.rows};
-    // ไฟล์ต้นฉบับ (ส่งตอนยืนยันเท่านั้น → เก็บไว้ + แนบเมลบัญชี) · เกิน 8MB = ไม่แนบ
-    PFILE=null; if(buf.byteLength<=8*1024*1024){ const u=new Uint8Array(buf); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); PFILE=btoa(s); }
-    const pv=await post(Object.assign({action:'preview'},PENDING));
-    showPreview(pv);
+    const p=parseAdminPlan(X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
+    if(p.hdr<0||!p.rows.length){ toast('ไม่พบรายการในไฟล์ — ต้องเป็นแผนการส่งมอบจากแอดมิน (มีหัวตาราง "บริษัท")',true); return; }
+    let b64=''; if(buf.byteLength<=8*1024*1024){ const u=new Uint8Array(buf); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); b64=btoa(s); }
+    confirmAdmin(p,f.name,b64);
   }catch(err){ toast(String(err.message||err),true); }
 }
-function showPreview(pv){
-  const P=$('panel'); P.hidden=false; P.className='panel';
-  if(!pv.ok){ P.className='panel bad'; P.innerHTML=`<div class="txt">⛔ ${esc(pv.error||'อ่านไฟล์ไม่สำเร็จ')}</div><div class="acts"><button class="btn" type="button" onclick="closePanel()">ปิด</button></div>`; return; }
-  const li=[].concat(
-    pv.chg.map(c=>`<li>แก้ #${c.no} ${esc(c.cust)} — ${esc(c.txt)}</li>`),
-    pv.add.map(a=>`<li>${pv.isNew?'':'เพิ่ม '}#${a.no} ${esc(a.cust)} · ${fmt(a.qty)} กก. · ${esc(a.driver||'ไม่พบคนขับ')}</li>`),
-    pv.del.map(x=>`<li>ตัดออก #${x.no} ${esc(x.cust)}</li>`)).join('');
-  const blocked=pv.missing.length>0||pv.loadedGone.length>0||pv.unchanged;
-  let warn='';
-  if(pv.missing.length) warn+=`<div style="color:var(--bad);font-weight:600;margin-top:6px">⛔ แพลนต้องมีคนขับครบก่อน — ทะเบียนไม่พบในตารางคนขับ:</div><ul>${pv.missing.map(m=>`<li>#${m.no} ${esc(m.cust)} · ทะเบียน "${esc(m.plate||'ว่าง')}"</li>`).join('')}</ul>แก้ใน SAP แล้วอัปโหลดใหม่`;
-  if(pv.loadedGone.length) warn+=`<div style="color:var(--bad);font-weight:600;margin-top:6px">⛔ ไฟล์ตัดรายการที่โหลดแล้วออก (#${pv.loadedGone.join(', #')}) — ตรวจไฟล์อีกครั้ง</div>`;
-  if(pv.unchanged) warn+=`<div style="font-weight:600;margin-top:6px">ไฟล์นี้เหมือนฉบับล่าสุด — ไม่มีอะไรเปลี่ยน</div>`;
-  if(pv.inactive.length) warn+=`<div class="warnd" style="margin-top:6px">⚠️ คนขับยังไม่ Active ใน LINE ${pv.inactive.length} คน (${esc([...new Set(pv.inactive.map(x=>x.name))].join(', '))}) — จะยังไม่ได้รับการ์ดจนกว่าจะเปิดใช้งาน</div>`;
-  const head=pv.isNew?`🗓️ <b>แพลนใหม่ · ส่ง ${thDate(pv.sendDate)}</b> (ฉบับแรก) — ${pv.total} เที่ยว`
-    :`<b>${esc(pv.revName)} · ส่ง ${thDate(pv.sendDate)}</b> — แก้ ${pv.chg.length} · เพิ่ม ${pv.add.length} · ตัดออก ${pv.del.length}`;
-  const after=pv.dispatched?' · แจกงานแล้ว → ส่ง<b>ใบงานใหม่/แก้ไข/ยกเลิก</b>ให้คนขับอัตโนมัติ':' · ยังไม่แจกงาน (กดแจกงานเมื่อพร้อม)';
-  P.className='panel'+(blocked?' bad':'');
-  const tb=Array.isArray(pv.table)&&pv.table.length;
-  P.innerHTML=`<div class="txt"${tb?' style="flex-basis:100%"':''}>${head}${tb?pvTable(pv):`<ul>${li}</ul>`}${warn}${blocked?'':`<div style="margin-top:4px">กดยืนยัน → บันทึกเป็น <b>${esc(pv.revName)}</b>${after}</div>`}</div>
-    <div class="acts" style="margin-left:auto"><button class="btn" type="button" onclick="closePanel()">${blocked?'ปิด':'ยกเลิก'}</button>${blocked?'':'<button class="btn gold" type="button" id="cYes">ยืนยันใช้ไฟล์นี้</button>'}</div>`;
-  if(tb&&$('pvOnly')) $('pvOnly').onchange=e=>{ $('pvBody').innerHTML=pvRows(pv,e.target.checked); };
-  if(!blocked) $('cYes').onclick=doCommit;
+function confirmAdmin(p,name,b64){
+  let m=$('dlgAdm'); if(!m){ m=document.createElement('div'); m.id='dlgAdm'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  const ex=DATA.dates.indexOf(p.ds)>=0;
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="aT">
+    <div class="dlghd"><div><div class="sub">${esc(name)}</div><h2 id="aT" style="color:#fff">⬆ อัปโหลดแผนแอดมิน · ${p.rows.length} แถว</h2></div><button type="button" class="dlgx" aria-label="ปิด" id="aX">✕</button></div>
+    <div class="dlgbd">
+      <div class="tf"><label>วันที่ส่งสินค้า *<input type="date" id="aSend" value="${p.ds}"></label><label>วันที่โหลด<input type="date" id="aLoad" value="${p.dl}"></label></div>
+      <div class="sub" id="aHint">${p.ds?(ex?'วันส่งนี้มีแผนอยู่แล้ว → บันทึกเป็นแผนแอดมินฉบับใหม่ (เทียบกับฉบับก่อนให้) · ตารางแผนเดิมไม่ถูกแก้':'วันส่งใหม่ → สร้างแพลนให้'):'อ่านวันที่ในไฟล์ไม่ได้ — เลือกวันที่ส่งเอง'}</div>
+      <div class="pvwrap"><table><thead><tr><th>บริษัท</th><th>สถานที่</th><th>ชนิดน้ำมัน</th><th class="r">จำนวน</th><th>บิล</th><th>สถานะ/PO</th><th>CO</th><th>SO</th><th>หมายเหตุ</th><th>เวลา</th></tr></thead><tbody>
+        ${p.rows.map(r=>`<tr class="${offTag(r.tag)?'same':''}"><td class="cust">${esc(r.cust)}</td><td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td>${esc(r.bill)}</td><td>${tagHtml(r.tag)}</td><td>${r.co?'✓':'✗'}</td><td class="num">${esc(r.so)}</td><td class="nt">${esc(r.note)}</td><td class="nt">${esc(r.time)}</td></tr>`).join('')}</tbody></table></div>
+    </div>
+    <div class="dlgft"><button type="button" class="btn" id="aNo">ยกเลิก</button><button type="button" class="btn gold" id="aYes">บันทึกแผนแอดมิน</button></div></div>`;
+  m.hidden=false; $('aX').onclick=close; $('aNo').onclick=close; $('aYes').focus();
+  $('aSend').onchange=()=>{ const v=$('aSend').value; $('aHint').textContent=DATA.dates.indexOf(v)>=0?'วันส่งนี้มีแผนอยู่แล้ว → บันทึกเป็นแผนแอดมินฉบับใหม่':'วันส่งใหม่ → สร้างแพลนให้'; };
+  $('aYes').onclick=async()=>{ const b=$('aYes'), sd=$('aSend').value; if(!sd){ toast('เลือกวันที่ส่งสินค้าก่อน',true); return; }
+    b.disabled=true; b.textContent='กำลังบันทึก…';
+    try{ const r=await postB({action:'uploadAdmin',sendDate:sd,loadDate:$('aLoad').value,fileName:name,rows:p.rows,fileB64:b64});
+      if(!r.ok){ toast(r.error||'บันทึกไม่สำเร็จ',true); b.disabled=false; b.textContent='บันทึกแผนแอดมิน'; return; }
+      const df=r.diff||{}; close();
+      toast('บันทึกแผนแอดมิน '+revName(r.rev)+' · '+r.rows+' แถว'+(r.rev?' · แก้ '+df.chg.length+' เพิ่ม '+df.add.length+' ตัด '+df.del.length:''));
+      ADM_OPEN=true; load(sd);
+    }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); close(); load(sd); } };
 }
-/* ตารางพรีวิว: แยกหัวจ่ายเหมือนตารางหลัก · ฉบับแก้ = ป้าย เพิ่ม/แก้/ตัดออก + ไฮไลต์ช่องที่เปลี่ยน */
-const PV_COLS={cust:['cust_name','cust_code'],dest:['dest'],prod:['prod_name','prod_code','prod_group'],qty:['qty_kg'],bill:['bill'],co:['co'],plate:['plate']};
-function pvTable(pv){
-  const t=pv.table, live=t.filter(r=>r.kind!=='del'), isRev=!pv.isNew;
-  const drv=new Set(live.filter(r=>r.driver).map(r=>r.driver)).size;
-  const kp=[['เที่ยว',live.length],['รวม (กก.)',fmt(live.reduce((s,r)=>s+Number(r.qty||0),0))],['คนขับ',drv+' คน']];
-  if(isRev) kp.push(['แก้',pv.chg.length],['เพิ่ม',pv.add.length],['ตัดออก',pv.del.length]);
-  if(pv.missing.length) kp.push(['ไม่พบทะเบียน',pv.missing.length]);
-  const changed=pv.chg.length+pv.add.length+pv.del.length;
-  const only=isRev&&changed>0;
-  return `<div class="pvsum">${kp.map(k=>`<div class="kpi"><div class="k">${k[0]}</div><div class="v">${k[1]}</div></div>`).join('')}</div>`
-    +(isRev?`<div class="pvtools"><label><input type="checkbox" id="pvOnly"${only?' checked':''}> แสดงเฉพาะรายการที่เปลี่ยน</label><span class="sub">ช่องสีส้ม = ค่าที่เปลี่ยนจากฉบับก่อน</span></div>`:'')
-    +`<div class="pvwrap"><table><thead><tr>${isRev?'<th>เปลี่ยน</th>':''}<th>#</th><th>ลูกค้า</th><th>สถานที่ส่ง</th><th>สินค้า</th><th class="r">จำนวน (กก.)</th><th>บิล</th><th>ใบขนย้าย</th><th>ทะเบียน</th><th>คนขับ</th><th>หมายเหตุ</th></tr></thead>
-      <tbody id="pvBody">${pvRows(pv,only)}</tbody></table></div>`;
+function askDay(){
+  let m=$('dlgDay'); if(!m){ m=document.createElement('div'); m.id='dlgDay'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  const t=new Date(Date.now()+7*3600e3+864e5).toISOString().slice(0,10), l=new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
+  m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="dT" style="max-width:440px">
+    <div class="dlghd"><h2 id="dT" style="color:#fff">📅 วันส่งใหม่</h2><button type="button" class="dlgx" aria-label="ปิด" id="dX">✕</button></div>
+    <div class="dlgbd"><div class="sub">สร้างตารางแผนเปล่า แล้วกด "+ เพิ่มเที่ยว" กรอกเอง (ไม่มีไฟล์แผนแอดมิน)</div>
+      <div class="tf"><label>วันที่ส่งสินค้า *<input type="date" id="dSend" value="${t}"></label><label>วันที่โหลด<input type="date" id="dLoad" value="${l}"></label></div></div>
+    <div class="dlgft"><button type="button" class="btn" id="dNo">ยกเลิก</button><button type="button" class="btn pri" id="dYes">สร้าง</button></div></div>`;
+  m.hidden=false; $('dX').onclick=close; $('dNo').onclick=close; $('dSend').focus();
+  $('dYes').onclick=async()=>{ const sd=$('dSend').value; if(!sd){ toast('เลือกวันที่ส่ง',true); return; }
+    try{ const r=await postB({action:'newPlan',sendDate:sd,loadDate:$('dLoad').value}); if(!r.ok){ toast(r.error||'ไม่สำเร็จ',true); return; } close(); load(sd); }
+    catch(e){ toast('ไม่สำเร็จ — ลองใหม่',true); } };
 }
-function pvRows(pv,onlyChanged){
-  const isRev=!pv.isNew, ncol=isRev?11:10;
-  const rows=pv.table.filter(r=>!onlyChanged||r.kind!=='same').slice().sort((a,b)=>(a.g||'').localeCompare(b.g||'')||a.no-b.no);
-  if(!rows.length) return `<tr><td colspan="${ncol}" class="empty">ไม่มีรายการที่เปลี่ยน</td></tr>`;
-  const KN={add:'เพิ่ม',chg:'แก้',del:'ตัดออก',same:'เหมือนเดิม'};
-  let html='', last=null;
-  rows.forEach(r=>{
-    if(r.g!==last){ last=r.g; const sum=pv.table.filter(x=>x.g===r.g&&x.kind!=='del').reduce((s,x)=>s+Number(x.qty||0),0);
-      html+=`<tr class="grp"><td colspan="${ncol}">หัวจ่าย ${esc(r.g||'—')} · ${esc(GROUPS[r.g]||'')} · รวม <span class="num">${fmt(sum)}</span> กก.</td></tr>`; }
-    const hl=c=>r.kind==='chg'&&(PV_COLS[c]||[]).some(k=>r.cf.indexOf(k)>=0)?' hl':'';
-    const cls=[r.missing?'bad':'',r.kind==='del'?'cx':'',isRev&&r.kind==='same'?'same':''].filter(Boolean).join(' ');
-    const drvCell=r.missing?'<span style="color:var(--bad);font-weight:700">⛔ ไม่พบทะเบียนนี้</span>':esc(r.driver||'—')+(r.inactive?'<span class="ina">ยังไม่ Active</span>':'');
-    html+=`<tr class="${cls}">${isRev?`<td><span class="k k-${r.kind}">${KN[r.kind]}</span>${r.kind==='chg'&&r.txt?`<span class="why">${esc(r.txt)}</span>`:''}</td>`:''}
-      <td class="num">${r.no}</td>
-      <td class="cust${hl('cust')}">${esc(r.cust)}<small>${esc(r.cust_code)}</small></td><td class="${hl('dest')}">${esc(r.dest)}</td>
-      <td class="prod${hl('prod')}">${esc(r.prod)}<small>${esc(r.prod_code)}</small></td><td class="r num${hl('qty')}">${fmt(r.qty)}</td>
-      <td class="${hl('bill')}">${esc(r.bill)}</td><td class="${hl('co')}">${r.co?'<span class="co y">✓ มี</span>':'<span class="co n">✗</span>'}</td>
-      <td class="num pl${hl('plate')}">${esc(r.plate||'—').replace(/\s*,\s*/g,'<br>')}</td><td class="${hl('plate')}">${drvCell}</td><td>${esc(r.note||'—')}</td></tr>`;
-  });
-  return html;
+function askDocNext(){
+  let m=$('dlgDoc'); if(!m){ m=document.createElement('div'); m.id='dlgDoc'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  const dc=DATA.doc||{};
+  m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="nT" style="max-width:440px">
+    <div class="dlghd"><h2 id="nT" style="color:#fff">ตั้งเลขที่ใบขนส่งถัดไป (DEV)</h2><button type="button" class="dlgx" aria-label="ปิด" id="nX">✕</button></div>
+    <div class="dlgbd"><div class="sub">เลขที่ใบ = ปปดด + 4 หลัก (เดือนนี้ ${esc(dc.yymm||'')}) · ระบบข้ามเลขที่มีในประวัติ/ออกไปแล้วให้เอง</div>
+      <div class="tf"><label>เลข 4 หลักถัดไป<input type="number" id="nNo" min="1" max="9999" value="${dc.next||1}"></label><label>ตัวอย่าง<input id="nEx" disabled value="${esc(docNext())}"></label></div></div>
+    <div class="dlgft"><button type="button" class="btn" id="nNo2">ยกเลิก</button><button type="button" class="btn pri" id="nYes">บันทึก</button></div></div>`;
+  m.hidden=false; $('nX').onclick=close; $('nNo2').onclick=close;
+  $('nNo').oninput=()=>{ $('nEx').value=(dc.yymm||'')+('000'+($('nNo').value||1)).slice(-4); };
+  $('nYes').onclick=async()=>{ try{ const r=await postB({action:'setDocNext',yymm:dc.yymm,next:$('nNo').value}); if(!r.ok){ toast(r.error||'ไม่สำเร็จ',true); return; }
+    toast('เลขที่ใบถัดไป = '+r.sample); close(); load(DATA.sendDate); }catch(e){ toast('ไม่สำเร็จ — ลองใหม่',true); } };
 }
+
 // ผลส่ง LINE จาก Edge (line = {admins, drivers, skipped, pushed, failed} / {error})
 function lineTxt(l,withAdmins){
   if(!l) return 'LINE: ไม่มีข้อมูล';
   if(l.error) return 'LINE ส่งไม่สำเร็จ';
   const a=[]; if(withAdmins) a.push('แพลน → บัญชี/พันตัน '+(l.admins||0)+' คน');
-  a.push('ใบงาน → คนขับ '+(l.drivers||0)+' คน');
+  if(l.drivers!=null) a.push('ใบงาน → คนขับ '+(l.drivers||0)+' คน');
   if(l.skipped) a.push(l.skipped+' เที่ยวไม่ได้ส่ง (คนขับยังไม่ Active)');
   if(l.failed) a.push('ส่งพลาด '+l.failed);
   return 'LINE: '+a.join(' · ');
 }
-function closePanel(){ $('panel').hidden=true; PENDING=null; }
-async function doCommit(){
-  if(!PENDING) return; const b=$('cYes'); b.disabled=true; b.textContent='กำลังบันทึก…';
-  try{
-    const d=await post(Object.assign({action:'commit',fileB64:PFILE||''},PENDING));
-    if(!d.ok){ showPreview(Object.assign({},d,{ok:true})); toast(d.error||'บันทึกไม่สำเร็จ',true); return; }
-    // ลูกค้าใหม่ในแพลน → ระบบเพิ่มเข้า "📍 ลูกค้า Bulk" ให้เอง (2026-10-19) · ผูกหมุดได้ = รอยืนยันหมุด · ไม่ได้ = ต้องกดแก้ไข
-    const nc=d.newCustomers||[], ncNo=nc.filter(x=>!x.pin).length;
-    const ncTxt=nc.length?' · ลูกค้าใหม่ '+nc.length+' ราย เพิ่มในหน้าลูกค้า Bulk แล้ว'+(ncNo?' ('+ncNo+' รายหาหมุด DTC ไม่เจอ ต้องกดแก้ไข)':' — รอยืนยันหมุด'):'';
-    closePanel(); toast('บันทึก '+d.revName+' แล้ว · '+lineTxt(d.line,true)+' · อีเมลบัญชีกำลังส่ง'+(d.file?' (แนบไฟล์ Excel)':'')+ncTxt);
-    setTimeout(()=>{ if(DATA&&DATA.plan&&DATA.plan.send_date===d.sendDate&&!VIEW) load(d.sendDate); },25000);   // อัปเดตสถานะอีเมล
-    load(d.sendDate);
-  }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(); }
-}
 
-/* ── แจกงานทั้งแพลน ── */
+/* ── 📤 แจกงาน (เฉพาะรถบริษัทที่มีคนขับ) ── */
 function askDispatch(){
-  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled);
-  const by={}; live.forEach(j=>{ (by[j.driver_name]=by[j.driver_name]||[]).push(j); });
-  const total=live.reduce((s,j)=>s+Number(j.qty_kg||0),0);
-  // หน้าต่างยืนยันเด้งด้านบนจอ (เดิมเป็นแถบใต้ตาราง ต้องเลื่อนลงไปหา) · 2026-10-15
+  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled), co=live.filter(isCo), go=co.filter(j=>j.driver_name), wait=co.filter(j=>!j.driver_name);
+  const by={}; go.forEach(j=>{ (by[j.driver_name]=by[j.driver_name]||[]).push(j); });
   let m=$('dlgDisp'); if(!m){ m=document.createElement('div'); m.id='dlgDisp'; m.className='dlg'; document.body.appendChild(m); }
   const close=()=>{ m.hidden=true; m.innerHTML=''; };
   m.onmousedown=e=>{ if(e.target===m) close(); };
   m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="dlgT">
-    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">📤 แจกงานทั้งแพลน</div><h2 id="dlgT" style="color:#fff">ส่ง ${thDate(p.send_date)} · ${revName(p.rev||0)}</h2></div>
+    <div class="dlghd"><div><div class="sub">📤 แจกงานรถบริษัท</div><h2 id="dlgT" style="color:#fff">ส่ง ${thDate(p.send_date)}</h2></div>
       <button type="button" class="dlgx" aria-label="ปิด" id="dNo2">✕</button></div>
     <div class="dlgbd">
-      <div class="kpis" style="padding:0;border:0"><div class="kpi"><div class="k">เที่ยว</div><div class="v">${live.length}</div></div>
-        <div class="kpi"><div class="k">รวม (กก.)</div><div class="v">${fmt(total)}</div></div><div class="kpi"><div class="k">คนขับ</div><div class="v">${Object.keys(by).length}</div></div></div>
-      <div class="dlglist">${Object.keys(by).map(k=>`<div><b>${esc(k||'—')} <span class="sub" style="font-weight:400">· ${by[k].length} เที่ยว</span></b>
+      <div class="kpis" style="padding:0;border:0"><div class="kpi"><div class="k">แจกตอนนี้</div><div class="v">${go.length}</div></div><div class="kpi"><div class="k">คนขับ</div><div class="v">${Object.keys(by).length}</div></div>
+        <div class="kpi"><div class="k">รอจัดรถ</div><div class="v">${wait.length}</div></div><div class="kpi"><div class="k">รถนอก/รับเอง</div><div class="v">${live.length-co.length}</div></div></div>
+      ${go.length?`<div class="dlglist">${Object.keys(by).map(k=>`<div><b>${esc(k)} <span class="sub" style="font-weight:400">· ${by[k].length} เที่ยว</span></b>
         <span class="dlgplate">🚛 ${[...new Set(by[k].map(j=>String(j.plate||'—').replace(/\s*[,/]\s*/g,' / ')))].map(esc).join(' · ')}</span>
-        ${by[k].map(j=>`<span class="dlgtrip"><span class="num">#${j.line_no}</span> <b>${esc(j.dest||'—')}</b> · ${esc(j.cust_name||'')}<span class="num"> · ${fmt(j.qty_kg)} กก.</span></span>`).join('')}</div>`).join('')}</div>
-      <div class="sub">คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที (กด "รับงาน" ในการ์ด) · หลังจากนี้อัปโหลดฉบับใหม่ = ส่งใบงานใหม่/แก้ไข/ยกเลิกให้อัตโนมัติ</div>
+        ${by[k].map(j=>`<span class="dlgtrip"><span class="num">#${j.line_no}</span> <b>${esc(j.dest||'—')}</b> · ${esc(j.cust_name||'')}<span class="num"> · ${esc(qtyTx(j))}</span></span>`).join('')}</div>`).join('')}</div>`
+        :'<div class="sub" style="color:var(--bad)">ยังไม่มีเที่ยวรถบริษัทที่เลือกคนขับ — เลือกคนขับก่อน</div>'}
+      <div class="sub">คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที${wait.length?' · เที่ยวที่รอจัดรถ ใส่คนขับทีหลังแล้วบันทึก = ส่งการ์ดให้เอง':''} · หลังแจกงาน แก้เที่ยว = ส่งการ์ดแก้ไข/ยกเลิกให้อัตโนมัติ${DATA.revs.length?'':' · ✉️ ส่งแผนฉบับแรกให้บัญชี/พันตันพร้อมกัน'}</div>
     </div>
-    <div class="dlgft"><button class="btn" type="button" id="dNo">ยกเลิก</button><button class="btn gold" type="button" id="dYes">ยืนยันแจกงาน ${live.length} เที่ยว</button></div></div>`;
-  m.hidden=false; $('dNo').onclick=close; $('dNo2').onclick=close; $('dYes').focus();
+    <div class="dlgft"><button class="btn" type="button" id="dNo">ยกเลิก</button><button class="btn gold" type="button" id="dYes"${go.length?'':' disabled'}>ยืนยันแจกงาน ${go.length} เที่ยว</button></div></div>`;
+  m.hidden=false; $('dNo').onclick=close; $('dNo2').onclick=close; (go.length?$('dYes'):$('dNo')).focus();
   $('dYes').onclick=async()=>{ const b=$('dYes'); b.disabled=true; b.textContent='กำลังแจก…';
     try{ const d=await post({action:'dispatch',planId:p.id});
-      if(d.ok){ close(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)); load(p.send_date); }
+      if(d.ok){ close(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)+(d.publish&&d.publish.ok?' · ส่งแผน'+d.publish.revName+'ให้บัญชีแล้ว':'')); load(p.send_date); }
       else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
     }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
+}
+/* ── ✉️ ส่งแผนให้บัญชี/พันตัน (snapshot ตารางแผน → ฉบับใหม่ + การ์ด LINE + อีเมล) ── */
+async function askPublish(){
+  const p=DATA.plan, n=DATA.revs.length?DATA.revs[DATA.revs.length-1].rev+1:0, live=DATA.jobs.filter(j=>!j.cancelled);
+  if(!live.length){ toast('ตารางแผนยังไม่มีเที่ยว',true); return; }
+  if(!(await askYes('ส่งแผนให้บัญชี · '+revName(n),'ส่งตารางแผน '+live.length+' เที่ยว ให้บัญชี Bulk + แอดมินพันตัน (การ์ด LINE + อีเมล)'+(n?' · มีป้ายบอกสิ่งที่เปลี่ยนจากฉบับก่อน':''),'ส่งแผน'))) return;
+  try{ const r=await post({action:'publish',planId:p.id});
+    if(r.ok) toast('ส่งแผน '+r.revName+' แล้ว · '+r.trips+' เที่ยว'+(r.line&&!r.line.error?' · LINE บัญชี/พันตัน '+(r.line.admins||0)+' คน':'')+' · อีเมลกำลังส่ง');
+    else if(r.same&&(await askYes('แผนไม่เปลี่ยน',r.error+' — ส่งซ้ำอีกครั้งไหม','ส่งซ้ำ'))){ const r2=await post({action:'publish',planId:p.id,force:true}); toast(r2.ok?'ส่งแผน '+r2.revName+' แล้ว':r2.error||'ไม่สำเร็จ',!r2.ok); }
+    else if(!r.same) toast(r.error||'ส่งไม่สำเร็จ',true);
+    setTimeout(()=>{ if(DATA&&DATA.plan&&DATA.plan.id===p.id) load(p.send_date); },20000);
+    load(p.send_date);
+  }catch(e){ toast('ไม่แน่ใจว่าส่งสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); }
+}
+
+/* ── 🖨️ ใบขนส่งน้ำมัน FM-TR-01 Rev.05 (ใบ 5 ส่วน · A4 ตั้ง 2 หน้า/เที่ยว) ──
+   หน้า 1: ส่วนที่ 1 ฝ่ายขนส่ง (ระบบกรอก) · ส่วนที่ 2 ป้อมยาม · ส่วนที่ 3 ห้องชั่ง (เขียนมือ)
+   หน้า 2: ส่วนที่ 4 ผลิต/โหลด · 5 QC · 6 บัญชี · 7 ผู้บันทึก (เขียนมือ) */
+async function printTrips(ids){
+  ids=(ids||[]).filter(Boolean); if(!ids.length){ toast('ติ๊กเลือกเที่ยวที่จะพิมพ์ก่อน',true); return; }
+  const js=DATA.jobs.filter(j=>ids.indexOf(j.id)>=0&&!j.cancelled), noDoc=js.filter(j=>!j.doc_no).length;
+  if(noDoc&&!(await askYes('ออกเลขที่ใบขนส่ง',noDoc+' เที่ยวยังไม่มีเลขที่ใบ — ระบบจะออกเลขใหม่ให้ (เริ่ม '+docNext()+') · ออกแล้วเลขผูกกับเที่ยวนั้น พิมพ์ซ้ำได้เลขเดิม','ออกเลข + พิมพ์'))) return;
+  toast('กำลังเตรียมใบขนส่ง '+js.length+' ใบ…');
+  try{
+    const r=await postB({action:'printData',ids});
+    if(!r.ok){ toast(r.error||'เตรียมใบขนส่งไม่สำเร็จ',true); return; }
+    $('printArea').innerHTML=r.jobs.map(j=>fmTr01(j,r.plan||DATA.plan,(r.prev||{})[j.id]||[],r.by)).join('');
+    if(r.issued&&r.issued.length) toast('ออกเลขที่ใบ '+r.issued.join(', '));
+    await (document.fonts&&document.fonts.ready||Promise.resolve());
+    setTimeout(()=>{ window.print(); load(DATA.sendDate); },250);
+  }catch(e){ toast('ไม่แน่ใจว่าออกเลขสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(DATA.sendDate); }
+}
+function fmTr01(j,pl,prev,by){
+  const f=Object.assign({},F5_DEF,j.form5||{}), e=esc, now=new Date(), hm=p2(now.getHours())+':'+p2(now.getMinutes());
+  const pv=f.prevManual?(f.prev||[]):prev.map(x=>x.prod), p3=[0,1,2].map(i=>pv[i]||'');
+  const X=on=>`<span class="xb">${on?'✓':''}</span>`, U=(v,w)=>`<span class="uv"${w?` style="min-width:${w}mm"`:''}>${e(v)||'&nbsp;'}</span>`, D=w=>`<span class="dt" style="width:${w}mm"></span>`;
+  const qt=String(j.qty_text||'').trim(), isT=tonOf(qt)>0&&!/^\s*[\d.,]+\s*(ถัง|ลิตร|ตู้|กก|kg)/i.test(qt);
+  const qv=qt?(isT?qt.replace(/\s*ตัน\s*/,' ').trim():qt):tons((j.qty_kg||0)/1000);
+  const FOOT='FM-TR-01 Rev.05 ประกาศใช้วันที่ 21 กุมภาพันธ์ 2569';
+  return `<section class="fm"><div class="fbox">
+  <div class="frow fhead"><div class="fco"><div class="fname">บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด</div><div class="flogo">SSB</div>
+      <div class="ftitle"><b>ใบขนส่งน้ำมัน</b><b>ส่วนที่ 1 สำหรับฝ่ายขนส่ง</b></div></div>
+    <table class="fdoc"><tr><th>เลขที่เอกสาร</th><td class="dno">${e(j.doc_no||'')}</td></tr><tr><th>ออกจากโรงงานก่อนเวลา</th><td>${e(f.leaveBy)}</td></tr><tr><th>ส่งถึงลูกค้าก่อนเวลา</th><td>${e(f.arriveBy||j.deliver_time||'')}</td></tr></table></div>
+  <div class="fsec s1">
+    <div class="fl c"><b>ชนิดน้ำมัน</b> ${U(j.prod_name,60)}</div>
+    <div class="fl"><b>ชื่อลูกค้า</b> ${U(j.cust_name,52)} <b class="bill">${e(j.bill||'')}</b> <b>สถานที่จัดส่ง</b> ${U(j.dest,34)} <b>จำนวนที่ต้องเติม</b> ${U(qv,18)} ${isT||!qt?'ตัน':''}</div>
+    <div class="fl"><span>วันที่ส่งสินค้า</span> ${U(thDate(pl.send_date),24)} <span class="ml">เอกสารแนบ</span> ${X(f.coa)} ใบ Certificate of Analysis (COA.) ${X(j.co)} ใบ CO ${f.coNo?U(f.coNo,26):D(26)}</div>
+    <div class="fl ind">${X(!!f.bags)} ถุงกรองจำนวน ${f.bags?U(f.bags,8):D(8)} ใบ ${f.bagTo?U(f.bagTo,40):D(40)} ผู้รับ</div>
+    <div class="fl"><span>บริษัทขนส่ง</span> ${U(j.carrier||'',36)} <span>ทะเบียนรถ</span> ${U(j.plate||'',38)} <span>ชื่อคนขับ</span> ${U(j.driver_name||'',42)}</div>
+    <div class="fl"><span>ผู้สั่งจ่าย</span> ${U(by||'',40)} <span>วันที่</span> ${U(thDate(pl.load_date||pl.send_date),26)} <span>เวลา</span> ${U(hm,14)} น.</div>
+  </div>
+  <div class="fsec s1b"><div class="fck">
+      <div>${X(f.cond==='ok')} สภาพรถปกติ ไม่เป็นสนิม สีไม่ลอกร่อน</div><div>${X(f.cond==='rust')} สภาพรถเป็นสนิม สีลอกร่อน</div>
+      <div>${X(f.n2)} เติมไนโตรเจน</div><div>${X(f.flush)} ฟลัสล้างวิ่ง ${e(f.flushTxt||'')}</div></div>
+    <div class="fsig"><div class="sg">ลงชื่อ${D(56)}ผู้บันทึก</div>
+      <div class="fprev"><b>ชนิดสินค้า ที่บรรทุกย้อนหลัง</b>${p3.map((x,i)=>`<div><span>${i+1}</span>${x?e(x):D(46)}</div>`).join('')}</div></div></div>
+  <div class="fsec"><div class="fst">ส่วนที่ 2 สำหรับป้อมยาม</div>
+    <div class="fl">วันที่รับเอกสาร${D(40)} เวลา${D(40)} ผู้รับเอกสาร${D(40)}</div>
+    <div class="fl"><u>ตรวจสอบรถภายนอก</u></div>
+    <div class="fl ind2">${X(false)} ไม่มีถังน้ำทั้งภายในและภายนอกรถขนส่ง <span class="ml">${X(false)} ไม่มีผู้ติดตาม</span></div>
+    <div class="fl">ผู้ตรวจสอบ${D(44)} วันที่${D(44)} เวลา${D(40)}</div>
+    <div class="fl">วันที่เรียกรถเข้าเติมน้ำมัน${D(26)} เวลา${D(44)} ผู้แจ้ง${D(42)}</div>
+    <div class="fl">วันที่รถออกจากป้อมยาม${D(30)} เวลา${D(44)} ผู้รับคืนเอกสาร${D(34)}</div></div>
+  <div class="fsec last"><div class="fst">ส่วนที่ 3 สำหรับห้องชั่ง</div>
+    <div class="fl c">เวลารถเข้า${D(40)} เวลารถออก${D(40)} รวมเวลา${D(34)}</div>
+    <div class="fl">น้ำหนักรถเข้า${D(32)} กก. น้ำหนักรถออก${D(32)} กก. น้ำหนักสุทธิ${D(38)} กก.</div>
+    <div class="fl">เลขที่ใบชั่ง${D(26)} ชื่อผู้ชั่ง${D(30)} ซีลทั้งหมด${D(14)} ตัว เลขที่ตีซีล${D(40)}</div></div>
+  </div></section>
+  <section class="fm"><div class="ftop"><b>มีต่อด้านหลัง</b><span>${FOOT}</span></div><div class="fbox">
+  <div class="frow fhead2"><div class="fco2"><div class="fname">บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด</div><b>ใบขนส่งน้ำมัน (ต่อ)</b></div>
+    <div class="fside"><div class="fbx">เวลาโหลดไม่เกิน 1.30 นาที</div><div>ชื่อลูกค้า <b class="uv">${e(j.cust_name||'')}</b></div></div></div>
+  <div class="fsec"><div class="fst c">ส่วนที่ 4 สำหรับฝ่ายผลิตและโหลดสินค้า</div>
+    <div class="f4"><div><div><u><b>ตรวจเช็ครถน้ำมัน</b></u></div>
+      ${['ความสะอาดรถภายนอก','ความสะอาดภายใน TANK','สภาพและความสะอาดซีลฝาปิด','สภาพและความสะอาดหม้อกรอง','ความสะอาดสายยางโหลดน้ำมัน'].map(x=>`<div class="ci">${X(false)} ${x}</div>`).join('')}
+      <div class="ci">${X(false)} ความสะอาดท่อโหลดน้ำมัน &nbsp;เดนหน้าท่อ${D(12)} ถัง${D(16)}kg.</div>
+      <div class="ci">${X(false)} สภาพและความสะอาดของวาล์ว เลขที่ซีล${D(40)}</div>
+      <div class="ci">${X(false)} ปราศจากสัตว์พาหะ</div><div class="ci">${X(false)} ตรวจสอบเศษลวดซีลบน TANK</div></div>
+      <div><div><u><b>โหลดน้ำมันจาก TANK</b></u></div><table class="ftank"><tr><th>RPO</th><th>PO (MIX)</th><th>RPS</th><th>ROL</th><th>PFAD</th><th>อื่นๆ</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></div></div>
+    <div class="fl">ลงชื่อผู้ตรวจสอบ${D(30)} เวลาเรียกเก็บแล็ป${D(36)} ผู้รับแจ้ง${D(50)}</div>
+    <div class="fl">หมายเหตุ${D(50)} ตรวจเช็คการติดซีลที่ฝาถังและวาล์วน้ำมัน &nbsp;เวลาตีซีล${D(36)}</div>
+    <div class="fl">${D(60)} ${X(false)} เรียบร้อย ${X(false)} ไม่เรียบร้อย &nbsp;เวลาปล่อยรถ${D(40)}</div>
+    <div class="fl">ผู้ถ่ายน้ำมัน${D(56)} <span class="ml">วันที่${D(14)}/${D(14)}/${D(14)}</span></div></div>
+  <div class="fsec"><div class="frow fst2"><b>ส่วนที่ 5 สำหรับฝ่ายตรวจสอบคุณภาพ</b><b class="fbx2">เวลาทำแลปไม่เกิน 15 นาที</b></div>
+    <div class="fl">เวลาเก็บตัวอย่าง${D(34)} ผู้เก็บตัวอย่าง${D(34)} เดรนหน้าท่อ${D(30)}กก.</div>
+    <div class="fl"><b>ผลทดสอบคุณภาพ &nbsp; Test report no.</b>${D(40)} <b>อ้างอิง : ตารางบันทึกผลวิเคราะห์น้ำมันขายออก FM-QC-27</b></div>
+    <div class="fl">ผู้ตรวจสอบ${D(40)} วันที่${D(12)}/${D(12)}/${D(12)} เวลาบันทึก${D(40)}</div></div>
+  <div class="fsec"><div class="fst">ส่วนที่ 6 สำหรับฝ่ายบัญชี</div>
+    <div class="fl ind3">เวลารับเอกสาร${D(40)} ผู้รับเอกสาร${D(50)}</div>
+    <div class="fl">เลขที่ใบส่งของ${D(30)} เลขที่ใบชั่ง${D(40)} ผู้จัดทำ${D(50)}</div>
+    <div class="fl ind3">ผู้รับใบส่งของ${D(40)} เวลารับใบส่งของ${D(44)}</div></div>
+  <div class="fsec last"><div class="fst">ส่วนที่ 7 สำหรับฝ่ายผู้บันทึกลงในคอมพิวเตอร์</div>
+    <div class="fl ind">วันที่รับเอกสาร${D(34)} เวลาที่รับเอกสาร${D(26)} ผู้บันทึก${D(40)}</div></div>
+  </div><div class="ffoot">${FOOT}</div></section>`;
 }
 
 /* ── 📍 ลูกค้า Bulk · 2026-10-15 ──
@@ -845,7 +1306,7 @@ function buildTicker(p,live){
   const sum=[['เที่ยวทั้งหมด',live.length]].concat(Object.keys(TK_ST).map(s=>[TK_ST[s][0],cnt(s)]).filter((x,i)=>i===0||x[1]))
     .map((x,i)=>`<span class="tk-item tk-sum"><span class="tk-sumlb">${esc(x[0])}</span><span class="tk-val">${x[1]}</span>${i===0?'':'<span class="tk-u">เที่ยว</span>'}</span>`).join('');
   const trip=j=>`<span class="tk-item tk-trip" data-id="${j.id}" tabindex="0"><span class="tk-code">#${j.line_no}</span><span>${esc(j.driver_name||'—')}</span><span class="tk-code">${esc(String(j.plate||'').split(/\s*[,/]\s*/)[0])}</span>
-    <span class="tk-val">${fmt(j.qty_kg)}</span><span class="tk-u">กก.</span>${tkSt(j.needs_ack&&j.status==='sent'?'sent':j.status)}${j.status==='gate_out'&&j.gate_out_at?`<span class="tk-code">${thTime(j.gate_out_at)}</span>`:''}</span>`;
+    <span class="tk-val">${esc(qtyTx(j))}</span>${tkSt(j.needs_ack&&j.status==='sent'?'sent':j.status)}${j.status==='gate_out'&&j.gate_out_at?`<span class="tk-code">${thTime(j.gate_out_at)}</span>`:''}</span>`;
   const out=live.filter(j=>j.status==='gate_out'||j.status==='delivered'), wg=live.filter(j=>j.status==='weighed'), rest=live.filter(j=>['gate_out','delivered','weighed'].indexOf(j.status)<0);
   let html=sum, n=sum.split('tk-item').length-1+live.length;
   if(out.length) html+=tkSep('ออกจาก SSB แล้ว '+out.length+' เที่ยว')+out.map(trip).join('');
@@ -860,7 +1321,7 @@ function buildTicker(p,live){
   if(!box.__tip){ box.__tip=true;   // ชี้/โฟกัสเที่ยว → กล่องบอกส่งที่ไหน (ผูกครั้งเดียว)
     const show=(el,x,y)=>{ const j=TK_JOBS[el.dataset.id]; if(!j) return; const t=$('tkTip');
       t.innerHTML=`<b>#${j.line_no} · ${esc(j.cust_name||'—')}</b>
-        <div><span>ส่งที่</span>${esc(j.dest||'—')}</div><div><span>สินค้า</span>${esc(j.prod_name||'—')} · <b>${fmt(j.qty_kg)} กก.</b></div>
+        <div><span>ส่งที่</span>${esc(j.dest||'—')}</div><div><span>สินค้า</span>${esc(j.prod_name||'—')} · <b>${esc(qtyTx(j))}</b></div>
         <div><span>คนขับ</span>${esc(j.driver_name||'—')} · ${esc(j.plate||'—')}</div>
         <div><span>บิล</span>${esc(j.bill||'—')} · ใบขนย้าย ${j.co?'<b style="color:var(--ok)">✓ มี</b>':'<b style="color:var(--bad)">✗ ไม่มี</b>'}</div>
         ${j.note?`<div><span>หมายเหตุ</span>${esc(j.note)}</div>`:''}`;
@@ -893,32 +1354,31 @@ function repSave(blob,name){ const a=document.createElement('a'); a.href=URL.cre
   setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast('ออกไฟล์แล้ว: '+name); }
 function bulkReport(){
   const v=REP_VIEW; if(!v||!v.plan) return;
-  const p=v.plan, rn=revName(v.rev), rows=v.jobs;
-  const total=rows.reduce((s,j)=>s+Number(j.qty_kg||0),0), drv=new Set(rows.map(j=>j.driver_name)).size, nco=rows.filter(j=>j.co).length;
+  const p=v.plan, rn=v.rev==null?'ยังไม่ส่งบัญชี':revName(v.rev), rows=v.jobs.slice().sort((a,b)=>String(a.prod_name||'').localeCompare(String(b.prod_name||''))||a.line_no-b.line_no);
+  const total=rows.reduce((s,j)=>s+tonOf(j.qty_text),0), co=rows.filter(isCo), nco=rows.filter(j=>j.co).length;
+  const drv=new Set(co.filter(j=>j.driver_name).map(j=>j.driver_name)).size;
   const stTx=j=>v.old?(v.chg[j.line_no]!=null?'แก้ในฉบับนี้':v.add[j.line_no]?'เพิ่มในฉบับนี้':'—')
-    :(j.needs_ack&&j.status==='sent'?'แก้ไข · รอรับใหม่':(ST[j.status]||j.status||''));
+    :!isCo(j)?(j.loaded?'โหลดแล้ว':KIND[j.kind]||''):!j.driver_name?'รอจัดรถ':(j.needs_ack&&j.status==='sent'?'แก้ไข · รอรับใหม่':(ST[j.status]||j.status||''));
   docReportPick({
-    title:'แผนการส่งมอบ SSB · ส่ง '+thDate(p.send_date)+' · '+rn+(v.old?' (ฉบับย้อนหลัง)':''),
-    file:'แผนส่งมอบBulk_ส่ง'+p.send_date+'_'+rn.replace(/\s/g,''),
+    title:'แผนการส่งมอบ SSB · ส่ง '+thDate(p.send_date)+(v.rev==null?'':' · '+rn)+(v.old?' (ฉบับที่ส่งบัญชี)':''),
+    file:'แผนส่งมอบBulk_ส่ง'+p.send_date+(v.rev==null?'':'_'+rn.replace(/\s/g,'')),
     sub:'วันโหลด '+thDate(p.load_date)+' · จุดโหลด พันตัน · '+rows.length+' เที่ยว',
-    kpis:[['เที่ยว',rows.length+' เที่ยว','#1B4332'],['รวม (กก.)',fmt(total),'#2D6A4F'],['คนขับ',drv+' คน','#C9A227'],['มีใบขนย้าย',nco+' เที่ยว','#157A40']],
-    cols:[{h:'#',w:28,a:'center',x:5},{h:'หัวจ่าย',w:64,x:10},{h:'ลูกค้า',w:0,x:38},{h:'ส่งที่',w:56,x:10},{h:'สินค้า',w:126,x:26},
-      {h:'จำนวน (กก.)',w:72,a:'right',x:12},{h:'บิล',w:30,a:'center',x:6},{h:'ใบขนย้าย',w:54,a:'center',x:9},
-      {h:'ทะเบียน',w:104,x:18},{h:'คนขับ',w:108,x:20},{h:'หมายเหตุ',w:80,x:18},{h:v.old?'เปลี่ยน':'สถานะ',w:92,a:'center',x:16}],
-    // แถวรวมท้ายแต่ละหัวจ่าย (เหมือน "รวม จำนวนที่ต้องส่ง FG-…" ในไฟล์ SAP) · แถวพิเศษ = {sub:[…]}
+    kpis:[['เที่ยว',rows.length+' เที่ยว','#1B4332'],['รวม (ตัน)',tons(total),'#2D6A4F'],['คนขับรถบริษัท',drv+' คน','#C9A227'],['รถนอก/รับเอง',(rows.length-co.length)+' เที่ยว','#157A40']],
+    cols:[{h:'#',w:26,a:'center',x:5},{h:'รอบ',w:30,a:'center',x:5},{h:'ลูกค้า',w:0,x:30},{h:'ส่งที่',w:62,x:12},{h:'สินค้า',w:100,x:20},
+      {h:'จำนวน',w:66,a:'right',x:12},{h:'บิล',w:28,a:'center',x:6},{h:'ใบขนย้าย',w:50,a:'center',x:9},
+      {h:'ขนส่ง',w:70,x:14},{h:'ทะเบียน',w:96,x:18},{h:'คนขับ',w:100,x:20},{h:'เลขที่ใบ',w:64,x:11},{h:v.old?'เปลี่ยน':'สถานะ',w:88,a:'center',x:16}],
     rows:rows.reduce((out,j,i)=>{
-      out.push([j.line_no,j.prod_group||'',j.cust_name||'',j.dest||'',j.prod_name||'',Number(j.qty_kg)||0,j.bill||'',j.co?'✓ มี':'✗',
-        String(j.plate||'').replace(/\s*[,/]\s*/g,' / '),j.driver_name||'',j.note||'',stTx(j)]);
+      out.push([j.line_no,j.round_no||'',j.cust_name||'',j.dest||'',j.prod_name||'',qtyTx(j).replace(/ ตัน$/,''),j.bill||'',j.co?'✓ มี':'✗',
+        j.carrier||(isCo(j)?'บริษัท':KIND[j.kind]||''),String(j.plate||'').replace(/\s*[,/]\s*/g,' / '),j.driver_name||'',j.doc_no||'',stTx(j)]);
       const nx=rows[i+1];
-      if(!nx||nx.prod_group!==j.prod_group){ const g=rows.filter(x=>x.prod_group===j.prod_group);
-        out.push({sub:['',j.prod_group||'—','รวมจำนวนที่ต้องส่ง '+(j.prod_group||'')+' · '+(GROUPS[j.prod_group]||''),'',g.length+' เที่ยว',
-          g.reduce((s,x)=>s+Number(x.qty_kg||0),0),'','','','','','']}); }
+      if(!nx||nx.prod_name!==j.prod_name){ const g=rows.filter(x=>x.prod_name===j.prod_name), gt=g.reduce((s,x)=>s+tonOf(x.qty_text),0);
+        out.push({sub:['','','รวม '+(j.prod_name||'—'),'',g.length+' เที่ยว',gt?tons(gt)+' ตัน':'','','','','','','','']}); }
       return out; },[]),
-    status:{col:11,map:{'ยังไม่แจก':['#5f5e5a','#efefef'],'แจกแล้ว · รอคนขับรับ':['#185fa5','#e6f1fb'],'รับงานแล้ว':['#8a5a0b','#fef0d9'],
-      'ชั่งต้นทางแล้ว':['#8a5a0b','#fef0d9'],'โหลดเสร็จ · ออกจาก SSB':['#185fa5','#e6f1fb'],'ส่งแล้ว':['#127a2e','#e7f5ee'],
+    status:{col:12,map:{'รอจัดรถ':['#5f5e5a','#efefef'],'ยังไม่แจก':['#5f5e5a','#efefef'],'แจกแล้ว · รอคนขับรับ':['#185fa5','#e6f1fb'],'รับงานแล้ว':['#8a5a0b','#fef0d9'],
+      'ชั่งต้นทางแล้ว':['#8a5a0b','#fef0d9'],'โหลดเสร็จ · ออกจาก SSB':['#185fa5','#e6f1fb'],'ส่งแล้ว':['#127a2e','#e7f5ee'],'โหลดแล้ว':['#127a2e','#e7f5ee'],
       'แก้ไข · รอรับใหม่':['#a33b0b','#fde9d9'],'แก้ในฉบับนี้':['#a33b0b','#fde9d9'],'เพิ่มในฉบับนี้':['#185fa5','#e6f1fb']}},
-    tint:{col:7,map:{'✓ มี':'#157A40','✗':'#B42318'}},   // สีตัวอักษรช่องใบขนย้าย
-    total:['','','รวม '+rows.length+' เที่ยว','','',total,'','','','','',''] });
+    tint:{col:7,map:{'✓ มี':'#157A40','✗':'#B42318'}},
+    total:['','','รวม '+rows.length+' เที่ยว','','',tons(total)+' ตัน','','','','','','',''] });
 }
 function docReportPick(spec){
   let m=$('docRepPick');
@@ -1065,5 +1525,6 @@ async function docReportImage(spec,kind){
   }catch(e){ gate('เชื่อมต่อ LINE ไม่สำเร็จ', String(e)); }
 })();
 </script>
+<div id="printArea" aria-hidden="true"></div>
 </body>
 </html>
