@@ -170,6 +170,8 @@ body.printing .legend{font-size:10.5px;margin-top:4px}
 body.printing h3.rp{font-size:12.5px;margin:8px 0 4px}
 body.printing table.rp{font-size:10px} body.printing table.rp th,body.printing table.rp td{padding:2px 5px} body.printing table.rp img{display:none}
 body.printing .foot{margin-top:5px;font-size:10px}
+.aft{margin-top:6px;padding:6px 8px;border-radius:8px;background:var(--oktint);border:1px solid #86EFAC;font-size:12px;line-height:1.45}.aft .al{font-weight:700;color:#166534}
+.aft-g{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}.fl .aft-g img{width:calc(50% - 3px);max-height:170px;margin-top:0;object-fit:cover}.aft-r+.aft-r{margin-top:6px}
 .ctag{display:inline-block;margin-left:4px;padding:0 8px;border-radius:99px;font-size:11.5px;font-weight:700;text-decoration:none;background:#FEF3C7;color:#92400E}.ctag.c-assigned{background:#FEE2E2;color:#B91C1C}.ctag.c-fixed{background:#DBEAFE;color:#1D4ED8}.ctag.c-closed{background:#DCFCE7;color:#166534}
 </style>
 </head>
@@ -268,9 +270,17 @@ function todayFix(d) {
   if (d.stats) d.stats.idle = (d.days || []).filter((dd) => dd.idle).length;
   return d;
 }
+// 📸 รูปหลังแก้ของเคสแจ้งซ่อม: fix_photos (คนขับส่งงานแก้) ก่อน · ปิดแล้วไม่มีรูปแก้ = รูปจากใบตรวจใบแรกหลังแจ้งที่ติ๊กข้อนั้นปกติ
+function aftHTML(x) {
+  const a = x.case_after; if (!a || !a.photos || !a.photos.length) return '';
+  const lab = a.src === 'check' ? 'รูปจากใบตรวจ ' + dTxt(a.check_date) + ' (ติ๊กปกติ)' : 'รูปที่คนขับส่งงานแก้';
+  return '<div class="aft"><div class="al">📸 หลังแก้ · ' + esc(lab) + '</div>' + (a.note ? '<div>' + esc(a.note) + '</div>' : '') +
+    '<div class="aft-g no-print">' + a.photos.slice(0, 4).map((u) => '<img loading="lazy" src="' + esc(u) + '" alt="รูปหลังแก้" data-img="' + esc(u) + '">').join('') + '</div></div>';
+}
 function sheetHTML(d, live) {
   todayFix(d);
   const v = d.vehicle, days = d.days, today = d.today || bkk();
+  const lastOf = {}; (d.repairs || []).forEach((r) => r.items.forEach((x) => { if (x.case_id && (!lastOf[x.case_id] || r.date > lastOf[x.case_id])) lastOf[x.case_id] = r.date; }));   // รูปหลังแก้ในตาราง = แถวล่าสุดของเคสนั้นแถวเดียว
   const sec = { 'ก': 'ก. ตรวจทุกครั้งก่อนออกงาน', 'ข': 'ข. เฉพาะหัวลาก / เทรลเลอร์', 'ค': 'ค. ตรวจประจำสัปดาห์ (วันจันทร์)' };
   const cl = (dd) => live && dd.check_id ? ' cl" data-day="' + dd.date : '';
   let h = '<section class="sheet">' +
@@ -300,7 +310,7 @@ function sheetHTML(d, live) {
         (x.verify_parts && x.verify_parts.length ? ' <span class="vtag">ผู้ทวนสอบเพิ่ม</span> <span class="parts">' + esc(x.verify_parts.join(', ')) + '</span>' + (x.verify_note ? ' — ' + esc(x.verify_note) : '') : '') +
         (x.photo_url ? '<div class="no-print"><img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '"></div>' : '') + '</div>').join('') + '</td>' +
       '<td>' + esc(r.driver_name || '') + '</td><td>' + (r.verified_at ? esc(tTxt(r.verified_at)) + '<br>' + esc(r.verified_by) : '<span style="color:var(--bad);font-weight:700">ยังไม่ทวนสอบ</span>') + '</td>' +
-      '<td>' + esc(r.verify_action || '') + '</td><td>' + esc(r.vehicle_state || '') + '</td>' +
+      '<td>' + esc(r.verify_action || '') + r.items.filter((x) => x.case_after && lastOf[x.case_id] === r.date).map((x) => '<div class="aft-r">ข้อ ' + x.no + ' ' + esc(x.name) + (x.case_status === 'closed' ? ' · <b style="color:#166534">✅ แก้ไขแล้ว</b>' + (x.case_closed_at ? ' ' + esc(tTxt(x.case_closed_at)) : '') : '') + aftHTML(x) + '</div>').join('') + '</td><td>' + esc(r.vehicle_state || '') + '</td>' +
       (live ? '<td class="no-print"><button class="btn ' + (r.verified_at ? 'gh' : 'pri') + '" data-day="' + r.date + '">' + (r.verified_at ? 'แก้' : 'ทวนสอบ') + '</button></td>' : '') + '</tr>').join('')
       : '<tr><td colspan="' + (live ? 7 : 6) + '" style="text-align:center;color:var(--muted)">ไม่มีรายการผิดปกติในเดือนนี้</td></tr>') +
     '</tbody></table>' +
@@ -335,7 +345,7 @@ function openDay(date) {
   const fails = rp ? rp.items.filter((x) => x.by !== 'verify') : [];
   let h = '<div class="row" style="font-size:13px;color:var(--muted)">ผู้ส่ง: <b style="color:var(--ink)">' + esc(dd.driver_name || '') + '</b> · ส่งเมื่อ ' + esc(tTxt(dd.submitted_at)) + (dd.backdated ? ' · <b>บันทึกย้อนหลัง</b>' : '') + '</div>';
   h += fails.length ? '<div style="font-weight:700;font-size:13px;margin-bottom:4px">คนขับแจ้งผิดปกติ</div>' + fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b>' + (x.case_label ? ' <a class="no-print ctag c-' + esc(x.case_status) + '" href="vehicle-equipment.html?view=fix&id=' + x.case_id + '" title="เปิดเคสแจ้งซ่อม">' + esc(x.case_label) + '</a>' : '') + '<div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
-    (x.note ? '<div>' + esc(x.note) + '</div>' : '') + (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + '</div>').join('')
+    (x.note ? '<div>' + esc(x.note) + '</div>' : '') + (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + aftHTML(x) + '</div>').join('')
     : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ คนขับแจ้งผ่านทุกข้อ</div>';
   // รูปทุกรูปที่คนขับถ่ายในใบนี้ (รวมข้อที่ผ่าน เช่น เกจถังดับเพลิง) · กดเปิดรูปเต็ม
   const phs = dd.photos || [];
