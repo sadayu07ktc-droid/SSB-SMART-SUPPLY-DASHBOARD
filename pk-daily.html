@@ -1532,6 +1532,24 @@ function jTeamNote(j,t,hp){const seen={},warn=s=>'<b style="color:#B45309">⚠�
       :tm?'ใช้เด็กรถ <span class="m">(ฐานร้าน)</span> — '+(t?'<b>'+esc(t)+'</b>'+hp:warn('ยังไม่ระบุ เลือกเด็กรถด้านบน'))
       :t?'<b>'+esc(t)+'</b> <span class="m">(แอดมินระบุ · ร้านไม่มีทีมลงในฐาน)</span>'+hp:warn('ร้านไม่มีทีมลงในฐาน — เลือกเด็กรถด้านบน');
     return '<br>📍 '+esc(s.n)+' · 👷 '+who;}).join('');}
+/* 💰 18 พ.ย. คุณน้อง "ดึงค่าใช้จ่ายที่ผูกกับพิกัด เช่น เบิกค่าทางด่วน · พาเลท ต่างๆ" → กล่องรายจุดส่งจากฐานร้าน (Edge pk-daily cost)
+   ทางด่วน/ค่าจอด = เบิกก่อนออกรถ · ค่าลงหลายแถว = ตามลักษณะงาน (จำนวนลัง/ตัดชั้น) · ค่าลงตามชนิดรถ + ค่าตักพาเลท จากหน้าค่ากลาง */
+const COST=()=>(typeof __D!=='undefined'&&__D.cost)||{};
+const btx=t=>{const m=String(t||'').trim().match(/^(\d[\d,]*)(?:\s*[-–]\s*(\d[\d,]*))?\s*(?:บาท)?$/);const n=x=>comma(+x.replace(/,/g,''));return m?n(m[1])+(m[2]?'–'+n(m[2]):'')+' บาท':String(t||'');};
+function jCostBox(j){const seen={},C=COST(),g=szG(j.size),rows=[];
+  (j.stops||[]).filter(s=>!s.rt&&s.n&&!s.tbd).forEach(s=>{const k=s.id||s.n;if(seen[k])return;seen[k]=1;const c=s.id?C[String(s.id)]:null;
+    const L=(e,l,v)=>'<br>'+e+' '+l+' <b>'+v+'</b>';let t='';
+    if(c){if(c.toll.length)t+=L('🛣️','ทางด่วน',esc(c.toll.map(btx).join(' / ')))+' <span class="m">(เบิกก่อนออกรถ)</span>';
+      if(c.park.length)t+=L('🅿️','ค่าจอด',esc(c.park.map(btx).join(' / ')));
+      const u=c.u&&(c.u[g]||(g==='10/22 ล้อ'?c.u['พ่วง']||c.u['10 ล้อ']:0));
+      if(u)t+=L('💵','ค่าลง ('+esc(SZL[j.size]||j.size)+')',comma(u)+' บาท');
+      c.fee.forEach(f=>{t+=f[0]?L('💵','ค่าลง',esc(btx(f[0])))+(f[1]?' <span class="m">· '+esc(f[1])+'</span>':''):'<br>💵 <span class="m">'+esc(f[1])+'</span>';});
+      if(c.pay.length)t+=L('💳','จ่ายค่าลง',esc(c.pay.join(' / ')));
+      if(c.pal.length||c.pf){const pn=parseInt(s.pal,10)||0;t+='<br>🔁 พาเลท'+(c.pal.length?' <b>'+esc(c.pal.join(' / '))+'</b>':'')+(c.pf?(c.pal.length?' ·':'')+' ค่าตัก <b>'+comma(c.pf)+' บ./พาเลท</b>'+(pn?' × '+pn+' = <b>'+comma(c.pf*pn)+' บาท</b>':''):'');}
+      if(c.doc.length)t+=L('📄','เอกสาร',esc(c.doc.join(' / ')));}
+    rows.push('<div style="padding:6px 0;border-top:1px dashed var(--line)">📍 <b>'+esc(s.n)+'</b>'+(t||'<br><span class="warn">⚠️ ร้านนี้ยังไม่มีข้อมูลค่าใช้จ่ายในฐาน — ถามแอดมิน</span>')+'</div>');});
+  if(!rows.length)return '';
+  return '<div class="box"><span class="lb">💰 ค่าใช้จ่าย + พาเลท รายจุดส่ง <span class="note">(ฐานร้าน · แก้ได้ที่หน้าค่ากลาง)</span></span><div class="note" style="color:var(--ink);line-height:1.7">'+rows.join('')+'</div></div>';}
 function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),mine=j.helpers||[],o=+j.hout||0,no=!!j.hnone;
   const other=helpBusy(j.id);
   const t=jHpTxt(j),is4=j.size==='4 ล้อ';
@@ -1578,7 +1596,7 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   if(JE.q){const sN=s=>String(s||'').replace(/\s/g,'').toLowerCase().replace(/เอฟซี/g,'fc').replace(/ดีซี/g,'dc').replace(/แมคโคร|makro/g,'แม็คโคร');   /* "FC" เจอ "เอฟซี" ด้วย */
     const nq=sN(JE.q);const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&sN(x.n).includes(nq)).slice(0,12);
     h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
-  h+=jRtBox(j)+'</div>'+mpSum(Object.assign({},j,{v:j.head?VEH.find(x=>x.head===j.head):null}))+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
+  h+=jRtBox(j)+'</div>'+jCostBox(j)+mpSum(Object.assign({},j,{v:j.head?VEH.find(x=>x.head===j.head):null}))+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
     +'<label class="note">รถขนส่ง<input class="in" id="jcar" list="carL" value="'+esc(j.carrier||'SSB')+'"></label>'
     +'<label class="note">เบิกค่าลงสินค้า<input class="in" id="junl" placeholder="'+esc(jUnlAuto(j)||'เช่น โอนค่าลงสินค้า 1500 บาท')+'" value="'+esc(j.unl||'')+'"></label></div>'
     +'<datalist id="carL"><option value="SSB"><option value="รถนอก"></datalist><div class="note">เว้นว่าง = คิดจากค่าลงของร้าน (ถ้ามีในระบบ)</div></div>';
@@ -2199,7 +2217,10 @@ function drvStat(code){const b=(MBASE[code]||[0,0,0]).slice(),r={h:b[0],y:b[1],o
   r.t=r.h+r.y+r.o;return r;}
 /* ค่าลงสินค้า: central_distances pk_unload_* ตามชนิดรถ + pk_pallet_fee × พาเลท (ในระบบกรอกไว้ไม่กี่ร้าน) */
 const UNL={52:{'4 ล้อ':300,'6 ล้อ':1400}},PFEE={217:40,31:76,252:50,203:50};
-function feeOf(v,s){if(s.rt)return 0;const u=(UNL[s.id]||{})[v.g]||0,pn=parseInt(s.pal,10),pf=PFEE[s.id]&&pn>0?PFEE[s.id]*pn:0;return u+pf;}
+/* 18 พ.ย. เว็บจริง: ค่าลงตามชนิดรถ + ค่าตักพาเลท สดจากหน้าค่ากลาง (Edge pk-daily cost.u / cost.pf) · UNL/PFEE ข้างบน = ใช้ตอนเปิดนอกเว็บ */
+function feeOf(v,s){if(s.rt)return 0;const C=COST(),c=C[String(s.id)],live=typeof __D!=='undefined'&&__D.cost;
+  const um=live?(c&&c.u)||{}:UNL[s.id]||{},u=um[v.g]||(v.g==='10/22 ล้อ'?um['พ่วง']||um['10 ล้อ']||0:0),pr=live?(c&&c.pf)||0:PFEE[s.id]||0;
+  const pn=parseInt(s.pal,10),pf=pr&&pn>0?pr*pn:0;return u+pf;}
 /* จังหวัด: ยังไม่มีในตารางร้าน · เดโมใส่ให้เฉพาะร้านที่ชื่อบอกชัด ของจริงเพิ่มคอลัมน์จังหวัดในหน้าค่ากลาง */
 const PV={65:'กรุงเทพฯ',293:'กรุงเทพฯ',370:'กรุงเทพฯ',74:'กรุงเทพฯ',192:'พระนครศรีอยุธยา',141:'พระนครศรีอยุธยา',102:'พระนครศรีอยุธยา',263:'นครราชสีมา',121:'ขอนแก่น',116:'บุรีรัมย์',
  261:'จันทบุรี',86:'สระแก้ว',39:'ระยอง',258:'ระยอง',31:'ระยอง',56:'ชลบุรี',188:'ปทุมธานี',230:'สุราษฎร์ธานี',124:'ลำพูน',252:'พิษณุโลก',217:'สิงห์บุรี',312:'เพชรบุรี',298:'ปราจีนบุรี',354:'ปทุมธานี',107:'นนทบุรี',67:'กรุงเทพมหานคร',152:'สมุทรสาคร',158:'ชลบุรี',172:'นครสวรรค์',187:'บุรีรัมย์',169:'ขอนแก่น',231:'ลำพูน',233:'สุราษฎร์ธานี',241:'สงขลา'};
