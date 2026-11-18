@@ -1105,7 +1105,7 @@ function fmTr01(j,pl,prev,by){
   const qt=String(j.qty_text||'').trim(), isT=tonOf(qt)>0&&!/^\s*[\d.,]+\s*(ถัง|ลิตร|ตู้|กก|kg)/i.test(qt);
   const qv=qt?(isT?qt.replace(/\s*ตัน\s*/,' ').trim():qt):tons((j.qty_kg||0)/1000);
   const FOOT='FM-TR-01 Rev.05 ประกาศใช้วันที่ 21 กุมภาพันธ์ 2569';
-  return `<section class="fm"><div class="fbox">
+  return `<section class="fm"><div class="ftop"><span></span><span>${FOOT}</span></div><div class="fbox">   <!-- 18 พ.ย. คุณน้อง: หน้า 1 ต้องมีเลขเอกสาร ISO ด้วย -->
   <div class="frow fhead"><div class="fco"><div class="fname">บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด</div><div class="flogo">SSB</div>
       <div class="ftitle"><b>ใบขนส่งน้ำมัน</b><b>ส่วนที่ 1 สำหรับฝ่ายขนส่ง</b></div></div>
     <table class="fdoc"><tr><th>เลขที่เอกสาร</th><td class="dno">${e(j.doc_no||'')}</td></tr><tr><th>ออกจากโรงงานก่อนเวลา</th><td>${e(f.leaveBy)}</td></tr><tr><th>ส่งถึงลูกค้าก่อนเวลา</th><td>${e(f.arriveBy||j.deliver_time||'')}</td></tr></table></div>
