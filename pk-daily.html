@@ -3267,6 +3267,13 @@ function ypMatchPo(p){const o=p&&p.po;if(!o)return null;
   if(br.length<2)return C.length===1?C[0]:null;
   const sc=C.map(x=>{const t=String(x.n).trim().split(/\s+/),r=ypLoose(t.length>1?t.slice(1).join(''):'');return {x,s:!r?0:r===br?2:ypCov(r,br)};}).sort((a,b)=>b.s-a.s);
   return sc[0].s>=0.6&&(!sc[1]||sc[0].s>sc[1].s)?sc[0].x:null;}
+/* 18 พ.ย. คุณน้อง: ราคา /N = แถม N เฉลี่ยลงราคาแล้ว (ส่งรวม q ไม่ส่งเพิ่ม) → คิดราคาใหม่ต่อลังให้เลย = ราคาเดิม × (q−N) ÷ q */
+function ypNum(x){const v=parseFloat(String(x==null?'':x).replace(/[, ]/g,''));return isFinite(v)?v:NaN;}
+function ypAvgPrice(i){const p=ypNum(i.price),q=+i.q,n=+i.avg;return p>0&&n>0&&q>n?Math.round(p*(q-n)/q*100)/100:null;}
+function ypBaht(v){return v.toLocaleString('en-US',{minimumFractionDigits:v%1?2:0,maximumFractionDigits:2});}
+function ypPriceCell(i,u){const np=ypAvgPrice(i);if(!np)return esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':'');
+  const p=ypNum(i.price),q=+i.q,n=+i.avg;
+  return '<b class="ypavg">'+ypBaht(np)+'</b><div class="note">ต่อ'+esc(u)+' · เดิม '+ypBaht(p)+'<br>แถม '+comma(n)+' เฉลี่ยใน '+comma(q)+'<br>'+ypBaht(p)+'×'+comma(q-n)+'÷'+comma(q)+'</div>';}
 function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop),inP=ypInPlan(m.mid);
   const sumQ=its.reduce((a,i)=>a+(i.u==='ถัง'?0:(+i.q||0)),0),qT=ypQty(p),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+(p.dlvFrom?' · แจ้งตามมา':'')+'</span>':p.waitDate?'<span class="w">⏳ '+(p.po?'รอเซลส์นัดส่ง/รับ':'รอแจ้งวันเข้ารับ')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
     ((p.cs||0)-(+p.pb||0)||(!p.tk&&!p.pb)?'<span class="i">📦 '+comma((p.cs||0)-(+p.pb||0))+' ลัง'+((p.free||0)-(+p.pbFree||0)?' (แถมจริง '+comma((p.free||0)-(+p.pbFree||0))+')':'')+'</span>':''),(p.pb?'<span class="i">🥫 '+comma(p.pb)+' ปี๊บ'+(p.pbFree?' (แถมจริง '+comma(p.pbFree)+')':'')+'</span>':''),(p.tk?'<span class="i">🛢️ '+comma(p.tk)+' ถัง'+(p.tkFree?' (แถมจริง '+comma(p.tkFree)+')':'')+'</span>':''),p.coa?'<span class="r">📄 ต้องมี COA</span>':'',p.receipt?'<span class="w">📃 ใบเสร็จ</span>':'',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':'',p.prepay?'<span class="w">💳 โอนเงินก่อน</span>':'',
@@ -3284,7 +3291,7 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
       /* pk-yp v19 ชื่อ/รหัส/หน่วยตามฐานข้อมูลสินค้า (pk_products) · ตัวเล็ก = ที่เซลส์พิมพ์ / บาร์โค้ด PO · ไม่รู้จัก = เตือน */
       const nm=i.pid?'<b>'+esc(i.pn)+'</b><div class="note">'+(i.pc?'<span class="ypcode">'+esc(i.pc)+'</span> · ':'')+(i.pm==='บาร์โค้ด'?'บาร์โค้ด PO':i.pm==='แถมตามที่ซื้อ'?'แถมตามสินค้าที่ซื้อ':'เซลส์พิมพ์')+' “'+esc(i.n)+'”</div>'
         :esc(i.n)+(m.sample?'':'<div class="ypunk">'+(i.pAsk?'⚠️ แถมสินค้าตัวไหน (ซื้อหลายตัว) · ระบุตอนส่งเมล':'⚠️ ยังไม่ตรงกับฐานสินค้า')+'</div>');
-      return '<tr><td>'+(u==='ถัง'?'🛢️ ':u==='ปี๊บ'?'🥫 ':'')+nm+'</td><td class="n">'+(i.q?comma(i.q)+tu:'')+'</td><td class="n">'+(i.f?'+'+comma(i.f)+tu:'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>';}).join('')
+      return '<tr><td>'+(u==='ถัง'?'🛢️ ':u==='ปี๊บ'?'🥫 ':'')+nm+'</td><td class="n">'+(i.q?comma(i.q)+tu:'')+'</td><td class="n">'+(i.f?'+'+comma(i.f)+tu:'')+'</td><td class="n">'+(i.price?ypPriceCell(i,u||'ลัง'):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>';}).join('')
     +'<tr><td><b>รวมลงแพลน</b></td><td class="n" colspan="2"><b>'+qT+'</b></td><td></td></tr></tbody></table>';
   if(p.unk&&!m.sample)h+='<div class="warn">⚠️ สินค้า '+p.unk+' บรรทัดยังไม่ตรงกับฐานสินค้า — ตอนส่งเมลเลือกชื่อให้ตรงฐาน · ชื่อที่เซลส์ใช้บ่อย เพิ่มได้ที่ <a href="pk-products.html" target="_blank" rel="noopener">ฐานข้อมูลสินค้า</a> ช่อง “ชื่อเรียกในกลุ่มไลน์”</div>';
   if(p.coa)h+='<div class="ypcoa">📄 <b>ต้องมีใบขนย้าย COA</b>'+(p.tk?' · มีสินค้าเป็นถัง':'')+(p.pickup?' · ลูกค้ารับเอง เตรียม COA ให้ลูกค้าตอนมารับ':' · คนขับต้องพก COA ไปด้วย ไม่งั้นผิดกฎ โดนจับ (ลงแพลนแล้วระบบใส่ในหมายเหตุรถให้)')+'</div>';
@@ -3448,7 +3455,7 @@ function ypPlace(p){const src=[p.dlvTxt].concat((p.notes||[]).filter(t=>/^ส่
 function ypMkRow(m,d){const p=m.p||{},k=p.pick||{},dl=p.dlv||'',pick=ypPickup(m);
   /* pk-yp v19: ชื่อ+หน่วยตามฐานข้อมูลสินค้า (คลัง/บัญชีเปิดบิลตรงรหัส) · ไม่รู้จัก = ตามที่เซลส์พิมพ์ ให้แอดมินแก้ในหน้าต่างเมล */
   const unitOf=i=>i.pu||(i.u==='ถัง'?'ถัง':/ปี๊บ|ปี๊ป/.test(i.n)?'ปี๊บ':'ลัง'),items=[];
-  (p.items||[]).forEach(i=>{const u=unitOf(i),n=i.pn||i.n;if(+i.q)items.push({n,q:String(i.q),u,price:i.price?String(i.price):''});if(+i.f)items.push({n,q:String(i.f),u,price:'แถม'});});
+  (p.items||[]).forEach(i=>{const u=unitOf(i),n=i.pn||i.n;if(+i.q){const np=ypAvgPrice(i);items.push({n,q:String(i.q),u,price:np?String(np):i.price?String(i.price):''});}if(+i.f)items.push({n,q:String(i.f),u,price:'แถม'});});
   const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
   const head=pick?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+ypPlace(p);
   const P=!pick&&m.head?PLAN[m.head]:null,dv=P?drvOf(P.driver):null;
