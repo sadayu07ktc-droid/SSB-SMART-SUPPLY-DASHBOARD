@@ -412,6 +412,14 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .fst2>b{padding:1.6mm 3mm;flex:1;text-align:center}
 .fst2 .fbx2{border-left:1.4px solid #000}
 .ffoot{text-align:right;font-size:8.5pt;margin-top:1mm}
+/* 18 พ.ย. คุณน้อง "สัดส่วนไม่ได้" → ใบเต็มหน้า A4 เหมือน Excel: กรอบยืดเต็มความสูง ส่วนต่างๆ แบ่งที่ว่างกัน (บรรทัดกระจายในส่วน) */
+.fm{height:275mm;display:flex;flex-direction:column;font-size:11pt}
+.fm>.fbox{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
+.fm>.fbox>.fhead,.fm>.fbox>.fhead2{flex:none}
+.fm>.fbox>.fsec{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
+.fm>.fbox>.fsec.s1b{justify-content:space-around}
+.fm .fhead{min-height:34mm}
+.fm .ftank td{height:16mm}
 </style>
 </head>
 <body>
@@ -1111,8 +1119,8 @@ function fmTr01(j,pl,prev,by){
     <table class="fdoc"><tr><th>เลขที่เอกสาร</th><td class="dno">${e(j.doc_no||'')}</td></tr><tr><th>ออกจากโรงงานก่อนเวลา</th><td>${e(f.leaveBy)}</td></tr><tr><th>ส่งถึงลูกค้าก่อนเวลา</th><td>${e(f.arriveBy||j.deliver_time||'')}</td></tr></table></div>
   <div class="fsec s1">
     <div class="fl c"><b>ชนิดน้ำมัน</b> ${U(j.prod_name,60)}</div>
-    <div class="fl"><b>ชื่อลูกค้า</b> ${U(j.cust_name,52)} <b class="bill">${e(j.bill||'')}</b> <b>สถานที่จัดส่ง</b> ${U(j.dest,34)} <b>จำนวนที่ต้องเติม</b> ${U(qv,18)} ${isT||!qt?'ตัน':''}</div>
-    <div class="fl"><span>วันที่ส่งสินค้า</span> ${U(thDate(pl.send_date),24)} <span class="ml">เอกสารแนบ</span> ${X(f.coa)} ใบ Certificate of Analysis (COA.) ${X(j.co)} ใบ CO ${f.coNo?U(f.coNo,26):D(26)}</div>
+    <div class="fl"><b>ชื่อลูกค้า</b> ${U(j.cust_name,40)} <b class="bill">${e(j.bill||'')}</b> <b>สถานที่จัดส่ง</b> ${U(j.dest,34)} <b>จำนวนที่ต้องเติม</b> ${U(qv,14)} ${isT||!qt?'ตัน':''}</div>
+    <div class="fl"><span>วันที่ส่งสินค้า</span> ${U(thDate(pl.send_date),24)} <span class="ml">เอกสารแนบ</span> ${X(f.coa)} ใบ Certificate of Analysis (COA.) ${X(j.co)} ใบ CO ${f.coNo?U(f.coNo,22):D(22)}</div>
     <div class="fl ind">${X(!!f.bags)} ถุงกรองจำนวน ${f.bags?U(f.bags,8):D(8)} ใบ ${f.bagTo?U(f.bagTo,40):D(40)} ผู้รับ</div>
     <div class="fl"><span>บริษัทขนส่ง</span> ${U(j.carrier||'',36)} <span>ทะเบียนรถ</span> ${U(j.plate||'',38)} <span>ชื่อคนขับ</span> ${U(j.driver_name||'',42)}</div>
     <div class="fl"><span>ผู้สั่งจ่าย</span> ${U(by||'',40)} <span>วันที่</span> ${U(thDate(pl.load_date||pl.send_date),26)} <span>เวลา</span> ${U(hm,14)} น.</div>
@@ -1131,7 +1139,7 @@ function fmTr01(j,pl,prev,by){
     <div class="fl">วันที่รถออกจากป้อมยาม${D(30)} เวลา${D(44)} ผู้รับคืนเอกสาร${D(34)}</div></div>
   <div class="fsec last"><div class="fst">ส่วนที่ 3 สำหรับห้องชั่ง</div>
     <div class="fl c">เวลารถเข้า${D(40)} เวลารถออก${D(40)} รวมเวลา${D(34)}</div>
-    <div class="fl">น้ำหนักรถเข้า${D(32)} กก. น้ำหนักรถออก${D(32)} กก. น้ำหนักสุทธิ${D(38)} กก.</div>
+    <div class="fl">น้ำหนักรถเข้า${D(32)} กก. น้ำหนักรถออก${D(32)} กก. น้ำหนักสุทธิ${D(32)} กก.</div>
     <div class="fl">เลขที่ใบชั่ง${D(26)} ชื่อผู้ชั่ง${D(30)} ซีลทั้งหมด${D(14)} ตัว เลขที่ตีซีล${D(40)}</div></div>
   </div></section>
   <section class="fm"><div class="ftop"><b>มีต่อด้านหลัง</b><span>${FOOT}</span></div><div class="fbox">
@@ -1144,20 +1152,20 @@ function fmTr01(j,pl,prev,by){
       <div class="ci">${X(false)} สภาพและความสะอาดของวาล์ว เลขที่ซีล${D(40)}</div>
       <div class="ci">${X(false)} ปราศจากสัตว์พาหะ</div><div class="ci">${X(false)} ตรวจสอบเศษลวดซีลบน TANK</div></div>
       <div><div><u><b>โหลดน้ำมันจาก TANK</b></u></div><table class="ftank"><tr><th>RPO</th><th>PO (MIX)</th><th>RPS</th><th>ROL</th><th>PFAD</th><th>อื่นๆ</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></div></div>
-    <div class="fl">ลงชื่อผู้ตรวจสอบ${D(30)} เวลาเรียกเก็บแล็ป${D(36)} ผู้รับแจ้ง${D(50)}</div>
+    <div class="fl">ลงชื่อผู้ตรวจสอบ${D(30)} เวลาเรียกเก็บแล็ป${D(36)} ผู้รับแจ้ง${D(44)}</div>
     <div class="fl">หมายเหตุ${D(50)} ตรวจเช็คการติดซีลที่ฝาถังและวาล์วน้ำมัน &nbsp;เวลาตีซีล${D(36)}</div>
     <div class="fl">${D(60)} ${X(false)} เรียบร้อย ${X(false)} ไม่เรียบร้อย &nbsp;เวลาปล่อยรถ${D(40)}</div>
     <div class="fl">ผู้ถ่ายน้ำมัน${D(56)} <span class="ml">วันที่${D(14)}/${D(14)}/${D(14)}</span></div></div>
   <div class="fsec"><div class="frow fst2"><b>ส่วนที่ 5 สำหรับฝ่ายตรวจสอบคุณภาพ</b><b class="fbx2">เวลาทำแลปไม่เกิน 15 นาที</b></div>
     <div class="fl">เวลาเก็บตัวอย่าง${D(34)} ผู้เก็บตัวอย่าง${D(34)} เดรนหน้าท่อ${D(30)}กก.</div>
-    <div class="fl"><b>ผลทดสอบคุณภาพ &nbsp; Test report no.</b>${D(40)} <b>อ้างอิง : ตารางบันทึกผลวิเคราะห์น้ำมันขายออก FM-QC-27</b></div>
+    <div class="fl"><b>ผลทดสอบคุณภาพ &nbsp; Test report no.</b>${D(50)}</div><div class="fl"><b>อ้างอิง : ตารางบันทึกผลวิเคราะห์น้ำมันขายออก FM-QC-27</b></div>
     <div class="fl">ผู้ตรวจสอบ${D(40)} วันที่${D(12)}/${D(12)}/${D(12)} เวลาบันทึก${D(40)}</div></div>
   <div class="fsec"><div class="fst">ส่วนที่ 6 สำหรับฝ่ายบัญชี</div>
     <div class="fl ind3">เวลารับเอกสาร${D(40)} ผู้รับเอกสาร${D(50)}</div>
     <div class="fl">เลขที่ใบส่งของ${D(30)} เลขที่ใบชั่ง${D(40)} ผู้จัดทำ${D(50)}</div>
     <div class="fl ind3">ผู้รับใบส่งของ${D(40)} เวลารับใบส่งของ${D(44)}</div></div>
   <div class="fsec last"><div class="fst">ส่วนที่ 7 สำหรับฝ่ายผู้บันทึกลงในคอมพิวเตอร์</div>
-    <div class="fl ind">วันที่รับเอกสาร${D(34)} เวลาที่รับเอกสาร${D(26)} ผู้บันทึก${D(40)}</div></div>
+    <div class="fl ind2">วันที่รับเอกสาร${D(34)} เวลาที่รับเอกสาร${D(26)} ผู้บันทึก${D(34)}</div></div>
   </div><div class="ffoot">${FOOT}</div></section>`;
 }
 
