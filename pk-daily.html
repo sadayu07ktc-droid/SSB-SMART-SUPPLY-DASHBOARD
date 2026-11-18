@@ -1425,7 +1425,9 @@ fetch('https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-fleet').then(r=>
       if(s)Object.assign(s,v);else PSKU.push(Object.assign({k:d.k,n:d.name},v));});
     /* pk-yp v19: รายชื่อสินค้าตามฐาน ให้เลือกในหน้าต่างเมล FM-MK (ช่องสินค้า) */
     window.PKPROD=j.sku.concat(Array.isArray(j.skuMissing)?j.skuMissing:[]).map(d=>({n:String(d.name||''),u:String(d.unit||'')})).filter(x=>x.n);let dl=document.getElementById('ypProdL');if(!dl){dl=document.createElement('datalist');dl.id='ypProdL';document.body.appendChild(dl);}
-    dl.innerHTML=window.PKPROD.map(x=>'<option value="'+esc(x.n)+'">').join('');}}).catch(()=>{});
+    /* 18 พ.ย. คุณน้อง: สินค้า UL = ส่งออกลาวเท่านั้น → ไว้ท้ายรายการ + ป้ายกำกับ กันเลือกผิดให้ร้านในประเทศ */
+    const isUL=n=>/\bUL\s*$/i.test(String(n).replace(/\([^)]*\)/g,'').trim());
+    dl.innerHTML=window.PKPROD.filter(x=>!isUL(x.n)).concat(window.PKPROD.filter(x=>isUL(x.n))).map(x=>'<option value="'+esc(x.n)+'"'+(isUL(x.n)?' label="⚠️ ส่งออกลาวเท่านั้น"':'')+'>').join('');}}).catch(()=>{});
 const mpSku=k=>PSKU.find(x=>x.k===k);
 function mpCalc(lines){const P=PK_PAL,part=[];let full=0,kg=0,cs=0;
   (lines||[]).forEach(l=>{const s=mpSku(l.k),q=Math.max(0,Math.floor(n0(l.q)));if(!s||!q)return;cs+=q;kg+=q*s.kg;
@@ -3301,7 +3303,7 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
   h+='<table class="pol"><thead><tr><th>สินค้า</th><th class="n">จำนวน</th><th class="n">แถมจริง</th><th class="n">ราคา</th></tr></thead><tbody>'
     +its.map(i=>{const u=i.pu||(i.u==='ถัง'?'ถัง':''),tu=u&&u!=='ลัง'?' '+u:'';
       /* pk-yp v19 ชื่อ/รหัส/หน่วยตามฐานข้อมูลสินค้า (pk_products) · ตัวเล็ก = ที่เซลส์พิมพ์ / บาร์โค้ด PO · ไม่รู้จัก = เตือน */
-      const nm=i.pid?'<b>'+esc(i.pn)+'</b><div class="note">'+(i.pc?'<span class="ypcode">'+esc(i.pc)+'</span> · ':'')+(i.pm==='บาร์โค้ด'?'บาร์โค้ด PO':i.pm==='แถมตามที่ซื้อ'?'แถมตามสินค้าที่ซื้อ':'เซลส์พิมพ์')+' “'+esc(i.n)+'”</div>'
+      const nm=i.pid?'<b>'+esc(i.pn)+'</b><div class="note">'+(i.pc?'<span class="ypcode">'+esc(i.pc)+'</span> · ':'')+(i.pm==='บาร์โค้ด'?'บาร์โค้ด PO':i.pm==='แถมตามที่ซื้อ'?'แถมตามสินค้าที่ซื้อ':i.pm==='ใกล้เคียง'?'เทียบชนิด+ขนาด+ยี่ห้อ จาก':'เซลส์พิมพ์')+' “'+esc(i.n)+'”</div>'
         :esc(i.n)+(m.sample?'':'<div class="ypunk">'+(i.pAsk?'⚠️ แถมสินค้าตัวไหน (ซื้อหลายตัว) · ระบุตอนส่งเมล':'⚠️ ยังไม่ตรงกับฐานสินค้า')+'</div>');
       return '<tr><td>'+(u==='ถัง'?'🛢️ ':u==='ปี๊บ'?'🥫 ':'')+nm+'</td><td class="n">'+(i.q?comma(i.q)+tu:'')+'</td><td class="n">'+(i.f?'+'+comma(i.f)+tu:'')+'</td><td class="n">'+(i.price?ypPriceCell(i,u||'ลัง'):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>';}).join('')
     +'<tr><td><b>รวมลงแพลน</b></td><td class="n" colspan="2"><b>'+qT+'</b></td><td></td></tr></tbody></table>';
