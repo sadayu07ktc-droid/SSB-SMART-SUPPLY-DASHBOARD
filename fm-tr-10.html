@@ -97,6 +97,7 @@ table.fm td.m.x.mon{background:#FFF1F1}
 table.fm td.vt{height:62px;padding:1px 0;text-align:center;font-size:9.5px;line-height:1.05}
 table.fm td.vt span{writing-mode:vertical-rl;transform:rotate(180deg);display:inline-block;max-height:60px;overflow:hidden;white-space:nowrap}
 table.fm td.vt.miss span{color:var(--bad);font-weight:700}
+table.fm td.vt.idle span{color:#9AA5A0} table.fm th.d.idle{color:#9AA5A0}
 table.fm td.ft{font-weight:700;font-size:11px}
 table.fm td.cl{cursor:pointer}
 table.fm td.cl:hover{outline:2px solid var(--gold);outline-offset:-2px}
@@ -246,6 +247,7 @@ async function openVeh(id) {
   $('main').innerHTML = '<div class="stats no-print">' +
     '<div class="st"><b>' + s.checked + '</b><span>วันที่ส่งใบตรวจ</span></div>' +
     '<div class="st"><b style="color:var(--bad)">' + s.missing + '</b><span>รถวิ่งแต่ไม่ส่ง</span></div>' +
+    '<div class="st"><b style="color:#9AA5A0">' + (s.idle || 0) + '</b><span>ไม่วิ่ง (ไม่ต้องส่ง)</span></div>' +
     '<div class="st"><b style="color:var(--warn)">' + s.fail_days + '</b><span>วันที่มี X</span></div>' +
     '<div class="st"><b style="color:var(--bad)">' + s.unverified + '</b><span>รอทวนสอบ</span></div>' +
     '<div class="st"><b>' + s.backdated + '</b><span>บันทึกย้อนหลัง</span></div></div>' + sheetHTML(d, true);
@@ -256,6 +258,9 @@ const MARK = {
   'X': '<svg class="mk bad" viewBox="0 0 16 16" aria-label="ไม่ผ่าน"><circle cx="8" cy="8" r="7"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2"/></svg>',
   'V': '<svg class="mk ver" viewBox="0 0 16 16" aria-label="ผู้ทวนสอบพบ"><circle cx="8" cy="8" r="6.6"/><path d="M5.4 5.4l5.2 5.2M10.6 5.4l-5.2 5.2"/></svg>',
 };
+// หลักฐานว่าวันนั้นรถวิ่งไหม (ชี้ที่วัน/ช่องลายมือชื่อ) · เกณฑ์เดียวกับ veq-check/หน้าอุปกรณ์ติดรถ
+const RUN_SRC = { attendance: 'ลงเวลาเข้างาน', order: 'มีออเดอร์', dtc: 'GPS' };
+const runTip = (dd) => dd.missing ? ' · รถวิ่งแต่ไม่ส่ง (' + [RUN_SRC[dd.run_src] || '', dd.run_km ? 'GPS ' + Math.round(dd.run_km) + ' กม.' : ''].filter(Boolean).join(' · ') + ')' : dd.idle ? ' · ไม่วิ่ง' + (dd.run_km ? ' (GPS ' + Math.round(dd.run_km) + ' กม. ต่ำกว่าเกณฑ์)' : '') : '';
 function sheetHTML(d, live) {
   const v = d.vehicle, days = d.days, today = d.today || bkk();
   const sec = { 'ก': 'ก. ตรวจทุกครั้งก่อนออกงาน', 'ข': 'ข. เฉพาะหัวลาก / เทรลเลอร์', 'ค': 'ค. ตรวจประจำสัปดาห์ (วันจันทร์)' };
@@ -269,17 +274,17 @@ function sheetHTML(d, live) {
     '<span>พนักงานขับรถประจำ: <b>' + esc(v.drivers.map((x) => x.name).join(', ') || 'รถสแปร์') + '</b></span></div>' +
     '<table class="fm"><colgroup><col class="c-no"><col class="c-name"><col class="c-crit">' + days.map(() => '<col>').join('') + '</colgroup>' +
     '<thead><tr><th>ข้อ</th><th>รายการตรวจ</th><th>วิธีดู / เกณฑ์ปกติ</th>' +
-    days.map((dd) => '<th class="d' + (dd.monday ? ' mon' : '') + (dd.missing ? ' miss' : '') + (live && dd.check_id ? ' cl" data-day="' + dd.date : '') + '" title="' + dTxt(dd.date) + (dd.missing ? ' · รถวิ่งแต่ไม่ส่ง' : '') + '">' + dd.day + '</th>').join('') + '</tr></thead><tbody>';
+    days.map((dd) => '<th class="d' + (dd.monday ? ' mon' : '') + (dd.missing ? ' miss' : dd.idle ? ' idle' : '') + (live && dd.check_id ? ' cl" data-day="' + dd.date : '') + '" title="' + dTxt(dd.date) + runTip(dd) + '">' + dd.day + '</th>').join('') + '</tr></thead><tbody>';
   let last = '';
   d.items.forEach((it) => {
     if (it.section !== last) { last = it.section; h += '<tr class="sec"><td colspan="' + (3 + days.length) + '">' + esc(sec[it.section] || it.section) + '</td></tr>'; }
     h += '<tr><td class="no">' + it.no + (it.star ? '<span class="star">★</span>' : '') + '</td><td class="nm">' + esc(it.name) + '</td><td class="cr">' + esc(it.criteria || '') + '</td>' +
       days.map((dd) => { const m = dd.marks[it.code] || ''; return '<td class="m' + (m === 'X' || m === 'V' ? ' x' : m === '–' ? ' na' : '') + (dd.monday ? ' mon' : '') + cl(dd) + '">' + (MARK[m] || m) + '</td>'; }).join('') + '</tr>';
   });
-  h += '<tr><td colspan="3" class="ft">ลายมือชื่อ พนักงานขับรถ</td>' + days.map((dd) => '<td class="vt' + (dd.missing ? ' miss' : '') + cl(dd) + '"><span>' + (dd.check_id ? esc(first(dd.driver_name)) : dd.missing ? 'ไม่ส่ง' : '') + '</span></td>').join('') + '</tr>' +
+  h += '<tr><td colspan="3" class="ft">ลายมือชื่อ พนักงานขับรถ</td>' + days.map((dd) => '<td class="vt' + (dd.missing ? ' miss' : dd.idle ? ' idle' : '') + cl(dd) + '" title="' + dTxt(dd.date) + runTip(dd) + '"><span>' + (dd.check_id ? esc(first(dd.driver_name)) : dd.missing ? 'ไม่ส่ง' : dd.idle ? 'ไม่วิ่ง' : '') + '</span></td>').join('') + '</tr>' +
     '<tr><td colspan="3" class="ft">ผู้ทวนสอบ (หัวหน้างาน)</td>' + days.map((dd) => '<td class="vt' + cl(dd) + '"><span>' + (dd.verified_by ? esc(first(dd.verified_by)) : dd.fail ? '<b style="color:var(--bad)">รอ</b>' : '') + '</span></td>').join('') + '</tr>' +
     '</tbody></table>' +
-    '<div class="legend"><b>วิธีอ่าน:</b> ' + MARK['/'] + ' = ผ่าน · ' + MARK['X'] + ' = ไม่ผ่าน (คนขับแจ้ง) · ' + MARK['V'] + ' = ผู้ทวนสอบพบ · – = ไม่เกี่ยวกับรถคันนี้ / ไม่ใช่วันตรวจประจำสัปดาห์ · ว่าง = ไม่มีงาน ·<b class="star" style="color:var(--bad)">★</b> = ข้อห้ามออกรถ (ไม่ผ่าน ห้ามนำรถออกจนกว่าแก้ไข)</div>' +
+    '<div class="legend"><b>วิธีอ่าน:</b> ' + MARK['/'] + ' = ผ่าน · ' + MARK['X'] + ' = ไม่ผ่าน (คนขับแจ้ง) · ' + MARK['V'] + ' = ผู้ทวนสอบพบ · – = ไม่เกี่ยวกับรถคันนี้ / ไม่ใช่วันตรวจประจำสัปดาห์ · <b>ไม่ส่ง</b> = วันนั้นรถวิ่งงาน (มีออเดอร์ / ลงเวลา / GPS วิ่ง ≥ 20 กม.) แต่ไม่ส่งใบตรวจ · <span style="color:#9AA5A0">ไม่วิ่ง</span> = วันนั้นรถไม่ออกวิ่ง ไม่ต้องส่ง ·<b class="star" style="color:var(--bad)">★</b> = ข้อห้ามออกรถ (ไม่ผ่าน ห้ามนำรถออกจนกว่าแก้ไข)</div>' +
     '<h3 class="rp">บันทึกแจ้งซ่อม (ดึงจากใบตรวจอัตโนมัติ)</h3>' +
     '<table class="rp"><thead><tr><th>วันที่</th><th>อาการผิดปกติ (คนขับแจ้ง)</th><th>ผู้แจ้ง</th><th>วันที่ทวนสอบ · ผู้ทวนสอบ</th><th>การดำเนินการ</th><th>สถานะรถ</th>' + (live ? '<th class="no-print"></th>' : '') + '</tr></thead><tbody>' +
     (d.repairs.length ? d.repairs.map((r) => '<tr><td class="dt">' + dTxt(r.date) + '</td><td>' +
