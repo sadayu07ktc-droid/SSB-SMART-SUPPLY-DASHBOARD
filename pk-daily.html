@@ -140,6 +140,7 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .ypm .r{background:var(--badbg);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}
 .ypcoa{font-size:13px;background:var(--badbg);color:var(--bad);border-radius:8px;padding:7px 10px;line-height:1.6;margin-top:6px}
 .tchip.coa{background:var(--badbg);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}
+.ypunk{color:var(--warn);font-size:12px;margin-top:2px}.ypcode{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11.5px}
 .yppk{font-size:13px;background:var(--infobg);color:var(--info);border-radius:8px;padding:7px 10px;line-height:1.6}
 .ypc details.ypalt>summary{margin-top:2px}
 .ypban{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:13px}
@@ -1418,7 +1419,10 @@ fetch('https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-fleet').then(r=>
   /* 📦 สินค้า = ฐานข้อมูลสินค้า Packing (pk_products) · จับคู่ รหัส → ชื่อ (ไม่สนวงเล็บ/ช่องว่าง/คำว่า ขวด น้ำมัน ลิตร) → ไม่เจอ = เพิ่มใหม่ (17 พ.ย.) */
   if(Array.isArray(j.sku)){const kk=x=>String(x||'').replace(/\([^)]*\)/g,'').replace(/\s+/g,'').toLowerCase(),k2=x=>kk(x).replace(/ขวด|น้ำมัน|ลิตร/g,'');
     j.sku.forEach(d=>{const tpl=PSKU.filter(x=>!x.db),s=PSKU.find(x=>x.k===d.k)||tpl.find(x=>kk(x.n)===kk(d.name))||tpl.find(x=>k2(x.n)===k2(d.name));const v={kg:d.kg,per:d.per,lay:d.lay,h:d.h,db:1};
-      if(s)Object.assign(s,v);else PSKU.push(Object.assign({k:d.k,n:d.name},v));});}}).catch(()=>{});
+      if(s)Object.assign(s,v);else PSKU.push(Object.assign({k:d.k,n:d.name},v));});
+    /* pk-yp v19: รายชื่อสินค้าตามฐาน ให้เลือกในหน้าต่างเมล FM-MK (ช่องสินค้า) */
+    window.PKPROD=j.sku.concat(Array.isArray(j.skuMissing)?j.skuMissing:[]).map(d=>({n:String(d.name||''),u:String(d.unit||'')})).filter(x=>x.n);let dl=document.getElementById('ypProdL');if(!dl){dl=document.createElement('datalist');dl.id='ypProdL';document.body.appendChild(dl);}
+    dl.innerHTML=window.PKPROD.map(x=>'<option value="'+esc(x.n)+'">').join('');}}).catch(()=>{});
 const mpSku=k=>PSKU.find(x=>x.k===k);
 function mpCalc(lines){const P=PK_PAL,part=[];let full=0,kg=0,cs=0;
   (lines||[]).forEach(l=>{const s=mpSku(l.k),q=Math.max(0,Math.floor(n0(l.q)));if(!s||!q)return;cs+=q;kg+=q*s.kg;
@@ -3218,7 +3222,8 @@ async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;const sig0=YP.loa
 async function ypMark(m,st,extra){m.st=st;if(m.sample||!ypLive())return;
   const r=await fetch(ypUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({action:'mark',userId:MY_UID,mid:m.mid,st},extra||{}))}).then(z=>z.json());
   if(!r.ok)throw new Error(r.error||'บันทึกสถานะไม่ได้');if(r.by)m.stBy=r.by;if(r.at)m.stAt=r.at;}
-function ypQty(p){return [p.cs||!p.tk?comma(p.cs||0)+' ลัง':'',p.tk?comma(p.tk)+' ถัง':''].filter(Boolean).join(' + ');}
+/* pk-yp v19 (18 พ.ย. แอดมิน: ปี๊บหน่วยเป็นปี๊บ ถังเป็นถัง) p.pb = ปี๊บ (ยังรวมอยู่ใน p.cs ที่ใช้ลงแพลน) → โชว์แยกหน่วย */
+function ypQty(p){const pb=+p.pb||0,cs=(p.cs||0)-pb;return [cs||(!p.tk&&!pb)?comma(cs)+' ลัง':'',pb?comma(pb)+' ปี๊บ':'',p.tk?comma(p.tk)+' ถัง':''].filter(Boolean).join(' + ');}
 function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head].status==='ready').map(v=>{const p=PLAN[v.head],d=drvOf(p.driver),n=p.stops.length;
   return '<option value="'+esc(v.head)+'"'+(v.head===sel?' selected':'')+'>'+esc(plOf(v.head))+' · '+esc(v.g||'')+(d?' · '+esc(d.name.split(' ')[0]):v.ext?' · รถนอก':' · ไม่มีคนขับ')+(n?' · มี '+n+' จุด':' · ว่าง')+'</option>';}).join('');}
 /* 🧾 PO: ลูกค้า + "สาขาที่ส่ง" → ร้านในค่ากลาง (คุณน้อง 13 พ.ย. ศรีธิคำ สะพานสี่/คลังสินค้าใหม่/ตลาดอมร)
@@ -3240,7 +3245,7 @@ function ypMatchPo(p){const o=p&&p.po;if(!o)return null;
   return sc[0].s>=0.6&&(!sc[1]||sc[0].s>sc[1].s)?sc[0].x:null;}
 function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop),inP=ypInPlan(m.mid);
   const sumQ=its.reduce((a,i)=>a+(i.u==='ถัง'?0:(+i.q||0)),0),qT=ypQty(p),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+(p.dlvFrom?' · แจ้งตามมา':'')+'</span>':p.waitDate?'<span class="w">⏳ '+(p.po?'รอเซลส์นัดส่ง/รับ':'รอแจ้งวันเข้ารับ')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
-    (p.cs||!p.tk?'<span class="i">📦 '+comma(p.cs||0)+' ลัง'+(p.free?' (แถมจริง '+comma(p.free)+')':'')+'</span>':''),(p.tk?'<span class="i">🛢️ '+comma(p.tk)+' ถัง'+(p.tkFree?' (แถมจริง '+comma(p.tkFree)+')':'')+'</span>':''),p.coa?'<span class="r">📄 ต้องมี COA</span>':'',p.receipt?'<span class="w">📃 ใบเสร็จ</span>':'',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':'',p.prepay?'<span class="w">💳 โอนเงินก่อน</span>':'',
+    ((p.cs||0)-(+p.pb||0)||(!p.tk&&!p.pb)?'<span class="i">📦 '+comma((p.cs||0)-(+p.pb||0))+' ลัง'+((p.free||0)-(+p.pbFree||0)?' (แถมจริง '+comma((p.free||0)-(+p.pbFree||0))+')':'')+'</span>':''),(p.pb?'<span class="i">🥫 '+comma(p.pb)+' ปี๊บ'+(p.pbFree?' (แถมจริง '+comma(p.pbFree)+')':'')+'</span>':''),(p.tk?'<span class="i">🛢️ '+comma(p.tk)+' ถัง'+(p.tkFree?' (แถมจริง '+comma(p.tkFree)+')':'')+'</span>':''),p.coa?'<span class="r">📄 ต้องมี COA</span>':'',p.receipt?'<span class="w">📃 ใบเสร็จ</span>':'',p.cheque?'<span class="w">🧾 รับเช็ค</span>':'',p.cash?'<span class="w">💵 เงินสด</span>':'',p.prepay?'<span class="w">💳 โอนเงินก่อน</span>':'',
     p.pickAt?'<span class="i">'+(p.pickAt==='บางนา'?'🏬 ขึ้นของ คลังบางนา':'🏭 ขึ้นของ โรงงานหนองใหญ่')+'</span>':'',
     p.statedCs?'<span class="'+(p.statedCs===sumQ?'g':'w')+'" title="'+esc(p.statedTxt||'')+'">เซลส์สรุป '+comma(p.statedCs)+(p.statedCs===sumQ?' ✓ ตรง':' ≠ นับได้ '+comma(sumQ))+'</span>':''].join('');
   const nw=st!=='planned'&&st!=='ignored'&&(ypIsNew(m)||YP.fresh.has(m.mid));
@@ -3251,8 +3256,13 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
       +(o.buyer&&ypNorm(o.buyer)!==ypNorm(p.shop)?'<br><span class="note">'+esc(o.buyer)+'</span>':'')
       +(o.branch?'<br>📍 สาขาที่ส่ง <b>'+esc(o.branch)+'</b>'+(hit?' → <span class="tchip">'+esc(hit.n)+'</span>':' <span class="note">· ยังไม่พบร้านนี้ในค่ากลาง</span>'):'')+'</span><button class="btn sm" type="button" data-yppo>🖼️ ดูรูป PO</button></div>';}
   h+='<table class="pol"><thead><tr><th>สินค้า</th><th class="n">จำนวน</th><th class="n">แถมจริง</th><th class="n">ราคา</th></tr></thead><tbody>'
-    +its.map(i=>{const tu=i.u==='ถัง'?' ถัง':'';return '<tr><td>'+(tu?'🛢️ ':'')+esc(i.n)+'</td><td class="n">'+(i.q?comma(i.q)+tu:'')+'</td><td class="n">'+(i.f?'+'+comma(i.f)+tu:'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>';}).join('')
+    +its.map(i=>{const u=i.pu||(i.u==='ถัง'?'ถัง':''),tu=u&&u!=='ลัง'?' '+u:'';
+      /* pk-yp v19 ชื่อ/รหัส/หน่วยตามฐานข้อมูลสินค้า (pk_products) · ตัวเล็ก = ที่เซลส์พิมพ์ / บาร์โค้ด PO · ไม่รู้จัก = เตือน */
+      const nm=i.pid?'<b>'+esc(i.pn)+'</b><div class="note">'+(i.pc?'<span class="ypcode">'+esc(i.pc)+'</span> · ':'')+(i.pm==='บาร์โค้ด'?'บาร์โค้ด PO':i.pm==='แถมตามที่ซื้อ'?'แถมตามสินค้าที่ซื้อ':'เซลส์พิมพ์')+' “'+esc(i.n)+'”</div>'
+        :esc(i.n)+(m.sample?'':'<div class="ypunk">'+(i.pAsk?'⚠️ แถมสินค้าตัวไหน (ซื้อหลายตัว) · ระบุตอนส่งเมล':'⚠️ ยังไม่ตรงกับฐานสินค้า')+'</div>');
+      return '<tr><td>'+(u==='ถัง'?'🛢️ ':u==='ปี๊บ'?'🥫 ':'')+nm+'</td><td class="n">'+(i.q?comma(i.q)+tu:'')+'</td><td class="n">'+(i.f?'+'+comma(i.f)+tu:'')+'</td><td class="n">'+(i.price?esc(i.price)+(i.avg?'<div class="note">/'+esc(i.avg)+' เฉลี่ยราคาแล้ว</div>':''):(i.freeOnly?'<span class="note">ของแถม</span>':''))+'</td></tr>';}).join('')
     +'<tr><td><b>รวมลงแพลน</b></td><td class="n" colspan="2"><b>'+qT+'</b></td><td></td></tr></tbody></table>';
+  if(p.unk&&!m.sample)h+='<div class="warn">⚠️ สินค้า '+p.unk+' บรรทัดยังไม่ตรงกับฐานสินค้า — ตอนส่งเมลเลือกชื่อให้ตรงฐาน · ชื่อที่เซลส์ใช้บ่อย เพิ่มได้ที่ <a href="pk-products.html" target="_blank" rel="noopener">ฐานข้อมูลสินค้า</a> ช่อง “ชื่อเรียกในกลุ่มไลน์”</div>';
   if(p.coa)h+='<div class="ypcoa">📄 <b>ต้องมีใบขนย้าย COA</b>'+(p.tk?' · มีสินค้าเป็นถัง':'')+(p.pickup?' · ลูกค้ารับเอง เตรียม COA ให้ลูกค้าตอนมารับ':' · คนขับต้องพก COA ไปด้วย ไม่งั้นผิดกฎ โดนจับ (ลงแพลนแล้วระบบใส่ในหมายเหตุรถให้)')+'</div>';
   /* pk-yp v11: วันรับมาจากข้อความที่เซลส์ส่งตามมา (ร้าน + วันเข้ารับ) · ยังรอ = บอกว่าระบบรอจับข้อความนั้นอยู่ */
   if(p.dlvFrom){const f=p.dlvFrom;h+='<div class="yppk">📅 <b>'+(p.pickup?'วันเข้ารับ ':'วันส่ง ')+esc(dateTH(p.dlv))+'</b> · จากข้อความที่เซลส์แจ้งตามมา'+(f.by?' ('+esc(f.by)+')':'')+' · '+esc(ypTime(f.at))+'<div class="note">“'+esc(String(f.text||'').replace(/\s+/g,' ').slice(0,120))+'”</div></div>';}
@@ -3410,8 +3420,9 @@ function ypPlace(p){const src=[p.dlvTxt].concat((p.notes||[]).filter(t=>/^ส่
   return '';}
 /* แถวฟอร์ม FM-MK จากออเดอร์ไลน์ (ตรรกะเดียวกับ fromMsg ใน pk-mk.html) · รถเรา = ทะเบียน/คนขับจากรถที่ลงแพลน */
 function ypMkRow(m,d){const p=m.p||{},k=p.pick||{},dl=p.dlv||'',pick=ypPickup(m);
-  const unitOf=i=>i.u==='ถัง'?'ถัง':/ปี๊บ/.test(i.n)?'ปี๊บ':'ลัง',items=[];
-  (p.items||[]).forEach(i=>{const u=unitOf(i);if(+i.q)items.push({n:i.n,q:String(i.q),u,price:i.price?String(i.price):''});if(+i.f)items.push({n:i.n,q:String(i.f),u,price:'แถม'});});
+  /* pk-yp v19: ชื่อ+หน่วยตามฐานข้อมูลสินค้า (คลัง/บัญชีเปิดบิลตรงรหัส) · ไม่รู้จัก = ตามที่เซลส์พิมพ์ ให้แอดมินแก้ในหน้าต่างเมล */
+  const unitOf=i=>i.pu||(i.u==='ถัง'?'ถัง':/ปี๊บ|ปี๊ป/.test(i.n)?'ปี๊บ':'ลัง'),items=[];
+  (p.items||[]).forEach(i=>{const u=unitOf(i),n=i.pn||i.n;if(+i.q)items.push({n,q:String(i.q),u,price:i.price?String(i.price):''});if(+i.f)items.push({n,q:String(i.f),u,price:'แถม'});});
   const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
   const head=pick?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+ypPlace(p);
   const P=!pick&&m.head?PLAN[m.head]:null,dv=P?drvOf(P.driver):null;
@@ -3441,7 +3452,7 @@ async function ypMailOpen(m,fresh){if(m.sample||!ypLive()){toast('หน้า�
     Object.keys(card).forEach(f=>{if(card[f]&&card[f]!==(S.row[f]||'')){S.row[f]=card[f];S.dirty=1;}});}
   catch(e){fail(e);return;}
   const draw=()=>{const r=S.row,G=YPG[S.g],sent=ypSentOf(S,m.mid);
-    const it=r.items.map((x,i)=>'<tr><td><input class="in" data-it="'+i+'" data-k="n" value="'+esc(x.n)+'" aria-label="สินค้า"></td><td><input class="in r" data-it="'+i+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td><input class="in c" data-it="'+i+'" data-k="u" value="'+esc(x.u)+'" aria-label="หน่วย"></td><td><input class="in r" data-it="'+i+'" data-k="price" value="'+esc(x.price)+'" aria-label="ราคา"></td><td><button class="ib" data-itx="'+i+'" aria-label="ลบบรรทัด" title="ลบบรรทัด">✕</button></td></tr>').join('');
+    const it=r.items.map((x,i)=>'<tr><td><input class="in" data-it="'+i+'" data-k="n" value="'+esc(x.n)+'" list="ypProdL" aria-label="สินค้า"></td><td><input class="in r" data-it="'+i+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td><input class="in c" data-it="'+i+'" data-k="u" value="'+esc(x.u)+'" aria-label="หน่วย"></td><td><input class="in r" data-it="'+i+'" data-k="price" value="'+esc(x.price)+'" aria-label="ราคา"></td><td><button class="ib" data-itx="'+i+'" aria-label="ลบบรรทัด" title="ลบบรรทัด">✕</button></td></tr>').join('');
     const fld=(k,l,ph)=>'<label>'+l+'<input class="in" data-f="'+k+'" value="'+esc(r[k]||'')+'" placeholder="'+esc(ph||'')+'"></label>';
     const defSub=S.g==='acc'?'แพลนจัดส่งสินค้า ประจำวันที่ '+ypDot(d):'แพลนจัดส่งสินค้า แจ้งจัด '+ypMkShops(S).join(' / ')+' '+ypDot(d);
     ov.querySelector('.ymb').innerHTML='<div class="ymh"><div><h3>✉️ เมลแผนการส่งมอบ · '+esc(r.shop)+'</h3><div class="note">'+(ypPickup(m)?'🙋 ลูกค้ารับเอง':'🚚 ส่งด้วยรถเรา')+' · ฟอร์มส่งสินค้า '+esc(dateTH(d))+' · <b>บันทึกลงฟอร์ม FM-MK แล้ว</b> (ฉบับที่ '+S.rev+' · ร้านที่ '+ypMkNos(S).join(', ')+')</div></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
@@ -3464,6 +3475,7 @@ async function ypMailOpen(m,fresh){if(m.sample||!ypLive()){toast('หน้า�
     ov.querySelectorAll('[data-it],[data-f]').forEach(i=>i.oninput=()=>{S.dirty=1;});
     ov.querySelectorAll('[data-sib]').forEach(c=>c.onchange=()=>{ypMkRead(S,ov);S.sib[+c.dataset.sib].on=c.checked;if(!S.subEd[S.g])delete S.sub[S.g];draw();});
     ov.querySelectorAll('[data-itx]').forEach(b=>b.onclick=()=>{ypMkRead(S,ov);S.row.items.splice(+b.dataset.itx,1);S.dirty=1;draw();});
+    ov.querySelectorAll('[data-k="n"]').forEach(i=>i.addEventListener('change',()=>{const x=(window.PKPROD||[]).find(y=>y.n===i.value.trim()),u=x&&x.u&&ov.querySelector('[data-it="'+i.dataset.it+'"][data-k="u"]');if(u)u.value=x.u;}));   /* เลือกชื่อจากฐาน → หน่วยตามฐาน */
     ov.querySelector('[data-itadd]').onclick=()=>{ypMkRead(S,ov);S.row.items.push({n:'',q:'',u:'ลัง',price:''});S.dirty=1;draw();};
     $('ymSub').oninput=()=>{S.sub[S.g]=$('ymSub').value;S.subEd[S.g]=1;};$('ymNote').oninput=()=>{S.note[S.g]=$('ymNote').value;};
     $('ymPV').onclick=ev=>ypMkPreview(S,m,ov,ev.currentTarget,false,draw);

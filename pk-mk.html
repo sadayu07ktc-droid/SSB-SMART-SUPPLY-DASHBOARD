@@ -390,10 +390,11 @@ function placeOf(p){
   return '';
 }
 function fromMsg(m){ const p=m.p||{}, k=p.pick||{}, d=p.dlv||m.planDate||'';
-  const unitOf=i=>i.u==='ถัง'?'ถัง':/ปี๊บ/.test(i.n)?'ปี๊บ':'ลัง', items=[];
-  (p.items||[]).forEach(i=>{ const u=unitOf(i);
-    if(+i.q) items.push({n:i.n,q:String(i.q),u,price:i.price?String(i.price):''});
-    if(+i.f) items.push({n:i.n,q:String(i.f),u,price:'แถม'}); });
+  /* pk-yp v19 (18 พ.ย.): ชื่อ+หน่วยตามฐานข้อมูลสินค้า (i.pn/i.pu) · ไม่รู้จัก = ตามที่เซลส์พิมพ์ */
+  const unitOf=i=>i.pu||(i.u==='ถัง'?'ถัง':/ปี๊บ|ปี๊ป/.test(i.n)?'ปี๊บ':'ลัง'), items=[];
+  (p.items||[]).forEach(i=>{ const u=unitOf(i), n=i.pn||i.n;
+    if(+i.q) items.push({n,q:String(i.q),u,price:i.price?String(i.price):''});
+    if(+i.f) items.push({n,q:String(i.f),u,price:'แถม'}); });
   const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
   const head=p.pickup?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+placeOf(p);
   return {src:'line',mid:m.mid,shop:p.shop||'',loadAt:p.pickAt||'หนองใหญ่',trans:[head].concat(fl).join(' + ')+(d?' '+dm(d):''),
@@ -485,7 +486,7 @@ async function openYp(b){
   const ms=y.msgs.filter(m=>m.st!=='ignored'&&m.p&&(m.p.pickup||m.st==='planned')&&!inDoc.has(m.mid)).sort((a,c)=>(onDay(a)?0:1)-(onDay(c)?0:1)||String(c.at).localeCompare(String(a.at)));
   const w=document.createElement('div'); w.className='dlg';
   w.innerHTML='<div class="dlg-in wide" role="dialog" aria-modal="true" aria-label="ดึงออเดอร์จากไลน์"><div class="dlg-h"><b>⬇ ดึงออเดอร์จากไลน์<div class="sub">เฉพาะออเดอร์ที่ลงแพลนรถแล้ว + ลูกค้ามารับเอง (Pending ที่ยังไม่ลงรถไม่แสดง) · ติ๊กไว้ให้แล้ว = แพลนวันที่ '+esc(dm(DATE))+(dowOf(DATE)===6?' (เสาร์ รวมลูกค้ารับเอง อา./จ.)':'')+'</div></b><button class="xbtn" data-x aria-label="ปิด">✕</button></div><div class="dlg-b">'
-    +(ms.length?ms.map((m,i)=>{const p=m.p,on=onDay(m);return '<label class="ck"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'><span><b>'+esc(p.shop)+'</b> <small>· '+(p.pickup?'รับเอง':'ส่ง')+' '+(p.dlv?esc(dm(p.dlv)):'ไม่พบวัน')+(p.pickAt?' · '+esc(p.pickAt):'')+' · '+(p.cs?p.cs+' ลัง':'')+(p.tk?' '+p.tk+' ถัง':'')+(m.st==='planned'?' · ลงแพลนแล้ว':'')+'</small></span></label>';}).join(''):'<div class="msg">ไม่มีออเดอร์ที่ลงแพลนรถแล้ว / ลูกค้ารับเอง<br><small>(ออเดอร์ Pending ต้องลงแพลนรถในหน้าแพลนรถประจำวันก่อน)</small></div>')
+    +(ms.length?ms.map((m,i)=>{const p=m.p,on=onDay(m);return '<label class="ck"><input type="checkbox" data-i="'+i+'"'+(on?' checked':'')+'><span><b>'+esc(p.shop)+'</b> <small>· '+(p.pickup?'รับเอง':'ส่ง')+' '+(p.dlv?esc(dm(p.dlv)):'ไม่พบวัน')+(p.pickAt?' · '+esc(p.pickAt):'')+' · '+((p.cs||0)-(+p.pb||0)?((p.cs||0)-(+p.pb||0))+' ลัง':'')+(p.pb?' '+p.pb+' ปี๊บ':'')+(p.tk?' '+p.tk+' ถัง':'')+(m.st==='planned'?' · ลงแพลนแล้ว':'')+'</small></span></label>';}).join(''):'<div class="msg">ไม่มีออเดอร์ที่ลงแพลนรถแล้ว / ลูกค้ารับเอง<br><small>(ออเดอร์ Pending ต้องลงแพลนรถในหน้าแพลนรถประจำวันก่อน)</small></div>')
     +'</div><div class="row" style="margin-top:10px"><button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="ypGo">เพิ่มเข้าแพลน</button></div></div>';
   document.body.appendChild(w); const close=()=>w.remove();
   w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close); w.onclick=e=>{if(e.target===w)close();};

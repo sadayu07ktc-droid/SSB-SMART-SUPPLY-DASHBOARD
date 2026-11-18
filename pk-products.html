@@ -248,7 +248,7 @@
   <main class="main"><div class="wrap">
     <div class="bar">
       <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='pk-plan.html'" aria-label="กลับ">←</button>
-      <div><h1>ฐานข้อมูลสินค้า</h1><div class="sub">รหัส 7-11 · ขนาดลัง · น้ำหนัก · การเรียงพาเลท — ใช้คิดพาเลท/น้ำหนักตอนจัดรถ <span style="opacity:.6">· build 2026-11-17a</span></div></div>
+      <div><h1>ฐานข้อมูลสินค้า</h1><div class="sub">รหัส 7-11 · ขนาดลัง · น้ำหนัก · การเรียงพาเลท — ใช้คิดพาเลท/น้ำหนักตอนจัดรถ <span style="opacity:.6">· build 2026-11-18a</span></div></div>
     </div>
     <div class="road" aria-hidden="true"></div>
     <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
@@ -301,7 +301,7 @@ function list(){
     if(F.c.startsWith('b:')&&(r.brand||'(ไม่ระบุยี่ห้อ)')!==F.c.slice(2)) return false;
     if(F.c.startsWith('ch:')&&!String(r.channels||'').split(/[,/]+/).map(x=>x.trim()).includes(F.c.slice(3))) return false;
     if(F.c.startsWith('g:')&&(r.product_group||'(ไม่ระบุประเภท)')!==F.c.slice(2)) return false;
-    if(q&&![r.sap_code,r.item_code,r.name,r.brand,r.product_group,r.aliases,r.product_id,r.note].join(' ').toLowerCase().includes(q)) return false;
+    if(q&&![r.sap_code,r.item_code,r.name,r.brand,r.product_group,r.aliases,r.barcodes,r.product_id,r.note].join(' ').toLowerCase().includes(q)) return false;
     return true;
   }).sort((a,b)=>String(a.brand||'ฮ').localeCompare(String(b.brand||'ฮ'),'th')||String(a.name).localeCompare(String(b.name),'th'));
 }
@@ -335,7 +335,7 @@ function render(){
     h+='<tr tabindex="0" data-id="'+esc(r.product_id)+'" class="'+(r.status==='Inactive'?'off':'')+'">'
       +'<td class="mono">'+(r.sap_code?esc(r.sap_code):is711(r)?nv:'')+'</td>'
       +'<td class="mono hide-m">'+(r.item_code?esc(r.item_code):nv)+'</td>'
-      +'<td><div class="pn">'+esc(r.name)+'<small>'+[r.brand,r.product_group].filter(Boolean).map(esc).join(' · ')+(r.aliases?' · ไลน์: '+esc(r.aliases):'')+(g.length?' <span class="tag out">ขาด '+esc(g.join(', '))+'</span>':'')+(r.caution?' <span class="tag bad">⚠ '+esc(r.caution)+'</span>':'')+'</small></div></td>'
+      +'<td><div class="pn">'+esc(r.name)+'<small>'+[r.brand,r.product_group].filter(Boolean).map(esc).join(' · ')+(r.aliases?' · ไลน์: '+esc(r.aliases):'')+(r.barcodes?' · บาร์โค้ด: '+esc(r.barcodes):'')+(g.length?' <span class="tag out">ขาด '+esc(g.join(', '))+'</span>':'')+(r.caution?' <span class="tag bad">⚠ '+esc(r.caution)+'</span>':'')+'</small></div></td>'
       +'<td class="c">'+esc(r.main_unit||'')+'</td>'
       +'<td class="dim hide-m">'+(has(r.case_w_mm)&&has(r.case_l_mm)&&has(r.case_h_mm)?nf(r.case_w_mm,0)+' × '+nf(r.case_l_mm,0)+' × '+nf(r.case_h_mm,0):nv)+'</td>'
       +'<td class="n">'+(has(r.weight_per_unit)?nf(r.weight_per_unit,3):nv)+'</td>'
@@ -424,7 +424,7 @@ function qfBind(){
 
 /* ── ฟอร์มเพิ่ม/แก้ไข ── */
 const FF=[
-  ['หลัก',[['sap_code','รหัส 7-11','เช่น 104884'],['item_code','รหัสสินค้า','เช่น F5PK22-0100-012-2-0'],['name','ชื่อสินค้า','เช่น ขวด 1L*12 ทับทิม E',1,'wide'],['brand','ยี่ห้อ','ทับทิม / โบนัส / ไชโย…',0,0,'brands'],['product_group','ประเภท','ขวด / ถุง / ปี๊บ / ถัง',0,0,'groups'],['main_unit','หน่วย','ลัง / ปี๊บ / ถัง / กล่อง',0,0,'units'],['channels','ใช้กับ','7-11, ยี่ปั๊ว'],['aliases','ชื่อเรียกในกลุ่มไลน์','คั่นด้วย , เช่น ไชโย 1ลิตร, ไชโยถุง',0,'wide']]],
+  ['หลัก',[['sap_code','รหัส 7-11','เช่น 104884'],['item_code','รหัสสินค้า','เช่น F5PK22-0100-012-2-0'],['name','ชื่อสินค้า','เช่น ขวด 1L*12 ทับทิม E',1,'wide'],['brand','ยี่ห้อ','ทับทิม / โบนัส / ไชโย…',0,0,'brands'],['product_group','ประเภท','ขวด / ถุง / ปี๊บ / ถัง',0,0,'groups'],['main_unit','หน่วย','ลัง / ปี๊บ / ถัง / กล่อง',0,0,'units'],['channels','ใช้กับ','7-11, ยี่ปั๊ว'],['aliases','ชื่อเรียกในกลุ่มไลน์','คั่นด้วย , เช่น ไชโย 1ลิตร, ไชโยถุง',0,'wide'],['barcodes','บาร์โค้ดในใบ PO','คั่นด้วย , เช่น 8858776300150',0,'wide']]],
   ['ขนาดลัง และน้ำหนัก',[['case_w_mm','กว้างลัง (มม.)','240','n'],['case_l_mm','ยาวลัง (มม.)','320','n'],['case_h_mm','สูงลัง (มม.)','293','n'],['weight_per_unit','กก./หน่วย (QC)','11.44','n'],['weight_stock','กก./หน่วย ชีตคลัง','11.52','n']]],
   ['การเรียงบนพาเลท',[['per_layer','หน่วยต่อชั้น','14','n'],['layers','จำนวนชั้น','4','n'],['per_pallet','หน่วยต่อพาเลท','ว่าง = ต่อชั้น × ชั้น','n'],['stack_pallets','พาเลทเต็มซ้อนกันได้ (ชั้น)','เช่น 2','n'],['mix_ok','ผสมเศษกับสินค้าอื่นได้','',0,0,'mix']]],
   ['อื่นๆ',[['caution','ข้อควรระวัง','เช่น ห้ามวางทับ',0,'wide'],['note','หมายเหตุ','',0,'wide'],['status','สถานะ','',0,0,'status']]]];
@@ -529,7 +529,7 @@ function XSPEC(){return {
     {k:'weight_per_unit',h:'กก./หน่วย (QC)',w:11,help:'น้ำหนักต่อหน่วยรวมบรรจุภัณฑ์ ใช้คิดน้ำหนักพาเลท'},{k:'weight_stock',h:'กก./หน่วย ชีตคลัง',w:11},
     {k:'per_layer',h:'หน่วยต่อชั้น',w:9},{k:'layers',h:'จำนวนชั้น',w:8},{k:'per_pallet',h:'หน่วยต่อพาเลท',w:10,help:'เว้นว่าง = ระบบคิด หน่วยต่อชั้น × จำนวนชั้น ให้'},
     {k:'stack_pallets',h:'พาเลทเต็มซ้อนกันได้ (ชั้น)',w:12},{k:'mix_ok',h:'ผสมเศษกับสินค้าอื่นได้',w:12,help:'ได้ / ไม่ได้'},
-    {k:'caution',h:'ข้อควรระวัง',w:22},{k:'channels',h:'ใช้กับ',w:12,help:'เช่น 7-11, ยี่ปั๊ว'},{k:'aliases',h:'ชื่อเรียกในไลน์',w:24,help:'ชื่อที่เซลส์พิมพ์ในกลุ่มไลน์ คั่นด้วย , (ใช้จับคู่ออเดอร์ยี่ปั๊ว)'},
+    {k:'caution',h:'ข้อควรระวัง',w:22},{k:'channels',h:'ใช้กับ',w:12,help:'เช่น 7-11, ยี่ปั๊ว'},{k:'aliases',h:'ชื่อเรียกในไลน์',w:24,help:'ชื่อที่เซลส์พิมพ์ในกลุ่มไลน์ คั่นด้วย , (ใช้จับคู่ออเดอร์ยี่ปั๊ว)'},{k:'barcodes',h:'บาร์โค้ด (ใบ PO)',w:18,help:'บาร์โค้ดสินค้าในใบ PO ลูกค้า คั่นด้วย , (ใช้จับคู่ PO อัตโนมัติ)'},
     {k:'note',h:'หมายเหตุ',w:30},
     {k:'status',h:'สถานะ',w:9,get:r=>r.status==='Inactive'?'เลิกใช้':'ใช้งาน',help:'ใช้งาน / เลิกใช้'},
     {k:'pal_h',h:'สูงพาเลทเต็ม (ซม.)',w:11,ro:1,get:r=>{const v=palH(r);return v==null?'':v;}},
