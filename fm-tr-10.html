@@ -260,7 +260,7 @@ const MARK = {
 };
 // หลักฐานว่าวันนั้นรถวิ่งไหม (ชี้ที่วัน/ช่องลายมือชื่อ) · เกณฑ์เดียวกับ veq-check/หน้าอุปกรณ์ติดรถ
 const RUN_SRC = { attendance: 'ลงเวลาเข้างาน', order: 'มีออเดอร์', dtc: 'GPS' };
-const runTip = (dd) => dd.missing ? ' · รถวิ่งแต่ไม่ส่ง (' + [RUN_SRC[dd.run_src] || '', dd.run_km ? 'GPS ' + Math.round(dd.run_km) + ' กม.' : ''].filter(Boolean).join(' · ') + ')' : dd.idle ? ' · ไม่วิ่ง' + (dd.run_km ? ' (GPS ' + Math.round(dd.run_km) + ' กม. ต่ำกว่าเกณฑ์)' : '') : dd.wait ? ' · วันนี้ยังไม่ออกรถ (ยังไม่หมดวัน)' : '';
+const runTip = (dd) => dd.missing ? ' · รถวิ่งแต่ไม่ส่ง (' + [dd.run_src === 'dtc' ? '' : RUN_SRC[dd.run_src] || '', dd.run_km ? 'GPS ' + Math.round(dd.run_km) + ' กม.' : ''].filter(Boolean).join(' · ') + ')' : dd.idle ? ' · ไม่วิ่ง' + (dd.run_km ? ' (GPS ' + Math.round(dd.run_km) + ' กม. ต่ำกว่าเกณฑ์)' : '') : dd.wait ? ' · วันนี้ยังไม่ออกรถ (ยังไม่หมดวัน)' : '';
 // วันนี้ยังไม่จบวัน → ยังไม่วิ่ง ≠ ไม่วิ่ง (ออเดอร์/ลงเวลาอาจยังไม่มา) · ไม่นับในช่อง "ไม่วิ่ง"
 function todayFix(d) {
   const t = d.today || bkk();
