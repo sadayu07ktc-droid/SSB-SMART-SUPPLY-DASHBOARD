@@ -442,27 +442,31 @@ function vehX(){
   const kindTx=v=>v.unit_kind==='หาง'?'หางสำรอง':(v.head_kind||'');
   const num=(k,h,help)=>({k,h,w:11,help:help||'ตัวเลข (ซม.)'});
   const group=G;
+  // ▾ ดรอปดาวน์ในไฟล์ (18 พ.ย. คุณน้อง) · strict = เลือกจากรายการเท่านั้น · ไม่ strict = เลือกหรือพิมพ์เองได้ · รายการ = ค่ามาตรฐาน + ค่าที่มีในฐานแล้ว (ทุกกลุ่ม · ไฟล์ 3 กลุ่มเหมือนกัน)
+  const have=k=>DATA.vehicles.map(v=>String(v[k]||'').trim()).filter(Boolean);
+  const uniq=a=>a.filter((x,i)=>x&&a.indexOf(x)===i);
+  const byTh=a=>a.slice().sort((x,y)=>x.localeCompare(y,'th'));
   return { title:'ทะเบียนรถ '+G, sheet:'ทะเบียนรถ', file:'ทะเบียนรถ_'+G, unit:'คัน', key:'id', maxRows:1000,
     offHint:'เลิกใช้ = แก้คอลัมน์ สถานะ เป็น เลิกใช้',
     rows:DATA.vehicles.filter(v=>vg(v)===G),
     sort:(a,b)=>((a.status==='เลิกใช้')-(b.status==='เลิกใช้'))||String(a.plate).localeCompare(String(b.plate)),
     cols:[
       {k:'plate',h:'ทะเบียน (หัว,หาง)',w:18,ro:1,newOnly:1,help:'รถคันใหม่กรอกในแถวใหม่ เช่น 87-1234 หรือ หัว,หาง 87-1234,87-5678 (ห้ามซ้ำกับรถที่ใช้งานอยู่) · รถคันเดิมแก้ที่ปุ่ม ✏️ ในหน้าเว็บ'},
-      {k:'job_group',h:'กลุ่ม',w:8,ro:1,newOnly:1,get:v=>vg(v),help:'ไร่ / Bulk / Packing · แถวใหม่เว้นว่าง = '+G+' · ใส่ได้เฉพาะกลุ่มของคุณ'},
+      {k:'job_group',h:'กลุ่ม',w:8,ro:1,newOnly:1,get:v=>vg(v),dd:{list:['ไร่','Bulk','Packing'],strict:1},help:'ไร่ / Bulk / Packing · แถวใหม่เว้นว่าง = '+G+' · ใส่ได้เฉพาะกลุ่มของคุณ'},
       {k:'_drv',h:'คนขับประจำ',w:20,ro:1,get:v=>(v.drivers||[]).filter(d=>headOf(d.plate)===headOf(v.plate)).map(d=>d.name+' ('+(d.status||'-')+')').join(', ')||(v.unit_kind==='หาง'?'หางสำรอง':'รถสแปร์')},
-      {k:'vehicle_type',h:'ประเภทรถ (ค่าแรง)',w:16,help:VTYPES.join(' / ')+' — คำว่า พ่วง / 4 ล้อ / 6 ล้อ ใช้คิดเกณฑ์น้ำมันค่าแรง · รถคันใหม่ต้องกรอกช่องนี้'},
-      {k:'brand',h:'ยี่ห้อ',w:10},{k:'model',h:'รุ่น',w:12},
-      {k:'status',h:'สถานะ',w:9,get:v=>v.status||'ใช้งาน',help:'ใช้งาน / เลิกใช้'},
+      {k:'vehicle_type',h:'ประเภทรถ (ค่าแรง)',w:16,dd:{list:uniq(VTYPES.concat(byTh(have('vehicle_type')))),strict:1},help:VTYPES.join(' / ')+' — คำว่า พ่วง / 4 ล้อ / 6 ล้อ ใช้คิดเกณฑ์น้ำมันค่าแรง · รถคันใหม่ต้องกรอกช่องนี้'},
+      {k:'brand',h:'ยี่ห้อ',w:10,dd:{list:uniq(byTh(have('brand')))}},{k:'model',h:'รุ่น',w:12,dd:{list:uniq(byTh(have('model')))}},
+      {k:'status',h:'สถานะ',w:9,get:v=>v.status||'ใช้งาน',dd:{list:['ใช้งาน','เลิกใช้'],strict:1},help:'ใช้งาน / เลิกใช้'},
       {k:'start_date',h:'วันจดทะเบียน',w:12,get:v=>dmyToIso(v.start_date),help:'ปปปป-ดด-วว เช่น 2024-02-08 หรือ 8/2/2567'},
       {k:'tax_expiry_date',h:'วันหมดอายุภาษี',w:12,get:v=>dmyToIso(v.tax_expiry_date),help:'ปปปป-ดด-วว หรือ ว/ด/ปปปป (พ.ศ. ได้)'},
-      {k:'kind',h:'ชนิดหัว',w:10,get:kindTx,help:'หัวลาก (ต่อหางเทรลเลอร์ · หัวไม่มีกระบะ) / 10 ล้อ (มีกระบะ · ต่อหางลูกได้) / 10 ล้อฮุกลิฟ (กระบะยกขึ้น-ลงได้ · ต่อหางลูกได้) / 6 ล้อ / 4 ล้อ / หางสำรอง (ไม่มีหัว)'},
-      {k:'body_type',h:'รูปทรงกระบะ',w:16,help:'เช่น '+BODY_LIST.slice(0,8).join(' / ')},
+      {k:'kind',h:'ชนิดหัว',w:10,get:kindTx,dd:{list:HEAD_KINDS.concat(['หางสำรอง']),strict:1},help:'หัวลาก (ต่อหางเทรลเลอร์ · หัวไม่มีกระบะ) / 10 ล้อ (มีกระบะ · ต่อหางลูกได้) / 10 ล้อฮุกลิฟ (กระบะยกขึ้น-ลงได้ · ต่อหางลูกได้) / 6 ล้อ / 4 ล้อ / หางสำรอง (ไม่มีหัว)'},
+      {k:'body_type',h:'รูปทรงกระบะ',w:16,dd:{list:uniq(BODY_LIST.concat(byTh(have('body_type'))))},help:'เช่น '+BODY_LIST.slice(0,8).join(' / ')},
       num('head_w_cm','หัว กว้าง (ซม.)'),num('head_l_cm','หัว ยาว (ซม.)'),num('head_h_cm','หัว สูง (ซม.)','ซม. · พื้นเรียบ = เว้นว่าง'),
       num('tail_w_cm','หาง กว้าง (ซม.)'),num('tail_l_cm','หาง ยาว (ซม.)'),num('tail_h_cm','หาง สูง (ซม.)','ซม. · พื้นเรียบ = เว้นว่าง'),
       num('deck_h_cm','พื้นกระบะสูงจากถนน (ซม.)','ซม. · พื้นเรียบ: วางของสูงได้ = 400 − ค่านี้'),
       num('tare_kg','น้ำหนักรถเปล่า (กก.)','กก. หัว+หาง'),num('gvw_kg','น้ำหนักรวมตามกฎหมาย (กก.)','กก. ต้องมากกว่าน้ำหนักรถเปล่า'),
       {k:'_pay',h:'บรรทุกได้ (กก.)',w:11,ro:1,get:v=>{const t=n0(v.tare_kg),g=n0(v.gvw_kg);return t!=null&&g!=null?g-t:'';}},
-      {k:'needs_tarp',h:'ค่าคลุมผ้าใบ',w:10,get:v=>v.needs_tarp===true?'ได้':v.needs_tarp===false?'ไม่ได้':'',help:'ได้ (กระบะเปิด/พื้นเรียบ/คอก) / ไม่ได้ (ตู้ทึบ/ผ้าใบในตัว) · ว่าง = ตามประเภทงาน'},
+      {k:'needs_tarp',h:'ค่าคลุมผ้าใบ',w:10,get:v=>v.needs_tarp===true?'ได้':v.needs_tarp===false?'ไม่ได้':'',dd:{list:['ได้','ไม่ได้'],strict:1},help:'ได้ (กระบะเปิด/พื้นเรียบ/คอก) / ไม่ได้ (ตู้ทึบ/ผ้าใบในตัว) · ว่าง = ตามประเภทงาน'},
       {k:'spec_note',h:'หมายเหตุรถ',w:24}
     ].concat(KEY.concat(CTX,DET).map(c=>({k:c[0],h:c[1]+(c[2]?' ('+c[2]+')':''),w:12,help:'ตัวเลข'+(c[2]?' '+c[2]:'')}))),
     preview:rows=>vehPost(rows,false,group), apply:rows=>vehPost(rows,true,group), onDone:()=>load() };
@@ -477,6 +481,28 @@ function xrtLib(){
 function xrtSave(blob, name){
   var u = URL.createObjectURL(blob), a = document.createElement('a'); a.href = u; a.download = name; document.body.appendChild(a); a.click();
   setTimeout(function(){ URL.revokeObjectURL(u); a.remove(); }, 1500);
+}
+// ▾ xlsx-js-style เขียน Data Validation ไม่ได้ → เปิดไฟล์ที่สร้างแล้วด้วย JSZip แทรก <dataValidations> ในแผ่นแรก (sheet1.xml) ก่อน <pageMargins>
+function xrtZipLib(){
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  return new Promise(function(ok, no){ var s = document.createElement('script'); s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = function(){ ok(window.JSZip); }; s.onerror = function(){ no(new Error('โหลด JSZip ไม่ได้')); }; document.head.appendChild(s); });
+}
+async function xrtAddDropdowns(buf, dv){
+  var Z = await xrtZipLib(), zip = await Z.loadAsync(buf), p = 'xl/worksheets/sheet1.xml', f = zip.file(p);
+  if (!f) throw new Error('ไม่พบ ' + p);
+  var xml = await f.async('string');
+  if (xml.indexOf('<dataValidations') >= 0) return buf;
+  var e = function(s){ return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); };
+  var dvx = '<dataValidations count="' + dv.length + '">' + dv.map(function(d){
+    return '<dataValidation type="list" allowBlank="1" showInputMessage="1" showErrorMessage="' + (d.strict ? 1 : 0) + '" errorStyle="stop"'
+      + (d.strict ? ' errorTitle="' + e(d.name) + '" error="' + e('เลือกจากรายการเท่านั้น (กดลูกศร ▾)') + '"' : '')
+      + ' sqref="' + d.sqref + '"><formula1>' + e(d.src) + '</formula1></dataValidation>'; }).join('') + '</dataValidations>';
+  // ลำดับตาม schema: dataValidations ต้องมาก่อนแท็กเหล่านี้ (SheetJS ใส่ ignoredErrors ต่อท้าย sheetData) ไม่งั้น Excel "ซ่อมไฟล์" แล้วทิ้งดรอปดาวน์
+  var at = ['<hyperlinks', '<printOptions', '<pageMargins', '<pageSetup', '<headerFooter', '<rowBreaks', '<colBreaks', '<customProperties', '<cellWatches', '<ignoredErrors', '<smartTags', '<drawing', '<legacyDrawing', '<picture', '<oleObjects', '<controls', '<webPublishItems', '<tableParts', '<extLst', '</worksheet>']
+    .map(function(t){ return xml.indexOf(t); }).filter(function(i){ return i >= 0; }).reduce(function(a, b){ return Math.min(a, b); });
+  zip.file(p, xml.slice(0, at) + dvx + xml.slice(at));
+  return await zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE' });
 }
 function xrtYmd(d){ var p = function(n){ return ('0' + n).slice(-2); }; return d.getFullYear() + p(d.getMonth() + 1) + p(d.getDate()); }
 async function xrtDownload(S, b){
@@ -508,9 +534,30 @@ async function xrtDownload(S, b){
       ['4. ช่องที่เว้นว่าง = คงค่าเดิม · ลบแถวทิ้ง = ไม่ลบออกจากระบบ' + (S.offHint ? ' (' + S.offHint + ')' : '')],
       ['5. ก่อนบันทึกจริง ระบบจะแสดงสรุป เพิ่มใหม่ / แก้ไข (ค่าเก่า → ใหม่) / ผิดพลาด ให้ตรวจแล้วค่อยกดยืนยัน'], [''], ['ค่าที่ใช้ได้']]
       .concat(S.cols.filter(function(x){ return x.help; }).map(function(x){ return [x.h, x.help]; }));
+    // ▾ ดรอปดาวน์ (18 พ.ย.) — รายการอยู่แผ่นซ่อน "ตัวเลือก" · คอลัมน์ที่มี dd ได้ลูกศรเลือก ตั้งแต่แถว 3 เผื่อแถวใหม่ 500 แถว
+    var dds = [], lists = [];
+    cols.forEach(function(x, ci){ if (x.dd && x.dd.list && x.dd.list.length) { dds.push({ ci: ci, x: x, li: lists.length }); lists.push(x.dd.list); } });
+    if (dds.length) {
+      help.splice(help.findIndex(function(r){ return r[0] === 'ค่าที่ใช้ได้'; }), 0, ['ช่องที่มีลูกศร ▾ = กดเลือกจากรายการได้ · ' + dds.filter(function(d){ return d.x.dd.strict; }).map(function(d){ return d.x.h; }).join(' / ') + ' = ต้องเลือกจากรายการเท่านั้น · ช่องอื่นที่มีลูกศร พิมพ์คำใหม่เองได้'], ['']);
+    }
     var wh = X.utils.aoa_to_sheet(help); wh['!cols'] = [{ wch: 26 }, { wch: 100 }];
     var wb = X.utils.book_new(); X.utils.book_append_sheet(wb, ws, S.sheet); X.utils.book_append_sheet(wb, wh, 'วิธีใช้');
-    xrtSave(new Blob([X.write(wb, { bookType: 'xlsx', type: 'array' })], { type: 'application/octet-stream' }), (S.file || S.sheet) + '_' + xrtYmd(new Date()) + '.xlsx');
+    var LS = 'ตัวเลือก';
+    if (dds.length) {
+      var la = [dds.map(function(d){ return d.x.h; })], mx = Math.max.apply(null, lists.map(function(l){ return l.length; }));
+      for (var i = 0; i < mx; i++) la.push(lists.map(function(l){ return l[i] == null ? '' : String(l[i]); }));
+      var wl = X.utils.aoa_to_sheet(la); X.utils.book_append_sheet(wb, wl, LS);
+      wb.Workbook = { Sheets: [{}, {}, { Hidden: 1 }] };
+    }
+    var out = X.write(wb, { bookType: 'xlsx', type: 'array' });
+    if (dds.length) {
+      try { out = await xrtAddDropdowns(out, dds.map(function(d){
+          var col = X.utils.encode_col(d.ci), lc = X.utils.encode_col(d.li);
+          return { sqref: col + '3:' + col + (rows.length + 502), src: "'" + LS + "'!$" + lc + '$2:$' + lc + '$' + (lists[d.li].length + 1), strict: !!d.x.dd.strict, name: d.x.h };
+        })); }
+      catch (e) { console.warn('DROPDOWN_ERR', e); toast('ใส่ดรอปดาวน์ไม่สำเร็จ — ได้ไฟล์แบบไม่มีดรอปดาวน์', true); }
+    }
+    xrtSave(new Blob([out], { type: 'application/octet-stream' }), (S.file || S.sheet) + '_' + xrtYmd(new Date()) + '.xlsx');
   } catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: ' + (e.message || e), true); }
   finally { done(); }
 }
