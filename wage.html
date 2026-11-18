@@ -421,6 +421,7 @@ async function loadReport(){
   const cur=$('driver').value, ds=[...new Set(ROWS.map(r=>r.driver).filter(Boolean))];
   $('driver').innerHTML='<option value="">คนขับทุกคน</option>'+ds.map(d=>`<option${d===cur?' selected':''}>${d}</option>`).join('');
   applyView();
+  if(DEEP_ORDER){const o=DEEP_ORDER;DEEP_ORDER='';setTimeout(()=>openDetail(o),300);}   // 📋 ลิงก์จากการ์ด LINE
   waAfterLoad();
 }
 
@@ -1357,6 +1358,8 @@ $('summary').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e
  * สิทธิ์จริงตรวจที่ Edge (admin-perms getPinInfo + ssb-read getWageReport group) · PIN ครั้งแรกแอดมินตั้งเอง */
 const WG={'ไร่':{ic:'🌴',t:'ไร่',d:'คนขับรถไร่ · งานรับปาล์ม'},Bulk:{ic:'🏭',t:'Bulk',d:'คนขับกลุ่ม Bulk'},Packing:{ic:'📦',t:'Packing',d:'คนขับกลุ่ม Packing'}};
 let PIN_INFO=null; window.WAGE_GROUP='';
+/* 📋 ลิงก์จากการ์ด LINE "จบงาน PK" (18 พ.ย. 2569) wage.html?order=ORD-… → เลือกกลุ่ม+PIN ตามปกติ แล้วเปิดลิ้นชักใบงานนั้นเองหลังโหลดรายงาน (ครั้งเดียว) */
+let DEEP_ORDER=(()=>{try{const v=(new URLSearchParams(location.search).get('order')||'').trim();return /^ORD-[A-Za-z0-9-]{4,40}$/.test(v)?v:'';}catch(e){return '';}})();
 function lastGroup(){try{return localStorage.getItem('ssb_wage_group')||'';}catch(e){return '';}}
 function gpMsg(t){$('gpHi').textContent=t;$('gpSub').textContent='';$('gpGrid').innerHTML='';}
 function showPicker(){
@@ -1366,7 +1369,7 @@ function showPicker(){
   $('gpGrid').innerHTML=Object.keys(WG).map(k=>{const g=WG[k],ok=allow.includes(k),isLast=ok&&k===last;
     return '<button type="button" class="gpc'+(ok?'':' lock')+(isLast?' last':'')+'"'+(ok?'':' disabled aria-disabled="true"')+' onclick="pickGroup(\''+k+'\')">'
       +'<span class="gpi" aria-hidden="true">'+g.ic+'</span><b>'+g.t+'</b><small>'+(ok?g.d:'🔒 ไม่มีสิทธิ์ดูกลุ่มนี้')+'</small>'+(isLast?'<em>ใช้ล่าสุด</em>':'')+'</button>';}).join('');
-  $('gpNote').textContent=allow.length===3?'คุณดูได้ทุกกลุ่ม':'คุณดูได้เฉพาะกลุ่ม '+allow.join(', ')+' (ตามประเภทแอดมิน)';
+  $('gpNote').textContent=(allow.length===3?'คุณดูได้ทุกกลุ่ม':'คุณดูได้เฉพาะกลุ่ม '+allow.join(', ')+' (ตามประเภทแอดมิน)')+(DEEP_ORDER?' · เลือกกลุ่มแล้วจะเปิดใบงาน '+DEEP_ORDER+' ให้เลย':'');
 }
 async function pickGroup(k){
   if(!((PIN_INFO&&PIN_INFO.groups)||[]).includes(k))return;
