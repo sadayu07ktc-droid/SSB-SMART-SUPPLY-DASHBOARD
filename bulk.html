@@ -525,6 +525,27 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .pdseg button{display:flex;align-items:center;gap:6px;justify-content:center}
 .pdseg button[aria-checked="true"] .pdcode{box-shadow:0 0 0 2px #fff}
 .bcode{font-family:var(--f-num);font-weight:700}
+.prbtn{display:inline-flex;align-items:center;gap:6px}
+.prbd{display:flex;flex-direction:column;gap:10px}
+.prstep{font-size:11.5px;font-weight:700;color:var(--muted);letter-spacing:.02em;margin-top:4px}
+.prrow{display:grid;grid-template-columns:56px minmax(0,1fr);gap:8px;align-items:start}
+.prl{font-size:13px;color:var(--muted);padding-top:6px}
+.pdchip:disabled{opacity:.45;cursor:default}
+.prkinds{display:flex;flex-direction:column;gap:8px}
+.prk{display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.prk.on{border:1.5px solid var(--k);background:color-mix(in srgb,var(--k) 9%,var(--surface))}
+.prk:focus-visible,.prfmt button:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+.prki{flex:none;width:36px;height:36px;border-radius:10px;color:#fff;display:grid;place-items:center}
+.prkt{flex:1;min-width:0}.prkt b{display:block;font-size:14px}.prkt small{display:block;color:var(--muted);font-size:12px}
+.prdot{flex:none;width:16px;height:16px;border-radius:50%;border:2px solid var(--line)}
+.prk.on .prdot{border-color:var(--k);background:radial-gradient(circle,var(--k) 0 4px,transparent 5px)}
+.prfmt{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.prfmt button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;font:inherit;font-weight:700;text-align:left;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer}
+.prfmt button:hover:not(:disabled){border-color:var(--brand2);background:var(--tint)}
+.prfmt button:disabled{opacity:.5;cursor:default}
+.prfmt b{font-family:var(--f-num);font-size:11px;color:#fff;border-radius:6px;padding:1px 7px;margin-bottom:4px}
+.prfmt small{color:var(--muted);font-weight:400;font-size:11.5px}
+@media (max-width:520px){.prfmt{grid-template-columns:1fr}.prrow{grid-template-columns:1fr}.prl{padding-top:0}}
 .pdadd{border-style:dashed;background:none;cursor:pointer;font:inherit;color:var(--ink);text-align:left;justify-content:center;min-height:96px}
 .pdadd:hover{border-color:var(--brand2);background:var(--tint)}
 .pdadd:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
@@ -584,7 +605,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19e</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19f</span></div>
   </div>
   </div></main>
 </div>
@@ -2005,6 +2026,7 @@ function pdDraw(focus){
           <button type="button" class="pdchip${PD_F==='all'?' on':''}" data-pdf="all">ทั้งหมด <b>${ps.length}</b></button>
           ${ds.map(d=>`<button type="button" class="pdchip${PD_F===d.code?' on':''}" data-pdf="${esc(d.code)}"><i style="background:${pdDot(d.code)}"></i>${esc(d.name)} <b>${ps.filter(p=>p.dept===d.code).length}</b></button>`).join('')}</div>
         <input type="search" id="pdQ" class="vsin pdq" placeholder="ค้นหาชนิดสินค้า" aria-label="ค้นหาชนิดสินค้า" value="${esc(PD_Q)}">
+        <button type="button" class="btn prbtn" id="pdRep" title="ออกรายงาน Excel / PDF / JPEG"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 18v-3M12 18v-6M16 18v-4"/></svg>รายงาน</button>
         ${ed?'<button type="button" class="btn gold" id="pdAdd">+ เพิ่มชนิดสินค้า</button>':''}</div>
       <div class="pdwrap"><table class="pdt"><thead><tr><th>#</th><th>ชนิดสินค้า</th><th>บริษัท</th><th>รหัสบิล</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
         <tbody>${rows.length?rows.map(row).join(''):`<tr><td colspan="${ed?6:5}" class="sub" style="text-align:center;padding:18px">ไม่พบชนิดสินค้า</td></tr>`}</tbody></table></div>
@@ -2014,6 +2036,7 @@ function pdDraw(focus){
   m.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>{ PD_F=b.dataset.pdf; pdDraw(); });
   const qi=$('pdQ'); qi.oninput=()=>{ PD_Q=qi.value; const pos=qi.selectionStart; pdDraw(); const n=$('pdQ'); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} };
   if($('pdAdd')) $('pdAdd').onclick=()=>pdEdit(null);
+  $('pdRep').onclick=openProdReport;   // 📊 รายงาน 19 พ.ย.
   m.querySelectorAll('[data-pdp]').forEach(b=>b.onclick=()=>pdEdit(ps.find(p=>String(p.id)===b.dataset.pdp)));
   m.querySelectorAll('[data-pdn]').forEach(b=>b.onclick=()=>pdEdit(null,b.dataset.pdn));
   m.querySelectorAll('[data-pde]').forEach(b=>b.onclick=()=>pdDeptEdit(ds.find(d=>d.code===b.dataset.pde)));
@@ -2021,6 +2044,83 @@ function pdDraw(focus){
   if(focus) $('pdX').focus();
 }
 // กล่องแก้ไขเล็ก (ใช้ร่วม สินค้า / บริษัท)
+/* 📊 รายงานชนิดสินค้า → บริษัท / รหัสบิล · 2026-11-19 · skill webapp-report-export แบบ 3 ขั้น
+   1 เลือกข้อมูล (บริษัท / สถานะ · Set ว่าง = ทั้งหมด · ค่าเริ่ม = ตัวกรองบนจอ) → 2 เลือกรายงาน → 3 Excel / PDF / JPEG (ใช้ docReportXlsx / docReportImage เดิม) */
+let PR_P=null;
+const PR_KINDS=[['list','รายการชนิดสินค้า','ทุกชนิดเรียงตามบริษัท พร้อมรหัสบิล A/B','#2F7D4F','M4 6h16M4 12h16M4 18h10'],
+  ['group','แยกตามบริษัท','มีแถบหัวบริษัท (ชื่อเต็มไทย/อังกฤษ) ก่อนรายการของบริษัทนั้น','#C2410C','M3 7h18M3 12h18M3 17h18M7 4v16'],
+  ['sum','สรุปตามบริษัท','บริษัทละแถว: ชื่อเต็ม · รหัสบิล · จำนวนชนิดใช้งาน/เลิกใช้','#3B6E8F','M5 20V10M12 20V4M19 20v-7']];
+function openProdReport(){
+  if(!PR_P) PR_P={cos:new Set(), sts:new Set(), kind:'list'};
+  PR_P.cos=new Set(PD_F!=='all'?[PD_F]:[]);   // ค่าเริ่ม = ตัวกรองบนจอ
+  prDraw();
+}
+function prRows(){ const ps=DATA.products||[], q=nrm(PD_Q);
+  return ps.filter(p=>(!PR_P.cos.size||PR_P.cos.has(p.dept))&&(!PR_P.sts.size||PR_P.sts.has(p.active===false?'off':'on'))&&(!q||[p.name,...(p.aliases||[])].some(n=>nrm(n).includes(q)))); }
+function prDraw(){
+  let m=$('prPick');
+  if(!m){ m=document.createElement('div'); m.id='prPick'; m.className='dlg'; m.style.zIndex=74;
+    m.onmousedown=e=>{ if(e.target===m) m.remove(); }; document.body.appendChild(m); }
+  const ds=DATA.depts||[], ps=DATA.products||[], rows=prRows(), q=PD_Q.trim();
+  const chip=(on,attr,inner,dis)=>`<button type="button" class="pdchip${on?' on':''}" ${attr}${dis?' disabled':''} aria-pressed="${on}">${inner}</button>`;
+  const cntSt=v=>ps.filter(p=>(!PR_P.cos.size||PR_P.cos.has(p.dept))&&(p.active===false?'off':'on')===v).length;
+  const ic=d=>`<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
+  m.innerHTML=`<div class="dlgbox" style="max-width:560px" role="dialog" aria-modal="true" aria-labelledby="prT">
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">ฐานข้อมูล Bulk</div><h2 id="prT" style="color:#fff;margin:2px 0 0">📊 ออกรายงานชนิดสินค้า</h2></div><button type="button" class="dlgx" id="prX" aria-label="ปิด">✕</button></div>
+    <div class="dlgbd prbd">
+      <div class="prstep">1 · เลือกข้อมูล</div>
+      <div class="prrow"><span class="prl">บริษัท</span><div class="pdchips">${chip(!PR_P.cos.size,'data-prc=""','ทุกบริษัท')}${ds.map(d=>chip(PR_P.cos.has(d.code),`data-prc="${esc(d.code)}"`,`<i style="background:${pdDot(d.code)}"></i>${esc(d.code)} · ${esc(d.name)} <b>${ps.filter(p=>p.dept===d.code).length}</b>`)).join('')}</div></div>
+      <div class="prrow"><span class="prl">สถานะ</span><div class="pdchips">${chip(!PR_P.sts.size,'data-prs=""','ทั้งหมด')}${chip(PR_P.sts.has('on'),'data-prs="on"','ใช้งาน <b>'+cntSt('on')+'</b>')}${chip(PR_P.sts.has('off'),'data-prs="off"','เลิกใช้ <b>'+cntSt('off')+'</b>',!cntSt('off'))}</div></div>
+      ${q?`<div class="sub">ใช้คำค้นบนจอด้วย: “${esc(q)}”</div>`:''}
+      <div class="prstep">2 · เลือกรายงาน</div>
+      <div class="prkinds" role="radiogroup" aria-label="ชนิดรายงาน">${PR_KINDS.map(([k,t,dsc,clr,path])=>`<button type="button" role="radio" aria-checked="${PR_P.kind===k}" class="prk${PR_P.kind===k?' on':''}" data-prk="${k}" style="--k:${clr}">
+        <span class="prki" style="background:${clr}">${ic(path)}</span><span class="prkt"><b>${t}</b><small>${dsc}</small></span><span class="prdot" aria-hidden="true"></span></button>`).join('')}</div>
+      <div class="prstep">3 · เลือกรูปแบบไฟล์ <span class="sub" style="font-weight:400">· ${rows.length} ชนิด${PR_P.kind==='sum'?' · '+prDepts(rows).length+' บริษัท':''}</span></div>
+      <div class="prfmt">
+        <button type="button" data-prf="xlsx"${rows.length?'':' disabled'}><b style="background:#1d6f42">XLS</b>Excel<small>กรอง/เรียงต่อได้</small></button>
+        <button type="button" data-prf="pdf"${rows.length?'':' disabled'}><b style="background:#b91c1c">PDF</b>PDF<small>A4 แนวนอน พร้อมพิมพ์</small></button>
+        <button type="button" data-prf="jpg"${rows.length?'':' disabled'}><b style="background:#0f766e">JPG</b>JPEG<small>ภาพเดียว ส่งไลน์ได้</small></button></div>
+      ${rows.length?'':'<div class="sub" style="color:var(--bad)">ไม่มีชนิดสินค้าตามที่เลือก</div>'}
+    </div></div>`;
+  m.hidden=false;
+  const tog=(set,v,all)=>{ if(!v){ set.clear(); return; } set.has(v)?set.delete(v):set.add(v); if(set.size===all) set.clear(); };
+  $('prX').onclick=()=>m.remove();
+  m.querySelectorAll('[data-prc]').forEach(b=>b.onclick=()=>{ tog(PR_P.cos,b.dataset.prc,ds.length); prDraw(); });
+  m.querySelectorAll('[data-prs]').forEach(b=>b.onclick=()=>{ tog(PR_P.sts,b.dataset.prs,2); prDraw(); });
+  m.querySelectorAll('[data-prk]').forEach(b=>b.onclick=()=>{ PR_P.kind=b.dataset.prk; prDraw(); });
+  m.querySelectorAll('[data-prf]').forEach(b=>b.onclick=async()=>{ const h=b.innerHTML; b.disabled=true; b.innerHTML='<span style="padding:8px 4px">กำลังสร้าง…</span>';
+    try{ const sp=prSpec(); if(b.dataset.prf==='xlsx') await docReportXlsx(sp); else await docReportImage(sp,b.dataset.prf); m.remove(); }
+    catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: '+(e.message||e),true); b.disabled=false; b.innerHTML=h; } });
+}
+function prDepts(rows){ const ds=DATA.depts||[]; return ds.filter(d=>(!PR_P.cos.size||PR_P.cos.has(d.code))&&(PR_P.kind==='sum'||rows.some(p=>p.dept===d.code))); }
+function prSpec(){
+  const rows=prRows(), ds=DATA.depts||[], dOrd=c=>{ const i=ds.findIndex(d=>d.code===c); return i<0?99:i; };
+  rows.sort((a,b)=>dOrd(a.dept)-dOrd(b.dept)||String(a.name).localeCompare(String(b.name),'th'));
+  const coTx=PR_P.cos.size?[...PR_P.cos].map(c=>(deptOf(c)||{}).name||c).join(', '):'ทุกบริษัท';
+  const stTx=PR_P.sts.size===1?(PR_P.sts.has('on')?'ใช้งาน':'เลิกใช้'):'ทุกสถานะ';
+  const on=rows.filter(p=>p.active!==false).length, deps=prDepts(rows);
+  const ST={'ใช้งาน':['#127a2e','#e7f5ee'],'เลิกใช้':['#5f5e5a','#efefef']}, tint={}; ds.forEach(d=>{ tint[d.code+' · '+d.name]=pdDot(d.code); });
+  const kind=PR_KINDS.find(k=>k[0]===PR_P.kind)[1], d8=new Date().toISOString().slice(0,10).replace(/-/g,'');
+  const base={ title:'ชนิดสินค้า → บริษัท / รหัสบิล · '+kind, sheet:'ชนิดสินค้า', file:'ชนิดสินค้า_'+kind.replace(/\s/g,'')+(PR_P.cos.size?'_'+[...PR_P.cos].join(''):''),
+    sub:coTx+' · '+stTx+(PD_Q.trim()?' · ค้น “'+PD_Q.trim()+'”':'')+' · '+rows.length+' ชนิด',
+    kpis:[['ชนิดสินค้า',rows.length+' ชนิด','#1B4332'],['ใช้งาน',on+' ชนิด','#127a2e'],['เลิกใช้',(rows.length-on)+' ชนิด','#5f5e5a'],['บริษัท',deps.length+' บริษัท','#C9A227']] };
+  if(PR_P.kind==='sum'){
+    const R=deps.map(d=>{ const mine=rows.filter(p=>p.dept===d.code), a=mine.filter(p=>p.active!==false).length;
+      return [d.code+' · '+d.name, d.company||'(ยังไม่ใส่ชื่อเต็ม)', d.company_en||'', d.code+'A / '+d.code+'B', a, mine.length-a, mine.length]; });
+    return Object.assign(base,{ cols:[{h:'รหัส · ชื่อย่อ',w:130,x:16},{h:'ชื่อบริษัท (ไทย)',w:0,x:40},{h:'ชื่อบริษัท (อังกฤษ)',w:300,x:46},{h:'รหัสบิล',w:80,a:'center',x:10},
+      {h:'ใช้งาน',w:60,a:'right',x:9},{h:'เลิกใช้',w:60,a:'right',x:9},{h:'รวม',w:60,a:'right',x:9}], rows:R, tint:{col:0,map:tint},
+      total:['รวม '+R.length+' บริษัท','','','',on,rows.length-on,rows.length], noSubMerge:1 });
+  }
+  const line=(p,i)=>[i+1, p.name, (p.aliases||[]).join(', '), p.dept+' · '+((deptOf(p.dept)||{}).name||''), p.dept+'A', p.dept+'B', p.active===false?'เลิกใช้':'ใช้งาน', p.note||''];
+  const cols=[{h:'#',w:34,a:'center',x:5},{h:'ชนิดสินค้า',w:190,x:26},{h:'ชื่ออื่นที่ใช้จับคู่',w:0,x:34},{h:'บริษัท',w:120,x:16},
+    {h:'บิล A (VAT)',w:76,a:'center',x:11},{h:'บิล B',w:60,a:'center',x:9},{h:'สถานะ',w:70,a:'center',x:10},{h:'หมายเหตุ',w:170,x:24}];
+  let R;
+  if(PR_P.kind==='group'){ R=[]; deps.forEach(d=>{ const mine=rows.filter(p=>p.dept===d.code); if(!mine.length) return;
+      R.push({sub:[d.code, d.name+' · '+mine.length+' ชนิด', (d.company||'(ยังไม่ใส่ชื่อบริษัทเต็ม)')+(d.company_en?' / '+d.company_en:''),'','','','','']});
+      mine.forEach((p,i)=>R.push(line(p,i))); }); }
+  else R=rows.map(line);
+  return Object.assign(base,{ cols, rows:R, status:{col:6,map:ST}, tint:{col:3,map:tint}, noSubMerge:0, subMerge:[2,7], subBig:-1, total:['','รวม '+rows.length+' ชนิด','','','','',on+' ใช้งาน',''] });
+}
 function pdForm(title,html,onSave){
   const w=document.createElement('div'); w.className='dlg'; w.id='dlgPdE'; w.style.zIndex=72;
   w.innerHTML=`<div class="dlgbox" style="max-width:480px" role="dialog" aria-modal="true" aria-labelledby="pdeT"><div class="dlgbd"><h2 id="pdeT" style="margin:0">${title}</h2>${html}</div>
@@ -2150,8 +2250,8 @@ async function docReportXlsx(spec){
   aoa.push(spec.cols.map(k=>c(k.h,S.th)));
   let zi=0;
   spec.rows.forEach(r=>{
-    if(r.sub){ aoa.push(r.sub.map((v,ci)=>c(v,{font:F({bold:true,sz:ci===5?12:10,color:{rgb:'1B4332'}}),fill:{fgColor:{rgb:'FBF0C9'}},border:bd,
-      alignment:{horizontal:spec.cols[ci].a==='right'?'right':'left',vertical:'center'}}))); merges.push({s:{r:aoa.length-1,c:2},e:{r:aoa.length-1,c:3}}); zi=0; return; }
+    if(r.sub){ aoa.push(r.sub.map((v,ci)=>c(v,{font:F({bold:true,sz:ci===(spec.subBig==null?5:spec.subBig)?12:10,color:{rgb:'1B4332'}}),fill:{fgColor:{rgb:'FBF0C9'}},border:bd,
+      alignment:{horizontal:spec.cols[ci].a==='right'?'right':'left',vertical:'center'}}))); { const sm=spec.subMerge||[2,3]; merges.push({s:{r:aoa.length-1,c:sm[0]},e:{r:aoa.length-1,c:sm[1]}}); } zi=0; return; }
     const i=zi++;
     const base={font:F(),border:bd,alignment:{vertical:'top',wrapText:true}}; if(i%2) base.fill={fgColor:{rgb:'F7FAF8'}};
     aoa.push(r.map((v,ci)=>{
@@ -2166,7 +2266,7 @@ async function docReportXlsx(spec){
   ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:n-1}});
   ws['!cols']=spec.cols.map(k=>({wch:k.x||12})); ws['!merges']=merges; ws['!rows']=[{hpt:30},{hpt:18}];
   ws['!print']={orientation:'landscape'};
-  const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'แพลนส่งมอบ');
+  const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,spec.sheet||'แพลนส่งมอบ');
   repSave(new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),docReportName(spec,'xlsx'));
 }
 function docReportPages(spec){
@@ -2183,7 +2283,7 @@ function docReportPages(spec){
   const colg='<colgroup>'+spec.cols.map(k=>'<col'+(k.w?(' style="width:'+k.w+'px"'):'')+'>').join('')+'</colgroup>';
   const thead='<tr>'+spec.cols.map((k,i)=>`<th style="${th};text-align:${k.a||'left'}${i===0?';border-radius:8px 0 0 0':''}${i===spec.cols.length-1?';border-radius:0 8px 0 0':''}">${e(k.h)}</th>`).join('')+'</tr>';
   const tr=(r,i)=>r.sub?'<tr style="background:#FBF0C9;font-weight:800;color:#1B4332">'+r.sub.map((v,ci)=>
-      `<td style="${cell};border-top:1.5px solid #C9A227;border-bottom:1.5px solid #C9A227;overflow:visible;text-align:${spec.cols[ci].a||'left'}${ci===5?';font-size:13px':''}">${e(typeof v==='number'?fmt(v):String(v==null?'':v))}</td>`).join('')+'</tr>'
+      `<td style="${cell};border-top:1.5px solid #C9A227;border-bottom:1.5px solid #C9A227;overflow:visible;text-align:${spec.cols[ci].a||'left'}${ci===(spec.subBig==null?5:spec.subBig)?';font-size:13px':''}">${e(typeof v==='number'?fmt(v):String(v==null?'':v))}</td>`).join('')+'</tr>'
     :'<tr style="background:'+(i%2?'#f7faf8':'#fff')+'">'+r.map((v,ci)=>{
       let st=''; if(spec.status&&ci===spec.status.col&&spec.status.map[v]){ const cc=spec.status.map[v]; st=`<span style="display:inline-block;line-height:16px;vertical-align:middle;padding:1px 7px;border-radius:9px;font-size:10px;font-weight:700;color:${cc[0]};background:${cc[1]}">${e(String(v))}</span>`; }
       if(!st&&spec.tint&&ci===spec.tint.col&&spec.tint.map[v]) st=`<b style="color:${spec.tint.map[v]}">${e(String(v))}</b>`;
