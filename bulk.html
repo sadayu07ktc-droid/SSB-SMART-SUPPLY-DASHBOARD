@@ -568,6 +568,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .cxbad{color:#B42318}
 :root[data-theme="dark"] .cxs.chg h3{color:#7FB2F0}:root[data-theme="dark"] .cxs.err h3,:root[data-theme="dark"] .cxbad{color:#F08A80}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cxs.chg h3{color:#7FB2F0}:root:not([data-theme="light"]) .cxs.err h3,:root:not([data-theme="light"]) .cxbad{color:#F08A80}}
+.ohg{margin:4px 0 12px}.ohgh{font-size:12px;font-weight:700;color:var(--muted);margin:0 0 6px}.ohp{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line,#e5e0d6);border-radius:10px;margin:0 0 6px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -608,7 +609,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19i</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19j</span></div>
   </div>
   </div></main>
 </div>
@@ -635,11 +636,17 @@ const NAV_IC={plan:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0
   dash:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
   track:'<circle cx="6" cy="5" r="2"/><path d="M6 7v10"/><circle cx="6" cy="19" r="2"/><path d="M11 5h9M11 12h9M11 19h9"/><circle cx="6" cy="12" r="1"/>',
   wage:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>',
+  hub:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1L2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.8 4H7.2a2 2 0 0 0-1.7 1.1z"/>',
   usercog:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a5 5 0 0 1 5-5h4"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13.7 14.5l1.7 1M20.6 18.5l1.7 1M13.7 19.5l1.7-1M20.6 15.5l1.7-1"/>'};
 function navItems(me){
   const out=[{sec:'งาน Bulk'},
     {ic:'plan',t:'แพลนส่งมอบ',s:'แผนแอดมิน · ตารางแผน',on:1,act:'navTop()'},{ic:'pulse',t:'สถานะเที่ยว',act:'navStatus()'},{ic:'truck',t:'สรุปสถานะรถ',s:'พร้อม · ไม่มีคนขับ · ซ่อม',act:'openVStat()'},{ic:'clock',t:'แพลนย้อนหลัง',act:'openHistory()'},
     {ic:'report',t:'รายงาน',s:'Excel · PDF · JPEG',act:'navReport()'},{ic:'db',t:'ฐานข้อมูล',s:'ชนิดสินค้า · ลูกค้า',grp:'db',sub:[{t:'ชนิดสินค้า → รหัสบิล',dot:'#2F7D4F',act:'openProducts()'},{t:'ลูกค้า Bulk · พิกัด',dot:'#C2410C',act:'openCustomers()'}]}];
+  /* 🧾 Order Hub (รวมออเดอร์ขาย) · 19 พ.ย. · เห็นเฉพาะ DEV + คนที่ DEV ติ๊กให้ (bulk-board ohub) · DEV มีเมนูย่อยตั้งค่าคนเข้า */
+  const oh=DATA&&DATA.ohub;
+  if(oh&&oh.can) out.push({sec:'งานขาย'}, me&&me.isDev
+    ?{ic:'hub',t:'Order Hub',s:'รวมออเดอร์ขาย · ตั้งค่าคนเข้า',grp:'ohub',sub:[{t:'เปิด Order Hub',dot:'#0E9AA7',act:'openOHub()'},{t:'ตั้งค่าคนที่เข้าได้',dot:'#C9A227',act:'ohubSettings()'}]}
+    :{ic:'hub',t:'Order Hub',s:'รวมออเดอร์ขาย',act:'openOHub()'});
   // บัญชี/แอดมินพันตัน ใช้เฉพาะงาน Bulk ตามริชเมนู ไม่โชว์ลิงก์ระบบขนส่ง
   if(me&&me.type!=='ACC_BULK'&&me.type!=='YARD_BULK') out.push({sec:'ระบบขนส่ง'},
     {ic:'dash',t:'Command Center',url:'/ManageDrivers/'},
@@ -663,6 +670,36 @@ function navDraw(me){
   }).join('');
   $('nav').querySelectorAll('.nav-grp').forEach(b=>b.onclick=()=>{ const op=b.getAttribute('aria-expanded')!=='true', sb=$('nsub-'+b.dataset.grp);
     b.setAttribute('aria-expanded',String(op)); if(sb) sb.hidden=!op; try{ localStorage.setItem('bulk_nav_'+b.dataset.grp,op?'1':'0'); }catch(e){} });
+}
+
+/* 🧾 Order Hub · เปิดแท็บใหม่ + DEV ตั้งค่าคนที่เห็นเมนู (เก็บ app_config ORDER_HUB_USERS ผ่าน bulk-board) · 2026-11-19 */
+function openOHub(){ const u=DATA&&DATA.ohub&&DATA.ohub.url; if(!u){ toast('ไม่มีสิทธิ์เข้า Order Hub',true); return; } window.open(u,'_blank','noopener'); }
+async function ohubSettings(){
+  let m=$('dlgOH'); if(!m){ m=document.createElement('div'); m.id='dlgOH'; m.className='dlg'; m.style.zIndex=74; document.body.appendChild(m); }
+  const close=()=>m.remove(); m.onmousedown=e=>{ if(e.target===m) close(); };
+  m.innerHTML='<div class="dlgbox" role="dialog" aria-modal="true"><div class="dlgbd"><div class="sub" style="padding:18px">กำลังโหลดรายชื่อ…</div></div></div>'; m.hidden=false;
+  let d; try{ d=await (await fetch(BOARD+'?action=ohub&userId='+encodeURIComponent(MY_UID))).json(); }catch(e){ d={ok:false,error:'โหลดไม่สำเร็จ'}; }
+  if(!d.ok){ toast(d.error||'โหลดไม่สำเร็จ',true); close(); return; }
+  const on=new Set(d.users), ord=['ADMIN_BULK','MANAGER','EXECUTIVE','ACC_BULK','YARD_BULK'];
+  const ps=d.people.slice().sort((a,b)=>ord.indexOf(a.type)-ord.indexOf(b.type)||String(a.name).localeCompare(String(b.name),'th'));
+  const draw=()=>{ const grp={}; ps.forEach(p=>{ (grp[p.type]=grp[p.type]||[]).push(p); });
+    m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="ohT" style="max-width:520px">
+      <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">เฉพาะ DEV · คนที่ติ๊ก = เห็นเมนู Order Hub ในหน้านี้</div><h2 id="ohT" style="color:#fff;margin:2px 0 0">🧾 ใครเข้า Order Hub ได้บ้าง</h2></div>
+        <button type="button" class="dlgx" aria-label="ปิด" id="ohX">✕</button></div>
+      <div class="dlgbd">
+        ${ord.filter(t=>grp[t]).map(t=>`<div class="ohg"><div class="ohgh">${esc(TYPE_TH[t]||t)}</div>${grp[t].map(p=>`<label class="ck ohp"><input type="checkbox" data-u="${esc(p.uid)}"${on.has(p.uid)?' checked':''}><span>${esc(p.name)}</span></label>`).join('')}</div>`).join('')||'<div class="sub">ไม่มีแอดมินที่เข้าหน้า Bulk ได้</div>'}
+        <div class="sub" style="margin-top:10px">DEV เห็นเมนูเสมอ · ใน Order Hub เองยังต้องมีบทบาท (แอดมิน/ฝ่ายขาย) ถึงจะดูออเดอร์ได้</div>
+      </div>
+      <div class="dlgft"><span class="sub" id="ohN" style="margin-right:auto">${on.size} คน</span><button class="btn" type="button" id="ohNo">ยกเลิก</button><button class="btn gold" type="button" id="ohYes">บันทึก</button></div></div>`;
+    $('ohX').onclick=close; $('ohNo').onclick=close;
+    m.querySelectorAll('[data-u]').forEach(c=>c.onchange=()=>{ c.checked?on.add(c.dataset.u):on.delete(c.dataset.u); $('ohN').textContent=on.size+' คน'; });
+    $('ohYes').onclick=async()=>{ const b=$('ohYes'); b.disabled=true; b.textContent='กำลังบันทึก…';
+      try{ const r=await postB({action:'ohubSet',uids:[...on]});
+        if(!r.ok){ toast(r.error||'บันทึกไม่สำเร็จ',true); b.disabled=false; b.textContent='บันทึก'; return; }
+        toast('บันทึกแล้ว ✓ เข้า Order Hub ได้ '+r.users.length+' คน (+ DEV)'); close();
+      }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — เปิดใหม่ให้ตรวจ',true); b.disabled=false; b.textContent='บันทึก'; } };
+  };
+  draw();
 }
 const navSmooth=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth';
 function navTop(){ window.scrollTo({top:0,behavior:navSmooth()}); }
