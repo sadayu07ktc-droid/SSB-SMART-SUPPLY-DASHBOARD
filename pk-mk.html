@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" data-ssb-theme>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261014a"></script>
+<script src="ssb-read.js?v=20261119t"></script>
 <script src="ssb-pin-gate.js?v=20261009a"></script>
 <style>
 
@@ -257,6 +257,7 @@
     <nav id="nav" aria-label="เมนู"></nav>
     <div class="foot" id="foot" hidden>
       <div class="foot-who" id="footWho"></div>
+      <button type="button" class="foot-out" data-ssb-theme-btn style="color:inherit"></button>
       <button type="button" class="foot-out" onclick="navLogout()" title="ออกจากระบบ" aria-label="ออกจากระบบ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>ออกจากระบบ</span></button>
     </div>
   </aside>

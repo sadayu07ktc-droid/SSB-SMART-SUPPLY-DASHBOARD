@@ -141,3 +141,76 @@
   };
   if (document.body) chip(); else document.addEventListener('DOMContentLoaded', chip);
 })();
+
+/* ── 🌓 ปุ่มธีมสี สว่าง/มืด ใช้ร่วมทุกหน้า · 2026-11-19 ──────────────────────────────────
+ *   เดิม: หน้าเปลี่ยนสีตามโหมดของเครื่อง (prefers-color-scheme) อย่างเดียว → Windows ตั้งแอปสว่าง = หน้าเว็บสว่างเสมอ
+ *   ใช้: <html data-ssb-theme> + ปุ่ม <button data-ssb-theme-btn></button> ที่ไหนก็ได้ในหน้า (ไฟล์นี้เติมไอคอน/ข้อความ/คลิกให้)
+ *   ทำงาน: เลือกแล้วจำใน localStorage (ssb_theme_v1 ใช้ร่วมทุกหน้า) → ตั้ง <html data-theme> + บังคับกฎ CSS
+ *          @media (prefers-color-scheme: dark/light) ให้ "ติด/ไม่ติด" ตามที่เลือก (หน้าไม่ต้องแก้ CSS เดิม)
+ *   ยังไม่เคยเลือก = ตามเครื่องเหมือนเดิม */
+(function () {
+  var KEY = 'ssb_theme_v1', root = document.documentElement;
+  if (!root.hasAttribute('data-ssb-theme')) return;
+  var mq = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+  var seen = [];   // [{rule, orig}] ถือ reference ไว้ → คืนค่าเดิมได้
+  var pick = function () { try { var v = localStorage.getItem(KEY); return v === 'dark' || v === 'light' ? v : ''; } catch (e) { return ''; } };
+  var eff = function () { var p = pick(); return p || (mq && mq.matches ? 'dark' : 'light'); };
+  var RX = /\(\s*prefers-color-scheme\s*:\s*(dark|light)\s*\)/gi;
+  var fix = function (rule, mode) {
+    var rec = null;
+    for (var i = 0; i < seen.length; i++) if (seen[i].rule === rule) { rec = seen[i]; break; }
+    if (!rec) { if (!/prefers-color-scheme/i.test(rule.media.mediaText)) return; rec = { rule: rule, orig: rule.media.mediaText }; seen.push(rec); }
+    var t = rec.orig;
+    if (mode) {
+      var only = t.replace(RX, '').replace(/\s+/g, '') === '';
+      if (only) { var hit = (t.match(/dark|light/i) || [''])[0].toLowerCase() === mode; t = hit ? 'all' : 'not all'; }
+      else t = t.replace(RX, function (_, w) { return w.toLowerCase() === mode ? '(min-width: 0px)' : '(max-width: 0px)'; });
+    }
+    if (rule.media.mediaText !== t) rule.media.mediaText = t;
+  };
+  var walk = function (rules, mode) {
+    for (var i = 0; i < rules.length; i++) {
+      var r = rules[i];
+      if (r.media && r.cssRules) fix(r, mode);   // CSSMediaRule
+      if (r.cssRules) try { walk(r.cssRules, mode); } catch (e) {}
+    }
+  };
+  var apply = function () {
+    var mode = pick();
+    if (mode) root.setAttribute('data-theme', mode); else root.removeAttribute('data-theme');
+    for (var i = 0; i < document.styleSheets.length; i++) { try { walk(document.styleSheets[i].cssRules, mode); } catch (e) {} }   // ฟอนต์ Google (ข้ามโดเมน) อ่านไม่ได้ ข้าม
+    var dark = eff() === 'dark';
+    var bs = document.querySelectorAll('[data-ssb-theme-btn]');
+    for (var j = 0; j < bs.length; j++) {
+      var b = bs[j];
+      if (!b.__ssbT) { b.__ssbT = 1; b.type = 'button'; b.addEventListener('click', function () { window.ssbTheme.set(eff() === 'dark' ? 'light' : 'dark'); }); }
+      var ico = dark
+        ? '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+      var lab = dark ? 'ธีมสว่าง' : 'ธีมมืด';
+      b.innerHTML = ico + '<span>' + lab + '</span>';
+      b.title = 'เปลี่ยนเป็น' + lab; b.setAttribute('aria-label', 'เปลี่ยนเป็น' + lab);
+    }
+  };
+  window.ssbTheme = {
+    get: eff,
+    set: function (m) { try { if (m) localStorage.setItem(KEY, m); else localStorage.removeItem(KEY); } catch (e) {} apply(); }
+  };
+  apply();
+  document.addEventListener('DOMContentLoaded', apply);
+  window.addEventListener('load', apply);
+  if (mq && mq.addEventListener) mq.addEventListener('change', apply);
+  window.addEventListener('storage', function (e) { if (e.key === KEY) apply(); });   // เปลี่ยนจากอีกแท็บ → แท็บนี้ตาม
+  try {   // <style>/<link> ที่สคริปต์เติมทีหลัง (เช่น กล่อง PIN) ก็บังคับด้วย
+    var tm = 0;
+    new MutationObserver(function (ms) {
+      for (var i = 0; i < ms.length; i++) for (var k = 0; k < ms[i].addedNodes.length; k++) {
+        var n = ms[i].addedNodes[k];
+        if (n.nodeName === 'STYLE' || n.nodeName === 'LINK' || (n.querySelector && n.querySelector('[data-ssb-theme-btn],style'))) {
+          if (n.nodeName === 'LINK') n.addEventListener('load', apply);
+          clearTimeout(tm); tm = setTimeout(apply, 0); return;
+        }
+      }
+    }).observe(root, { childList: true, subtree: true });
+  } catch (e) {}
+})();

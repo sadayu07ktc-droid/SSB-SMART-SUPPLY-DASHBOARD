@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="th">
+<html lang="th" data-ssb-theme>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anuphan:wght@500;600;700&family=Sarabun:wght@400;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
 <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-<script src="ssb-read.js?v=20261014b"></script>
+<script src="ssb-read.js?v=20261119t"></script>
 <script src="ssb-pin-gate.js?v=20261014b"></script>
 <style>
 /* แพลนส่งมอบ Bulk (FM-MK-04 จาก SAP B1) · 2026-10-14 · Edge bulk-plan
@@ -440,6 +440,52 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .fm>.fbox>.fsec.s1b{justify-content:space-around}
 .fm .fhead{min-height:34mm}
 .fm .ftank td{height:16mm}
+/* 🚛 สรุปสถานะรถ Bulk · 2026-11-19 */
+.vsbox{max-width:1180px}
+.vskpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.vskpi>div{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.vskpi small{color:var(--muted);font-size:12.5px;font-weight:600;display:flex;align-items:center;gap:6px}
+.vskpi b{font-size:26px;line-height:1.15}
+.vskpi em{font-style:normal;color:var(--muted);font-size:12px}
+.vsgrid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.vsgrid{grid-template-columns:1fr}.vskpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.vsopt{display:flex;gap:8px;align-items:center;font-size:13px;cursor:pointer}
+.vsimg{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#EEF3EF;margin-top:8px;min-height:120px}
+.vsimg img{display:block;width:100%;height:auto}
+.vsleg{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12.5px;color:var(--muted);margin-top:8px}
+.vsleg i{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+.vsact{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.vslist{display:flex;flex-direction:column;gap:10px;max-height:76vh;overflow:auto;padding-right:2px}
+.vsg{border:1px solid var(--line);border-radius:12px;overflow:hidden;flex:none}
+.vsg>h3{margin:0;font-size:14px;padding:8px 12px;background:var(--surface2);display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.vsg>h3 small{color:var(--muted);font-weight:500;font-size:12px}
+.vsrow{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 12px;border-top:1px solid var(--line)}
+.vsrow.rep,.vsrow.off{background:rgba(220,38,38,.07)}
+.vsdot{display:inline-block;width:12px;height:12px;border-radius:50%;flex:none}
+.vsmain{min-width:0}
+.vsmain b{font-family:var(--f-num);font-size:14px}
+.vsmain small{display:block;color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vsmain small.vsjob{color:var(--ink)}
+.vswarn{color:#B45309}
+.vsr{display:flex;flex-direction:column;align-items:flex-end;gap:3px;text-align:right;max-width:200px}
+.vsst{font-size:12.5px;font-weight:700;line-height:1.3}
+.vsst.job,.vsst.wait{color:#15803D}.vsst.nod{color:#A16207}.vsst.rep,.vsst.off{color:#B91C1C}
+.vsed{font:inherit;font-size:12px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:3px 9px;cursor:pointer;min-height:28px}
+.vsed:hover{border-color:var(--brand2)}
+.vsseg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.vsseg button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 6px;cursor:pointer}
+.vsseg button[aria-checked="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.vsseg button[data-s="repair"][aria-checked="true"],.vsseg button[data-s="off"][aria-checked="true"]{background:#B91C1C;border-color:#B91C1C}
+.vsrl{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.vsin{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.vsfmt{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.vsfmt button{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px;cursor:pointer;font-weight:600}
+.vsfmt button:hover{border-color:var(--brand2);background:var(--tint)}
+.vsfmt b{font-family:var(--f-num);font-size:12px;color:#fff;background:var(--brand2);border-radius:6px;padding:1px 7px;margin-bottom:4px}
+.vsfmt small{color:var(--muted);font-weight:400;font-size:12px}
+@media (max-width:520px){.vsfmt{grid-template-columns:1fr}}
+:root[data-theme="dark"] .vsst.job,:root[data-theme="dark"] .vsst.wait{color:#5BD08A}:root[data-theme="dark"] .vsst.nod{color:#E8C04A}:root[data-theme="dark"] .vsst.rep,:root[data-theme="dark"] .vsst.off,:root[data-theme="dark"] .vswarn{color:#F08A80}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .vsst.job,:root:not([data-theme="light"]) .vsst.wait{color:#5BD08A}:root:not([data-theme="light"]) .vsst.nod{color:#E8C04A}:root:not([data-theme="light"]) .vsst.rep,:root:not([data-theme="light"]) .vsst.off,:root:not([data-theme="light"]) .vswarn{color:#F08A80}}
 </style>
 </head>
 <body>
@@ -450,6 +496,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <nav id="nav" aria-label="เมนู"></nav>
     <div class="foot" id="foot" hidden>
       <div class="foot-who" id="footWho"></div>
+      <button type="button" class="foot-out" data-ssb-theme-btn style="color:inherit"></button>
       <button type="button" class="foot-out" onclick="navLogout()" title="ออกจากระบบ" aria-label="ออกจากระบบ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg><span>ออกจากระบบ</span></button>
     </div>
   </aside>
@@ -479,7 +526,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19a</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19b</span></div>
   </div>
   </div></main>
 </div>
@@ -498,6 +545,7 @@ let MY_PIC='';
 const TYPE_TH={DEV:'DEV',ADMIN_BULK:'แอดมิน Bulk',MANAGER:'ผู้จัดการ',EXECUTIVE:'ผู้บริหาร',ACC_BULK:'บัญชี Bulk',YARD_BULK:'แอดมินพันตัน'};
 const NAV_IC={plan:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 18v-6"/><path d="M9 15l3-3 3 3"/>',
   pulse:'<path d="M3 12h4l3 8 4-16 3 8h4"/>',
+  truck:'<rect x="2" y="6" width="12" height="9" rx="2"/><path d="M14 10h4l3 3v4h-2"/><path d="M9 17h6"/><circle cx="6.5" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   report:'<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/>',
   pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
@@ -507,7 +555,7 @@ const NAV_IC={plan:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0
   usercog:'<circle cx="9" cy="7" r="4"/><path d="M2 21v-2a5 5 0 0 1 5-5h4"/><circle cx="18" cy="17" r="3"/><path d="M18 12v2M18 20v2M13.7 14.5l1.7 1M20.6 18.5l1.7 1M13.7 19.5l1.7-1M20.6 15.5l1.7-1"/>'};
 function navItems(me){
   const out=[{sec:'งาน Bulk'},
-    {ic:'plan',t:'แพลนส่งมอบ',s:'แผนแอดมิน · ตารางแผน',on:1,act:'navTop()'},{ic:'pulse',t:'สถานะเที่ยว',act:'navStatus()'},{ic:'clock',t:'แพลนย้อนหลัง',act:'openHistory()'},
+    {ic:'plan',t:'แพลนส่งมอบ',s:'แผนแอดมิน · ตารางแผน',on:1,act:'navTop()'},{ic:'pulse',t:'สถานะเที่ยว',act:'navStatus()'},{ic:'truck',t:'สรุปสถานะรถ',s:'พร้อม · ไม่มีคนขับ · ซ่อม',act:'openVStat()'},{ic:'clock',t:'แพลนย้อนหลัง',act:'openHistory()'},
     {ic:'report',t:'รายงาน',s:'Excel · PDF · JPEG',act:'navReport()'},{ic:'pin',t:'ลูกค้า Bulk',s:'พิกัด · ตาชั่ง',act:'openCustomers()'}];
   // บัญชี/แอดมินพันตัน ใช้เฉพาะงาน Bulk ตามริชเมนู ไม่โชว์ลิงก์ระบบขนส่ง
   if(me&&me.type!=='ACC_BULK'&&me.type!=='YARD_BULK') out.push({sec:'ระบบขนส่ง'},
@@ -628,6 +676,7 @@ function runGo(){
   const p=DATA&&DATA.plan;
   if(g==='customers') return openCustomers();
   if(g==='history') return openHistory();
+  if(g==='vehicles') return openVStat();
   if(g==='report'){ if(p) bulkReport(); else toast('ยังไม่มีแพลนให้ออกรายงาน',true); return; }
   if(g==='status'){ const t=$('ticker').hidden?$('kpis'):$('ticker'); setTimeout(()=>t.scrollIntoView({behavior:'smooth',block:'start'}),60); return; }
 }
@@ -1470,6 +1519,259 @@ function repLoad(k){
 }
 function repSave(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast('ออกไฟล์แล้ว: '+name); }
+/* ═════════ 🚛 สรุปสถานะรถ Bulk · 2026-11-19 (คุณน้อง "เพิ่มเมนูนี้ในของ Bulk ด้วยนะ" = แท็บสรุปสถานะรถของ pk-daily) ═════════
+   รถ = ทะเบียนรถกลุ่ม Bulk สถานะใช้งาน (Edge bulk-board ?action=vstat) · จัดกลุ่ม 10 ล้อ / พ่วง แม่-ลูก / เทรลเลอร์ หัวลาก
+   วิ่งงาน = มีเที่ยวรถบริษัทในแพลนวันส่งที่เลือก (จับทะเบียนหัว) · คนขับ = คนขับ Bulk ที่ผูกทะเบียนนี้ (ไม่มี = เหลือง)
+   ซ่อม/งดวิ่ง = ตาราง pk_vehicle_status (ใช้ร่วมกับ PK · ตั้งที่ตัวหัว · ติดข้ามวันจนกว่าจะกดพร้อมใช้งาน) · แก้ได้ DEV/แอดมิน Bulk/ผู้จัดการ */
+let VS=null, VS_WJ=true, VS_CV=null;
+const VS_DOT={job:'#16A34A',wait:'#16A34A',nod:'#EAB308',rep:'#DC2626',off:'#DC2626'};
+const VS_GROUPS=['10 ล้อ','พ่วง · แม่-ลูก','เทรลเลอร์ · หัวลาก'];
+const VS_MON=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const VS_DOW=['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+const vsDateTH=iso=>{ const d=new Date(String(iso||'')+'T00:00:00'); return isNaN(d)?String(iso||''):'วัน'+VS_DOW[d.getDay()]+'ที่ '+d.getDate()+' '+VS_MON[d.getMonth()]+' '+(d.getFullYear()+543); };
+// ทะเบียนหัว (= Edge plateKey) "85-4549/5322" · "85-0752,85-7280" → 85-4549 / 85-0752
+const vsKey=p=>{ const seg=String(p||'').trim().replace(/\s*[/,]\s*/g,'/').split('/')[0]; const m=seg.replace(/[\s.]|หัว|ลูก/g,'').match(/^[0-9ก-ฮ]{1,3}-?[0-9]{1,4}/); return m?m[0]:seg.replace(/\s/g,''); };
+const vsGroup=v=>/10\s*ล้อ/.test(v.type)?'10 ล้อ':v.headKind==='หัวลาก'?'เทรลเลอร์ · หัวลาก':/พ่วง|trailer/i.test(v.type)?'พ่วง · แม่-ลูก':(v.type||'อื่นๆ');
+function vsRows(){
+  const d=DATA||{}, jobs=(d.jobs||[]).filter(j=>!j.cancelled&&isCo(j)&&j.plate).sort((a,b)=>a.line_no-b.line_no);
+  const dk={}; (d.drivers||[]).forEach(x=>{ const k=vsKey(x.plate); if(k&&!dk[k]) dk[k]=x; });
+  return ((VS&&VS.vehicles)||[]).map(v=>{
+    const st=VS.vst[v.head]||null, js=jobs.filter(j=>vsKey(j.plate)===v.head), dr=dk[v.head]||null;
+    const k=st&&st.s==='repair'?'rep':st&&st.s==='off'?'off':js.length?'job':dr?'wait':'nod';
+    const pls=v.plate.split(',').map(s=>s.trim()).filter(Boolean);
+    return {v,g:vsGroup(v),k,st,js,dr,drv:(js[0]&&js[0].driver_name)||(dr&&dr.name)||'',pls,tail:pls[1]||'',brand:v.model||v.brand||''};
+  });
+}
+const vsGroups=R=>[...VS_GROUPS,...new Set(R.map(r=>r.g).filter(g=>!VS_GROUPS.includes(g)))].map(g=>({g,rows:R.filter(r=>r.g===g)})).filter(G=>G.rows.length);
+function vsCounts(R){ const c={all:R.length,job:0,wait:0,nod:0,rep:0,off:0}; R.forEach(r=>c[r.k]++); return c; }
+const vsSt=r=>r.k==='rep'?(r.st&&r.st.r||'ซ่อม'):r.k==='off'?'งดวิ่ง'+(r.st&&r.st.r?' · '+r.st.r:''):r.k==='nod'?'พร้อม · ไม่มีคนขับ':r.k==='job'?'พร้อม · วิ่งงาน'+(r.js.length>1?' '+r.js.length+' เที่ยว':''):'พร้อม · รอมีงาน';
+const vsCust=j=>[j.cust_name||'—',j.dest?'→ '+j.dest:''].filter(Boolean).join(' ');
+const vsProd=j=>[j.prod_name,qtyTx(j)].filter(Boolean).join(' · ');
+const vsJob=r=>{ const j=r.js[0]; return j?vsCust(j)+' · '+vsProd(j)+(r.js.length>1?' +'+(r.js.length-1)+' เที่ยว':''):''; };
+const vsTailOk=r=>(r.k==='rep'||r.k==='off')&&r.tail?'หาง '+r.tail+' ใช้งานได้':'';
+const vsGSum=G=>{ const n=k=>G.rows.filter(r=>k.includes(r.k)).length, nod=n(['nod']), rp=n(['rep','off']);
+  return G.rows.length+' คัน · พร้อม '+n(['job','wait'])+(nod?' · ไม่มีคนขับ '+nod:'')+(rp?' · ซ่อม '+rp:''); };
+
+async function openVStat(){
+  const date=(DATA&&DATA.sendDate)||new Date(Date.now()+7*3600e3).toISOString().slice(0,10);
+  let m=$('dlgVst'); if(!m){ m=document.createElement('div'); m.id='dlgVst'; m.className='dlg'; document.body.appendChild(m); }
+  const onKey=e=>{ if(e.key==='Escape'&&!$('dlgVsE')&&!$('dlgVsX')) m._close(); };
+  m._close=()=>{ m.hidden=true; m.innerHTML=''; document.removeEventListener('keydown',onKey); };
+  m.onmousedown=e=>{ if(e.target===m) m._close(); };
+  document.addEventListener('keydown',onKey);
+  m.innerHTML='<div class="dlgbox vsbox" role="dialog" aria-modal="true" aria-label="สรุปสถานะรถ Bulk"><div class="dlgbd"><div class="sub" style="padding:24px;text-align:center">กำลังโหลดทะเบียนรถ Bulk…</div></div></div>';
+  m.hidden=false;
+  try{
+    const r=await fetch(BOARD+'?action=vstat&userId='+encodeURIComponent(MY_UID)+'&date='+encodeURIComponent(date)).then(x=>x.json());
+    if(!r.ok) throw new Error(r.error||'โหลดไม่สำเร็จ');
+    VS=r;
+  }catch(e){
+    m.innerHTML='<div class="dlgbox vsbox" role="alertdialog" aria-modal="true" aria-labelledby="vsErr"><div class="dlgbd"><h2 id="vsErr">โหลดสถานะรถไม่สำเร็จ</h2><div class="sub">'+esc(e.message||e)+'</div></div><div class="dlgft"><button type="button" class="btn" id="vsX0">ปิด</button></div></div>';
+    $('vsX0').onclick=m._close; $('vsX0').focus(); return;
+  }
+  vsDraw(true);
+}
+async function vsDraw(focus){
+  const m=$('dlgVst'); if(!m||m.hidden||!VS) return;
+  const R=vsRows(), c=vsCounts(R), ed=VS.canEdit, plan=DATA&&DATA.plan&&DATA.sendDate===VS.date;
+  const tile=(l,n,col,sub)=>'<div><small>'+(col?'<i class="vsdot" style="background:'+col+'"></i>':'')+l+'</small><b class="num" style="color:'+(col||'var(--ink)')+'">'+n+'</b>'+(sub?'<em>'+sub+'</em>':'')+'</div>';
+  const row=r=>'<div class="vsrow '+r.k+'"><i class="vsdot" style="background:'+VS_DOT[r.k]+'" aria-hidden="true"></i>'
+    +'<div class="vsmain"><b>'+esc(r.pls.join(' / '))+'</b><small>'+esc([r.brand,r.drv||(r.k==='nod'?'ยังไม่มีคนขับ':'')].filter(Boolean).join(' · '))+'</small>'
+    +(r.js.length&&r.k==='job'?'<small class="vsjob">'+esc(vsJob(r))+'</small>':'')
+    +(r.js.length&&(r.k==='rep'||r.k==='off')?'<small class="vswarn">⚠ มีงานในแพลน '+r.js.length+' เที่ยว — เปลี่ยนรถในตารางแผน</small>':'')
+    +(r.st&&r.k!=='job'&&r.k!=='wait'&&r.k!=='nod'&&r.st.from?'<small>ตั้งแต่ '+esc(thDate(r.st.from))+(r.st.by?' · '+esc(r.st.by):'')+'</small>':'')+'</div>'
+    +'<div class="vsr"><span class="vsst '+r.k+'">'+esc(vsSt(r))+'</span>'+(vsTailOk(r)?'<span class="vsst job">✓ '+esc(vsTailOk(r))+'</span>':'')
+    +(ed?'<button type="button" class="vsed" data-vh="'+esc(r.v.head)+'" aria-label="ตั้งสถานะรถ '+esc(r.pls.join(' / '))+'">✏️ สถานะ</button>':'')+'</div></div>';
+  m.innerHTML='<div class="dlgbox vsbox" role="dialog" aria-modal="true" aria-labelledby="vsT">'
+   +'<div class="dlghd"><div><div class="sub" style="color:#CFE3D6">'+esc(vsDateTH(VS.date))+' · '+(plan?'ตามแพลนวันส่งที่เลือก':'ยังไม่มีแพลนวันส่งนี้ (ทุกคันยังไม่มีงาน)')+'</div><h2 id="vsT" style="color:#fff;margin:2px 0 0">🚛 สรุปสถานะรถ Bulk</h2></div><button type="button" class="dlgx" id="vsX" aria-label="ปิด">✕</button></div>'
+   +'<div class="dlgbd">'
+   +'<div class="vskpi">'+tile('รถทั้งหมด',c.all,'',null)+tile('พร้อม มีคนขับ',c.job+c.wait,'#16A34A','วิ่งงาน '+c.job)+tile('ไม่มีคนขับ',c.nod,'#EAB308',null)+tile('ซ่อม',c.rep+c.off,'#DC2626',c.off?'งดวิ่ง '+c.off:null)+'</div>'
+   +'<div class="vsgrid"><div>'
+   +'<label class="vsopt"><input type="checkbox" id="vsWj"'+(VS_WJ?' checked':'')+'> แสดงคนขับ + งานใต้ทะเบียน</label>'
+   +'<div class="vsimg"><img id="vsImg" alt="รูปสรุปสถานะรถ Bulk ประจำวัน"></div>'
+   +'<div class="vsleg"><span><i style="background:#16A34A"></i>พร้อมใช้งาน มีคนขับ</span><span><i style="background:#EAB308"></i>พร้อม ไม่มีคนขับ</span><span><i style="background:#DC2626"></i>ซ่อม / งดวิ่ง + สาเหตุ</span></div>'
+   +'<div class="vsact"><button type="button" class="btn gold" id="vsDl">⬇ รายงาน (Excel / PDF / JPEG)</button></div>'
+   +'<p class="sub" style="margin:8px 0 0">รูปสร้างจากแพลนวันส่งที่เลือก + ทะเบียนรถ Bulk ทุกครั้ง · กดค้างที่รูปเพื่อบันทึก/ส่ง LINE ได้</p></div>'
+   +'<div class="vslist">'+(ed?'<div class="sub">กด ✏️ สถานะ เพื่อตั้งรถซ่อม / งดวิ่ง (ติดไปทุกวันจนกว่าจะกดพร้อมใช้งาน)</div>':'<div class="sub">ดูอย่างเดียว · ตั้งซ่อม/งดวิ่งได้เฉพาะ DEV / แอดมิน Bulk / ผู้จัดการ</div>')
+   +vsGroups(R).map(G=>'<section class="vsg"><h3>'+esc(G.g)+'<small>'+esc(vsGSum(G))+'</small></h3>'+G.rows.map(row).join('')+'</section>').join('')
+   +(R.length?'':'<div class="sub">ยังไม่มีรถ Bulk ในทะเบียนรถ (หน้าฐานต้นทุนรถ)</div>')+'</div></div></div></div>';
+  $('vsX').onclick=m._close;
+  $('vsWj').onchange=e=>{ VS_WJ=e.target.checked; vsDraw(); };
+  $('vsDl').onclick=vsExport;
+  m.querySelectorAll('[data-vh]').forEach(b=>b.onclick=()=>vsEdit(b.dataset.vh));
+  if(focus) $('vsX').focus();
+  const src=await vsImage(); if($('vsImg')) $('vsImg').src=src;
+}
+function vsEdit(head){
+  const r=vsRows().find(x=>x.v.head===head); if(!r) return;
+  let cur=r.st?r.st.s:'ready';
+  const w=document.createElement('div'); w.className='dlg'; w.id='dlgVsE'; w.style.zIndex=72;
+  const SEG=[['ready','พร้อมใช้งาน'],['repair','ซ่อม'],['off','งดวิ่ง']];
+  w.innerHTML='<div class="dlgbox" style="max-width:460px" role="dialog" aria-modal="true" aria-labelledby="veT"><div class="dlgbd">'
+   +'<div><h2 id="veT" style="margin:0">สถานะรถ <span class="num">'+esc(r.pls.join(' / '))+'</span></h2><div class="sub">'+esc([vsGroup(r.v),r.brand,r.drv].filter(Boolean).join(' · '))+'</div></div>'
+   +'<div class="vsseg" role="radiogroup" aria-label="สถานะรถ">'+SEG.map(([k,l])=>'<button type="button" role="radio" data-s="'+k+'" aria-checked="'+(cur===k)+'">'+l+'</button>').join('')+'</div>'
+   +'<label class="vsrl" id="veRl">สาเหตุ (ขึ้นในรูปสรุปและรายงาน)<input id="veR" class="vsin" maxlength="200" placeholder="เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 21/11" value="'+esc(r.st&&r.st.r||'')+'"></label>'
+   +'<div class="sub">📌 ซ่อม/งดวิ่ง มีผลตั้งแต่ '+esc(thDate(VS.date))+' และติดไปทุกวันจนกว่าจะกด “พร้อมใช้งาน”'
+     +(r.st&&r.st.from?'<br>ตอนนี้: '+esc(r.st.s==='repair'?'ซ่อม':'งดวิ่ง')+' ตั้งแต่ '+esc(thDate(r.st.from))+(r.st.by?' โดย '+esc(r.st.by):''):'')
+     +(r.tail?'<br><span style="color:#15803D">✓ ตั้งที่ตัวหัว '+esc(r.v.head)+' · หาง '+esc(r.tail)+' ยังใช้งานได้</span>':'')
+     +(r.js.length?'<br><span class="vswarn">⚠ คันนี้มีงานในแพลนวันนี้ '+r.js.length+' เที่ยว — ถ้าซ่อมต้องเปลี่ยนรถในตารางแผนด้วย</span>':'')+'</div>'
+   +'</div><div class="dlgft"><button type="button" class="btn" data-a="0">ยกเลิก</button><button type="button" class="btn gold" data-a="1">บันทึก</button></div></div>';
+  document.body.appendChild(w);
+  const sync=()=>{ w.querySelectorAll('[data-s]').forEach(b=>b.setAttribute('aria-checked',String(b.dataset.s===cur))); $('veRl').hidden=cur==='ready'; };
+  const done=()=>{ document.removeEventListener('keydown',onKey); w.remove(); const b=document.querySelector('#dlgVst [data-vh="'+CSS.escape(head)+'"]'); if(b) b.focus(); };
+  const onKey=e=>{ if(e.key==='Escape') done(); };
+  document.addEventListener('keydown',onKey);
+  w.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>{ cur=b.dataset.s; sync(); if(cur!=='ready') $('veR').focus(); });
+  w.onmousedown=e=>{ if(e.target===w) done(); };
+  w.querySelector('[data-a="0"]').onclick=done;
+  const ok=w.querySelector('[data-a="1"]');
+  ok.onclick=async()=>{
+    const reason=cur==='ready'?'':$('veR').value.trim();
+    if(cur!=='ready'&&!reason&&!(await askYes('ไม่ใส่สาเหตุ?','รูปสรุปจะขึ้นแค่ “'+(cur==='repair'?'ซ่อม':'งดวิ่ง')+'” ไม่มีรายละเอียด','บันทึกเลย'))) return;
+    ok.disabled=true; ok.textContent='กำลังบันทึก…';
+    try{
+      const x=await postB({action:'vstat',date:VS.date,head,status:cur,reason});
+      if(!x.ok) throw new Error(x.error||'บันทึกไม่สำเร็จ');
+      if(x.vst) VS.vst[head]=x.vst; else delete VS.vst[head];
+      done(); vsDraw();
+      toast(x.same?'สถานะเดิม ไม่ได้เปลี่ยน':'✅ '+r.pls.join(' / ')+' → '+(cur==='ready'?'พร้อมใช้งาน':cur==='repair'?'ซ่อม':'งดวิ่ง'));
+    }catch(e){ ok.disabled=false; ok.textContent='บันทึก'; toast('❌ '+(e.message||e),true); }
+  };
+  sync(); (w.querySelector('[aria-checked="true"]')||ok).focus();
+}
+
+/* ── รูปสรุป (canvas 1080 กว้าง · โครงเดียวกับ pk-daily drawReport) ── */
+function vsRR(x,X,Y,w,h,r){ x.beginPath(); x.moveTo(X+r,Y); x.arcTo(X+w,Y,X+w,Y+h,r); x.arcTo(X+w,Y+h,X,Y+h,r); x.arcTo(X,Y+h,X,Y,r); x.arcTo(X,Y,X+w,Y,r); x.closePath(); }
+function vsDotC(x,cx,cy,r,col){ x.beginPath(); x.arc(cx,cy,r+4,0,Math.PI*2); x.fillStyle=col+'2E'; x.fill(); x.beginPath(); x.arc(cx,cy,r,0,Math.PI*2); x.fillStyle=col; x.fill(); }
+function vsFit(x,t,cx,cy,max,align){ x.textAlign=align||'left'; let s=String(t||''); const t0=s; while(x.measureText(s).width>max&&s.length>4) s=s.slice(0,-2); if(s!==t0) s=s.slice(0,-1)+'…'; x.fillText(s,cx,cy); }
+async function vsImage(){
+  try{ await document.fonts.load('700 22px "IBM Plex Sans Thai"'); await document.fonts.load('700 30px "Anuphan"'); }catch(e){}
+  const R=vsRows(), c=vsCounts(R), groups=vsGroups(R);
+  const W=1080,PAD=36,RH=VS_WJ?64:52,GH=50,HEAD=176,KP=118,FOOT=86;
+  const H=HEAD+KP+groups.reduce((a,G)=>a+GH+G.rows.length*RH+18,0)+FOOT;
+  const cv=document.createElement('canvas'); cv.width=W; cv.height=H; const x=cv.getContext('2d');
+  const F=(w,s,f)=>w+' '+s+'px '+(f||'"IBM Plex Sans Thai", sans-serif'), FH='"Anuphan", "IBM Plex Sans Thai", sans-serif';
+  x.fillStyle='#EEF3EF'; x.fillRect(0,0,W,H);
+  x.fillStyle='#1B4332'; x.fillRect(0,0,W,HEAD); x.fillStyle='#C9A227'; x.fillRect(0,HEAD-6,W,6);
+  x.textBaseline='alphabetic'; x.textAlign='left';
+  x.fillStyle='#E9CF6E'; x.font=F('600',20); x.fillText('SSB Smart Supply · Bulk',PAD,56);
+  x.fillStyle='#FFFFFF'; x.font=F('700',40,FH); x.fillText('สรุปสถานะรถ Bulk ประจำวัน',PAD,108);
+  x.fillStyle='#CFE3D6'; x.font=F('500',22); x.fillText(vsDateTH(VS.date),PAD,146);
+  const tiles=[['รถทั้งหมด',c.all,'#1B4332',null],['พร้อม มีคนขับ',c.job+c.wait,'#16A34A','วิ่งงาน '+c.job],['ไม่มีคนขับ',c.nod,'#EAB308',null],['ซ่อม',c.rep+c.off,'#DC2626',c.off?'งดวิ่ง '+c.off:null]];
+  const tw=(W-PAD*2-3*14)/4;
+  tiles.forEach(([l,n,col,sub],i)=>{ const X=PAD+i*(tw+14),Y=HEAD+20;
+    x.fillStyle='#FFFFFF'; vsRR(x,X,Y,tw,KP-34,16); x.fill();
+    if(i) vsDotC(x,X+28,Y+30,9,col);
+    x.fillStyle='#5D6E63'; x.font=F('600',17); x.textAlign='left'; x.fillText(l,X+(i?46:20),Y+36);
+    x.fillStyle=i?col:'#14261C'; x.font=F('700',38,FH); x.fillText(String(n),X+20,Y+74);
+    if(sub){ x.fillStyle='#5D6E63'; x.font=F('500',15); x.textAlign='right'; x.fillText(sub,X+tw-16,Y+72); }
+  });
+  let y=HEAD+KP; const brk=[y];
+  groups.forEach(G=>{ const vs=G.rows, h=GH+vs.length*RH;
+    x.fillStyle='#FFFFFF'; vsRR(x,PAD,y,W-PAD*2,h,18); x.fill();
+    x.save(); vsRR(x,PAD,y,W-PAD*2,h,18); x.clip();
+    x.fillStyle='#F4F7F4'; x.fillRect(PAD,y,W-PAD*2,GH);
+    x.fillStyle='#14261C'; x.font=F('700',21,FH); x.textAlign='left'; x.textBaseline='middle'; x.fillText(G.g,PAD+22,y+GH/2);
+    x.font=F('500',16); x.fillStyle='#5D6E63'; x.textAlign='right'; x.fillText(vsGSum(G),W-PAD-22,y+GH/2);
+    let ry=y+GH;
+    vs.forEach((r,i)=>{ const k=r.k, bad=k==='rep'||k==='off';
+      if(i){ x.strokeStyle='#E3EAE5'; x.lineWidth=1; x.beginPath(); x.moveTo(PAD+20,ry); x.lineTo(W-PAD-20,ry); x.stroke(); }
+      if(bad){ x.fillStyle='#FDF0EF'; x.fillRect(PAD,ry,W-PAD*2,RH); }
+      const cy=VS_WJ&&!bad?ry+RH/2-10:ry+RH/2;
+      vsDotC(x,PAD+34,ry+RH/2,10,VS_DOT[k]);
+      x.textBaseline='middle'; x.textAlign='left';
+      x.fillStyle='#9AA8A0'; x.font=F('600',15); x.fillText(String(i+1),PAD+58,cy);
+      x.fillStyle='#14261C'; x.font=F('700',20); vsFit(x,r.pls.join(' / '),PAD+86,cy,226,'left');
+      x.fillStyle='#5D6E63'; x.font=F('500',16); vsFit(x,r.brand,PAD+330,cy,190,'left');
+      x.fillStyle=bad?'#B91C1C':k==='nod'?'#A16207':'#15803D'; x.font=F('700',bad?16:18);
+      const tt=vsTailOk(r)?'✓ '+vsTailOk(r):'', R0=W-PAD-22; let rx=R0;
+      if(tt){ const c0=x.fillStyle; x.fillStyle='#15803D'; x.textAlign='right'; x.fillText(tt,rx,cy); rx-=x.measureText(tt).width+12; x.fillStyle=c0; }
+      vsFit(x,vsSt(r),rx,cy,W-PAD*2-560-(R0-rx),'right');
+      if(VS_WJ&&!bad){ const jt=(r.drv||'ยังไม่มีคนขับ')+(k==='job'?' · '+vsJob(r):'');
+        x.fillStyle='#5D6E63'; x.font=F('500',15); vsFit(x,jt,PAD+86,ry+RH/2+14,W-PAD*2-110,'left'); }
+      ry+=RH; brk.push(ry); });
+    x.restore(); y+=h+18; brk.push(y); });
+  y+=4; let lx=PAD; x.textBaseline='middle'; x.textAlign='left'; x.font=F('500',15);
+  [['#16A34A','พร้อมใช้งาน มีคนขับ'],['#EAB308','พร้อม ไม่มีคนขับ'],['#DC2626','ซ่อม / งดวิ่ง']].forEach(([col,t])=>{ vsDotC(x,lx+9,y+16,7,col); x.fillStyle='#3F4F45'; x.fillText(t,lx+24,y+17); lx+=24+x.measureText(t).width+26; });
+  const now=new Date(); x.textAlign='right'; x.fillStyle='#8A978F'; x.font=F('500',14);
+  x.fillText('สร้าง '+now.getDate()+'/'+(now.getMonth()+1)+'/'+(now.getFullYear()+543)+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'),W-PAD,y+50);
+  cv._brk=brk; VS_CV=cv; return cv.toDataURL('image/png');
+}
+
+/* ── รายงาน Excel / PDF / JPEG (ข้อมูลชุดเดียวกับรูป) ── */
+const VSC=[['ลำดับ',6,'c'],['ทะเบียน',22,'c'],['ยี่ห้อ / รุ่น',18,'l'],['สถานะ',20,'c'],['สาเหตุ / หมายเหตุ',26,'l'],['คนขับ',22,'l'],['ลูกค้า → ปลายทาง',36,'l'],['สินค้า · จำนวน',24,'l'],['เที่ยว',8,'c']];
+const VS_XST={job:['พร้อม · วิ่งงาน','127A2E','E7F5EE'],wait:['พร้อม · รอมีงาน','127A2E','E7F5EE'],nod:['พร้อม · ไม่มีคนขับ','8A5A0B','FEF0D9'],rep:['ซ่อม','A32D2D','FCEDED'],off:['งดวิ่ง','A32D2D','FCEDED']};
+const vsName=ext=>'สถานะรถBulk_'+String(VS.date).replace(/-/g,'')+'.'+ext;
+async function vsXlsx(){ await repLoad('xlsx'); const XL=window.XLSX, N=VSC.length, R=vsRows(), c=vsCounts(R), groups=vsGroups(R);
+  const thin=col=>({style:'thin',color:{rgb:col}}), grid={top:thin('D5DED8'),bottom:thin('D5DED8'),left:thin('D5DED8'),right:thin('D5DED8')};
+  const SX=o=>{ const b={font:{name:'Tahoma',sz:11,color:{rgb:'1F2A24'}},alignment:{vertical:'center',horizontal:'center',wrapText:true},border:grid};
+    o=o||{}; return Object.assign(b,o,{font:Object.assign({},b.font,o.font||{}),alignment:Object.assign({},b.alignment,o.alignment||{})}); };
+  const ws={}, M=[], RH=[]; let r=0;
+  const put=(col,v,s,z)=>{ const cell={v:v==null?'':v,t:typeof v==='number'?'n':'s',s:SX(s)}; if(z) cell.z=z; ws[XL.utils.encode_cell({r,c:col})]=cell; };
+  const band=(c1,c2,v,s,z)=>{ for(let k=c1;k<=c2;k++) put(k,k===c1?v:'',s,k===c1?z:null); if(c2>c1) M.push({s:{r,c:c1},e:{r,c:c2}}); };
+  const now=new Date();
+  band(0,N-1,'สรุปสถานะรถ Bulk ประจำวัน   ·   '+vsDateTH(VS.date),{fill:{fgColor:{rgb:'1B4332'}},font:{sz:18,bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:'left',indent:1},border:{}}); RH.push(38); r++;
+  band(0,N-1,'SSB Smart Supply · Bulk   |   รถ Bulk ทุกคันในทะเบียน + งานตามแพลนวันส่ง   |   สร้าง '+now.getDate()+'/'+(now.getMonth()+1)+'/'+(now.getFullYear()+543)+' '+String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0')+' น.',
+    {fill:{fgColor:{rgb:'2D6A4F'}},font:{sz:10,bold:true,color:{rgb:'E9CF6E'}},alignment:{horizontal:'left',indent:1},border:{bottom:{style:'medium',color:{rgb:'C9A227'}}}}); RH.push(20); r++;
+  RH.push(10); r++;
+  const KB=[[0,1,'รถทั้งหมด',c.all,'0" คัน"','1B4332','E3F1E8'],[2,3,'พร้อม มีคนขับ',(c.job+c.wait)+' คัน · วิ่งงาน '+c.job,null,'127A2E','E7F5EE'],[4,5,'ไม่มีคนขับ',c.nod,'0" คัน"','8A5A0B','FEF0D9'],[6,8,'ซ่อม / งดวิ่ง',(c.rep+c.off)+' คัน'+(c.off?' · งดวิ่ง '+c.off:''),null,'A32D2D','FCEDED']];
+  const kb=(top,bot,col)=>{ const o={left:{style:'thick',color:{rgb:col}}}; if(top) o.top=thin('FFFFFF'); if(bot) o.bottom=thin('FFFFFF'); return o; };
+  KB.forEach(([a,b,l,,,col,bg])=>band(a,b,l,{fill:{fgColor:{rgb:bg}},font:{sz:10,bold:true,color:{rgb:'5D6E63'}},alignment:{horizontal:'left',indent:1,vertical:'bottom'},border:kb(1,0,col)})); RH.push(20); r++;
+  KB.forEach(([a,b,,v,z,col,bg])=>band(a,b,v,{fill:{fgColor:{rgb:bg}},font:{sz:16,bold:true,color:{rgb:col}},alignment:{horizontal:'left',indent:1,vertical:'top'},border:kb(0,1,col)},z)); RH.push(30); r++;
+  RH.push(12); r++;
+  const hdr=r; VSC.forEach((h,i)=>put(i,h[0],{fill:{fgColor:{rgb:'1B4332'}},font:{bold:true,color:{rgb:'FFFFFF'}},alignment:{horizontal:h[2]==='l'?'left':'center',indent:h[2]==='l'?1:0},border:{top:thin('1B4332'),bottom:thin('1B4332'),left:thin('2D6A4F'),right:thin('2D6A4F')}})); RH.push(30); r++;
+  groups.forEach(G=>{
+    band(0,N-1,G.g+'   ·   '+vsGSum(G),{fill:{fgColor:{rgb:'E8F1EB'}},font:{bold:true,sz:12,color:{rgb:'1B4332'}},alignment:{horizontal:'left',indent:1},border:{left:{style:'thick',color:{rgb:'2D6A4F'}},top:thin('D5DED8'),bottom:thin('D5DED8')}}); RH.push(24); r++;
+    G.rows.forEach((R1,ri)=>{ const st=VS_XST[R1.k], bad=R1.k==='rep'||R1.k==='off', z=bad?{fill:{fgColor:{rgb:'FDF0EF'}}}:ri%2?{fill:{fgColor:{rgb:'F5F9F6'}}}:{}, L=Object.assign({},z,{alignment:{horizontal:'left',indent:1}});
+      const js=bad?[]:R1.js, reason=bad?[R1.st&&R1.st.r,vsTailOk(R1)].filter(Boolean).join(' · ')+(R1.st&&R1.st.from?' (ตั้งแต่ '+thDate(R1.st.from)+')':''):'';
+      const cust=js.map(vsCust).join('\n'), prod=js.map(vsProd).join('\n');
+      put(0,ri+1,Object.assign({},z,{font:{bold:true,color:{rgb:'2D6A4F'}}}));
+      put(1,R1.pls.join(' / '),Object.assign({},z,{font:{bold:true}}));
+      put(2,R1.brand,Object.assign({},L,{font:{color:{rgb:'5D6E63'}}}));
+      put(3,st[0],{fill:{fgColor:{rgb:st[2]}},font:{bold:true,color:{rgb:st[1]}}});
+      put(4,reason,Object.assign({},L,{font:{bold:bad,color:{rgb:bad?'A32D2D':'3F4F45'}}}));
+      put(5,R1.drv||(R1.k==='nod'?'ยังไม่มีคนขับ':''),Object.assign({},L,{font:{bold:!!R1.drv,color:{rgb:R1.drv?'14261C':'8A5A0B'}}}));
+      put(6,cust,L); put(7,prod,L); put(8,js.length||'',z,'0" เที่ยว"');
+      RH.push(Math.max(24,Math.max(js.length,Math.ceil(Math.max(cust.length/(36*Math.max(js.length,1)),reason.length/26,1)))*15+9)); r++; });
+  });
+  band(0,N-1,'รวม '+c.all+' คัน   ·   พร้อม มีคนขับ '+(c.job+c.wait)+' (วิ่งงาน '+c.job+')   ·   ไม่มีคนขับ '+c.nod+'   ·   ซ่อม '+c.rep+(c.off?'   ·   งดวิ่ง '+c.off:''),
+    {fill:{fgColor:{rgb:'E3F1E8'}},font:{bold:true,sz:12,color:{rgb:'1B4332'}},alignment:{horizontal:'left',indent:1},border:{top:{style:'medium',color:{rgb:'2D6A4F'}},bottom:{style:'medium',color:{rgb:'2D6A4F'}}}}); RH.push(28); r++;
+  RH.push(10); r++;
+  band(0,N-1,'คำอธิบาย:  วิ่งงาน = มีเที่ยวรถบริษัทในแพลนวันส่งนี้ (จับทะเบียนหัว)  ·  ไม่มีคนขับ = ยังไม่มีคนขับ Bulk ผูกทะเบียนนี้  ·  ซ่อม / งดวิ่ง = ตั้งที่ตัวหัว ติดไปทุกวันจนกว่าจะกดพร้อมใช้งาน',{font:{sz:10,color:{rgb:'5D6E63'}},alignment:{horizontal:'left',indent:1},border:{}}); RH.push(20); r++;
+  ws['!ref']=XL.utils.encode_range({s:{r:0,c:0},e:{r:r-1,c:N-1}}); ws['!merges']=M; ws['!cols']=VSC.map(h=>({wch:h[1]})); ws['!rows']=RH.map(h=>({hpt:h}));
+  ws['!margins']={left:.3,right:.3,top:.4,bottom:.4,header:.2,footer:.2}; ws['!pageSetup']={orientation:'landscape',fitToWidth:1,fitToHeight:0,paperSize:9}; ws['!printHeader']=[hdr+1,hdr+1];
+  const wb=XL.utils.book_new(); XL.utils.book_append_sheet(wb,ws,'สถานะรถ');
+  return new Blob([XL.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}); }
+async function vsPdf(cv){ await repLoad('pdf'); const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({orientation:'portrait',unit:'pt',format:'a4'}),PW=595.28,PH=841.89,M=22,sc=(PW-M*2)/cv.width,maxH=(PH-M*2-14)/sc;
+  const cuts=[0]; let from=0; const b=cv._brk||[];
+  while(cv.height-from>maxH){ let ct=b.filter(v=>v>from+40&&v-from<=maxH).pop(); if(!ct) ct=from+maxH; cuts.push(ct); from=ct; } cuts.push(cv.height);
+  for(let i=0;i<cuts.length-1;i++){ const h=cuts[i+1]-cuts[i], pc=document.createElement('canvas'); pc.width=cv.width; pc.height=h;
+    const px=pc.getContext('2d'); px.fillStyle='#EEF3EF'; px.fillRect(0,0,pc.width,h); px.drawImage(cv,0,cuts[i],cv.width,h,0,0,cv.width,h);
+    if(i) pdf.addPage(); pdf.addImage(pc.toDataURL('image/jpeg',.92),'JPEG',M,M,cv.width*sc,h*sc);
+    pdf.setFontSize(9); pdf.setTextColor(140); pdf.text((i+1)+' / '+(cuts.length-1),PW-M,PH-10,{align:'right'}); }
+  return new Blob([pdf.output('arraybuffer')],{type:'application/octet-stream'}); }   // octet-stream: แอป LINE ไม่เปิด PDF ค้าง
+function vsExport(){
+  const R=vsRows(), c=vsCounts(R); if(!R.length){ toast('ไม่มีรถให้ออกรายงาน',true); return; }
+  const w=document.createElement('div'); w.className='dlg'; w.id='dlgVsX'; w.style.zIndex=72;
+  w.innerHTML='<div class="dlgbox" style="max-width:560px" role="dialog" aria-modal="true" aria-labelledby="vxT"><div class="dlghd"><div><div class="sub" style="color:#CFE3D6">'+esc(vsDateTH(VS.date))+' · รถ '+c.all+' คัน · พร้อม '+(c.job+c.wait)+' · ไม่มีคนขับ '+c.nod+' · ซ่อม '+(c.rep+c.off)+'</div><h2 id="vxT" style="color:#fff;margin:2px 0 0">🚛 รายงานสถานะรถ Bulk</h2></div><button type="button" class="dlgx" data-x aria-label="ปิด">✕</button></div>'
+   +'<div class="dlgbd"><div class="vsfmt">'
+   +'<button type="button" data-k="xlsx"><b>XLS</b>Excel<small>ตารางทุกคัน มีสีสถานะ กรองต่อได้</small></button>'
+   +'<button type="button" data-k="pdf"><b>PDF</b>A4 แนวตั้ง<small>พร้อมพิมพ์</small></button>'
+   +'<button type="button" data-k="jpg"><b>JPG</b>รูปภาพ<small>ภาพเดียว ส่ง LINE ได้เลย</small></button></div>'
+   +'<div class="sub">ข้อมูลชุดเดียวกับรูป · PDF / JPEG '+(VS_WJ?'แสดง':'ไม่แสดง')+'คนขับ + งานใต้ทะเบียน (ติ๊กเปลี่ยนได้ที่หน้าก่อนหน้า)</div></div></div>';
+  document.body.appendChild(w);
+  const done=()=>{ document.removeEventListener('keydown',onKey); w.remove(); if($('vsDl')) $('vsDl').focus(); };
+  const onKey=e=>{ if(e.key==='Escape') done(); };
+  document.addEventListener('keydown',onKey);
+  w.onmousedown=e=>{ if(e.target===w) done(); };
+  w.querySelector('[data-x]').onclick=done;
+  w.querySelectorAll('[data-k]').forEach(b=>b.onclick=async()=>{ if(b.disabled) return; const k=b.dataset.k, t0=b.innerHTML; b.disabled=true; b.innerHTML='<b>…</b>กำลังสร้างไฟล์';
+    try{ let blob; if(k==='xlsx') blob=await vsXlsx(); else { await vsImage(); blob=k==='pdf'?await vsPdf(VS_CV):await new Promise(ok=>VS_CV.toBlob(ok,'image/jpeg',.93)); }
+      repSave(blob,vsName(k)); done(); }
+    catch(e){ b.disabled=false; b.innerHTML=t0; toast('❌ สร้างไฟล์ไม่สำเร็จ: '+(e&&e.message||e),true); } });
+  w.querySelector('[data-k="xlsx"]').focus();
+}
 function bulkReport(){
   const v=REP_VIEW; if(!v||!v.plan) return;
   const p=v.plan, rn=v.rev==null?'ยังไม่ส่งบัญชี':revName(v.rev), rows=v.jobs.slice().sort((a,b)=>String(a.prod_name||'').localeCompare(String(b.prod_name||''))||a.line_no-b.line_no);
