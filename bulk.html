@@ -486,6 +486,45 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 @media (max-width:520px){.vsfmt{grid-template-columns:1fr}}
 :root[data-theme="dark"] .vsst.job,:root[data-theme="dark"] .vsst.wait{color:#5BD08A}:root[data-theme="dark"] .vsst.nod{color:#E8C04A}:root[data-theme="dark"] .vsst.rep,:root[data-theme="dark"] .vsst.off,:root[data-theme="dark"] .vswarn{color:#F08A80}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .vsst.job,:root:not([data-theme="light"]) .vsst.wait{color:#5BD08A}:root:not([data-theme="light"]) .vsst.nod{color:#E8C04A}:root:not([data-theme="light"]) .vsst.rep,:root:not([data-theme="light"]) .vsst.off,:root:not([data-theme="light"]) .vswarn{color:#F08A80}}
+/* 🗂️ เมนูย่อย ฐานข้อมูล + หน้าชนิดสินค้า → บริษัท / รหัสบิล · 2026-11-19 */
+.nav-grp .chev{margin-left:auto;width:16px;height:16px;flex:none;transition:transform .2s}
+.nav-grp[aria-expanded="false"] .chev{transform:rotate(-90deg)}
+.nsub{margin:-2px 0 6px 21px;padding-left:12px;border-left:1.5px solid var(--line);display:flex;flex-direction:column;gap:2px}
+.nav-s{display:flex;align-items:center;gap:9px;width:100%;padding:7px 10px;border:1px solid transparent;border-radius:10px;background:none;color:var(--navtx);font:inherit;font-size:13px;text-align:left;cursor:pointer;white-space:nowrap}
+.nav-s:hover{background:var(--glass-2)}
+.nav-s:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
+.nav-s i{width:8px;height:8px;border-radius:50%;flex:none}
+@media(min-width:861px){.dash.nav-collapsed .side:not(:hover):not(:focus-within) .nsub{display:none}.dash.nav-collapsed .side:not(:hover):not(:focus-within) .chev{opacity:0}}
+@media(max-width:860px){.nav-grp{display:none}.nsub,.nsub[hidden]{display:contents}.nav-s{flex:none;width:auto;padding:8px 12px;border-radius:14px}}
+.pdcos{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.pdco{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2);display:flex;flex-direction:column;gap:4px;min-width:0}
+.pdco.miss{border-color:var(--warn);background:var(--warnTint)}
+.pdco-h{display:flex;align-items:center;gap:8px}
+.pdco-h .pdbill{margin-left:auto;font-size:12px;color:var(--muted);font-weight:600}
+.pdco-n{font-size:13px;font-weight:600}
+.pdco-f{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:auto}
+.pdcode{display:inline-grid;place-items:center;min-width:22px;height:22px;border-radius:6px;color:#fff;font-family:var(--f-num);font-weight:700;font-size:12.5px;flex:none}
+.pdwarn{color:var(--warn)}
+.pdmiss{border:1px solid var(--warn);background:var(--warnTint);border-radius:12px;padding:10px 12px;font-size:13px}
+.pdmiss-l{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.pdbar{display:flex;gap:8px 10px;flex-wrap:wrap;align-items:center}
+.pdchips{display:flex;gap:6px;flex-wrap:wrap;flex:1;min-width:0}
+.pdchip{font:inherit;font-size:12.5px;font-weight:600;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:5px 11px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.pdchip i{width:8px;height:8px;border-radius:50%}
+.pdchip b{font-family:var(--f-num);color:var(--muted)}
+.pdchip.on{background:var(--brand);border-color:var(--brand);color:#fff}.pdchip.on b{color:rgba(255,255,255,.85)}
+.pdq{width:200px;max-width:100%;padding:7px 11px}
+.pdwrap{max-height:52vh;overflow:auto;border:1px solid var(--line);border-radius:12px}
+.pdt{width:100%;border-collapse:collapse;font-size:13px}
+.pdt th{position:sticky;top:0;background:var(--surface2);text-align:left;font-size:12px;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);z-index:1}
+.pdt td{padding:7px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+.pdt td small{display:block;color:var(--muted);font-size:11.5px}
+.pdt tr.off td{opacity:.55}
+.pddot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:0}
+.pdseg{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.pdseg button{display:flex;align-items:center;gap:6px;justify-content:center}
+.pdseg button[aria-checked="true"] .pdcode{box-shadow:0 0 0 2px #fff}
+.bcode{font-family:var(--f-num);font-weight:700}
 </style>
 </head>
 <body>
@@ -526,7 +565,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19b</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19c</span></div>
   </div>
   </div></main>
 </div>
@@ -548,6 +587,7 @@ const NAV_IC={plan:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0
   truck:'<rect x="2" y="6" width="12" height="9" rx="2"/><path d="M14 10h4l3 3v4h-2"/><path d="M9 17h6"/><circle cx="6.5" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>',
   clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   report:'<path d="M6 9V3h12v6"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7" rx="1"/>',
+  db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 11v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
   pin:'<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
   dash:'<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
   track:'<circle cx="6" cy="5" r="2"/><path d="M6 7v10"/><circle cx="6" cy="19" r="2"/><path d="M11 5h9M11 12h9M11 19h9"/><circle cx="6" cy="12" r="1"/>',
@@ -556,7 +596,7 @@ const NAV_IC={plan:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0
 function navItems(me){
   const out=[{sec:'งาน Bulk'},
     {ic:'plan',t:'แพลนส่งมอบ',s:'แผนแอดมิน · ตารางแผน',on:1,act:'navTop()'},{ic:'pulse',t:'สถานะเที่ยว',act:'navStatus()'},{ic:'truck',t:'สรุปสถานะรถ',s:'พร้อม · ไม่มีคนขับ · ซ่อม',act:'openVStat()'},{ic:'clock',t:'แพลนย้อนหลัง',act:'openHistory()'},
-    {ic:'report',t:'รายงาน',s:'Excel · PDF · JPEG',act:'navReport()'},{ic:'pin',t:'ลูกค้า Bulk',s:'พิกัด · ตาชั่ง',act:'openCustomers()'}];
+    {ic:'report',t:'รายงาน',s:'Excel · PDF · JPEG',act:'navReport()'},{ic:'db',t:'ฐานข้อมูล',s:'ชนิดสินค้า · ลูกค้า',grp:'db',sub:[{t:'ชนิดสินค้า → รหัสบิล',dot:'#2F7D4F',act:'openProducts()'},{t:'ลูกค้า Bulk · พิกัด',dot:'#C2410C',act:'openCustomers()'}]}];
   // บัญชี/แอดมินพันตัน ใช้เฉพาะงาน Bulk ตามริชเมนู ไม่โชว์ลิงก์ระบบขนส่ง
   if(me&&me.type!=='ACC_BULK'&&me.type!=='YARD_BULK') out.push({sec:'ระบบขนส่ง'},
     {ic:'dash',t:'Command Center',url:'/ManageDrivers/'},
@@ -570,11 +610,16 @@ function navDraw(me){
   const uidQ=MY_UID?'?uid='+encodeURIComponent(MY_UID):'';
   $('nav').innerHTML=navItems(me).map(n=>{
     if(n.sec) return '<div class="nsec">'+esc(n.sec)+'</div>';
+    if(n.sub){ let op=true; try{ op=localStorage.getItem('bulk_nav_'+n.grp)!=='0'; }catch(e){}   /* 🗂️ เมนูย่อย (แบบโปรเจคไฟฟ้า) · 19 พ.ย. */
+      return '<button type="button" class="nav-i nav-grp" data-grp="'+n.grp+'" aria-expanded="'+op+'" aria-controls="nsub-'+n.grp+'" title="'+esc(n.t)+'"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAV_IC[n.ic]+'</svg><span class="nav-tx"><b>'+esc(n.t)+'</b>'+(n.s?'<small>'+esc(n.s)+'</small>':'')+'</span><svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg></button>'
+        +'<div class="nsub" id="nsub-'+n.grp+'"'+(op?'':' hidden')+'>'+n.sub.map(x=>'<button type="button" class="nav-s" onclick="'+x.act+'"><i style="background:'+x.dot+'" aria-hidden="true"></i><span>'+esc(x.t)+'</span></button>').join('')+'</div>'; }
     const inner='<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+NAV_IC[n.ic]+'</svg><span class="nav-tx"><b>'+esc(n.t)+'</b>'+(n.s?'<small>'+esc(n.s)+'</small>':'')+'</span>';
     /* rel=opener: หน้าระบบเดียวกัน · แท็บใหม่ได้สำเนา sessionStorage ที่จำ PIN ไว้ ไม่ต้องใส่ซ้ำ */
     return n.url?'<a class="nav-i" title="'+esc(n.t)+' (เปิดแท็บใหม่)" href="'+esc(n.url+uidQ)+'" target="_blank" rel="opener">'+inner+'</a>'
       :'<button type="button" class="nav-i'+(n.on?' on':'')+'" title="'+esc(n.t)+'"'+(n.on?' aria-current="page"':'')+' onclick="'+n.act+'">'+inner+'</button>';
   }).join('');
+  $('nav').querySelectorAll('.nav-grp').forEach(b=>b.onclick=()=>{ const op=b.getAttribute('aria-expanded')!=='true', sb=$('nsub-'+b.dataset.grp);
+    b.setAttribute('aria-expanded',String(op)); if(sb) sb.hidden=!op; try{ localStorage.setItem('bulk_nav_'+b.dataset.grp,op?'1':'0'); }catch(e){} });
 }
 const navSmooth=()=>window.matchMedia&&matchMedia('(prefers-reduced-motion:reduce)').matches?'auto':'smooth';
 function navTop(){ window.scrollTo({top:0,behavior:navSmooth()}); }
@@ -675,6 +720,7 @@ function runGo(){
   const g=GO; GO=''; if(!g) return;
   const p=DATA&&DATA.plan;
   if(g==='customers') return openCustomers();
+  if(g==='products') return openProducts();
   if(g==='history') return openHistory();
   if(g==='vehicles') return openVStat();
   if(g==='report'){ if(p) bulkReport(); else toast('ยังไม่มีแพลนให้ออกรายงาน',true); return; }
@@ -860,7 +906,7 @@ function renderPlan(){
       <td class="sel">${j.status==='_snap'||j.cancelled?'':`<input type="checkbox" data-sel="${j.id}"${SEL.has(j.id)?' checked':''} aria-label="เลือกเที่ยว #${j.line_no}">`}</td>
       <td class="num">${j.line_no}</td><td class="num">${j.round_no||''}</td>
       <td class="cust">${esc(j.cust_name)}${j.cust_code?`<small>${esc(j.cust_code)}</small>`:''}${warn}</td><td>${esc(j.dest)}</td>
-      <td class="prod">${esc(j.prod_name)}</td><td class="r num">${esc(qtyTx(j).replace(/ ตัน$/,''))}</td><td>${esc(j.bill)}</td>
+      <td class="prod">${esc(j.prod_name)}</td><td class="r num">${esc(qtyTx(j).replace(/ ตัน$/,''))}</td><td class="bcode" title="${esc(prodOf(j.prod_name)?'บิล '+(j.bill||'')+' · บริษัท '+((deptOf(prodOf(j.prod_name).dept)||{}).name||''):'ชนิดสินค้านี้ยังไม่อยู่ในฐานข้อมูล')}">${esc(billCode(j))}</td>
       <td>${isCo(j)?'<span class="kd company">บริษัท</span> ':''}${who}</td>
       <td>${tg(j,'co',j.co)}</td><td>${tg(j,'co_closed',j.co_closed)}</td><td>${tg(j,'loaded',j.loaded)}</td>
       <td class="nt">${esc(j.deliver_time||'')}</td><td>${j.doc_no?`<span class="docno">${esc(j.doc_no)}</span>${j.printed_at?'<small class="sub" style="display:block">พิมพ์ '+thTime(j.printed_at)+'</small>':''}`:'<span class="sub">—</span>'}</td>
@@ -1254,6 +1300,9 @@ function fxMsg(msg){ const c=msg&&msg.contents; if(!c) return '<div class="sub">
 async function printTrips(ids){
   ids=(ids||[]).filter(Boolean); if(!ids.length){ toast('ติ๊กเลือกเที่ยวที่จะพิมพ์ก่อน',true); return; }
   const js=DATA.jobs.filter(j=>ids.indexOf(j.id)>=0&&!j.cancelled), noDoc=js.filter(j=>!j.doc_no).length;
+  { const iss=pdIssues(js);   /* 🗂️ ชนิดสินค้าที่ยังไม่อยู่ในฐาน → หัวใบยังเป็นชื่อเดิม + บิลตามแผน */
+    if(iss.miss.length&&!(await askYes('ชนิดสินค้ายังไม่อยู่ในฐานข้อมูล',iss.miss.join(', ')+' — ใบขนส่งจะใช้ชื่อ '+FM_CO_DEF+' และบิลตามแผน (ไม่มีอักษรบริษัท) · เพิ่มได้ที่เมนู ฐานข้อมูล › ชนิดสินค้า','พิมพ์ต่อ'))) return;
+    if(iss.noCo.length&&!(await askYes('บริษัทยังไม่มีชื่อเต็ม','รหัส '+iss.noCo.join(', ')+' ยังไม่ใส่ชื่อบริษัท — หัวใบจะเว้นช่องให้เขียนเอง · ใส่ได้ที่เมนู ฐานข้อมูล › ชนิดสินค้า','พิมพ์ต่อ'))) return; }
   if(noDoc&&!(await askYes('ออกเลขที่ใบขนส่ง',noDoc+' เที่ยวยังไม่มีเลขที่ใบ — ระบบจะออกเลขใหม่ให้ (เริ่ม '+docNext()+') · ออกแล้วเลขผูกกับเที่ยวนั้น พิมพ์ซ้ำได้เลขเดิม','ออกเลข + พิมพ์'))) return;
   toast('กำลังเตรียมใบขนส่ง '+js.length+' ใบ…');
   try{
@@ -1271,14 +1320,14 @@ function fmTr01(j,pl,prev,by){
   const X=on=>`<span class="xb">${on?'✓':''}</span>`, U=(v,w)=>`<span class="uv"${w?` style="min-width:${w}mm"`:''}>${e(v)||'&nbsp;'}</span>`, D=w=>`<span class="dt" style="width:${w}mm"></span>`;
   const qt=String(j.qty_text||'').trim(), isT=tonOf(qt)>0&&!/^\s*[\d.,]+\s*(ถัง|ลิตร|ตู้|กก|kg)/i.test(qt);
   const qv=qt?(isT?qt.replace(/\s*ตัน\s*/,' ').trim():qt):tons((j.qty_kg||0)/1000);
-  const FOOT='FM-TR-01 Rev.05 ประกาศใช้วันที่ 21 กุมภาพันธ์ 2569';
+  const FOOT='FM-TR-01 Rev.05 ประกาศใช้วันที่ 21 กุมภาพันธ์ 2569', CO=coOf(j);   // 🗂️ 19 พ.ย. บริษัทตามชนิดสินค้า
   return `<section class="fm"><div class="ftop"><span></span><span>${FOOT}</span></div><div class="fbox">   <!-- 18 พ.ย. คุณน้อง: หน้า 1 ต้องมีเลขเอกสาร ISO ด้วย -->
-  <div class="frow fhead"><div class="fco"><div class="fname">บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด</div><div class="flogo">SSB</div>
+  <div class="frow fhead"><div class="fco"><div class="fname">${e(CO)}</div><div class="flogo">SSB</div>
       <div class="ftitle"><b>ใบขนส่งน้ำมัน</b><b>ส่วนที่ 1 สำหรับฝ่ายขนส่ง</b></div></div>
     <table class="fdoc"><tr><th>เลขที่เอกสาร</th><td class="dno">${e(j.doc_no||'')}</td></tr><tr><th>ออกจากโรงงานก่อนเวลา</th><td>${e(f.leaveBy)}</td></tr><tr><th>ส่งถึงลูกค้าก่อนเวลา</th><td>${e(f.arriveBy||j.deliver_time||'')}</td></tr></table></div>
   <div class="fsec s1">
     <div class="fl c"><b>ชนิดน้ำมัน</b> ${U(j.prod_name,60)}</div>
-    <div class="fl"><b>ชื่อลูกค้า</b> ${U(j.cust_name,40)} <b class="bill">${e(j.bill||'')}</b> <b>สถานที่จัดส่ง</b> ${U(j.dest,34)} <b>จำนวนที่ต้องเติม</b> ${U(qv,14)} ${isT||!qt?'ตัน':''}</div>
+    <div class="fl"><b>ชื่อลูกค้า</b> ${U(j.cust_name,40)} <b class="bill">${e(billCode(j))}</b> <b>สถานที่จัดส่ง</b> ${U(j.dest,34)} <b>จำนวนที่ต้องเติม</b> ${U(qv,14)} ${isT||!qt?'ตัน':''}</div>
     <div class="fl"><span>วันที่ส่งสินค้า</span> ${U(thDate(pl.send_date),24)} <span class="ml">เอกสารแนบ</span> ${X(f.coa)} ใบ Certificate of Analysis (COA.) ${X(j.co)} ใบ CO ${f.coNo?U(f.coNo,22):D(22)}</div>
     <div class="fl ind">${X(!!f.bags)} ถุงกรองจำนวน ${f.bags?U(f.bags,8):D(8)} ใบ ${f.bagTo?U(f.bagTo,40):D(40)} ผู้รับ</div>
     <div class="fl"><span>บริษัทขนส่ง</span> ${U(j.carrier||'',36)} <span>ทะเบียนรถ</span> ${U(j.plate||'',38)} <span>ชื่อคนขับ</span> ${U(j.driver_name||'',42)}</div>
@@ -1302,7 +1351,7 @@ function fmTr01(j,pl,prev,by){
     <div class="fl">เลขที่ใบชั่ง${D(26)} ชื่อผู้ชั่ง${D(30)} ซีลทั้งหมด${D(14)} ตัว เลขที่ตีซีล${D(40)}</div></div>
   </div></section>
   <section class="fm"><div class="ftop"><b>มีต่อด้านหลัง</b><span>${FOOT}</span></div><div class="fbox">
-  <div class="frow fhead2"><div class="fco2"><div class="fname">บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด</div><b>ใบขนส่งน้ำมัน (ต่อ)</b></div>
+  <div class="frow fhead2"><div class="fco2"><div class="fname">${e(CO)}</div><b>ใบขนส่งน้ำมัน (ต่อ)</b></div>
     <div class="fside"><div class="fbx">เวลาโหลดไม่เกิน 1.30 นาที</div><div>ชื่อลูกค้า <b class="uv">${e(j.cust_name||'')}</b></div></div></div>
   <div class="fsec"><div class="fst c">ส่วนที่ 4 สำหรับฝ่ายผลิตและโหลดสินค้า</div>
     <div class="f4"><div><div><u><b>ตรวจเช็ครถน้ำมัน</b></u></div>
@@ -1490,7 +1539,7 @@ function buildTicker(p,live){
       t.innerHTML=`<b>#${j.line_no} · ${esc(j.cust_name||'—')}</b>
         <div><span>ส่งที่</span>${esc(j.dest||'—')}</div><div><span>สินค้า</span>${esc(j.prod_name||'—')} · <b>${esc(qtyTx(j))}</b></div>
         <div><span>คนขับ</span>${esc(j.driver_name||'—')} · ${esc(j.plate||'—')}</div>
-        <div><span>บิล</span>${esc(j.bill||'—')} · ใบขนย้าย ${j.co?'<b style="color:var(--ok)">✓ มี</b>':'<b style="color:var(--bad)">✗ ไม่มี</b>'}</div>
+        <div><span>บิล</span>${esc(billCode(j)||'—')} · ใบขนย้าย ${j.co?'<b style="color:var(--ok)">✓ มี</b>':'<b style="color:var(--bad)">✗ ไม่มี</b>'}</div>
         ${j.note?`<div><span>หมายเหตุ</span>${esc(j.note)}</div>`:''}`;
       t.hidden=false; const w=t.offsetWidth, h=t.offsetHeight;
       t.style.left=Math.max(8,Math.min(x-w/2,innerWidth-w-8))+'px'; t.style.top=(y+h+20>innerHeight?y-h-12:y+18)+'px'; };
@@ -1772,6 +1821,128 @@ function vsExport(){
     catch(e){ b.disabled=false; b.innerHTML=t0; toast('❌ สร้างไฟล์ไม่สำเร็จ: '+(e&&e.message||e),true); } });
   w.querySelector('[data-k="xlsx"]').focus();
 }
+/* ═════════ 🗂️ ฐานข้อมูล · ชนิดสินค้า → บริษัท / รหัสบิล · 2026-11-19 คุณน้อง ═════════
+   "อักษรตัวแรกคือบริษัท ตัวที่สองคือชนิดบิล A หรือ B (A เปิด VAT)" → รหัสบิล = bulk_bill_depts.code + bill เช่น V + A = VA
+   ชนิดสินค้าแต่ละตัวผูกบริษัท (bulk_products.dept) · ใบขนส่ง FM-TR-01 ใช้ชื่อบริษัทของชนิดสินค้านั้น
+   จับชื่อสินค้าแบบตัดช่องว่าง/สัญลักษณ์ (= Edge norm) + ชื่ออื่น (aliases) · แก้ได้ DEV/แอดมิน Bulk/ผู้จัดการ (Edge bulk-board saveProduct/saveDept) */
+const FM_CO_DEF='บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด';
+const PD_DOT={V:'#2F7D4F',P:'#C2410C',D:'#B7791F',E:'#3B6E8F'};
+const pdDot=c=>PD_DOT[c]||'#6B7280';
+let PD_IX=null, PD_SRC=null, PD_F='all', PD_Q='';
+function prodOf(name){
+  const ps=DATA&&DATA.products;
+  if(PD_SRC!==ps||!PD_IX){ PD_IX={}; (ps||[]).forEach(p=>{ if(p.active===false) return; [p.name,...(p.aliases||[])].forEach(n=>{ const k=nrm(n); if(k&&!PD_IX[k]) PD_IX[k]=p; }); }); PD_SRC=ps; }
+  return PD_IX[nrm(name)]||null;
+}
+const pdReset=()=>{ PD_IX=null; };
+const deptOf=c=>(DATA&&DATA.depts||[]).find(d=>d.code===c)||null;
+// รหัสบิลเต็ม: บิล "A" + สินค้า CPO (P) → "PA" · บิลกรอกเป็น 2 ตัวอักษรอยู่แล้ว = ใช้ตามนั้น · ไม่รู้จักสินค้า = บิลเดิม
+function billCode(j){ const b=String(j&&j.bill||'').trim().toUpperCase(), p=prodOf(j&&j.prod_name); if(!b||/^[A-Z]{2}$/.test(b)||!p) return b; return p.dept+b; }
+// ชื่อบริษัทบนใบขนส่ง: ไม่รู้จักสินค้า = ชื่อเดิม (น้ำมันพืช) · รู้จักแต่บริษัทยังไม่ใส่ชื่อเต็ม = เว้นช่องให้เขียน
+function coOf(j){ const p=prodOf(j&&j.prod_name); if(!p) return FM_CO_DEF; const d=deptOf(p.dept); return d&&d.company?d.company:'บริษัท ……………………………… จำกัด'; }
+// ก่อนพิมพ์: สินค้าที่ยังไม่อยู่ในฐาน / บริษัทที่ยังไม่มีชื่อเต็ม
+function pdIssues(js){
+  const miss=[...new Set(js.filter(j=>j.prod_name&&!prodOf(j.prod_name)).map(j=>j.prod_name))];
+  const noCo=[...new Set(js.map(j=>prodOf(j.prod_name)).filter(Boolean).map(p=>p.dept).filter(c=>!(deptOf(c)||{}).company))];
+  return {miss,noCo};
+}
+const pdMissing=()=>[...new Set(((DATA&&DATA.jobs)||[]).filter(j=>!j.cancelled&&j.prod_name&&!prodOf(j.prod_name)).map(j=>j.prod_name))];
+
+function pdDlg(){ let m=$('dlgProd'); if(!m){ m=document.createElement('div'); m.id='dlgProd'; m.className='dlg'; document.body.appendChild(m); } return m; }
+function openProducts(){
+  if(!DATA||!DATA.products){ toast('ยังโหลดฐานข้อมูลไม่เสร็จ — ลองใหม่อีกครั้ง',true); return; }
+  const m=pdDlg();
+  const onKey=e=>{ if(e.key==='Escape'&&!$('dlgPdE')) m._close(); };
+  m._close=()=>{ m.hidden=true; m.innerHTML=''; document.removeEventListener('keydown',onKey); };
+  m.onmousedown=e=>{ if(e.target===m) m._close(); };
+  document.addEventListener('keydown',onKey);
+  m.hidden=false; pdDraw(true);
+}
+function pdDraw(focus){
+  const m=$('dlgProd'); if(!m||m.hidden) return;
+  const ed=DATA.me&&DATA.me.canEdit, ps=DATA.products||[], ds=DATA.depts||[], miss=pdMissing();
+  const q=nrm(PD_Q), rows=ps.filter(p=>(PD_F==='all'||p.dept===PD_F)&&(!q||[p.name,...(p.aliases||[])].some(n=>nrm(n).includes(q))));
+  const cnt=c=>ps.filter(p=>p.dept===c&&p.active!==false).length;
+  const card=d=>`<div class="pdco${d.company?'':' miss'}"><div class="pdco-h"><span class="pdcode" style="background:${pdDot(d.code)}">${esc(d.code)}</span><b>${esc(d.name)}</b><span class="num pdbill">${esc(d.code)}A · ${esc(d.code)}B</span></div>
+      <div class="pdco-n">${d.company?esc(d.company):'<span class="pdwarn">⚠ ยังไม่ใส่ชื่อบริษัทเต็ม — ใบขนส่งจะเว้นช่องไว้</span>'}</div>${d.company_en?`<div class="sub">${esc(d.company_en)}</div>`:''}
+      <div class="pdco-f"><span class="sub">${cnt(d.code)} ชนิดสินค้า</span>${ed?`<button type="button" class="vsed" data-pde="${esc(d.code)}">✏️ แก้ชื่อบริษัท</button>`:''}</div></div>`;
+  const row=(p,i)=>`<tr class="${p.active===false?'off':''}"><td class="num">${i+1}</td>
+      <td><b>${esc(p.name)}</b>${(p.aliases||[]).length?`<small>ชื่ออื่น: ${esc(p.aliases.join(', '))}</small>`:''}${p.note?`<small>${esc(p.note)}</small>`:''}</td>
+      <td><span class="pddot" style="background:${pdDot(p.dept)}"></span>${esc((deptOf(p.dept)||{}).name||p.dept)}</td>
+      <td class="num"><b>${esc(p.dept)}A</b> <span class="sub">/ ${esc(p.dept)}B</span></td>
+      <td>${p.active===false?'<span class="chip k-del">เลิกใช้</span>':'<span class="chip k-same">ใช้งาน</span>'}</td>
+      ${ed?`<td><button type="button" class="vsed" data-pdp="${p.id}" aria-label="แก้ ${esc(p.name)}">✏️</button></td>`:''}</tr>`;
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="pdT">
+    <div class="dlghd"><div><div class="sub">ฐานข้อมูล Bulk</div><h2 id="pdT" style="color:#fff;margin:2px 0 0">🧪 ชนิดสินค้า → บริษัท / รหัสบิล</h2></div><button type="button" class="dlgx" id="pdX" aria-label="ปิด">✕</button></div>
+    <div class="dlgbd">
+      <div class="sub">รหัสบิล = <b>อักษรบริษัท</b> + <b>ชนิดบิล</b> A (เปิด VAT) / B · เช่น CPO บิล A → <b>PA</b> · ใบขนส่ง FM-TR-01 ใช้ชื่อบริษัทตามชนิดสินค้า</div>
+      <div class="pdcos">${ds.map(card).join('')}</div>
+      ${miss.length?`<div class="pdmiss"><b>⚠ สินค้าในแพลนวันนี้ที่ยังไม่อยู่ในฐาน (${miss.length})</b> — ใบขนส่งจะใช้ชื่อ ${esc(FM_CO_DEF)} และบิลตามแผน
+        <div class="pdmiss-l">${miss.map(n=>ed?`<button type="button" class="vsed" data-pdn="${esc(n)}">+ ${esc(n)}</button>`:`<span class="chip k-chg">${esc(n)}</span>`).join('')}</div></div>`:''}
+      <div class="pdbar"><div class="pdchips" role="group" aria-label="กรองตามบริษัท">
+          <button type="button" class="pdchip${PD_F==='all'?' on':''}" data-pdf="all">ทั้งหมด <b>${ps.length}</b></button>
+          ${ds.map(d=>`<button type="button" class="pdchip${PD_F===d.code?' on':''}" data-pdf="${esc(d.code)}"><i style="background:${pdDot(d.code)}"></i>${esc(d.name)} <b>${ps.filter(p=>p.dept===d.code).length}</b></button>`).join('')}</div>
+        <input type="search" id="pdQ" class="vsin pdq" placeholder="ค้นหาชนิดสินค้า" aria-label="ค้นหาชนิดสินค้า" value="${esc(PD_Q)}">
+        ${ed?'<button type="button" class="btn gold" id="pdAdd">+ เพิ่มชนิดสินค้า</button>':''}</div>
+      <div class="pdwrap"><table class="pdt"><thead><tr><th>#</th><th>ชนิดสินค้า</th><th>บริษัท</th><th>รหัสบิล</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
+        <tbody>${rows.length?rows.map(row).join(''):`<tr><td colspan="${ed?6:5}" class="sub" style="text-align:center;padding:18px">ไม่พบชนิดสินค้า</td></tr>`}</tbody></table></div>
+      ${ed?'':'<div class="sub">ดูอย่างเดียว · แก้ได้เฉพาะ DEV / แอดมิน Bulk / ผู้จัดการ</div>'}
+    </div></div>`;
+  $('pdX').onclick=m._close;
+  m.querySelectorAll('[data-pdf]').forEach(b=>b.onclick=()=>{ PD_F=b.dataset.pdf; pdDraw(); });
+  const qi=$('pdQ'); qi.oninput=()=>{ PD_Q=qi.value; const pos=qi.selectionStart; pdDraw(); const n=$('pdQ'); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} };
+  if($('pdAdd')) $('pdAdd').onclick=()=>pdEdit(null);
+  m.querySelectorAll('[data-pdp]').forEach(b=>b.onclick=()=>pdEdit(ps.find(p=>String(p.id)===b.dataset.pdp)));
+  m.querySelectorAll('[data-pdn]').forEach(b=>b.onclick=()=>pdEdit(null,b.dataset.pdn));
+  m.querySelectorAll('[data-pde]').forEach(b=>b.onclick=()=>pdDeptEdit(ds.find(d=>d.code===b.dataset.pde)));
+  if(focus) $('pdX').focus();
+}
+// กล่องแก้ไขเล็ก (ใช้ร่วม สินค้า / บริษัท)
+function pdForm(title,html,onSave){
+  const w=document.createElement('div'); w.className='dlg'; w.id='dlgPdE'; w.style.zIndex=72;
+  w.innerHTML=`<div class="dlgbox" style="max-width:480px" role="dialog" aria-modal="true" aria-labelledby="pdeT"><div class="dlgbd"><h2 id="pdeT" style="margin:0">${title}</h2>${html}</div>
+    <div class="dlgft"><button type="button" class="btn" data-a="0">ยกเลิก</button><button type="button" class="btn gold" data-a="1">บันทึก</button></div></div>`;
+  document.body.appendChild(w);
+  const done=()=>{ document.removeEventListener('keydown',onKey); w.remove(); };
+  const onKey=e=>{ if(e.key==='Escape') done(); };
+  document.addEventListener('keydown',onKey);
+  w.onmousedown=e=>{ if(e.target===w) done(); };
+  w.querySelector('[data-a="0"]').onclick=done;
+  const ok=w.querySelector('[data-a="1"]');
+  ok.onclick=async()=>{ ok.disabled=true; ok.textContent='กำลังบันทึก…';
+    try{ const msg=await onSave(w); done(); pdReset(); pdDraw(); render(); toast(msg); }
+    catch(e){ ok.disabled=false; ok.textContent='บันทึก'; toast('❌ '+(e.message||e),true); } };
+  const f=w.querySelector('input:not([readonly]),select'); if(f) f.focus();
+  return w;
+}
+function pdEdit(p,newName){
+  const ds=DATA.depts||[], cur=p?p.dept:(ds[0]&&ds[0].code)||'V';
+  const fl=(l,inner)=>`<label class="vsrl">${l}${inner}</label>`;
+  pdForm(p?'แก้ชนิดสินค้า':'เพิ่มชนิดสินค้า',
+    fl('ชื่อชนิดสินค้า (ตามแผนแอดมิน)',`<input class="vsin" id="peN" maxlength="80" value="${esc(p?p.name:(newName||''))}" placeholder="เช่น PO mix TBHQ">`)
+    +fl('ชื่ออื่นที่ใช้เรียก (คั่นด้วย ,)',`<input class="vsin" id="peA" value="${esc(p?(p.aliases||[]).join(', '):'')}" placeholder="เช่น POmix TBHQ, PO-mix TBHQ">`)
+    +`<div class="vsrl">บริษัท / รหัสบิล<div class="vsseg pdseg" role="radiogroup" aria-label="บริษัท">${ds.map(d=>`<button type="button" role="radio" data-s="${esc(d.code)}" aria-checked="${d.code===cur}"><span class="pdcode" style="background:${pdDot(d.code)}">${esc(d.code)}</span>${esc(d.name)}</button>`).join('')}</div></div>`
+    +fl('หมายเหตุ',`<input class="vsin" id="peT" maxlength="200" value="${esc(p&&p.note||'')}">`)
+    +(p?`<label class="vsopt"><input type="checkbox" id="peOn"${p.active===false?'':' checked'}> ใช้งานอยู่ (ไม่ติ๊ก = เลิกใช้ · ไม่ลบประวัติ)</label>`:'')
+    +(p&&p.updated_by?`<div class="sub">แก้ล่าสุด ${esc(thTime(p.updated_at))} · ${esc(p.updated_by)}</div>`:''),
+    async w=>{ const dept=(w.querySelector('.pdseg [aria-checked="true"]')||{}).dataset;
+      const r=await postB({action:'saveProduct',id:p?p.id:0,name:$('peN').value.trim(),aliases:$('peA').value.split(',').map(s=>s.trim()).filter(Boolean),dept:dept&&dept.s,note:$('peT').value.trim(),active:p?$('peOn').checked:true});
+      if(!r.ok) throw new Error(r.error||'บันทึกไม่สำเร็จ');
+      const L=DATA.products, i=L.findIndex(x=>x.id===r.product.id); if(i>=0) L[i]=r.product; else L.push(r.product);
+      return '✅ '+r.product.name+' → '+r.product.dept+'A / '+r.product.dept+'B'; });
+  const w=$('dlgPdE'); w.querySelectorAll('.pdseg [data-s]').forEach(b=>b.onclick=()=>w.querySelectorAll('.pdseg [data-s]').forEach(x=>x.setAttribute('aria-checked',String(x===b))));
+}
+function pdDeptEdit(d){
+  const fl=(l,inner)=>`<label class="vsrl">${l}${inner}</label>`;
+  pdForm('บริษัท รหัส '+esc(d.code),
+    `<div class="sub">รหัสบิล <b>${esc(d.code)}A</b> (เปิด VAT) / <b>${esc(d.code)}B</b> · ชื่อนี้พิมพ์บนหัวใบขนส่ง FM-TR-01</div>`
+    +fl('ชื่อย่อ (แผนก)',`<input class="vsin" id="pdN" maxlength="40" value="${esc(d.name)}">`)
+    +fl('ชื่อบริษัทเต็ม (ไทย)',`<input class="vsin" id="pdC" maxlength="120" value="${esc(d.company||'')}" placeholder="บริษัท … จำกัด">`)
+    +fl('ชื่อบริษัท (อังกฤษ)',`<input class="vsin" id="pdE" maxlength="120" value="${esc(d.company_en||'')}" placeholder="… Co., Ltd.">`),
+    async()=>{ const r=await postB({action:'saveDept',code:d.code,name:$('pdN').value.trim(),company:$('pdC').value.trim(),companyEn:$('pdE').value.trim()});
+      if(!r.ok) throw new Error(r.error||'บันทึกไม่สำเร็จ');
+      Object.assign(d,r.dept); return '✅ บันทึกบริษัท '+d.code+' แล้ว'; });
+}
 function bulkReport(){
   const v=REP_VIEW; if(!v||!v.plan) return;
   const p=v.plan, rn=v.rev==null?'ยังไม่ส่งบัญชี':revName(v.rev), rows=v.jobs.slice().sort((a,b)=>String(a.prod_name||'').localeCompare(String(b.prod_name||''))||a.line_no-b.line_no);
@@ -1788,7 +1959,7 @@ function bulkReport(){
       {h:'จำนวน',w:66,a:'right',x:12},{h:'บิล',w:28,a:'center',x:6},{h:'ใบขนย้าย',w:50,a:'center',x:9},
       {h:'ขนส่ง',w:70,x:14},{h:'ทะเบียน',w:96,x:18},{h:'คนขับ',w:100,x:20},{h:'เลขที่ใบ',w:64,x:11},{h:v.old?'เปลี่ยน':'สถานะ',w:88,a:'center',x:16}],
     rows:rows.reduce((out,j,i)=>{
-      out.push([j.line_no,j.round_no||'',j.cust_name||'',j.dest||'',j.prod_name||'',qtyTx(j).replace(/ ตัน$/,''),j.bill||'',j.co?'✓ มี':'✗',
+      out.push([j.line_no,j.round_no||'',j.cust_name||'',j.dest||'',j.prod_name||'',qtyTx(j).replace(/ ตัน$/,''),billCode(j),j.co?'✓ มี':'✗',
         j.carrier||(isCo(j)?'บริษัท':KIND[j.kind]||''),String(j.plate||'').replace(/\s*[,/]\s*/g,' / '),j.driver_name||'',j.doc_no||'',stTx(j)]);
       const nx=rows[i+1];
       if(!nx||nx.prod_name!==j.prod_name){ const g=rows.filter(x=>x.prod_name===j.prod_name), gt=g.reduce((s,x)=>s+tonOf(x.qty_text),0);
