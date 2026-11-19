@@ -157,6 +157,26 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 @media(max-width:760px){.tk-label{padding:0 11px;font-size:11px;max-width:46%}.tk-date{display:none}.tk-item{padding:8px 13px;gap:6px}.tk-view::before,.tk-view::after{width:22px}}
 /* 📍 ลูกค้า Bulk (พิกัด/หมุด DTC/ตาชั่งปลายทาง/ใบชั่งตอนออก) · 2026-10-15 */
 .dlgbox.wide{max-width:980px}
+/* 👀 พรีวิวก่อนส่งแผน (การ์ด LINE + อีเมล + ผู้รับ) · แจกงานโชว์รายละเอียดทุกเที่ยว · 2026-11-19 */
+#dlgPub{z-index:70}
+.pvmode{border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55}
+.pvmode.test{background:#FDE8E8;color:#8A1C12;border:1px solid #F3B4AE}
+.pvmode.real{background:#E7F4EC;color:#14532D;border:1px solid #B5DCC3}
+.pvmode.same{background:#FFF4E5;color:#7A3B05;border:1px solid #F5C98A}
+.pvtabs{display:flex;gap:4px;border-bottom:1px solid var(--line)}
+.pvtabs button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;font:inherit;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.pvtabs button[aria-selected="true"]{color:var(--brandInk);border-bottom-color:var(--gold)}
+.pvtabs button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+.pvrcp{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px}
+.pvrcp .lb{color:var(--muted);min-width:62px}
+.pvchip{background:var(--surface2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;font-size:12.5px}
+.pvchip.off{opacity:.6;text-decoration:line-through}
+.pvphone{background:#8CABD9;border-radius:12px;padding:14px;overflow:auto;max-height:58vh}
+.pvnote{font-size:12px;color:var(--muted);line-height:1.5}
+.pvmail{width:100%;height:58vh;border:1px solid var(--line);border-radius:10px;background:#F3F5F4}
+.dlgft.wrap{flex-wrap:wrap}
+.dsec{font-size:12.5px;font-weight:700;color:var(--brandInk);margin:4px 0 -4px}
+.dlgtrip .pd{color:var(--muted)}
 .cinfo{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--muted)}
 .cinfo .btn{margin-left:auto}
 .ctbl{overflow-x:auto;border:1px solid var(--line);border-radius:10px}
@@ -459,7 +479,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-18a</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19a</span></div>
   </div>
   </div></main>
 </div>
@@ -1050,8 +1070,11 @@ function lineTxt(l,withAdmins){
 
 /* ── 📤 แจกงาน (เฉพาะรถบริษัทที่มีคนขับ) ── */
 function askDispatch(){
-  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled), co=live.filter(isCo), go=co.filter(j=>j.driver_name), wait=co.filter(j=>!j.driver_name);
+  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled), co=live.filter(isCo), go=co.filter(j=>j.driver_name), wait=co.filter(j=>!j.driver_name), outs=live.filter(j=>!isCo(j));
   const by={}; go.forEach(j=>{ (by[j.driver_name]=by[j.driver_name]||[]).push(j); });
+  const firstPub=!DATA.revs.length;
+  /* 19 พ.ย. คุณน้อง: รีเช็คก่อนแจก — ลูกค้า · สถานที่ส่ง · สินค้า · จำนวน ทุกเที่ยว */
+  const tripLi=j=>`<span class="dlgtrip"><span class="num">#${j.line_no}</span> <b>${esc(j.cust_name||'—')}</b><br>📍 ${esc(j.dest||'—')}<br><span class="pd">${esc(j.prod_name||'—')}</span> · <b>${esc(qtyTx(j))}</b>${j.round_no?'<span class="num"> · รอบ '+esc(j.round_no)+'</span>':''}${j.deliver_time?'<span class="num"> · '+esc(j.deliver_time)+'</span>':''}</span>`;
   let m=$('dlgDisp'); if(!m){ m=document.createElement('div'); m.id='dlgDisp'; m.className='dlg'; document.body.appendChild(m); }
   const close=()=>{ m.hidden=true; m.innerHTML=''; };
   m.onmousedown=e=>{ if(e.target===m) close(); };
@@ -1061,33 +1084,120 @@ function askDispatch(){
     <div class="dlgbd">
       <div class="kpis" style="padding:0;border:0"><div class="kpi"><div class="k">แจกตอนนี้</div><div class="v">${go.length}</div></div><div class="kpi"><div class="k">คนขับ</div><div class="v">${Object.keys(by).length}</div></div>
         <div class="kpi"><div class="k">รอจัดรถ</div><div class="v">${wait.length}</div></div><div class="kpi"><div class="k">รถนอก/รับเอง</div><div class="v">${live.length-co.length}</div></div></div>
-      ${go.length?`<div class="dlglist">${Object.keys(by).map(k=>`<div><b>${esc(k)} <span class="sub" style="font-weight:400">· ${by[k].length} เที่ยว</span></b>
+      ${go.length?`<div class="dsec">📤 แจกตอนนี้ (${go.length})</div><div class="dlglist">${Object.keys(by).map(k=>`<div><b>${esc(k)} <span class="sub" style="font-weight:400">· ${by[k].length} เที่ยว</span></b>
         <span class="dlgplate">🚛 ${[...new Set(by[k].map(j=>String(j.plate||'—').replace(/\s*[,/]\s*/g,' / ')))].map(esc).join(' · ')}</span>
-        ${by[k].map(j=>`<span class="dlgtrip"><span class="num">#${j.line_no}</span> <b>${esc(j.dest||'—')}</b> · ${esc(j.cust_name||'')}<span class="num"> · ${esc(qtyTx(j))}</span></span>`).join('')}</div>`).join('')}</div>`
+        ${by[k].map(tripLi).join('')}</div>`).join('')}</div>`
         :'<div class="sub" style="color:var(--bad)">ยังไม่มีเที่ยวรถบริษัทที่เลือกคนขับ — เลือกคนขับก่อน</div>'}
-      <div class="sub">คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที${wait.length?' · เที่ยวที่รอจัดรถ ใส่คนขับทีหลังแล้วบันทึก = ส่งการ์ดให้เอง':''} · หลังแจกงาน แก้เที่ยว = ส่งการ์ดแก้ไข/ยกเลิกให้อัตโนมัติ${DATA.revs.length?'':' · ✉️ ส่งแผนฉบับแรกให้บัญชี/พันตันพร้อมกัน'}</div>
+      ${wait.length?`<div class="dsec">⏳ รอจัดรถ · ยังไม่แจก (${wait.length})</div><div class="dlglist">${wait.map(j=>`<div>${tripLi(j)}</div>`).join('')}</div>`:''}
+      ${outs.length?`<div class="dsec">🚚 รถนอก/รับเอง · ไม่แจก (${outs.length})</div><div class="dlglist">${outs.map(j=>`<div><span class="dlgplate">${esc(j.carrier||KIND[j.kind]||'รถนอก')}${j.plate?' · '+esc(j.plate):''}</span>${tripLi(j)}</div>`).join('')}</div>`:''}
+      <div class="sub">คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที${wait.length?' · เที่ยวที่รอจัดรถ ใส่คนขับทีหลังแล้วบันทึก = ส่งการ์ดให้เอง':''} · หลังแจกงาน แก้เที่ยว = ส่งการ์ดแก้ไข/ยกเลิกให้อัตโนมัติ</div>
+      ${firstPub?`<label class="sub" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="dPub" checked> ✉️ ส่งแผนฉบับแรกให้บัญชี/พันตันพร้อมกัน
+        <button type="button" class="btn sm" id="dPv" style="margin-left:auto">👀 พรีวิวแผน</button></label>`:''}
     </div>
     <div class="dlgft"><button class="btn" type="button" id="dNo">ยกเลิก</button><button class="btn gold" type="button" id="dYes"${go.length?'':' disabled'}>ยืนยันแจกงาน ${go.length} เที่ยว</button></div></div>`;
   m.hidden=false; $('dNo').onclick=close; $('dNo2').onclick=close; (go.length?$('dYes'):$('dNo')).focus();
+  if(firstPub) $('dPv').onclick=e=>{ e.preventDefault(); openPubPreview(p,{view:1}); };
   $('dYes').onclick=async()=>{ const b=$('dYes'); b.disabled=true; b.textContent='กำลังแจก…';
-    try{ const d=await post({action:'dispatch',planId:p.id});
+    try{ const d=await post({action:'dispatch',planId:p.id,publish:firstPub?$('dPub').checked:false});
       if(d.ok){ close(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)+(d.publish&&d.publish.ok?' · ส่งแผน'+d.publish.revName+'ให้บัญชีแล้ว':'')); load(p.send_date); }
       else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
     }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
 }
 /* ── ✉️ ส่งแผนให้บัญชี/พันตัน (snapshot ตารางแผน → ฉบับใหม่ + การ์ด LINE + อีเมล) ── */
 async function askPublish(){
-  const p=DATA.plan, n=DATA.revs.length?DATA.revs[DATA.revs.length-1].rev+1:0, live=DATA.jobs.filter(j=>!j.cancelled);
+  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled);
   if(!live.length){ toast('ตารางแผนยังไม่มีเที่ยว',true); return; }
-  if(!(await askYes('ส่งแผนให้บัญชี · '+revName(n),'ส่งตารางแผน '+live.length+' เที่ยว ให้บัญชี Bulk + แอดมินพันตัน (การ์ด LINE + อีเมล)'+(n?' · มีป้ายบอกสิ่งที่เปลี่ยนจากฉบับก่อน':''),'ส่งแผน'))) return;
-  try{ const r=await post({action:'publish',planId:p.id});
-    if(r.ok) toast('ส่งแผน '+r.revName+' แล้ว · '+r.trips+' เที่ยว'+(r.line&&!r.line.error?' · LINE บัญชี/พันตัน '+(r.line.admins||0)+' คน':'')+' · อีเมลกำลังส่ง');
-    else if(r.same&&(await askYes('แผนไม่เปลี่ยน',r.error+' — ส่งซ้ำอีกครั้งไหม','ส่งซ้ำ'))){ const r2=await post({action:'publish',planId:p.id,force:true}); toast(r2.ok?'ส่งแผน '+r2.revName+' แล้ว':r2.error||'ไม่สำเร็จ',!r2.ok); }
-    else if(!r.same) toast(r.error||'ส่งไม่สำเร็จ',true);
-    setTimeout(()=>{ if(DATA&&DATA.plan&&DATA.plan.id===p.id) load(p.send_date); },20000);
-    load(p.send_date);
-  }catch(e){ toast('ไม่แน่ใจว่าส่งสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); }
+  openPubPreview(p,{});
 }
+/* 👀 19 พ.ย. คุณน้อง: พรีวิวก่อนส่ง — การ์ด LINE ตามจริง + อีเมลตามจริง + รายชื่อผู้รับ + บอกโหมดเทส · ปุ่มส่งให้ฉันดูคนเดียว
+   Edge bulk-plan publishPreview (ไม่เขียน) / publishTest (ส่งหาคนกดคนเดียว) / publish (ส่งจริง) · opts.view = ดูอย่างเดียว (เปิดจากหน้าแจกงาน) */
+async function openPubPreview(p,opts){
+  let m=$('dlgPub'); if(!m){ m=document.createElement('div'); m.id='dlgPub'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; document.removeEventListener('keydown',onKey); };
+  const onKey=e=>{ if(e.key==='Escape') close(); };
+  document.addEventListener('keydown',onKey);
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  m.innerHTML='<div class="dlgbox wide" role="dialog" aria-modal="true" aria-label="พรีวิวแผน"><div class="dlgbd"><div class="sub">กำลังเตรียมพรีวิวการ์ด LINE และอีเมล…</div></div></div>'; m.hidden=false;
+  let d; try{ d=await post({action:'publishPreview',planId:p.id}); }catch(e){ d={ok:false,error:'โหลดพรีวิวไม่ได้ — ลองใหม่'}; }
+  if(m.hidden) return;
+  if(!d.ok){ close(); toast(d.error||'โหลดพรีวิวไม่ได้',true); return; }
+  const L=d.line||{}, M=d.mail||{}, act=(L.to||[]).filter(x=>x.active), TY={ACC_BULK:'บัญชี',YARD_BULK:'พันตัน',ADMIN_BULK:'แอดมิน Bulk'};
+  const nPpl=act.length+(M.to||[]).length+(M.cc||[]).length;
+  const chip=(x,off)=>'<span class="pvchip'+(off?' off':'')+'" title="'+esc(x.email||'')+'">'+esc(x.name||'—')+(TY[x.type]?' · '+TY[x.type]:'')+(x.email?' <span class="num">'+esc(x.email)+'</span>':'')+'</span>';
+  const mode=d.testMode
+    ?'<div class="pvmode test"><b>🧪 โหมดเทสเปิดอยู่</b> — กด “ส่งแผนจริง” จะ<b>ถึงทุกคนในรายชื่อด้านล่างจริง</b> แต่การ์ดและหัวเมลมีป้าย “เทสระบบ · ไม่ต้องดำเนินการ” · อยากดูเฉยๆ ใช้ปุ่ม “ส่งให้ฉันดูคนเดียว”</div>'
+    :'<div class="pvmode real"><b>ส่งจริง</b> — ไม่มีป้ายเทส บัญชี/พันตันจะใช้แผนนี้ทำงาน</div>';
+  const same=d.same?'<div class="pvmode same">แผนไม่เปลี่ยนจากฉบับที่ส่งล่าสุด ('+esc(d.prevName)+') — ถ้ากดส่งจะเป็นการส่งซ้ำ</div>':'';
+  const diff=d.rev?'<div class="sub">เทียบฉบับก่อน: แก้ '+d.chg+' · เพิ่ม '+d.add+' · ตัดออก '+d.del+'</div>':'';
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="pvT">
+    <div class="dlghd"><div><div class="sub">👀 พรีวิวก่อนส่งแผนให้บัญชี/พันตัน</div><h2 id="pvT" style="color:#fff">ส่ง ${thDate(p.send_date)} · ${esc(d.revName)} · ${d.trips} เที่ยว</h2></div>
+      <button type="button" class="dlgx" aria-label="ปิด" id="pvX">✕</button></div>
+    <div class="dlgbd">${mode}${same}${diff}
+      <div class="pvtabs" role="tablist"><button type="button" role="tab" id="pvTL" aria-selected="true" aria-controls="pvL">💬 การ์ด LINE · ${act.length} คน</button>
+        <button type="button" role="tab" id="pvTM" aria-selected="false" aria-controls="pvM">📧 อีเมล · ถึง ${(M.to||[]).length} · CC ${(M.cc||[]).length}</button></div>
+      <div id="pvL" role="tabpanel" aria-labelledby="pvTL" style="display:flex;flex-direction:column;gap:10px">
+        <div class="pvrcp"><span class="lb">ผู้รับ LINE</span>${(L.to||[]).map(x=>chip(x,!x.active)).join('')||'<span class="sub" style="color:var(--bad)">ไม่มีผู้รับ</span>'}</div>
+        ${(L.to||[]).some(x=>!x.active)?'<div class="pvnote">ขีดฆ่า = ยังไม่ Active ใน LINE · ไม่ได้รับการ์ด</div>':''}
+        <div class="pvnote">แจ้งเตือนบนมือถือ: “${esc(L.card&&L.card.altText||'')}”</div>
+        <div class="pvphone">${fxMsg(L.card)}</div></div>
+      <div id="pvM" role="tabpanel" aria-labelledby="pvTM" hidden style="display:flex;flex-direction:column;gap:10px">
+        <div class="pvrcp"><span class="lb">ถึง (To)</span>${(M.to||[]).map(x=>chip(x)).join('')||'<span class="sub" style="color:var(--bad)">ไม่มีบัญชีที่ใส่อีเมล — เมลจะส่งไม่ออก</span>'}</div>
+        <div class="pvrcp"><span class="lb">สำเนา (CC)</span>${(M.cc||[]).map(x=>chip(x)).join('')||'<span class="sub">—</span>'}</div>
+        <div class="pvrcp"><span class="lb">หัวเรื่อง</span><b>${esc(M.subject||'')}</b></div>
+        <iframe class="pvmail" id="pvF" title="ตัวอย่างอีเมล" sandbox></iframe></div>
+    </div>
+    <div class="dlgft wrap"><button class="btn" type="button" id="pvNo">${opts.view?'ปิด':'ยกเลิก'}</button>
+      <button class="btn" type="button" id="pvMe" title="ส่งการ์ด LINE + อีเมลตัวอย่าง ถึงคุณคนเดียว · ยังไม่บันทึกฉบับ">👀 ส่งให้ฉันดูคนเดียว${d.me&&d.me.email?'':' (LINE)'}</button>
+      ${opts.view?'':`<button class="btn gold" type="button" id="pvGo">${d.same?'ส่งซ้ำ':'✉️ ส่งแผนจริง'} · ${nPpl} คน</button>`}</div></div>`;
+  $('pvF').srcdoc=M.html||'';
+  const tab=w=>{ const isL=w==='L'; $('pvTL').setAttribute('aria-selected',isL); $('pvTM').setAttribute('aria-selected',!isL); $('pvL').hidden=!isL; $('pvM').hidden=isL; $('pvL').style.display=isL?'flex':'none'; $('pvM').style.display=isL?'none':'flex'; };
+  $('pvTL').onclick=()=>tab('L'); $('pvTM').onclick=()=>tab('M'); $('pvM').style.display='none';
+  $('pvX').onclick=close; $('pvNo').onclick=close; $('pvNo').focus();
+  $('pvMe').onclick=async()=>{ const b=$('pvMe'), t0=b.textContent; b.disabled=true; b.textContent='กำลังส่งหาคุณ…';
+    try{ const r=await post({action:'publishTest',planId:p.id});
+      if(!r.ok) toast(r.error||'ส่งตัวอย่างไม่สำเร็จ',true);
+      else toast('ส่งตัวอย่างหาคุณแล้ว · LINE '+(r.line&&r.line.pushed?'✓':'✗ ไม่สำเร็จ')+' · อีเมล '+(r.mail&&r.mail.ok?'✓ '+r.mail.email:'✗ '+(r.mail&&r.mail.error||'')),!(r.line&&r.line.pushed));
+    }catch(e){ toast('ไม่แน่ใจว่าส่งตัวอย่างสำเร็จ — เช็ค LINE/อีเมลของคุณ',true); }
+    if(!m.hidden){ b.disabled=false; b.textContent=t0; } };
+  if(opts.view) return;
+  $('pvGo').onclick=async()=>{ const b=$('pvGo'); b.disabled=true; $('pvMe').disabled=true; b.textContent='กำลังส่ง…';
+    try{ const r=await post({action:'publish',planId:p.id,force:!!d.same});
+      if(r.ok){ close(); toast('ส่งแผน '+r.revName+' แล้ว · '+r.trips+' เที่ยว'+(r.line&&!r.line.error?' · LINE บัญชี/พันตัน '+(r.line.admins||0)+' คน':'')+' · อีเมลกำลังส่ง'); }
+      else { toast(r.error||'ส่งไม่สำเร็จ',true); b.disabled=false; $('pvMe').disabled=false; b.textContent='ลองส่งอีกครั้ง'; }
+      setTimeout(()=>{ if(DATA&&DATA.plan&&DATA.plan.id===p.id) load(p.send_date); },20000);
+      load(p.send_date);
+    }catch(e){ close(); toast('ไม่แน่ใจว่าส่งสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
+}
+/* วาดการ์ด LINE Flex แบบย่อ (bubble/carousel · box/text/separator/button/image) ให้หน้าตาใกล้ของจริงในแชต */
+const FX_SZ={xxs:11,xs:12,sm:13,md:14,lg:17,xl:20,xxl:24,'3xl':28}, FX_SP={none:0,xs:2,sm:4,md:8,lg:12,xl:16,xxl:20}, FX_W={nano:120,micro:160,kilo:260,mega:300,giga:500};
+const fxPx=v=>v==null?'':FX_SP[v]!=null?FX_SP[v]+'px':/^\d+(\.\d+)?(px|%)$/.test(String(v))?String(v):'';
+const fxCol=c=>/^#[0-9a-f]{3,8}$/i.test(String(c||''))?c:'';
+function fxBg(o){ const g=o.background; if(g&&g.type==='linearGradient'&&fxCol(g.startColor)) return 'background:linear-gradient('+(/^\d+deg$/.test(g.angle)?g.angle:'0deg')+','+fxCol(g.startColor)+(fxCol(g.centerColor)?','+fxCol(g.centerColor):'')+','+(fxCol(g.endColor)||fxCol(g.startColor))+');';
+  return fxCol(o.backgroundColor)?'background:'+o.backgroundColor+';':''; }
+function fxNode(o,dir,first){
+  if(!o||typeof o!=='object') return '';
+  const row=dir==='horizontal'||dir==='baseline', mg=(!first&&o.margin!=null)?(row?'margin-left:':'margin-top:')+fxPx(o.margin)+';':'';
+  const fl=row?'flex:'+(o.flex!=null?+o.flex||0:1)+' 1 0;min-width:0;':(o.flex>0?'flex:'+o.flex+' 1 0;':'');
+  if(o.type==='text'){ const sz=FX_SZ[o.size]||14;
+    return '<div style="'+mg+fl+'font-size:'+sz+'px;line-height:1.4;color:'+(fxCol(o.color)||'#111')+';font-weight:'+(o.weight==='bold'?700:400)+';text-align:'+(o.align==='end'?'right':o.align==='center'?'center':'left')+';'
+      +(o.wrap?'white-space:pre-wrap;overflow-wrap:anywhere':'white-space:nowrap;overflow:hidden;text-overflow:ellipsis')+'">'+esc(o.text)+'</div>'; }
+  if(o.type==='separator') return '<div style="'+mg+(row?'border-left':'border-top')+':1px solid '+(fxCol(o.color)||'#E5E5E5')+';align-self:stretch"></div>';
+  if(o.type==='button'){ const a=o.action||{}, pr=o.style==='primary', sc=o.style==='secondary';
+    return '<div style="'+mg+fl+'text-align:center;padding:'+(o.height==='sm'?'7px':'11px')+' 8px;border-radius:8px;font-size:14px;font-weight:600;'+(pr?'background:'+(fxCol(o.color)||'#06C755')+';color:#fff':sc?'background:#EFEFEF;color:#111':'color:'+(fxCol(o.color)||'#42659A'))+'">'+esc(a.label||'')+'</div>'; }
+  if(o.type==='image') return /^https:\/\//.test(String(o.url||''))?'<img alt="" src="'+esc(o.url)+'" style="'+mg+'max-width:100%;max-height:40px;object-fit:contain">':'';
+  if(o.type==='filler'||o.type==='spacer') return '<div style="flex:1 1 0"></div>';
+  if(o.type==='box'){ const ly=o.layout||'vertical', r=ly!=='vertical';
+    const pad=fxPx(o.paddingAll), sty=mg+fl+'display:flex;flex-direction:'+(r?'row':'column')+';'+(ly==='baseline'?'align-items:baseline;':'')+'gap:'+(fxPx(o.spacing)||'0')+';'+fxBg(o)
+      +(pad?'padding:'+pad+';':'')+(fxPx(o.cornerRadius)?'border-radius:'+fxPx(o.cornerRadius)+';':'');
+    return '<div style="'+sty+'">'+(o.contents||[]).map((c,i)=>fxNode(c,ly,i===0)).join('')+'</div>'; }
+  return '';
+}
+function fxBubble(b){ if(!b||b.type!=='bubble') return '';
+  const part=(o,def)=>o?'<div style="'+(fxPx(o.paddingAll)?'':'padding:'+def+';')+'">'+fxNode(o,'vertical',true)+'</div>':'';
+  return '<div style="width:'+(FX_W[b.size]||300)+'px;max-width:100%;flex:0 0 auto;background:#fff;border-radius:14px;overflow:hidden;font-family:system-ui,\'Noto Sans Thai\',sans-serif">'
+    +part(b.header,'16px')+part(b.body,'16px')+part(b.footer,'10px')+'</div>'; }
+function fxMsg(msg){ const c=msg&&msg.contents; if(!c) return '<div class="sub">ไม่มีการ์ด</div>';
+  return c.type==='carousel'?'<div style="display:flex;gap:8px;overflow-x:auto">'+(c.contents||[]).map(fxBubble).join('')+'</div>':fxBubble(c); }
 
 /* ── 🖨️ ใบขนส่งน้ำมัน FM-TR-01 Rev.05 (ใบ 5 ส่วน · A4 ตั้ง 2 หน้า/เที่ยว) ──
    หน้า 1: ส่วนที่ 1 ฝ่ายขนส่ง (ระบบกรอก) · ส่วนที่ 2 ป้อมยาม · ส่วนที่ 3 ห้องชั่ง (เขียนมือ)
