@@ -608,7 +608,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19g</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19h</span></div>
   </div>
   </div></main>
 </div>
@@ -948,7 +948,7 @@ function renderPlan(){
     return `<tr class="${j.cancelled?'cx':''}${SEL.has(j.id)?' picked':''}">
       <td class="sel">${j.status==='_snap'||j.cancelled?'':`<input type="checkbox" data-sel="${j.id}"${SEL.has(j.id)?' checked':''} aria-label="เลือกเที่ยว #${j.line_no}">`}</td>
       <td class="num">${j.line_no}</td><td class="num">${j.round_no||''}</td>
-      <td class="cust">${esc(j.cust_name)}${j.cust_code?`<small>${esc(j.cust_code)}</small>`:''}${warn}</td><td>${esc(j.dest)}</td>
+      <td class="cust">${esc(j.cust_name)}${warn}</td><td>${esc(j.dest)}</td>
       <td class="prod">${esc(j.prod_name)}</td><td class="r num">${esc(qtyTx(j).replace(/ ตัน$/,''))}</td><td class="bcode" title="${esc(prodOf(j.prod_name)?'บิล '+(j.bill||'')+' · บริษัท '+((deptOf(prodOf(j.prod_name).dept)||{}).name||''):'ชนิดสินค้านี้ยังไม่อยู่ในฐานข้อมูล')}">${esc(billCode(j))}</td>
       <td>${isCo(j)?'<span class="kd company">บริษัท</span> ':''}${who}</td>
       <td>${tg(j,'co',j.co)}</td><td>${tg(j,'co_closed',j.co_closed)}</td><td>${tg(j,'loaded',j.loaded)}</td>
@@ -995,7 +995,7 @@ function openTrip(j,pre){
   m.onmousedown=e=>{ if(e.target===m) close(); };
   const o=(v,l,sel)=>`<option value="${esc(v)}"${sel?' selected':''}>${esc(l)}</option>`;
   const drvOpts=o('','— ยังไม่เลือกคนขับ —',!dv)+d.drivers.map(x=>o(x.code,x.name+' · '+(x.plate||'ไม่มีทะเบียน')+(x.linked?(x.active?'':' · LINE ยังไม่ Active'):' · ยังไม่ผูก LINE'),dv&&dv.code===x.code)).join('');
-  const custOpts=o('','— ไม่ผูกรหัส —',!t.custCode)+(d.customers||[]).map(c=>o(c.cust_code,c.cust_name+' ('+c.cust_code+')',c.cust_code===t.custCode)).join('');
+  const custOpts=o('','— ไม่ผูกลูกค้า —',!t.custCode)+(d.customers||[]).map(c=>o(c.cust_code,c.cust_name+(c.dtc_poi_name?' · '+c.dtc_poi_name:''),c.cust_code===t.custCode)).join('');
   const dis=ro?' disabled':'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="tT">
     <div class="dlghd"><div><div class="sub">ส่ง ${thDate(p.send_date)} · โหลด ${thDate(p.load_date)}${j?' · เที่ยว #'+j.line_no:''}${j&&j.doc_no?' · ใบขนส่ง '+esc(j.doc_no):''}</div>
@@ -1006,7 +1006,7 @@ function openTrip(j,pre){
       <div class="sub" id="tKindHint"></div>
       <div class="tf">
         <label>บริษัท (ลูกค้า) *<input id="tCust" list="tCustL" value="${esc(t.custName)}"${dis}><datalist id="tCustL">${(d.customers||[]).flatMap(c=>[c.cust_name].concat(c.aliases||[])).filter((v,i,a)=>v&&a.indexOf(v)===i).map(v=>`<option value="${esc(v)}">`).join('')}</datalist></label>
-        <label>รหัสลูกค้า <small>(ใช้เช็คอินถึงลูกค้าอัตโนมัติ)</small><select id="tCode"${dis}>${custOpts}</select></label>
+        <label>ผูกลูกค้า <small>(ใช้เช็คอินถึงลูกค้าอัตโนมัติ)</small><select id="tCode"${dis}>${custOpts}</select></label>
         <label>สถานที่จัดส่ง<input id="tDest" value="${esc(t.dest)}"${dis}></label>
         <label>ชนิดน้ำมัน *<input id="tProd" value="${esc(t.prod)}"${dis}></label>
         <label>จำนวน *<input id="tQty" value="${esc(t.qtyText)}" placeholder="30 = ตัน · หรือ 10 ถัง / 40,000 ลิตร"${dis}><small class="hint" id="tQtyH"></small></label>
@@ -1447,7 +1447,7 @@ function custState(c){
 function drawCustList(){
   const d=CUST, ed=d.me.canEdit, m=$('dlgCust');
   const rows=d.customers.map(c=>{ const ll=c.location||c.dtc_location, st=custState(c);
-    return `<tr><td class="cust">${esc(c.cust_name||'—')}<small>${esc(c.cust_code)}</small></td>
+    return `<tr><td class="cust">${esc(c.cust_name||'—')}</td>
       <td class="pin">${c.dtc_poi_name?esc(c.dtc_poi_name)+`<small>${esc(c.dtc_poi_id)}</small>`:'<span class="sub">ไม่ผูกหมุด</span>'}</td>
       <td>${ll?`<a href="${mapUrl(ll)}" target="_blank" rel="noopener" title="เปิดใน Google Maps">${esc(ll)}</a><span class="src">${c.location?'กรอกเอง':'DTC'}</span>`:'<span class="sub">—</span>'}
         ${c.radius_m?`<div class="sub" style="font-size:11.5px">รัศมี ${c.radius_m} ม.</div>`:''}</td>
@@ -1456,7 +1456,7 @@ function drawCustList(){
       <td><span class="chip ${st[0]}">${st[1]}</span>${c.note?`<div class="sub" style="font-size:11.5px;margin-top:3px">${esc(c.note)}</div>`:''}</td>
       ${ed?`<td style="white-space:nowrap">${st[1]==='รอยืนยันหมุด'?`<button class="btn sm pri" type="button" data-ok="${esc(c.cust_code)}">✓ ยืนยัน</button> `:''}${st[1]==='พร้อม'?`<button class="btn sm" type="button" data-un="${esc(c.cust_code)}" title="กลับเป็น รอยืนยันหมุด · พิกัดไม่เปลี่ยน">ยกเลิกการยืนยัน</button> `:''}<button class="btn sm" type="button" data-ed="${esc(c.cust_code)}">แก้ไข</button></td>`:''}</tr>`; }).join('');
   const miss=d.missing.length?`<div class="cmiss"><b>ลูกค้าในแพลนที่ยังไม่ได้ตั้งค่า (${d.missing.length})</b><span class="sub" style="font-size:12px">ยังไม่ตั้งค่า = คนขับกด "ถึงลูกค้า" เอง · ไม่มีขั้นชั่งปลายทาง</span>
-    ${d.missing.map(x=>`<div><span>${esc(x.cust_name||'—')} <span class="sub num">${esc(x.cust_code)}</span></span>${ed?`<button class="btn sm" type="button" data-add="${esc(x.cust_code)}">+ ตั้งค่า</button>`:''}</div>`).join('')}</div>`:'';
+    ${d.missing.map((x,i)=>`<div><span>${esc(x.cust_name||'—')}</span>${ed?`<button class="btn sm" type="button" data-add="${i}">+ ตั้งค่า</button>`:''}</div>`).join('')}</div>`:'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="cT">
     <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">พิกัดเช็คอิน · ตาชั่งปลายทาง · ใบชั่งตอนออก</div><h2 id="cT" style="color:#fff">📍 ลูกค้า Bulk · ${d.customers.length} ราย</h2></div>
       <button type="button" class="dlgx" aria-label="ปิด" id="cX">✕</button></div>
@@ -1464,6 +1464,7 @@ function drawCustList(){
       <div class="cinfo"><span>คนขับเข้าใกล้พิกัดลูกค้า = ระบบเช็คอิน "ถึงลูกค้า" ให้เอง (รัศมีเดียวกับรถไร่ · ตั้งรายลูกค้าได้) · พิกัดกรอกเอง ใช้ก่อนหมุด DTC
         · หมุด DTC อัปเดต ${thTime(d.poiAt)||'—'} (${d.poi.length} หมุด)</span>
         <span class="cxbar"><button class="btn sm xl" type="button" id="cXd" title="ไฟล์นี้ใช้เป็นแม่แบบอัปโหลดกลับ">⬇ ดาวน์โหลด Excel</button>${ed?`<button class="btn sm" type="button" id="cXu" title="แก้หลายรายพร้อมกันจากไฟล์ที่ดาวน์โหลด">⬆ อัปโหลด</button><input type="file" id="cXf" accept=".xlsx,.xls,.csv" hidden>`:''}
+        ${ed?`<button class="btn sm pri" type="button" id="cAdd">＋ เพิ่มลูกค้า</button>`:''}
         ${ed?`<button class="btn sm" type="button" id="cRef" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>`:''}</span></div>
       <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
         <tbody>${rows||`<tr><td colspan="7" class="empty">ยังไม่มีลูกค้า</td></tr>`}</tbody></table></div>
@@ -1474,7 +1475,8 @@ function drawCustList(){
   $('cXd').onclick=()=>custXDownload($('cXd'));   // 📥 Excel 19 พ.ย.
   if($('cXu')){ $('cXu').onclick=()=>$('cXf').click(); $('cXf').onchange=()=>custXUpload($('cXf')); }
   m.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editCust(d.customers.find(c=>c.cust_code===b.dataset.ed)));
-  m.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{ const x=d.missing.find(c=>c.cust_code===b.dataset.add); editCust({cust_code:x.cust_code,cust_name:x.cust_name,_new:true}); });
+  m.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{ const x=d.missing[+b.dataset.add]; editCust({cust_code:x.cust_code||'',cust_name:x.cust_name,_new:true}); });
+  if($('cAdd')) $('cAdd').onclick=()=>editCust({cust_code:'',cust_name:'',_new:true});   /* 🆔 19 พ.ย. ไม่มีรหัส SAP แล้ว → เพิ่มลูกค้าด้วยชื่อ ระบบออกรหัสภายในเอง */
   m.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{ const c=d.customers.find(x=>x.cust_code===b.dataset.ok);
     saveCust(b,{custCode:c.cust_code,custName:c.cust_name,poiId:c.dtc_poi_id||'',location:c.location||'',radiusM:c.radius_m||'',hasDestScale:!!c.has_dest_scale,needSlipOut:!!c.need_slip_out,note:c.note||''},'ยืนยันหมุดแล้ว'); });
   // ยกเลิกการยืนยันหมุด (2026-10-16) — กด 2 ครั้ง (ครั้งแรกถาม) · พิกัด/ตั้งค่าอื่นไม่เปลี่ยน
@@ -1494,8 +1496,7 @@ function drawCustList(){
 /* 📥 Excel ลูกค้า Bulk · ดาวน์โหลด → แก้ → อัปโหลด → สรุป → ยืนยัน (แบบทะเบียนพนักงาน MySSB · skill webapp-excel-roundtrip) · 2026-11-19
    แถว 1 หัวไทย · แถว 2 คีย์อังกฤษ (ห้ามแก้) · ช่องว่าง = คงค่าเดิม · ลบแถว ≠ ลบลูกค้า · หลังบ้าน bulk-plan custImport ตรวจซ้ำทุกครั้ง */
 const CX_COLS=[
-  {k:'cust_code',h:'รหัสลูกค้า',w:12,req:1,help:'รหัสจาก SAP เช่น C100124 · ลูกค้าเดิมห้ามแก้รหัส (ใช้จับคู่) · ลูกค้าใหม่ = ต่อท้ายตาราง'},
-  {k:'cust_name',h:'ชื่อลูกค้า',w:36,help:'บังคับเมื่อเพิ่มลูกค้าใหม่'},
+  {k:'cust_name',h:'ชื่อลูกค้า',w:40,req:1,help:'ใช้จับคู่ลูกค้าเดิม (ไม่มีรหัส SAP แล้ว) · ชื่อไม่ตรงลูกค้าไหน = เพิ่มลูกค้าใหม่ · เปลี่ยนชื่อทำในเว็บ'},
   {k:'pin',h:'หมุด DTC',w:13,help:'รหัสหมุด เช่น ST-32551 (ดูในแผ่น "หมุด DTC") หรือชื่อหมุดตรงตัว'},
   {k:'pin_name',h:'ชื่อหมุด DTC',w:18,ro:1,get:c=>c.dtc_poi_name||''},
   {k:'dtc_loc',h:'พิกัดหมุด DTC',w:22,ro:1,get:c=>c.dtc_location||''},
@@ -1517,16 +1518,16 @@ async function custXDownload(b){
     const sro={font:F({sz:9,color:{rgb:'6B7A70'}}),fill:{fgColor:{rgb:'F2F6F3'}},border:bd}, sd={font:F(),border:bd}, sz={font:F(),border:bd,fill:{fgColor:{rgb:'FAFCFA'}}};
     const c=(v,s)=>({v:v==null?'':String(v),t:'s',s});   // ทุกช่องเป็นข้อความ → รหัส/พิกัดไม่เพี้ยน
     const rows=CUST.customers.slice().sort((a,b)=>String(a.cust_name||'').localeCompare(String(b.cust_name||''),'th'))
-      .concat(CUST.missing.map(x=>({cust_code:x.cust_code,cust_name:x.cust_name,_plan:1})));
-    const aoa=[CX_COLS.map(x=>c(x.h+(x.ro?' (อ่านอย่างเดียว)':x.k==='cust_code'?' (แถวเดิมห้ามแก้)':''),sh)),CX_COLS.map(x=>c(x.ro?'_'+x.k:x.k,sk))];
+      .concat(CUST.missing.map(x=>({cust_name:x.cust_name,_plan:1})));
+    const aoa=[CX_COLS.map(x=>c(x.h+(x.ro?' (อ่านอย่างเดียว)':x.k==='cust_name'?' (ห้ามแก้ชื่อแถวเดิม)':''),sh)),CX_COLS.map(x=>c(x.ro?'_'+x.k:x.k,sk))];
     rows.forEach((r,i)=>aoa.push(CX_COLS.map(x=>c(x.get?x.get(r):x.k==='pin'?r.dtc_poi_id:r[x.k],x.ro?sro:i%2?sz:sd))));
     const ws={}; aoa.forEach((row,ri)=>row.forEach((cell,ci)=>{ ws[X.utils.encode_cell({r:ri,c:ci})]=cell; }));
     ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:CX_COLS.length-1}});
-    ws['!cols']=CX_COLS.map(x=>({wch:x.w})); ws['!rows']=[{hpt:30},{hpt:13}]; ws['!freeze']={xSplit:2,ySplit:2};
+    ws['!cols']=CX_COLS.map(x=>({wch:x.w})); ws['!rows']=[{hpt:30},{hpt:13}]; ws['!freeze']={xSplit:1,ySplit:2};
     const help=[['วิธีใช้ไฟล์ ลูกค้า Bulk'],[''],
       ['1. แก้ในแผ่น "ลูกค้า Bulk" แล้วกด ⬆ อัปโหลด ในหน้า ฐานข้อมูล › ลูกค้า Bulk'],
-      ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์อังกฤษ) และรหัสลูกค้าของแถวเดิม — ระบบใช้จับคู่'],
-      ['3. เพิ่มลูกค้าใหม่: ต่อท้ายตาราง ใส่รหัส + ชื่อ + หมุด DTC หรือพิกัด · แถว "ยังไม่ตั้งค่า (อยู่ในแพลน)" = ลูกค้าในแพลนที่ยังไม่ได้ตั้ง เติมแล้วอัปโหลดได้เลย'],
+      ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์อังกฤษ) และชื่อลูกค้าของแถวเดิม — ระบบใช้ชื่อจับคู่ (ไม่มีรหัส SAP แล้ว) · เปลี่ยนชื่อลูกค้าทำในเว็บ'],
+      ['3. เพิ่มลูกค้าใหม่: ต่อท้ายตาราง ใส่ชื่อ + หมุด DTC หรือพิกัด (ระบบออกรหัสให้เอง) · แถว "ยังไม่ตั้งค่า (อยู่ในแพลน)" = ลูกค้าในแพลนที่ยังไม่ได้ตั้ง เติมแล้วอัปโหลดได้เลย'],
       ['4. ช่องว่าง = คงค่าเดิม (ลบพิกัด/หมุดทำในเว็บ) · ลบแถวทิ้ง = ไม่ลบลูกค้าออกจากระบบ · คอลัมน์สีเทา (อ่านอย่างเดียว) แก้ไปก็ไม่มีผล'],
       ['5. ก่อนบันทึกจริง ระบบสรุป เพิ่มใหม่ / แก้ไข (เก่า → ใหม่) / ผิดพลาด ให้ตรวจ แล้วค่อยกดยืนยัน'],
       ['6. ค่ากลาง (กม.) ผูกด้วยชื่อหมุด DTC — แก้ระยะที่หน้า 📍 ค่ากลาง (เฉพาะ DEV) ไม่ใช่ในไฟล์นี้'],[''],['ค่าที่ใช้ได้','']]
@@ -1547,11 +1548,11 @@ async function custXUpload(inp){
   toast('กำลังอ่านไฟล์…');
   try{ await repLoad('xlsx'); const X=window.XLSX, wb=X.read(await f.arrayBuffer(),{type:'array'});
     const ws=wb.Sheets['ลูกค้า Bulk']||wb.Sheets[wb.SheetNames[0]], aoa=X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
-    const ed=CX_COLS.filter(x=>!x.ro), keys=ed.map(x=>x.k), th={}; ed.forEach(x=>{ th[x.h]=x.k; th[x.h+' (ห้ามแก้)']=x.k; th[x.h+' (แถวเดิมห้ามแก้)']=x.k; });
+    const ed=CX_COLS.filter(x=>!x.ro), keys=ed.map(x=>x.k), th={}; ed.forEach(x=>{ th[x.h]=x.k; th[x.h+' (ห้ามแก้)']=x.k; th[x.h+' (แถวเดิมห้ามแก้)']=x.k; th[x.h+' (ห้ามแก้ชื่อแถวเดิม)']=x.k; });
     let hi=-1, map=null;
     for(let i=0;i<Math.min(aoa.length,10)&&hi<0;i++){ const row=(aoa[i]||[]).map(v=>String(v).trim());
-      if(row.includes('cust_code')&&keys.filter(k=>row.includes(k)).length>=4){ hi=i; map=row.map(v=>keys.includes(v)?v:''); }
-      else if(row.some(v=>th[v]==='cust_code')&&!(aoa[i+1]||[]).map(v=>String(v).trim()).includes('cust_code')){ hi=i; map=row.map(v=>th[v]||''); } }
+      if(row.includes('cust_name')&&keys.filter(k=>row.includes(k)).length>=4){ hi=i; map=row.map(v=>keys.includes(v)?v:''); }
+      else if(row.some(v=>th[v]==='cust_name')&&!(aoa[i+1]||[]).map(v=>String(v).trim()).includes('cust_name')){ hi=i; map=row.map(v=>th[v]||''); } }
     if(hi<0){ toast('ไม่พบหัวตาราง — ใช้ไฟล์ที่กด ⬇ ดาวน์โหลด เป็นแม่แบบ (ห้ามลบแถวที่ 2)',true); return; }
     const rows=[];
     for(let r=hi+1;r<aoa.length;r++){ const o={_line:r+1}; let any=false;
@@ -1576,7 +1577,7 @@ function custXPreview(pv){
       ${sec('แก้ไข','chg',pv.change.length+' ราย',pv.change.length?'<ol>'+pv.change.map((c,i)=>li(i+1,'<b>'+esc(c.name)+'</b> <span class="sub">'+esc(c.sub)+' · แถว '+c.line+'</span>',
         c.fields.map(x=>esc(x.label)+': <s>'+esc(x.old||'(ว่าง)')+'</s> → <b>'+esc(x.new)+'</b>').join('<br>'))).join('')+'</ol>':'')}
       ${sec('ผิดพลาด (ข้าม ไม่บันทึก)','err',pv.errors.length+' แถว',pv.errors.length?'<ol>'+pv.errors.map((e,i)=>li(i+1,'แถว '+e.line+(e.name?' · '+esc(e.name):''),'<span class="cxbad">'+esc(e.msg)+'</span>')).join('')+'</ol>':'')}
-      ${pv.todo.length?sec('ยังไม่ตั้งค่า (มีแค่รหัส+ชื่อ · ข้าม)','mute',pv.todo.length+' ราย','<p>'+pv.todo.map(x=>esc(x.name)).join(', ')+'</p>'):''}
+      ${pv.todo.length?sec('ยังไม่ตั้งค่า (มีแค่ชื่อ · ข้าม)','mute',pv.todo.length+' ราย','<p>'+pv.todo.map(x=>esc(x.name)).join(', ')+'</p>'):''}
       ${sec('ไม่เปลี่ยนแปลง','mute',pv.same+' ราย','')}
       ${pv.missing.length?sec('ไม่อยู่ในไฟล์ (ข้อมูลเดิมคงอยู่ ไม่ถูกลบ)','mute',pv.missing.length+' ราย','<p>'+pv.missing.slice(0,20).map(esc).join(', ')+(pv.missing.length>20?' และอีก '+(pv.missing.length-20):'')+'</p>'):''}
     </div>
@@ -1604,9 +1605,12 @@ function editCust(c){
   // คำค้นตั้งต้น = ชื่อลูกค้าตัดคำบริษัท/จำกัด (ช่วยหาหมุดที่ชื่อย่อ)
   const guess=String(c.cust_name||'').replace(/บริษัท|จำกัด|\(.*?\)|มหาชน/g,'').trim().split(/\s+/)[0]||'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="eT">
-    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">${c._new?'ตั้งค่าลูกค้าใหม่':'แก้ไขลูกค้า'} · ${esc(c.cust_code)}</div><h2 id="eT" style="color:#fff">${esc(c.cust_name||c.cust_code)}</h2></div>
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">${c._new?'ตั้งค่าลูกค้าใหม่':'แก้ไขลูกค้า'}</div><h2 id="eT" style="color:#fff">${esc(c.cust_name||'ลูกค้าใหม่')}</h2></div>
       <button type="button" class="dlgx" aria-label="กลับ" id="eX">✕</button></div>
     <div class="dlgbd"><div class="cf">
+      <label for="eName">ชื่อลูกค้า</label>
+      <div><input type="text" id="eName" maxlength="120" value="${esc(c.cust_name||'')}" placeholder="เช่น บริษัท ฟูจิ ออยล์ (ไทยแลนด์) จำกัด">
+        <div class="hint">ใช้ชื่อนี้จับคู่กับแพลน/ไฟล์ Excel (ไม่ใช้รหัส SAP แล้ว)</div></div>
       <div class="lb">หมุดใน DTC</div>
       <div><div class="pchosen" id="ePin"></div>
         <input type="text" id="eQ" placeholder="ค้นหมุด เช่น ฟูจิ, บีบีจีไอ" value="${esc(pick?'':guess)}" style="margin-top:6px" aria-label="ค้นหมุด DTC">
@@ -1641,18 +1645,19 @@ function editCust(c){
   $('eX').onclick=back; $('eNo').onclick=back;
   $('eYes').onclick=()=>{ const loc=$('eLoc').value.trim();
     if(!pick&&!loc&&!confirmNoLoc()) return;
-    saveCust($('eYes'),{custCode:c.cust_code,custName:c.cust_name,poiId:pick,location:loc,radiusM:$('eRad').value,
-      hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,note:$('eNote').value.trim()},'บันทึก '+(c.cust_name||c.cust_code)+' แล้ว'); };
+    const nm=$('eName').value.trim(); if(!nm){ toast('ใส่ชื่อลูกค้า',true); $('eName').focus(); return; }
+    saveCust($('eYes'),{custCode:c.cust_code,custName:nm,poiId:pick,location:loc,radiusM:$('eRad').value,
+      hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,note:$('eNote').value.trim()},'บันทึก '+nm+' แล้ว'); };
   // ยังไม่มีพิกัด: เตือนครั้งแรก (ปุ่มเปลี่ยนเป็นยืนยัน) กดซ้ำ = บันทึกจริง
   function confirmNoLoc(){ const b=$('eYes'); if(b.dataset.warned) return true;
     b.dataset.warned='1'; b.textContent='บันทึกแบบไม่มีพิกัด'; toast('ยังไม่มีพิกัด — คนขับต้องกด "ถึงลูกค้า" เอง · กดบันทึกอีกครั้งเพื่อยืนยัน',true); return false; }
   if($('eDel')) $('eDel').onclick=async()=>{ const b=$('eDel');
-    if(!b.dataset.sure){ b.dataset.sure='1'; b.textContent='ยืนยันลบ '+(c.cust_name||c.cust_code)+'?'; return; }
+    if(!b.dataset.sure){ b.dataset.sure='1'; b.textContent='ยืนยันลบ '+(c.cust_name||'ลูกค้านี้')+'?'; return; }
     b.disabled=true; b.textContent='กำลังลบ…';
     try{ const r=await post({action:'removeCustomer',custCode:c.cust_code}); toast(r.ok?'ลบออกจากรายการแล้ว':(r.error||'ลบไม่สำเร็จ'),!r.ok); }
     catch(e){ toast('ไม่แน่ใจว่าลบสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); }
     openCustomers(); };
-  $('eQ').focus();
+  (c._new&&!c.cust_name?$('eName'):$('eQ')).focus();
 }
 
 /* ── 🚛 แถบวิ่งสถานะเที่ยว (skill webapp-ticker) · 2026-10-15
