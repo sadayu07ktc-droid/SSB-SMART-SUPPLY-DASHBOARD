@@ -477,6 +477,9 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .vsseg button[aria-checked="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
 .vsseg button[data-s="repair"][aria-checked="true"],.vsseg button[data-s="off"][aria-checked="true"]{background:#B91C1C;border-color:#B91C1C}
 .vsrl{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--muted)}
+.pdal{display:flex;flex-wrap:wrap;gap:4px}.pdal:empty{display:none}
+.pdalc{font-size:12px;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--brand,#1B4332) 10%,transparent);color:var(--ink,#1B4332);border:1px solid color-mix(in srgb,var(--brand,#1B4332) 25%,transparent)}
+.pdalc.bad{background:#fceded;color:#a32d2d;border-color:#f1b8b8}.pdalc.mute{opacity:.55;text-decoration:line-through}
 .vsin{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
 .vsfmt{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .vsfmt button{font:inherit;display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px;cursor:pointer;font-weight:600}
@@ -605,7 +608,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19f</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19g</span></div>
   </div>
   </div></main>
 </div>
@@ -2010,7 +2013,7 @@ function pdDraw(focus){
       <div class="pdco-n">${d.company?esc(d.company):'<span class="pdwarn">⚠ ยังไม่ใส่ชื่อบริษัทเต็ม — ใบขนส่งจะเว้นช่องไว้</span>'}</div>${d.company_en?`<div class="sub">${esc(d.company_en)}</div>`:''}
       <div class="pdco-f"><span class="sub">${cnt(d.code)} ชนิดสินค้า</span>${ed?`<button type="button" class="vsed" data-pde="${esc(d.code)}">✏️ แก้ชื่อบริษัท</button>`:''}</div></div>`;
   const row=(p,i)=>`<tr class="${p.active===false?'off':''}"><td class="num">${i+1}</td>
-      <td><b>${esc(p.name)}</b>${(p.aliases||[]).length?`<small>ชื่ออื่น: ${esc(p.aliases.join(', '))}</small>`:''}${p.note?`<small>${esc(p.note)}</small>`:''}</td>
+      <td><b>${esc(p.name)}</b>${(p.aliases||[]).length?`<small>ชื่อในไลน์: ${esc(p.aliases.join(', '))}</small>`:''}${p.note?`<small>${esc(p.note)}</small>`:''}</td>
       <td><span class="pddot" style="background:${pdDot(p.dept)}"></span>${esc((deptOf(p.dept)||{}).name||p.dept)}</td>
       <td class="num"><b>${esc(p.dept)}A</b> <span class="sub">/ ${esc(p.dept)}B</span></td>
       <td>${p.active===false?'<span class="chip k-del">เลิกใช้</span>':'<span class="chip k-same">ใช้งาน</span>'}</td>
@@ -2112,7 +2115,7 @@ function prSpec(){
       total:['รวม '+R.length+' บริษัท','','','',on,rows.length-on,rows.length], noSubMerge:1 });
   }
   const line=(p,i)=>[i+1, p.name, (p.aliases||[]).join(', '), p.dept+' · '+((deptOf(p.dept)||{}).name||''), p.dept+'A', p.dept+'B', p.active===false?'เลิกใช้':'ใช้งาน', p.note||''];
-  const cols=[{h:'#',w:34,a:'center',x:5},{h:'ชนิดสินค้า',w:190,x:26},{h:'ชื่ออื่นที่ใช้จับคู่',w:0,x:34},{h:'บริษัท',w:120,x:16},
+  const cols=[{h:'#',w:34,a:'center',x:5},{h:'ชนิดสินค้า',w:190,x:26},{h:'ชื่อเรียกในกลุ่มไลน์',w:0,x:34},{h:'บริษัท',w:120,x:16},
     {h:'บิล A (VAT)',w:76,a:'center',x:11},{h:'บิล B',w:60,a:'center',x:9},{h:'สถานะ',w:70,a:'center',x:10},{h:'หมายเหตุ',w:170,x:24}];
   let R;
   if(PR_P.kind==='group'){ R=[]; deps.forEach(d=>{ const mine=rows.filter(p=>p.dept===d.code); if(!mine.length) return;
@@ -2143,18 +2146,24 @@ function pdEdit(p,newName){
   const fl=(l,inner)=>`<label class="vsrl">${l}${inner}</label>`;
   pdForm(p?'แก้ชนิดสินค้า':'เพิ่มชนิดสินค้า',
     fl('ชื่อชนิดสินค้า (ตามแผนแอดมิน)',`<input class="vsin" id="peN" maxlength="80" value="${esc(p?p.name:(newName||''))}" placeholder="เช่น PO mix TBHQ">`)
-    +fl('ชื่ออื่นที่ใช้เรียก (คั่นด้วย ,)',`<input class="vsin" id="peA" value="${esc(p?(p.aliases||[]).join(', '):'')}" placeholder="เช่น POmix TBHQ, PO-mix TBHQ">`)
+    +fl('ชื่อเรียกในกลุ่มไลน์ <span style="font-weight:400">· ตัวย่อที่เซลส์พิมพ์ คั่นด้วย ,</span>',`<input class="vsin" id="peA" value="${esc(p?(p.aliases||[]).join(', '):'')}" placeholder="เช่น RPO, Palm Oil Mix TBHQ, PO-mix" autocomplete="off"><span class="pdal" id="peAL" aria-live="polite"></span><small class="sub">ตัวพิมพ์เล็ก/ใหญ่ ช่องว่าง จุด ขีด ไม่มีผล · ชื่อเดียวใช้ได้กับสินค้าเดียว</small>`)
     +`<div class="vsrl">บริษัท / รหัสบิล<div class="vsseg pdseg" role="radiogroup" aria-label="บริษัท">${ds.map(d=>`<button type="button" role="radio" data-s="${esc(d.code)}" aria-checked="${d.code===cur}"><span class="pdcode" style="background:${pdDot(d.code)}">${esc(d.code)}</span>${esc(d.name)}</button>`).join('')}</div></div>`
     +fl('หมายเหตุ',`<input class="vsin" id="peT" maxlength="200" value="${esc(p&&p.note||'')}">`)
     +(p?`<label class="vsopt"><input type="checkbox" id="peOn"${p.active===false?'':' checked'}> ใช้งานอยู่ (ไม่ติ๊ก = เลิกใช้ · ไม่ลบประวัติ)</label>`:'')
     +(p&&p.updated_by?`<div class="sub">แก้ล่าสุด ${esc(thTime(p.updated_at))} · ${esc(p.updated_by)}</div>`:''),
     async w=>{ const dept=(w.querySelector('.pdseg [aria-checked="true"]')||{}).dataset;
-      const r=await postB({action:'saveProduct',id:p?p.id:0,name:$('peN').value.trim(),aliases:$('peA').value.split(',').map(s=>s.trim()).filter(Boolean),dept:dept&&dept.s,note:$('peT').value.trim(),active:p?$('peOn').checked:true});
+      const r=await postB({action:'saveProduct',id:p?p.id:0,name:$('peN').value.trim(),aliases:pdAlSplit($('peA').value).filter(a=>nrm(a)!==nrm($('peN').value)),dept:dept&&dept.s,note:$('peT').value.trim(),active:p?$('peOn').checked:true});
       if(!r.ok) throw new Error(r.error||'บันทึกไม่สำเร็จ');
       const L=DATA.products, i=L.findIndex(x=>x.id===r.product.id); if(i>=0) L[i]=r.product; else L.push(r.product);
       return '✅ '+r.product.name+' → '+r.product.dept+'A / '+r.product.dept+'B'; });
   const w=$('dlgPdE'); w.querySelectorAll('.pdseg [data-s]').forEach(b=>b.onclick=()=>w.querySelectorAll('.pdseg [data-s]').forEach(x=>x.setAttribute('aria-checked',String(x===b))));
+  /* 💬 ชื่อเรียกในกลุ่มไลน์ (แบบ pk-products) · โชว์เป็นชิป + เตือนชื่อที่ซ้ำกับสินค้าอื่นก่อนกดบันทึก · 19 พ.ย. */
+  const aIn=$('peA'), aL=$('peAL'), drawAl=()=>{ const own=nrm($('peN').value);
+    aL.innerHTML=pdAlSplit(aIn.value).map(a=>{ const k=nrm(a), o=(DATA.products||[]).find(x=>(!p||x.id!==p.id)&&[x.name,...(x.aliases||[])].some(n=>nrm(n)===k));
+      return o?`<span class="pdalc bad" title="ซ้ำกับ ${esc(o.name)}">${esc(a)} · ซ้ำ ${esc(o.name)}</span>`:k===own?`<span class="pdalc mute" title="ซ้ำกับชื่อหลัก ไม่ต้องใส่">${esc(a)}</span>`:`<span class="pdalc">${esc(a)}</span>`; }).join(''); };
+  aIn.oninput=drawAl; $('peN').addEventListener('input',drawAl); drawAl();
 }
+function pdAlSplit(s){ const seen={}; return String(s||'').split(/[,，、\n;]+/).map(x=>x.trim()).filter(x=>{ const k=nrm(x); if(!x||seen[k]) return false; seen[k]=1; return true; }); }
 function pdDeptEdit(d){
   const fl=(l,inner)=>`<label class="vsrl">${l}${inner}</label>`;
   const nw=!!d._new;
