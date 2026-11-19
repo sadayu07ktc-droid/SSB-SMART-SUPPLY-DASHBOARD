@@ -525,6 +525,9 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .pdseg button{display:flex;align-items:center;gap:6px;justify-content:center}
 .pdseg button[aria-checked="true"] .pdcode{box-shadow:0 0 0 2px #fff}
 .bcode{font-family:var(--f-num);font-weight:700}
+.pdadd{border-style:dashed;background:none;cursor:pointer;font:inherit;color:var(--ink);text-align:left;justify-content:center;min-height:96px}
+.pdadd:hover{border-color:var(--brand2);background:var(--tint)}
+.pdadd:focus-visible{outline:2px solid var(--brand2);outline-offset:2px}
 /* 📥 Excel ลูกค้า Bulk · 2026-11-19 */
 .cxbar{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
 .cinfo .cxbar .btn{margin-left:0}
@@ -581,7 +584,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19d</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19e</span></div>
   </div>
   </div></main>
 </div>
@@ -1995,7 +1998,7 @@ function pdDraw(focus){
     <div class="dlghd"><div><div class="sub">ฐานข้อมูล Bulk</div><h2 id="pdT" style="color:#fff;margin:2px 0 0">🧪 ชนิดสินค้า → บริษัท / รหัสบิล</h2></div><button type="button" class="dlgx" id="pdX" aria-label="ปิด">✕</button></div>
     <div class="dlgbd">
       <div class="sub">รหัสบิล = <b>อักษรบริษัท</b> + <b>ชนิดบิล</b> A (เปิด VAT) / B · เช่น CPO บิล A → <b>PA</b> · ใบขนส่ง FM-TR-01 ใช้ชื่อบริษัทตามชนิดสินค้า</div>
-      <div class="pdcos">${ds.map(card).join('')}</div>
+      <div class="pdcos">${ds.map(card).join('')}${ed?`<button type="button" class="pdco pdadd" id="pdAddCo"><b>＋ เพิ่มบริษัท / รหัส</b><span class="sub">อักษรอังกฤษ 1 ตัว → รหัสบิล ?A / ?B</span></button>`:''}</div>
       ${miss.length?`<div class="pdmiss"><b>⚠ สินค้าในแพลนวันนี้ที่ยังไม่อยู่ในฐาน (${miss.length})</b> — ใบขนส่งจะใช้ชื่อ ${esc(FM_CO_DEF)} และบิลตามแผน
         <div class="pdmiss-l">${miss.map(n=>ed?`<button type="button" class="vsed" data-pdn="${esc(n)}">+ ${esc(n)}</button>`:`<span class="chip k-chg">${esc(n)}</span>`).join('')}</div></div>`:''}
       <div class="pdbar"><div class="pdchips" role="group" aria-label="กรองตามบริษัท">
@@ -2014,6 +2017,7 @@ function pdDraw(focus){
   m.querySelectorAll('[data-pdp]').forEach(b=>b.onclick=()=>pdEdit(ps.find(p=>String(p.id)===b.dataset.pdp)));
   m.querySelectorAll('[data-pdn]').forEach(b=>b.onclick=()=>pdEdit(null,b.dataset.pdn));
   m.querySelectorAll('[data-pde]').forEach(b=>b.onclick=()=>pdDeptEdit(ds.find(d=>d.code===b.dataset.pde)));
+  if($('pdAddCo')) $('pdAddCo').onclick=()=>pdDeptEdit({code:'',name:'',_new:true});   // ＋ รหัสบริษัทใหม่ · 19 พ.ย.
   if(focus) $('pdX').focus();
 }
 // กล่องแก้ไขเล็ก (ใช้ร่วม สินค้า / บริษัท)
@@ -2053,14 +2057,21 @@ function pdEdit(p,newName){
 }
 function pdDeptEdit(d){
   const fl=(l,inner)=>`<label class="vsrl">${l}${inner}</label>`;
-  pdForm('บริษัท รหัส '+esc(d.code),
-    `<div class="sub">รหัสบิล <b>${esc(d.code)}A</b> (เปิด VAT) / <b>${esc(d.code)}B</b> · ชื่อนี้พิมพ์บนหัวใบขนส่ง FM-TR-01</div>`
+  const nw=!!d._new;
+  pdForm(nw?'เพิ่มบริษัท / รหัสใหม่':'บริษัท รหัส '+esc(d.code),
+    (nw?fl('รหัสบริษัท (อักษรอังกฤษ 1 ตัว)',`<input class="vsin" id="pdK" maxlength="1" autocomplete="off" placeholder="เช่น S" style="max-width:90px;text-transform:uppercase;font-family:var(--f-num);font-weight:700">`)
+      +`<div class="sub">ใช้แล้ว: ${(DATA.depts||[]).map(x=>esc(x.code)).join(' · ')} · รหัสบิลจะเป็น <b>?A</b> (เปิด VAT) / <b>?B</b> · เพิ่มแล้วเปลี่ยนรหัสไม่ได้</div>`
+      :`<div class="sub">รหัสบิล <b>${esc(d.code)}A</b> (เปิด VAT) / <b>${esc(d.code)}B</b> · ชื่อนี้พิมพ์บนหัวใบขนส่ง FM-TR-01</div>`)
     +fl('ชื่อย่อ (แผนก)',`<input class="vsin" id="pdN" maxlength="40" value="${esc(d.name)}">`)
     +fl('ชื่อบริษัทเต็ม (ไทย)',`<input class="vsin" id="pdC" maxlength="120" value="${esc(d.company||'')}" placeholder="บริษัท … จำกัด">`)
     +fl('ชื่อบริษัท (อังกฤษ)',`<input class="vsin" id="pdE" maxlength="120" value="${esc(d.company_en||'')}" placeholder="… Co., Ltd.">`),
-    async()=>{ const r=await postB({action:'saveDept',code:d.code,name:$('pdN').value.trim(),company:$('pdC').value.trim(),companyEn:$('pdE').value.trim()});
+    async()=>{ const code=nw?$('pdK').value.trim().toUpperCase():d.code, name=$('pdN').value.trim();
+      if(nw){ if(!/^[A-Z]$/.test(code)) throw new Error('รหัสต้องเป็นอักษรอังกฤษ 1 ตัว (A–Z)'); if((DATA.depts||[]).some(x=>x.code===code)) throw new Error('รหัส '+code+' มีอยู่แล้ว — กด แก้ชื่อบริษัท ที่การ์ดนั้นแทน'); }
+      if(!name) throw new Error('ใส่ชื่อย่อ (แผนก)');
+      const r=await postB({action:'saveDept',code,name,company:$('pdC').value.trim(),companyEn:$('pdE').value.trim()});
       if(!r.ok) throw new Error(r.error||'บันทึกไม่สำเร็จ');
-      Object.assign(d,r.dept); return '✅ บันทึกบริษัท '+d.code+' แล้ว'; });
+      if(nw) (DATA.depts=DATA.depts||[]).push(r.dept); else Object.assign(d,r.dept);
+      return '✅ '+(nw?'เพิ่ม':'บันทึก')+'บริษัท '+code+' แล้ว'; });
 }
 function bulkReport(){
   const v=REP_VIEW; if(!v||!v.plan) return;
