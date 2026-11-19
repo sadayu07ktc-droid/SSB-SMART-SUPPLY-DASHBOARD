@@ -393,8 +393,12 @@ function placeOf(p){
 function fromMsg(m){ const p=m.p||{}, k=p.pick||{}, d=p.dlv||m.planDate||'';
   /* pk-yp v19 (18 พ.ย.): ชื่อ+หน่วยตามฐานข้อมูลสินค้า (i.pn/i.pu) · ไม่รู้จัก = ตามที่เซลส์พิมพ์ */
   const unitOf=i=>i.pu||(i.u==='ถัง'?'ถัง':/ปี๊บ|ปี๊ป/.test(i.n)?'ปี๊บ':'ลัง'), items=[];
+  /* 19 พ.ย. ตรรกะเดียวกับ pk-daily ypAvgPrice: ร้านชื่อลงท้าย "BB" ลด 10 บาท/หน่วยจากราคาที่เซลส์พิมพ์ · แล้วเฉลี่ย /N = ×100÷(100+N) */
+  const bb=/(^|[^A-Za-z])BB\s*$/i.test(String(p.shop||'').trim());
+  const priceOf=i=>{ const v=parseFloat(String(i.price==null?'':i.price).replace(/[, ]/g,'')); if(!(v>0)) return i.price?String(i.price):'';
+    const b=bb?v-10:v, n=+i.avg; return String(n>0?Math.round(b*100/(100+n)*100)/100:b); };
   (p.items||[]).forEach(i=>{ const u=unitOf(i), n=i.pn||i.n;
-    if(+i.q) items.push({n,q:String(i.q),u,price:i.price?String(i.price):''});
+    if(+i.q) items.push({n,q:String(i.q),u,price:priceOf(i)});
     if(+i.f) items.push({n,q:String(i.f),u,price:'แถม'}); });
   const fl=[p.receipt&&'ใบเสร็จ',p.cheque&&'รับเช็ค',p.coa&&'COA',p.cash&&'เงินสด',p.prepay&&'โอนเงินก่อน'].filter(Boolean);
   const head=p.pickup?'รับเอง'+(p.pickAt==='บางนา'?' บน':p.pickAt==='หนองใหญ่'?' รง':''):'ส่ง'+placeOf(p);
