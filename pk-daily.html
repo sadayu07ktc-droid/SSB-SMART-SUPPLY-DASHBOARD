@@ -127,6 +127,12 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .yptab b{font-variant-numeric:tabular-nums;margin-left:3px}
 .ypc .yph{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
 .ypc .yph b{font-size:16px}
+/* ✓ คีย์ SAP แล้ว (19 พ.ย.) รีเช็คแอดมิน · ไม่ส่งเมล · โชว์สถานะในหน้า FM-MK */
+.ypsap{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted,inherit);cursor:pointer;user-select:none;white-space:nowrap}
+.ypsap input{width:16px;height:16px;margin:0;accent-color:#127a2e;cursor:pointer}
+.ypsap.on{background:#e7f5ee;border-color:#b7dfc6;color:#127a2e}
+.ypsap small{font-weight:400;opacity:.85}
+:root[data-theme="dark"] .ypsap.on{background:rgba(18,122,46,.2);border-color:rgba(110,200,140,.45);color:#7ee2a0}
 .ypm{display:flex;gap:6px;flex-wrap:wrap}
 .ypm span{font-size:12.5px;font-weight:600;border-radius:999px;padding:2px 9px;background:var(--surface2);border:1px solid var(--line)}
 .ypm .w{background:var(--warnbg);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 35%,transparent)}
@@ -3176,7 +3182,7 @@ function ypSeeDay(d){const L=YP.msgs.filter(m=>ypInYp(m)&&!ypSt(m)&&(d===''||d==
   ypBadge();ypDraw();}
 /* ไม่ให้เด้ง (คุณน้อง 10 พ.ย. "จิ้มดูแล้วชอบเด้ง ช่วงรีเฟรช"): โหลดใหม่ทุก 1 นาที → วาดใหม่เฉพาะเมื่อข้อมูลเปลี่ยนจริง ·
    กำลังพิมพ์/เลือกรถอยู่ = รอให้เสร็จก่อนค่อยวาด · จำข้อความเดิมที่กางไว้ · ไม่เล่นแอนิเมชันเลื่อนเข้าซ้ำ */
-const ypSig=()=>JSON.stringify([YP.src,YP.canEdit,YP.err,YP.groups,YP.msgs.map(m=>[m.mid,m.st||'',m.stBy||'',m.p,m.plateHist||null,m.mailed||null])]);
+const ypSig=()=>JSON.stringify([YP.src,YP.canEdit,YP.err,YP.groups,YP.msgs.map(m=>[m.mid,m.st||'',m.stBy||'',m.p,m.plateHist||null,m.mailed||null,m.sap||null])]);
 const ypTyping=()=>{const a=document.activeElement,d=$('ypDr');return !!(a&&d&&d.contains(a)&&/^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName));};
 const ypOpenD=new Set();
 /* ลูกค้ารับเองแต่เซลส์ยังไม่แจ้งทะเบียน → ทะเบียนที่ร้านนี้เคยมารับ ①②③ (ล่าสุดก่อน) ให้แอดมินเลือก / พิมพ์เอง */
@@ -3306,6 +3312,16 @@ function ypPriceCell(i,u,bb){const np=ypAvgPrice(i,bb);if(!np)return esc(i.price
   const p0=ypNum(i.price),p=ypBasePrice(i,bb),n=+i.avg,bbT=bb?'<br>BB ลด '+YP_BB_OFF+' = '+ypBaht(p):'';
   if(!(n>0))return '<b class="ypavg">'+ypBaht(np)+'</b><div class="note">ต่อ'+esc(u)+' · เดิม '+ypBaht(p0)+bbT+'</div>';
   return '<b class="ypavg">'+ypBaht(np)+'</b><div class="note">ต่อ'+esc(u)+' · เดิม '+ypBaht(p0)+bbT+'<br>/'+comma(n)+' = ซื้อ 100 แถม '+comma(n)+'<br>'+ypBaht(p)+'×100÷'+comma(100+n)+'</div>';}
+/* ✓ คีย์ SAP แล้ว (19 พ.ย. คุณน้อง "ปุ่มติ๊กหัวบน … แค่เป็นการรีเช็คแอดมิน ไม่ต้องส่งเมล") · Edge pk-yp v23 → pk_yp_sap · หน้า FM-MK โชว์สถานะ */
+function ypSapBox(m){const s=m.sap,can=YP.canEdit||!ypLive();
+  return '<label class="ypsap'+(s?' on':'')+'" title="'+(s?'คีย์ SAP แล้ว โดย '+esc(s.by||'')+' '+esc(ypTime(s.at))+' · เอาติ๊กออก = ยกเลิก':'ติ๊กเมื่อคีย์ออเดอร์นี้ใน SAP แล้ว (รีเช็คของแอดมิน ไม่ส่งเมล)')+'"><input type="checkbox" data-ypsap'+(s?' checked':'')+(can?'':' disabled')+'>คีย์ SAP แล้ว'+(s?' <small>· '+esc(String(s.by||'').split(/\s+/)[0])+' '+esc(ypTime(s.at))+'</small>':'')+'</label>';}
+async function ypSap(m,on,el){el.disabled=true;
+  try{let r={ok:true,sap:on?{by:'แอดมิน',at:new Date().toISOString()}:null};
+    if(!m.sample&&ypLive()){r=await fetch(ypUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sap',userId:MY_UID,mid:m.mid,on:!!on,shop:(m.p||{}).shop||''})}).then(z=>z.json());
+      if(!r.ok)throw new Error(r.error||'บันทึกไม่ได้');}
+    if(r.sap)m.sap=r.sap;else delete m.sap;ypDraw();
+    toast(on?'✅ คีย์ SAP แล้ว · ขึ้นสถานะในหน้าฟอร์ม FM-MK':'เอาติ๊ก คีย์ SAP ออกแล้ว');}
+  catch(e){el.checked=!on;el.disabled=false;toast('❌ '+e.message);}}
 function ypQn(v){return v%1?v.toLocaleString('en-US',{maximumFractionDigits:2}):comma(v);}
 function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').value,hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop),inP=ypInPlan(m.mid);
   const sumQ=its.reduce((a,i)=>a+(i.u==='ถัง'?0:(+i.q||0)),0),qT=ypQty(p),chips=[(p.dlv?'<span class="'+(p.dlv===pd?'g':'w')+'">'+(p.pickup?'📅 ลูกค้ารับ ':'🚚 ส่ง ')+esc(dateTH(p.dlv))+(p.dlv===pd?'':' · ไม่ตรงวันแพลน')+(p.dlvFrom?' · แจ้งตามมา':'')+'</span>':p.waitDate?'<span class="w">⏳ '+(p.po?'รอเซลส์นัดส่ง/รับ':'รอแจ้งวันเข้ารับ')+'</span>':'<span class="w">ไม่พบวันส่ง</span>'),
@@ -3314,7 +3330,7 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
     p.statedCs?'<span class="'+(p.statedCs===sumQ?'g':'w')+'" title="'+esc(p.statedTxt||'')+'">เซลส์สรุป '+comma(p.statedCs)+(p.statedCs===sumQ?' ✓ ตรง':' ≠ นับได้ '+comma(sumQ))+'</span>':''].join('');
   const nw=st!=='planned'&&st!=='ignored'&&(ypIsNew(m)||YP.fresh.has(m.mid));
   const ml=m.mailed||{},mlT=[ml.acc&&'บัญชี+เซลส์',ml.wh&&'คลัง'].filter(Boolean);   /* 📨 ส่งเมล FM-MK แล้ว (pk-yp v10) */
-  let h='<div class="box ypc'+(nw?' ypnew':'')+'" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+(nw?'<span class="tchip nw">🆕 ใหม่</span> ':'')+esc(p.shop||'(ไม่มีชื่อร้าน)')+(ypIsBB(p)?' <span class="tchip ypbb" title="ร้าน BB: ลด '+YP_BB_OFF+' บาทต่อหน่วยจากราคาที่เซลส์พิมพ์ แล้วค่อยเฉลี่ยของแถม">🏷️ BB ลด '+YP_BB_OFF+' บ./หน่วย</span>':'')+(p.pickup?' <span class="tchip ypk">🙋 รับเอง</span>':'')+(mlT.length?' <span class="tchip ypml" title="ส่งเมลแผนการส่งมอบแล้ว: '+esc(mlT.join(' · '))+'">📨 ส่งเมลแล้ว'+(mlT.length<2?' · '+esc(mlT[0]):'')+'</span>':'')+'</b><span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
+  let h='<div class="box ypc'+(nw?' ypnew':'')+'" data-ypm="'+esc(m.mid)+'"><div class="yph"><b>'+(nw?'<span class="tchip nw">🆕 ใหม่</span> ':'')+esc(p.shop||'(ไม่มีชื่อร้าน)')+(ypIsBB(p)?' <span class="tchip ypbb" title="ร้าน BB: ลด '+YP_BB_OFF+' บาทต่อหน่วยจากราคาที่เซลส์พิมพ์ แล้วค่อยเฉลี่ยของแถม">🏷️ BB ลด '+YP_BB_OFF+' บ./หน่วย</span>':'')+(p.pickup?' <span class="tchip ypk">🙋 รับเอง</span>':'')+(mlT.length?' <span class="tchip ypml" title="ส่งเมลแผนการส่งมอบแล้ว: '+esc(mlT.join(' · '))+'">📨 ส่งเมลแล้ว'+(mlT.length<2?' · '+esc(mlT[0]):'')+'</span>':'')+'</b>'+ypSapBox(m)+'<span class="note">'+esc(m.sender||'')+' · '+esc(ypTime(m.at))+'</span></div><div class="ypm">'+chips+'</div>';
   if(p.po){const o=p.po,amt=Number(o.amt);   /* 🧾 PO จากรูป/PDF (Edge pk-po) · ดูรูป = ลิงก์ชั่วคราว 10 นาที */
     h+='<div class="pobx"><span>🧾 <b>PO '+esc(o.no||'-')+'</b>'+(o.doc?' · ลงวันที่ '+esc(dateTH(o.doc)):'')+(o.due?' · กำหนดส่งตาม PO '+esc(dateTH(o.due)):'')+(amt>0?' · ยอด '+amt.toLocaleString('th-TH',{maximumFractionDigits:2})+' บ.':'')
       +(o.buyer&&ypNorm(o.buyer)!==ypNorm(p.shop)?'<br><span class="note">'+esc(o.buyer)+'</span>':'')
@@ -3428,6 +3444,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP
     const bb=card.querySelector('[data-ypback]');if(bb)bb.onclick=()=>ypBack(m,bb);
     const bm=card.querySelector('[data-ypmail]');if(bm)bm.onclick=()=>ypMailOpen(m,false);
     const bpo=card.querySelector('[data-yppo]');if(bpo)bpo.onclick=()=>ypPoImg(m,bpo);
+    const bsap=card.querySelector('[data-ypsap]');if(bsap)bsap.onchange=()=>ypSap(m,bsap.checked,bsap);
     const pin=card.querySelector('[data-ypplin]'),pdv=card.querySelector('[data-ypdrv]'),pso=card.querySelector('[data-ypso]'),ps=card.querySelector('[data-ypplsave]'),pc=card.querySelector('[data-ypplclr]');
     const vals=pl=>({plate:pl!=null?pl:(pin&&!pin.disabled?pin.value:''),driver:pdv?pdv.value:'',so:pso?pso.value:''});
     card.querySelectorAll('[data-ypplt]').forEach(b=>b.onclick=()=>ypPlate(m,vals(b.dataset.ypplt),b));

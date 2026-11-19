@@ -192,6 +192,11 @@
   .ib{border:0;background:none;color:var(--txt2);cursor:pointer;font-size:15px;padding:3px 6px;border-radius:6px}
   .ib:hover{background:var(--card);color:var(--danger)}
   .ib:disabled{opacity:.3;cursor:default}
+  /* ✓ คีย์ SAP แล้ว (19 พ.ย.) สถานะบนจอเท่านั้น · ไม่อยู่ในใบพิมพ์/เมล */
+  .sapst{margin-left:auto;font-size:12px;font-weight:600;border-radius:999px;padding:2px 10px;border:1px solid var(--line);color:var(--txt2);white-space:nowrap}
+  .sapst.ok{background:#e7f5ee;border-color:#b7dfc6;color:#127a2e}
+  :root[data-theme="dark"] .sapst.ok{background:rgba(18,122,46,.2);border-color:rgba(110,200,140,.45);color:#7ee2a0}
+  @media print{.sapst{display:none}}
   .badge{font-size:11px;font-weight:600;border-radius:999px;padding:1px 8px;background:var(--card);border:1px solid var(--line);color:var(--txt2)}
   .ro .ord input,.ro .ord select{border-color:transparent;background:transparent;pointer-events:none}
   .ro .ib,.ro .addit{display:none}
@@ -279,6 +284,7 @@ const EDGE_YP='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-yp';
 const EDGE_PROD='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-products';
 const EDGE_PKD='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-daily';
 const LIFF_ID='2010274217-Ot7vGhri';
+let SAP={}, SAP_KEY='';   /* ✓ คีย์ SAP แล้ว: mid → {by,at} จาก Edge pk-yp ?action=sap (ติ๊กที่การ์ดยี่ปั๊วใน pk-daily) */
 let MY_UID='', ME={canEdit:false,me:''}, DATE='', DOC=null, REVS=[], ROWS=[], DIRTY=false, YP=null, BUSY=false, DAY=null;
 let NOTES={accNote:'',whNote:'',bnNote:''}, MAILMODE='test', MAILTO=null, WATCH=0;   // v4 ส่งเมลเอง (แบบ Bulk) · อีเมลผู้รับโหลดตอนเปิด ไม่ฝังในหน้า
 const $=id=>document.getElementById(id);
@@ -445,14 +451,25 @@ function render(){
         :'⚠ ยังไม่มีใบแจ้งงาน PK ของวันที่ '+esc(dm(DATE))+' (อัปในหน้าแจกงาน Packing) · ร่างนี้มีเฉพาะลูกค้ารับเอง + ยี่ปั๊วที่ลงแพลนรถวันนี้แล้ว + PO ห้างที่ส่งคลังพรุ่งนี้ (ยังไม่มีทะเบียน/คนขับ) · Pending ไม่นำมาลง')+'</div>':'')
     +'<div class="note" style="margin-top:8px">บันทึกแต่ละครั้ง = ฉบับใหม่ ฉบับเก่าเก็บไว้ทั้งหมด (แก้/ลบไม่ได้) ให้ออดิทเรียกดูย้อนหลัง · ต้องบันทึกก่อนพิมพ์/ส่งเมล · กด ✉️ บันทึก + ส่งเมล = ระบบส่งให้เอง 2 ฉบับ (บัญชี+เซลส์ เปิดราคา / คลัง ปิดราคา) จาก ssbsmartsupply@gmail.com'+(ed?'':' · ดูได้อย่างเดียว (แก้ได้เฉพาะแอดมิน Packing / DEV)')+'</div></div>';
   h+='<div class="card'+(ed?'':' ro')+'" id="ords">'+(ROWS.length?ROWS.map(ordHtml).join(''):'<div class="msg">'+(ed?'ยังไม่มีร้าน — กด ⬇ ดึงยี่ปั๊ว / ⬇ ดึงงานห้าง หรือ ＋ เพิ่มร้านเอง':'ยังไม่มีแพลนวันนี้')+'</div>')+'</div>';
-  $('body').innerHTML=h; wire();
+  $('body').innerHTML=h; wire(); sapSync();
 }
+/* โหลดสถานะ คีย์ SAP ของร้านจากไลน์ในแพลนนี้ (เบา · เฉพาะ mid ที่อยู่ในหน้า) · ชุด mid เปลี่ยนค่อยโหลดใหม่ */
+async function sapSync(){
+  const mids=[...new Set(ROWS.map(o=>String(o.mid||'')).filter(x=>/^\d{5,25}$/.test(x)))].sort(), key=mids.join(',');
+  if(key===SAP_KEY) return; SAP_KEY=key; if(!mids.length){ SAP={}; return; }
+  try{ const r=await fetch(EDGE_YP+'?action=sap&userId='+encodeURIComponent(MY_UID)+'&mids='+encodeURIComponent(key)).then(x=>x.json());
+    if(!r.ok||key!==SAP_KEY) return; SAP=r.sap||{};
+    document.querySelectorAll('[data-sapmid]').forEach(el=>{ const s=SAP[el.dataset.sapmid]; el.outerHTML=sapHtml(el.dataset.sapmid,s); }); }
+  catch(_){}
+}
+function sapHtml(mid,s){ return '<span class="sapst'+(s?' ok':'')+'" data-sapmid="'+esc(mid)+'" title="'+(s?'คีย์ SAP แล้ว โดย '+esc(s.by||'')+' '+esc(tsTH(s.at)):'ยังไม่ติ๊ก คีย์ SAP แล้ว (ติ๊กที่การ์ดยี่ปั๊วในหน้าแจกงาน Packing)')+'">'+(s?'✓ คีย์ SAP แล้ว':'สถานะ: ยังไม่คีย์ SAP')+'</span>'; }
 function ordHtml(o,i){
   const inp=(k,ph,w)=>'<label'+(w?' class="w2"':'')+'>'+ph+'<input data-o="'+i+'" data-k="'+k+'" value="'+esc(o[k]||'')+'"></label>';
   return '<div class="ord '+(o.loadAt==='บางนา'?'bn':'ny')+'"><div class="oh"><span class="no">'+(i+1)+'</span>'
     +'<input class="shop" data-o="'+i+'" data-k="shop" value="'+esc(o.shop)+'" placeholder="บริษัท / ร้าน" aria-label="บริษัท">'
     +'<select data-o="'+i+'" data-k="loadAt" aria-label="ที่ขึ้นของ"><option value="หนองใหญ่"'+(o.loadAt!=='บางนา'?' selected':'')+'>🏭 ขึ้นของ หนองใหญ่</option><option value="บางนา"'+(o.loadAt==='บางนา'?' selected':'')+'>🏬 ขึ้นของ คลังบางนา</option></select>'
     +'<span class="badge">'+(o.src==='line'?'ยี่ปั๊ว · ไลน์':o.src==='mall'?'งานห้าง · PO':/^job:/.test(o.mid||'')?'ใบแจ้งงาน PK':'เพิ่มเอง')+'</span>'
+    +(o.src==='line'&&/^\d{5,25}$/.test(String(o.mid||''))?sapHtml(String(o.mid),SAP[String(o.mid)]):'')
     +'<button class="ib" data-mv="'+i+'" data-d="-1" title="เลื่อนขึ้น" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-mv="'+i+'" data-d="1" title="เลื่อนลง" aria-label="เลื่อนลง"'+(i<ROWS.length-1?'':' disabled')+'>↓</button><button class="ib" data-del="'+i+'" title="เอาร้านนี้ออก" aria-label="เอาร้านนี้ออก">✕</button></div>'
     +'<table class="it"><thead><tr><th>ชนิดน้ำมัน / สินค้า</th><th class="q">จำนวน</th><th class="u">หน่วย</th><th class="p">ราคา</th><th></th></tr></thead><tbody>'
     +o.items.map((x,j)=>'<tr><td><input list="dlProd" data-o="'+i+'" data-j="'+j+'" data-k="n" value="'+esc(x.n)+'" placeholder="ใส่ชื่อสินค้า" aria-label="สินค้า"></td><td class="q"><input data-o="'+i+'" data-j="'+j+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td class="u"><input data-o="'+i+'" data-j="'+j+'" data-k="u" value="'+esc(x.u)+'" list="dlUnit" aria-label="หน่วย"></td><td class="p"><input data-o="'+i+'" data-j="'+j+'" data-k="price" value="'+esc(x.price)+'" placeholder="ราคา / แถม / ***" aria-label="ราคา"></td><td><button class="ib" data-deli="'+i+'" data-j="'+j+'" title="ลบรายการ" aria-label="ลบรายการ">✕</button></td></tr>').join('')
