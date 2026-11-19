@@ -3267,7 +3267,13 @@ function ypVehOpts(sel){return VEH.filter(v=>!v.tail&&PLAN[v.head]&&PLAN[v.head]
  *   คนขับที่มีชื่อในแพลนวันนี้ = บอกคันที่ขับ · ไม่มี = บอกคันประจำ */
 const ypDrvHead=c=>{const v=VEH.find(x=>!x.tail&&PLAN[x.head]&&PLAN[x.head].driver===c);return v?v.head:'';};
 function ypDrvOpts(sel){return DRV.slice().sort((a,b)=>a.name.localeCompare(b.name,'th')).map(d=>{const h=ypDrvHead(d.code);
-  return '<option value="'+esc(d.code)+'"'+(d.code===sel?' selected':'')+'>'+esc(d.name)+(h?' · ขับ '+esc(plOf(h)):d.head?' · ประจำ '+esc(plOf(d.head)||d.head):'')+'</option>';}).join('');}
+  const l=d.name+(h?' · ขับ '+plOf(h):d.head?' · ประจำ '+(plOf(d.head)||d.head):'');
+  return '<option value="'+esc(d.code)+'" data-l="'+esc(l)+'"'+(d.code===sel?' selected':'')+'>'+esc(d.name)+'</option>';}).join('');}
+/* 19 พ.ย. คุณน้อง "ให้ช่องคนขับ โชว์แค่ชื่อ": ช่องที่เลือกแล้ว = ชื่ออย่างเดียว · กดเปิดรายการ = ชื่อ · ขับ/ประจำ ทะเบียน (คำใบ้ ไม่ไปไหน) */
+function ypDrvShort(el){if(!el||el.tagName!=='SELECT')return;const os=[...el.options].filter(o=>o.dataset.l);os.forEach(o=>{o.dataset.n=o.textContent;});
+  const L=on=>os.forEach(o=>{const t=on?o.dataset.l:o.dataset.n;if(o.textContent!==t)o.textContent=t;});
+  el.addEventListener('mousedown',()=>L(1));el.addEventListener('touchstart',()=>L(1),{passive:true});el.addEventListener('keydown',()=>L(1));
+  el.addEventListener('change',()=>L(0));el.addEventListener('blur',()=>L(0));}
 /* 🧾 PO: ลูกค้า + "สาขาที่ส่ง" → ร้านในค่ากลาง (คุณน้อง 13 พ.ย. ศรีธิคำ สะพานสี่/คลังสินค้าใหม่/ตลาดอมร)
  *   ชื่อไม่สนวรรณยุกต์/ไม้ไต่คู้ (มาร์เก็ตติ้ง = มาร์เกตติ้ง) · ร้านต้องมีชื่อลูกค้า · สาขาเทียบคู่ตัวอักษร (คลังสินค้าใหม่ ≈ คลังใหม่) · ได้คะแนนสูงสุดคนเดียว ≥0.6 */
 const ypLoose=x=>ypNorm(x).replace(/[\u0E47-\u0E4E]/g,'').replace(/มารเกตติง|มารเกตติ้ง|ซุปเปอรมารเกต|ค้าส่ง|คาสง|สาขา|สนญ|สำนักงานใหญ/g,'');
@@ -3413,7 +3419,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP
   const re=H.querySelector('[data-ypre]');if(re)re.onclick=()=>{YP.pend=1;ypLoad();};
   H.querySelectorAll('.ypc').forEach(card=>{const m=YP.msgs.find(x=>x.mid===card.dataset.ypm);if(!m)return;
     const sv=YP.sel[m.mid]=YP.sel[m.mid]||{},i1=card.querySelector('[data-ypst]'),i2=card.querySelector('[data-ypveh]');
-    if(i1)i1.oninput=()=>{sv.st=i1.value;};{const i3=card.querySelector('[data-ypemp]');if(i3)i3.oninput=()=>{i3.value=i3.value.replace(/[^0-9]/g,'');sv.emp=i3.value;};}const i4=card.querySelector('[data-ypdrv]');
+    if(i1)i1.oninput=()=>{sv.st=i1.value;};{const i3=card.querySelector('[data-ypemp]');if(i3)i3.oninput=()=>{i3.value=i3.value.replace(/[^0-9]/g,'');sv.emp=i3.value;};}const i4=card.querySelector('[data-ypdrv]');ypDrvShort(i4);
     if(i2)i2.onchange=()=>{sv.veh=i2.value;const P=PLAN[i2.value];if(i4&&!i4.value&&P&&P.driver){i4.value=P.driver;sv.drv=P.driver;}};
     if(i4)i4.onchange=()=>{sv.drv=i4.value;if(i2&&!i2.value&&i4.value){const d=drvOf(i4.value),h=ypDrvHead(i4.value)||(d&&d.head&&PLAN[d.head]&&PLAN[d.head].status==='ready'?d.head:'');if(h&&[...i2.options].some(o=>o.value===h)){i2.value=h;sv.veh=h;}}};
     const bp=card.querySelector('[data-ypplan]');if(bp)bp.onclick=()=>ypPlan(m,card,bp);
