@@ -525,6 +525,22 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .pdseg button{display:flex;align-items:center;gap:6px;justify-content:center}
 .pdseg button[aria-checked="true"] .pdcode{box-shadow:0 0 0 2px #fff}
 .bcode{font-family:var(--f-num);font-weight:700}
+/* 📥 Excel ลูกค้า Bulk · 2026-11-19 */
+.cxbar{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto}
+.cinfo .cxbar .btn{margin-left:0}
+.btn.xl{background:#1d6f42;border-color:#1d6f42;color:#fff}
+.cxpv{display:flex;flex-direction:column;gap:10px}
+.cxs{border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.cxs h3{margin:0;display:flex;justify-content:space-between;align-items:baseline;font-size:14px}
+.cxs.add h3{color:var(--ok)}.cxs.chg h3{color:#185fa5}.cxs.err h3{color:#B42318}.cxs.mute h3{color:var(--muted);font-weight:600}
+.cxs ol{list-style:none;margin:6px 0 0;padding:0;max-height:34vh;overflow:auto}
+.cxs li{display:flex;gap:8px;padding:6px 0;border-top:1px solid var(--line);font-size:13px}
+.cxs li .num{flex:none;width:22px;text-align:right;color:var(--muted)}
+.cxs li>div{min-width:0;flex:1}.cxs li small{display:block;color:var(--muted);font-size:12px;margin-top:2px;line-height:1.5}
+.cxs li small b{color:var(--ink)}.cxs p{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
+.cxbad{color:#B42318}
+:root[data-theme="dark"] .cxs.chg h3{color:#7FB2F0}:root[data-theme="dark"] .cxs.err h3,:root[data-theme="dark"] .cxbad{color:#F08A80}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .cxs.chg h3{color:#7FB2F0}:root:not([data-theme="light"]) .cxs.err h3,:root:not([data-theme="light"]) .cxbad{color:#F08A80}}
 </style>
 </head>
 <body>
@@ -565,7 +581,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19c</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19d</span></div>
   </div>
   </div></main>
 </div>
@@ -1420,13 +1436,16 @@ function drawCustList(){
     <div class="dlgbd">
       <div class="cinfo"><span>คนขับเข้าใกล้พิกัดลูกค้า = ระบบเช็คอิน "ถึงลูกค้า" ให้เอง (รัศมีเดียวกับรถไร่ · ตั้งรายลูกค้าได้) · พิกัดกรอกเอง ใช้ก่อนหมุด DTC
         · หมุด DTC อัปเดต ${thTime(d.poiAt)||'—'} (${d.poi.length} หมุด)</span>
-        ${ed?`<button class="btn sm" type="button" id="cRef" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>`:''}</div>
+        <span class="cxbar"><button class="btn sm xl" type="button" id="cXd" title="ไฟล์นี้ใช้เป็นแม่แบบอัปโหลดกลับ">⬇ ดาวน์โหลด Excel</button>${ed?`<button class="btn sm" type="button" id="cXu" title="แก้หลายรายพร้อมกันจากไฟล์ที่ดาวน์โหลด">⬆ อัปโหลด</button><input type="file" id="cXf" accept=".xlsx,.xls,.csv" hidden>`:''}
+        ${ed?`<button class="btn sm" type="button" id="cRef" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>`:''}</span></div>
       <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
         <tbody>${rows||`<tr><td colspan="7" class="empty">ยังไม่มีลูกค้า</td></tr>`}</tbody></table></div>
       ${miss}
       ${ed?'':'<div class="sub">ดูอย่างเดียว · แก้ได้เฉพาะ DEV / แอดมิน Bulk / ผู้จัดการ</div>'}
     </div></div>`;
   $('cX').onclick=closeCust;
+  $('cXd').onclick=()=>custXDownload($('cXd'));   // 📥 Excel 19 พ.ย.
+  if($('cXu')){ $('cXu').onclick=()=>$('cXf').click(); $('cXf').onchange=()=>custXUpload($('cXf')); }
   m.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editCust(d.customers.find(c=>c.cust_code===b.dataset.ed)));
   m.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>{ const x=d.missing.find(c=>c.cust_code===b.dataset.add); editCust({cust_code:x.cust_code,cust_name:x.cust_name,_new:true}); });
   m.querySelectorAll('[data-ok]').forEach(b=>b.onclick=()=>{ const c=d.customers.find(x=>x.cust_code===b.dataset.ok);
@@ -1444,6 +1463,106 @@ function drawCustList(){
     try{ const r=await post({action:'refreshPoi'}); toast(r.ok?'ดึงหมุดแล้ว '+r.total+' หมุด'+(r.moved?' · พิกัดลูกค้าเปลี่ยน '+r.moved+' ราย':''):(r.error||'ดึงหมุดไม่สำเร็จ'),!r.ok); }
     catch(e){ toast('ดึงหมุดไม่สำเร็จ — ลองใหม่',true); }
     openCustomers(); };
+}
+/* 📥 Excel ลูกค้า Bulk · ดาวน์โหลด → แก้ → อัปโหลด → สรุป → ยืนยัน (แบบทะเบียนพนักงาน MySSB · skill webapp-excel-roundtrip) · 2026-11-19
+   แถว 1 หัวไทย · แถว 2 คีย์อังกฤษ (ห้ามแก้) · ช่องว่าง = คงค่าเดิม · ลบแถว ≠ ลบลูกค้า · หลังบ้าน bulk-plan custImport ตรวจซ้ำทุกครั้ง */
+const CX_COLS=[
+  {k:'cust_code',h:'รหัสลูกค้า',w:12,req:1,help:'รหัสจาก SAP เช่น C100124 · ลูกค้าเดิมห้ามแก้รหัส (ใช้จับคู่) · ลูกค้าใหม่ = ต่อท้ายตาราง'},
+  {k:'cust_name',h:'ชื่อลูกค้า',w:36,help:'บังคับเมื่อเพิ่มลูกค้าใหม่'},
+  {k:'pin',h:'หมุด DTC',w:13,help:'รหัสหมุด เช่น ST-32551 (ดูในแผ่น "หมุด DTC") หรือชื่อหมุดตรงตัว'},
+  {k:'pin_name',h:'ชื่อหมุด DTC',w:18,ro:1,get:c=>c.dtc_poi_name||''},
+  {k:'dtc_loc',h:'พิกัดหมุด DTC',w:22,ro:1,get:c=>c.dtc_location||''},
+  {k:'location',h:'พิกัดกรอกเอง',w:24,help:'lat,lng เช่น 13.157902,101.333302 หรือลิงก์ Google Maps · ใส่แล้วใช้แทนหมุด DTC'},
+  {k:'radius_m',h:'รัศมีเช็คอิน (ม.)',w:12,help:'50–5000 · ว่าง = 300 ม. เท่ารถไร่'},
+  {k:'has_dest_scale',h:'ตาชั่งปลายทาง',w:12,get:c=>c._plan?'':c.has_dest_scale?'มี':'ไม่มี',help:'มี / ไม่มี'},
+  {k:'need_slip_out',h:'ใบชั่งตอนออก',w:12,get:c=>c._plan?'':c.need_slip_out?'ต้องมี':'ไม่ต้อง',help:'ต้องมี / ไม่ต้อง'},
+  {k:'confirm',h:'ยืนยันหมุด',w:12,get:c=>c._plan?'':/^auto/.test(c.match_note||'')?'รอยืนยัน':'ยืนยันแล้ว',help:'ยืนยันแล้ว / รอยืนยัน · แก้หมุดหรือพิกัด = ยืนยันให้เอง (เหมือนกดบันทึกในเว็บ)'},
+  {k:'note',h:'หมายเหตุ',w:30,help:'เช่น เข้าประตู 3 · ต้องจองคิวก่อน'},
+  {k:'central',h:'ค่ากลาง (กม.)',w:16,ro:1,get:c=>((CUST&&CUST.central||{})[c.dtc_poi_name]||[]).map(x=>x.km+(x.jt?' ('+x.jt+')':'')).join(' · ')},
+  {k:'status',h:'สถานะ',w:22,ro:1,get:c=>c._plan?'ยังไม่ตั้งค่า (อยู่ในแพลน)':custState(c)[1]}];
+async function custXDownload(b){
+  const t=b.innerHTML; b.disabled=true; b.textContent='กำลังสร้าง…';
+  try{ await repLoad('xlsx'); const X=window.XLSX, LN='C9D6CE';
+    const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
+    const F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'14251C'}},o||{});
+    const sh={font:F({bold:true,color:{rgb:'FFFFFF'}}),fill:{fgColor:{rgb:'1B4332'}},border:bd,alignment:{horizontal:'center',vertical:'center',wrapText:true}};
+    const sk={font:F({sz:8,italic:true,color:{rgb:'8A9A90'}}),fill:{fgColor:{rgb:'F2F6F3'}},border:bd,alignment:{horizontal:'center'}};
+    const sro={font:F({sz:9,color:{rgb:'6B7A70'}}),fill:{fgColor:{rgb:'F2F6F3'}},border:bd}, sd={font:F(),border:bd}, sz={font:F(),border:bd,fill:{fgColor:{rgb:'FAFCFA'}}};
+    const c=(v,s)=>({v:v==null?'':String(v),t:'s',s});   // ทุกช่องเป็นข้อความ → รหัส/พิกัดไม่เพี้ยน
+    const rows=CUST.customers.slice().sort((a,b)=>String(a.cust_name||'').localeCompare(String(b.cust_name||''),'th'))
+      .concat(CUST.missing.map(x=>({cust_code:x.cust_code,cust_name:x.cust_name,_plan:1})));
+    const aoa=[CX_COLS.map(x=>c(x.h+(x.ro?' (อ่านอย่างเดียว)':x.k==='cust_code'?' (แถวเดิมห้ามแก้)':''),sh)),CX_COLS.map(x=>c(x.ro?'_'+x.k:x.k,sk))];
+    rows.forEach((r,i)=>aoa.push(CX_COLS.map(x=>c(x.get?x.get(r):x.k==='pin'?r.dtc_poi_id:r[x.k],x.ro?sro:i%2?sz:sd))));
+    const ws={}; aoa.forEach((row,ri)=>row.forEach((cell,ci)=>{ ws[X.utils.encode_cell({r:ri,c:ci})]=cell; }));
+    ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:CX_COLS.length-1}});
+    ws['!cols']=CX_COLS.map(x=>({wch:x.w})); ws['!rows']=[{hpt:30},{hpt:13}]; ws['!freeze']={xSplit:2,ySplit:2};
+    const help=[['วิธีใช้ไฟล์ ลูกค้า Bulk'],[''],
+      ['1. แก้ในแผ่น "ลูกค้า Bulk" แล้วกด ⬆ อัปโหลด ในหน้า ฐานข้อมูล › ลูกค้า Bulk'],
+      ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์อังกฤษ) และรหัสลูกค้าของแถวเดิม — ระบบใช้จับคู่'],
+      ['3. เพิ่มลูกค้าใหม่: ต่อท้ายตาราง ใส่รหัส + ชื่อ + หมุด DTC หรือพิกัด · แถว "ยังไม่ตั้งค่า (อยู่ในแพลน)" = ลูกค้าในแพลนที่ยังไม่ได้ตั้ง เติมแล้วอัปโหลดได้เลย'],
+      ['4. ช่องว่าง = คงค่าเดิม (ลบพิกัด/หมุดทำในเว็บ) · ลบแถวทิ้ง = ไม่ลบลูกค้าออกจากระบบ · คอลัมน์สีเทา (อ่านอย่างเดียว) แก้ไปก็ไม่มีผล'],
+      ['5. ก่อนบันทึกจริง ระบบสรุป เพิ่มใหม่ / แก้ไข (เก่า → ใหม่) / ผิดพลาด ให้ตรวจ แล้วค่อยกดยืนยัน'],
+      ['6. ค่ากลาง (กม.) ผูกด้วยชื่อหมุด DTC — แก้ระยะที่หน้า 📍 ค่ากลาง (เฉพาะ DEV) ไม่ใช่ในไฟล์นี้'],[''],['ค่าที่ใช้ได้','']]
+      .concat(CX_COLS.filter(x=>x.help).map(x=>[x.h,x.help]));
+    const wh=X.utils.aoa_to_sheet(help); wh['!cols']=[{wch:20},{wch:100}]; wh.A1.s={font:F({bold:true,sz:13,color:{rgb:'1B4332'}})};
+    const pr=CUST.poi.slice().sort((a,b)=>((b.k==='ลูกค้า BULK')-(a.k==='ลูกค้า BULK'))||String(a.n).localeCompare(String(b.n),'th'));
+    const wp=X.utils.aoa_to_sheet([['รหัสหมุด','ชื่อหมุด','ประเภท','พิกัดกลาง']].concat(pr.map(p=>[p.id,p.n,p.k||'',p.c||''])));
+    ['A1','B1','C1','D1'].forEach(a=>{ wp[a].s=sh; }); wp['!cols']=[{wch:12},{wch:30},{wch:16},{wch:24}]; wp['!freeze']={xSplit:0,ySplit:1};
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'ลูกค้า Bulk'); X.utils.book_append_sheet(wb,wh,'วิธีใช้'); X.utils.book_append_sheet(wb,wp,'หมุด DTC');
+    const d=new Date(), p2=n=>('0'+n).slice(-2);
+    repSave(new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),'ลูกค้า Bulk_'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.xlsx');
+  }catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
+  finally{ b.disabled=false; b.innerHTML=t; }
+}
+let CX_UP=null, CX_BUSY=false;
+async function custXUpload(inp){
+  const f=inp.files&&inp.files[0]; inp.value=''; if(!f) return;
+  toast('กำลังอ่านไฟล์…');
+  try{ await repLoad('xlsx'); const X=window.XLSX, wb=X.read(await f.arrayBuffer(),{type:'array'});
+    const ws=wb.Sheets['ลูกค้า Bulk']||wb.Sheets[wb.SheetNames[0]], aoa=X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+    const ed=CX_COLS.filter(x=>!x.ro), keys=ed.map(x=>x.k), th={}; ed.forEach(x=>{ th[x.h]=x.k; th[x.h+' (ห้ามแก้)']=x.k; th[x.h+' (แถวเดิมห้ามแก้)']=x.k; });
+    let hi=-1, map=null;
+    for(let i=0;i<Math.min(aoa.length,10)&&hi<0;i++){ const row=(aoa[i]||[]).map(v=>String(v).trim());
+      if(row.includes('cust_code')&&keys.filter(k=>row.includes(k)).length>=4){ hi=i; map=row.map(v=>keys.includes(v)?v:''); }
+      else if(row.some(v=>th[v]==='cust_code')&&!(aoa[i+1]||[]).map(v=>String(v).trim()).includes('cust_code')){ hi=i; map=row.map(v=>th[v]||''); } }
+    if(hi<0){ toast('ไม่พบหัวตาราง — ใช้ไฟล์ที่กด ⬇ ดาวน์โหลด เป็นแม่แบบ (ห้ามลบแถวที่ 2)',true); return; }
+    const rows=[];
+    for(let r=hi+1;r<aoa.length;r++){ const o={_line:r+1}; let any=false;
+      map.forEach((k,ci)=>{ if(!k) return; const v=String(aoa[r][ci]==null?'':aoa[r][ci]).trim(); o[k]=v; if(v) any=true; });
+      if(any) rows.push(o); }
+    if(!rows.length){ toast('ไฟล์ไม่มีข้อมูล',true); return; }
+    if(rows.length>1000){ toast('ไฟล์ใหญ่เกิน 1,000 แถว',true); return; }
+    const pv=await post({action:'custImport',rows,apply:false});
+    if(!pv.ok){ toast(pv.error||'ตรวจไฟล์ไม่สำเร็จ',true); return; }
+    CX_UP={rows,name:f.name}; custXPreview(pv);
+  }catch(e){ toast('อ่านไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
+}
+function custXPreview(pv){
+  const m=$('dlgCust'), n=pv.add.length+pv.change.length;
+  const sec=(t,cls,cnt,body)=>`<section class="cxs ${cls}"><h3><span>${t}</span><b>${cnt}</b></h3>${body||''}</section>`;
+  const li=(i,main,sub)=>`<li><span class="num">${i}.</span><div>${main}${sub?`<small>${sub}</small>`:''}</div></li>`;
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="xT">
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">${esc(CX_UP.name)} · ${CX_UP.rows.length} แถว</div><h2 id="xT" style="color:#fff">📥 ตรวจไฟล์ก่อนนำเข้า</h2></div>
+      <button type="button" class="dlgx" aria-label="กลับ" id="xX">✕</button></div>
+    <div class="dlgbd cxpv">
+      ${sec('เพิ่มใหม่','add',pv.add.length+' ราย',pv.add.length?'<ol>'+pv.add.map((a,i)=>li(i+1,'<b>'+esc(a.name)+'</b>',esc(a.sub)+' · แถว '+a.line)).join('')+'</ol>':'')}
+      ${sec('แก้ไข','chg',pv.change.length+' ราย',pv.change.length?'<ol>'+pv.change.map((c,i)=>li(i+1,'<b>'+esc(c.name)+'</b> <span class="sub">'+esc(c.sub)+' · แถว '+c.line+'</span>',
+        c.fields.map(x=>esc(x.label)+': <s>'+esc(x.old||'(ว่าง)')+'</s> → <b>'+esc(x.new)+'</b>').join('<br>'))).join('')+'</ol>':'')}
+      ${sec('ผิดพลาด (ข้าม ไม่บันทึก)','err',pv.errors.length+' แถว',pv.errors.length?'<ol>'+pv.errors.map((e,i)=>li(i+1,'แถว '+e.line+(e.name?' · '+esc(e.name):''),'<span class="cxbad">'+esc(e.msg)+'</span>')).join('')+'</ol>':'')}
+      ${pv.todo.length?sec('ยังไม่ตั้งค่า (มีแค่รหัส+ชื่อ · ข้าม)','mute',pv.todo.length+' ราย','<p>'+pv.todo.map(x=>esc(x.name)).join(', ')+'</p>'):''}
+      ${sec('ไม่เปลี่ยนแปลง','mute',pv.same+' ราย','')}
+      ${pv.missing.length?sec('ไม่อยู่ในไฟล์ (ข้อมูลเดิมคงอยู่ ไม่ถูกลบ)','mute',pv.missing.length+' ราย','<p>'+pv.missing.slice(0,20).map(esc).join(', ')+(pv.missing.length>20?' และอีก '+(pv.missing.length-20):'')+'</p>'):''}
+    </div>
+    <div class="dlgft"><button class="btn" type="button" id="xNo">ยกเลิก</button>
+      <button class="btn gold" type="button" id="xYes"${n?'':' disabled'}>${n?'ยืนยันนำเข้า '+n+' ราย':'ไม่มีอะไรต้องบันทึก'}</button></div></div>`;
+  const back=()=>{ CX_UP=null; drawCustList(); };
+  $('xX').onclick=back; $('xNo').onclick=back;
+  $('xYes').onclick=async()=>{ if(CX_BUSY||!CX_UP) return; CX_BUSY=true; const b=$('xYes'); b.disabled=true; b.textContent='กำลังบันทึก…';
+    try{ const r=await post({action:'custImport',rows:CX_UP.rows,apply:true});   // หลังบ้านตรวจทั้งไฟล์ซ้ำ บันทึกเฉพาะแถวที่ผ่าน
+      if(!r.ok){ toast(r.error||'นำเข้าไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันนำเข้า '+n+' ราย'; return; }
+      toast('นำเข้าแล้ว ✓ เพิ่ม '+r.added+' · แก้ไข '+r.changed+(r.skipped?' · ข้าม '+r.skipped+' แถว':'')); CX_UP=null; openCustomers();
+    }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); CX_UP=null; openCustomers(); }
+    finally{ CX_BUSY=false; } };
 }
 async function saveCust(btn,body,okMsg){
   const t=btn.textContent; btn.disabled=true; btn.textContent='กำลังบันทึก…';
