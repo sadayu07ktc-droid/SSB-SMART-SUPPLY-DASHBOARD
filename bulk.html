@@ -608,7 +608,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19h</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19i</span></div>
   </div>
   </div></main>
 </div>
@@ -2034,6 +2034,7 @@ function pdDraw(focus){
           <button type="button" class="pdchip${PD_F==='all'?' on':''}" data-pdf="all">ทั้งหมด <b>${ps.length}</b></button>
           ${ds.map(d=>`<button type="button" class="pdchip${PD_F===d.code?' on':''}" data-pdf="${esc(d.code)}"><i style="background:${pdDot(d.code)}"></i>${esc(d.name)} <b>${ps.filter(p=>p.dept===d.code).length}</b></button>`).join('')}</div>
         <input type="search" id="pdQ" class="vsin pdq" placeholder="ค้นหาชนิดสินค้า" aria-label="ค้นหาชนิดสินค้า" value="${esc(PD_Q)}">
+        <button type="button" class="btn sm xl" id="pdXd" title="ไฟล์นี้ใช้เป็นแม่แบบอัปโหลดกลับ">⬇ ดาวน์โหลด</button>${ed?'<button type="button" class="btn sm" id="pdXu" title="แก้หลายชนิดพร้อมกันจากไฟล์ที่ดาวน์โหลด">⬆ อัปโหลด</button><input type="file" id="pdXf" accept=".xlsx,.xls,.csv" hidden>':''}
         <button type="button" class="btn prbtn" id="pdRep" title="ออกรายงาน Excel / PDF / JPEG"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 18v-3M12 18v-6M16 18v-4"/></svg>รายงาน</button>
         ${ed?'<button type="button" class="btn gold" id="pdAdd">+ เพิ่มชนิดสินค้า</button>':''}</div>
       <div class="pdwrap"><table class="pdt"><thead><tr><th>#</th><th>ชนิดสินค้า</th><th>บริษัท</th><th>รหัสบิล</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
@@ -2045,6 +2046,8 @@ function pdDraw(focus){
   const qi=$('pdQ'); qi.oninput=()=>{ PD_Q=qi.value; const pos=qi.selectionStart; pdDraw(); const n=$('pdQ'); n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} };
   if($('pdAdd')) $('pdAdd').onclick=()=>pdEdit(null);
   $('pdRep').onclick=openProdReport;   // 📊 รายงาน 19 พ.ย.
+  $('pdXd').onclick=()=>pdXDownload($('pdXd'));   // 📥 Excel 19 พ.ย.
+  if($('pdXu')){ $('pdXu').onclick=()=>$('pdXf').click(); $('pdXf').onchange=()=>pdXUpload($('pdXf')); }
   m.querySelectorAll('[data-pdp]').forEach(b=>b.onclick=()=>pdEdit(ps.find(p=>String(p.id)===b.dataset.pdp)));
   m.querySelectorAll('[data-pdn]').forEach(b=>b.onclick=()=>pdEdit(null,b.dataset.pdn));
   m.querySelectorAll('[data-pde]').forEach(b=>b.onclick=()=>pdDeptEdit(ds.find(d=>d.code===b.dataset.pde)));
@@ -2058,6 +2061,104 @@ let PR_P=null;
 const PR_KINDS=[['list','รายการชนิดสินค้า','ทุกชนิดเรียงตามบริษัท พร้อมรหัสบิล A/B','#2F7D4F','M4 6h16M4 12h16M4 18h10'],
   ['group','แยกตามบริษัท','มีแถบหัวบริษัท (ชื่อเต็มไทย/อังกฤษ) ก่อนรายการของบริษัทนั้น','#C2410C','M3 7h18M3 12h18M3 17h18M7 4v16'],
   ['sum','สรุปตามบริษัท','บริษัทละแถว: ชื่อเต็ม · รหัสบิล · จำนวนชนิดใช้งาน/เลิกใช้','#3B6E8F','M5 20V10M12 20V4M19 20v-7']];
+
+/* 📥 Excel ชนิดสินค้า · ดาวน์โหลด → แก้ → อัปโหลด → สรุป → ยืนยัน (แบบหน้าลูกค้า Bulk · skill webapp-excel-roundtrip) · 2026-11-19
+   id สีเทา = จับคู่ (ว่าง = เพิ่มใหม่) · ช่องว่าง = คงค่าเดิม · ลบแถว ≠ ลบสินค้า · หลังบ้าน bulk-board prodImport ตรวจซ้ำทุกครั้ง */
+const PX_COLS=[
+  {k:'id',h:'id',w:6,key:1,help:'ห้ามแก้ · ระบบใช้จับคู่ · แถวใหม่เว้นว่าง'},
+  {k:'name',h:'ชนิดสินค้า',w:24,help:'ชื่อตามแผนแอดมิน · บังคับเมื่อเพิ่มใหม่'},
+  {k:'aliases',h:'ชื่อเรียกในกลุ่มไลน์',w:44,get:p=>(p.aliases||[]).join(', '),help:'ตัวย่อที่เซลส์พิมพ์ คั่นด้วย , เช่น RPO, Palm Oil Mix TBHQ · ใส่ใหม่ทั้งชุด · ชื่อเดียวใช้ได้กับสินค้าเดียว'},
+  {k:'dept',h:'บริษัท',w:14,get:p=>p.dept+' · '+((deptOf(p.dept)||{}).name||''),help:''},
+  {k:'bill',h:'รหัสบิล',w:12,ro:1,get:p=>p.dept+'A / '+p.dept+'B'},
+  {k:'active',h:'สถานะ',w:10,get:p=>p.active===false?'เลิกใช้':'ใช้งาน',help:'ใช้งาน / เลิกใช้ (ไม่ลบประวัติ)'},
+  {k:'note',h:'หมายเหตุ',w:30,help:''}];
+let PX_UP=null, PX_BUSY=false;
+async function pdXDownload(b){
+  const t=b.innerHTML; b.disabled=true; b.textContent='กำลังสร้าง…';
+  try{ await repLoad('xlsx'); const X=window.XLSX, LN='C9D6CE', ds=DATA.depts||[];
+    PX_COLS.find(x=>x.k==='dept').help='ใส่อักษร '+ds.map(d=>d.code+' ('+d.name+')').join(' / ')+' → บิล ?A / ?B';
+    const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
+    const F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'14251C'}},o||{});
+    const sh={font:F({bold:true,color:{rgb:'FFFFFF'}}),fill:{fgColor:{rgb:'1B4332'}},border:bd,alignment:{horizontal:'center',vertical:'center',wrapText:true}};
+    const sk={font:F({sz:8,italic:true,color:{rgb:'8A9A90'}}),fill:{fgColor:{rgb:'F2F6F3'}},border:bd,alignment:{horizontal:'center'}};
+    const sro={font:F({sz:9,color:{rgb:'6B7A70'}}),fill:{fgColor:{rgb:'F2F6F3'}},border:bd}, sd={font:F(),border:bd}, sz={font:F(),border:bd,fill:{fgColor:{rgb:'FAFCFA'}}};
+    const c=(v,s)=>({v:v==null?'':String(v),t:'s',s});
+    const dOrd=x=>{ const i=ds.findIndex(d=>d.code===x); return i<0?99:i; };
+    const rows=(DATA.products||[]).slice().sort((a,b)=>dOrd(a.dept)-dOrd(b.dept)||String(a.name).localeCompare(String(b.name),'th'));
+    const aoa=[PX_COLS.map(x=>c(x.h+(x.ro?' (อ่านอย่างเดียว)':x.key?' (ห้ามแก้)':''),sh)),PX_COLS.map(x=>c(x.ro?'_'+x.k:x.k,sk))];
+    rows.forEach((r,i)=>aoa.push(PX_COLS.map(x=>c(x.get?x.get(r):r[x.k],x.ro||x.key?sro:i%2?sz:sd))));
+    const ws={}; aoa.forEach((row,ri)=>row.forEach((cell,ci)=>{ ws[X.utils.encode_cell({r:ri,c:ci})]=cell; }));
+    ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:PX_COLS.length-1}});
+    ws['!cols']=PX_COLS.map(x=>({wch:x.w})); ws['!rows']=[{hpt:30},{hpt:13}]; ws['!freeze']={xSplit:2,ySplit:2};
+    const help=[['วิธีใช้ไฟล์ ชนิดสินค้า Bulk'],[''],
+      ['1. แก้ในแผ่น "ชนิดสินค้า" แล้วกด ⬆ อัปโหลด ในหน้า ฐานข้อมูล › ชนิดสินค้า'],
+      ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์อังกฤษ) และคอลัมน์ id — ระบบใช้จับคู่'],
+      ['3. เพิ่มชนิดใหม่: ต่อท้ายตาราง เว้น id ว่าง ใส่ชื่อ + บริษัท (+ ชื่อเรียกในกลุ่มไลน์ ถ้ามี)'],
+      ['4. ช่องว่าง = คงค่าเดิม · ลบแถวทิ้ง = ไม่ลบสินค้า (ใช้ สถานะ = เลิกใช้) · คอลัมน์สีเทา (อ่านอย่างเดียว) แก้ไปก็ไม่มีผล'],
+      ['5. ชื่อเรียกในกลุ่มไลน์ ใส่ใหม่ทั้งชุด คั่นด้วย , — ชื่อเดียวกันใช้ได้กับสินค้าเดียว (ซ้ำ = ระบบแจ้งผิดพลาด)'],
+      ['6. ก่อนบันทึกจริง ระบบสรุป เพิ่มใหม่ / แก้ไข (เก่า → ใหม่) / ผิดพลาด ให้ตรวจ แล้วค่อยกดยืนยัน'],[''],['ค่าที่ใช้ได้','']]
+      .concat(PX_COLS.filter(x=>x.help).map(x=>[x.h,x.help]));
+    const wh=X.utils.aoa_to_sheet(help); wh['!cols']=[{wch:22},{wch:100}]; wh.A1.s={font:F({bold:true,sz:13,color:{rgb:'1B4332'}})};
+    const wd=X.utils.aoa_to_sheet([['อักษร','ชื่อย่อ','ชื่อบริษัท','บิล A (VAT)','บิล B']].concat(ds.map(d=>[d.code,d.name,d.company||'',d.code+'A',d.code+'B'])));
+    ['A1','B1','C1','D1','E1'].forEach(a=>{ wd[a].s=sh; }); wd['!cols']=[{wch:8},{wch:12},{wch:44},{wch:12},{wch:8}];
+    const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'ชนิดสินค้า'); X.utils.book_append_sheet(wb,wh,'วิธีใช้'); X.utils.book_append_sheet(wb,wd,'บริษัท');
+    const d=new Date(), p2=n=>('0'+n).slice(-2);
+    repSave(new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),'ชนิดสินค้า Bulk_'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.xlsx');
+  }catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
+  finally{ b.disabled=false; b.innerHTML=t; }
+}
+async function pdXUpload(inp){
+  const f=inp.files&&inp.files[0]; inp.value=''; if(!f) return;
+  toast('กำลังอ่านไฟล์…');
+  try{ await repLoad('xlsx'); const X=window.XLSX, wb=X.read(await f.arrayBuffer(),{type:'array'});
+    const ws=wb.Sheets['ชนิดสินค้า']||wb.Sheets[wb.SheetNames[0]], aoa=X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+    const ed=PX_COLS.filter(x=>!x.ro), keys=ed.map(x=>x.k), th={}; ed.forEach(x=>{ th[x.h]=x.k; th[x.h+' (ห้ามแก้)']=x.k; });
+    let hi=-1, map=null;
+    for(let i=0;i<Math.min(aoa.length,10)&&hi<0;i++){ const row=(aoa[i]||[]).map(v=>String(v).trim());
+      if(row.includes('name')&&keys.filter(k=>row.includes(k)).length>=3){ hi=i; map=row.map(v=>keys.includes(v)?v:''); }
+      else if(row.some(v=>th[v]==='name')&&!(aoa[i+1]||[]).map(v=>String(v).trim()).includes('name')){ hi=i; map=row.map(v=>th[v]||''); } }
+    if(hi<0){ toast('ไม่พบหัวตาราง — ใช้ไฟล์ที่กด ⬇ ดาวน์โหลด เป็นแม่แบบ (ห้ามลบแถวที่ 2)',true); return; }
+    const rows=[];
+    for(let r=hi+1;r<aoa.length;r++){ const o={_line:r+1}; let any=false;
+      map.forEach((k,ci)=>{ if(!k) return; const v=String(aoa[r][ci]==null?'':aoa[r][ci]).trim(); o[k]=v; if(v) any=true; });
+      if(any) rows.push(o); }
+    if(!rows.length){ toast('ไฟล์ไม่มีข้อมูล',true); return; }
+    if(rows.length>1000){ toast('ไฟล์ใหญ่เกิน 1,000 แถว',true); return; }
+    const pv=await postB({action:'prodImport',rows,apply:false});
+    if(!pv.ok){ toast(pv.error||'ตรวจไฟล์ไม่สำเร็จ',true); return; }
+    PX_UP={rows,name:f.name}; pdXPreview(pv);
+  }catch(e){ toast('อ่านไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
+}
+function pdXPreview(pv){
+  let m=$('pdXDlg'); if(!m){ m=document.createElement('div'); m.id='pdXDlg'; m.className='dlg'; m.style.zIndex=74; document.body.appendChild(m); }
+  const close=()=>{ PX_UP=null; m.remove(); };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  const n=pv.add.length+pv.change.length;
+  const sec=(t,cls,cnt,body)=>`<section class="cxs ${cls}"><h3><span>${t}</span><b>${cnt}</b></h3>${body||''}</section>`;
+  const li=(i,main,sub)=>`<li><span class="num">${i}.</span><div>${main}${sub?`<small>${sub}</small>`:''}</div></li>`;
+  m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="pxT">
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">${esc(PX_UP.name)} · ${PX_UP.rows.length} แถว</div><h2 id="pxT" style="color:#fff;margin:2px 0 0">📥 ตรวจไฟล์ชนิดสินค้าก่อนนำเข้า</h2></div>
+      <button type="button" class="dlgx" aria-label="ปิด" id="pxX">✕</button></div>
+    <div class="dlgbd cxpv">
+      ${sec('เพิ่มใหม่','add',pv.add.length+' ชนิด',pv.add.length?'<ol>'+pv.add.map((a,i)=>li(i+1,'<b>'+esc(a.name)+'</b>','บิล '+esc(a.sub)+' · แถว '+a.line)).join('')+'</ol>':'')}
+      ${sec('แก้ไข','chg',pv.change.length+' ชนิด',pv.change.length?'<ol>'+pv.change.map((c,i)=>li(i+1,'<b>'+esc(c.name)+'</b> <span class="sub">แถว '+c.line+'</span>',
+        c.fields.map(x=>esc(x.label)+': <s>'+esc(x.old||'(ว่าง)')+'</s> → <b>'+esc(x.new)+'</b>').join('<br>'))).join('')+'</ol>':'')}
+      ${sec('ผิดพลาด (ข้าม ไม่บันทึก)','err',pv.errors.length+' แถว',pv.errors.length?'<ol>'+pv.errors.map((e,i)=>li(i+1,'แถว '+e.line+(e.name?' · '+esc(e.name):''),'<span class="cxbad">'+esc(e.msg)+'</span>')).join('')+'</ol>':'')}
+      ${sec('ไม่เปลี่ยนแปลง','mute',pv.same+' ชนิด','')}
+      ${pv.missing.length?sec('ไม่อยู่ในไฟล์ (ข้อมูลเดิมคงอยู่ ไม่ถูกลบ)','mute',pv.missing.length+' ชนิด','<p>'+pv.missing.slice(0,30).map(esc).join(', ')+(pv.missing.length>30?' และอีก '+(pv.missing.length-30):'')+'</p>'):''}
+    </div>
+    <div class="dlgft"><button class="btn" type="button" id="pxNo">ยกเลิก</button>
+      <button class="btn gold" type="button" id="pxYes"${n?'':' disabled'}>${n?'ยืนยันนำเข้า '+n+' ชนิด':'ไม่มีอะไรต้องบันทึก'}</button></div></div>`;
+  m.hidden=false;
+  $('pxX').onclick=close; $('pxNo').onclick=close;
+  $('pxYes').onclick=async()=>{ if(PX_BUSY||!PX_UP) return; PX_BUSY=true; const b=$('pxYes'); b.disabled=true; b.textContent='กำลังบันทึก…';
+    try{ const r=await postB({action:'prodImport',rows:PX_UP.rows,apply:true});   // หลังบ้านตรวจทั้งไฟล์ซ้ำ บันทึกเฉพาะแถวที่ผ่าน
+      if(!r.ok){ toast(r.error||'นำเข้าไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันนำเข้า '+n+' ชนิด'; return; }
+      if(Array.isArray(r.products)) DATA.products=r.products;
+      toast('นำเข้าแล้ว ✓ เพิ่ม '+r.added+' · แก้ไข '+r.changed+(r.skipped?' · ข้าม '+r.skipped+' แถว':'')); close(); pdDraw();
+    }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดหน้าใหม่ให้ตรวจ',true); close(); }
+    finally{ PX_BUSY=false; } };
+}
 function openProdReport(){
   if(!PR_P) PR_P={cos:new Set(), sts:new Set(), kind:'list'};
   PR_P.cos=new Set(PD_F!=='all'?[PD_F]:[]);   // ค่าเริ่ม = ตัวกรองบนจอ
