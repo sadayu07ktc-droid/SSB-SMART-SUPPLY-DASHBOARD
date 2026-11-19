@@ -94,6 +94,19 @@
     clear: function () { try { localStorage.removeItem(KEY); } catch (e) {} }
   };
   var isIssuer = /\/SSB-SMART-SUPPLY-DASHBOARD\/(index\.html)?$/.test(location.pathname);   // แดชบอร์ดหลักล็อกอินจริงเสมอ
+  // 🔁 เปลี่ยนบัญชี (2026-11-19): ลิงก์ที่มี ?login=1 → ทิ้งบัตร + ทิ้งล็อกอิน LINE ที่ค้างในเบราว์เซอร์ → หน้าจะให้ล็อกอิน LINE ใหม่
+  //   ใช้เมื่อเครื่องนี้มีบัตรของคนอื่นค้าง (เช่น เปิดลิงก์ที่ส่งให้แอดมินบนเครื่อง DEV / คอมส่วนกลาง)
+  try {
+    var qs = new URLSearchParams(location.search);
+    if (qs.get('login') === '1') {
+      window.ssbSession.clear();
+      for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('LIFF_STORE') === 0) localStorage.removeItem(k); }
+      localStorage.removeItem('ssb_admin_pin_v1');
+      qs.delete('login'); var q = qs.toString();
+      history.replaceState(null, '', location.pathname + (q ? '?' + q : '') + location.hash);   // ตัดออก กันวนตอน LINE เด้งกลับ
+      return;
+    }
+  } catch (e) {}
   var s = window.ssbSession.get(), L = window.liff;
   if (!s || isIssuer || window.SSB_SSO_OFF || !L || L.__ssbSso) return;
   L.__ssbSso = true;
@@ -105,4 +118,26 @@
   L.isLoggedIn = function () { return true; };
   L.login = function () {};
   L.getProfile = function () { return Promise.resolve({ userId: s.uid, displayName: s.name, pictureUrl: s.pic, statusMessage: '' }); };
+  // 👤 ป้ายกลางล่าง (ไม่บังปุ่มออกจากระบบในเมนูซ้าย / ปุ่มลอยขวา) "ชื่อ · เปลี่ยนบัญชี" — หน้านี้ไม่ถามล็อกอินเพราะใช้บัตรที่ค้างในเบราว์เซอร์ จึงต้องโชว์ว่าเป็นบัญชีใคร
+  var chip = function () {
+    if (document.getElementById('ssbWho')) return;
+    var b = document.createElement('div'); b.id = 'ssbWho';
+    b.setAttribute('style', 'position:fixed;left:50%;transform:translateX(-50%);bottom:10px;z-index:2147483000;display:flex;align-items:center;gap:6px;max-width:calc(100vw - 20px);padding:5px 6px 5px 10px;border-radius:999px;background:rgba(27,67,50,.92);color:#fff;font:12px/1.2 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.2)');
+    var n = document.createElement('span'); n.textContent = '👤 ' + (s.name || 'ไม่ทราบชื่อ');
+    n.setAttribute('style', 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:46vw');
+    var sw = document.createElement('button'); sw.type = 'button'; sw.textContent = 'เปลี่ยนบัญชี';
+    sw.setAttribute('style', 'border:0;border-radius:999px;padding:4px 9px;background:#C9A227;color:#1B4332;font-weight:600;font-size:12px;font-family:inherit;cursor:pointer');
+    var x = document.createElement('button'); x.type = 'button'; x.textContent = '×'; x.setAttribute('aria-label', 'ซ่อน');
+    x.setAttribute('style', 'border:0;background:transparent;color:#fff;font-size:16px;line-height:1;cursor:pointer;padding:0 4px;opacity:.75');
+    sw.onclick = function () {
+      if (!confirm('ตอนนี้ใช้บัญชี "' + (s.name || s.uid) + '"\nออกแล้วล็อกอิน LINE ด้วยบัญชีของคุณเอง?')) return;
+      var u = new URL(location.href); u.searchParams.set('login', '1'); location.href = u.toString();
+    };
+    x.onclick = function () { b.remove(); };
+    b.appendChild(n); b.appendChild(sw); b.appendChild(x);
+    var st = document.createElement('style'); st.textContent = '@media print{#ssbWho{display:none!important}}';
+    (document.head || document.body).appendChild(st);
+    document.body.appendChild(b);
+  };
+  if (document.body) chip(); else document.addEventListener('DOMContentLoaded', chip);
 })();
