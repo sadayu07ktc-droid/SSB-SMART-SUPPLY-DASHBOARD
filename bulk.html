@@ -610,7 +610,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-20a</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-20b</span></div>
   </div>
   </div></main>
 </div>
@@ -1558,11 +1558,13 @@ async function custXDownload(b){
     const sh={font:F({bold:true,color:{rgb:'FFFFFF'}}),fill:{fgColor:{rgb:'1B4332'}},border:bd,alignment:{horizontal:'center',vertical:'center',wrapText:true}};
     const sk={font:F({sz:8,italic:true,color:{rgb:'8A9A90'}}),fill:{fgColor:{rgb:'F2F6F3'}},border:bd,alignment:{horizontal:'center'}};
     const sro={font:F({sz:9,color:{rgb:'6B7A70'}}),fill:{fgColor:{rgb:'F2F6F3'}},border:bd}, sd={font:F(),border:bd}, sz={font:F(),border:bd,fill:{fgColor:{rgb:'FAFCFA'}}};
+    const swb={origin:{font:F({bold:true,color:{rgb:'A15C07'}}),fill:{fgColor:{rgb:'FDF0D9'}},border:bd,alignment:{horizontal:'center'}},
+      dest:{font:F({bold:true,color:{rgb:'1D4ED8'}}),fill:{fgColor:{rgb:'E2EBFD'}},border:bd,alignment:{horizontal:'center'}}};   // ยึดน้ำหนัก ต้นทาง=อำพัน / ปลายทาง=น้ำเงิน (ตรงกับป้ายบนจอ)
     const c=(v,s)=>({v:v==null?'':String(v),t:'s',s});   // ทุกช่องเป็นข้อความ → รหัส/พิกัดไม่เพี้ยน
     const rows=CUST.customers.slice().sort((a,b)=>String(a.cust_name||'').localeCompare(String(b.cust_name||''),'th'))
       .concat(CUST.missing.map(x=>({cust_name:x.cust_name,_plan:1})));
     const aoa=[CX_COLS.map(x=>c(x.h+(x.ro?' (อ่านอย่างเดียว)':x.k==='cust_name'?' (ห้ามแก้ชื่อแถวเดิม)':''),sh)),CX_COLS.map(x=>c(x.ro?'_'+x.k:x.k,sk))];
-    rows.forEach((r,i)=>aoa.push(CX_COLS.map(x=>c(x.get?x.get(r):x.k==='pin'?r.dtc_poi_id:r[x.k],x.ro?sro:i%2?sz:sd))));
+    rows.forEach((r,i)=>aoa.push(CX_COLS.map(x=>c(x.get?x.get(r):x.k==='pin'?r.dtc_poi_id:r[x.k],x.ro?sro:(x.k==='weight_basis'&&swb[r.weight_basis])||(i%2?sz:sd)))));
     const ws={}; aoa.forEach((row,ri)=>row.forEach((cell,ci)=>{ ws[X.utils.encode_cell({r:ri,c:ci})]=cell; }));
     ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:CX_COLS.length-1}});
     ws['!cols']=CX_COLS.map(x=>({wch:x.w})); ws['!rows']=[{hpt:30},{hpt:13}]; ws['!freeze']={xSplit:1,ySplit:2};
