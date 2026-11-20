@@ -324,9 +324,27 @@ function checkinHtml(){
 }
 /* ── PK: เวลาถึงแต่ละจุด (pk_stop_arrivals · GPS) + เวลาคนขับบันทึกจุด (pk_stop_logs) ── */
 const thShort=iso=>{ const d=new Date(iso); return isNaN(d)?'—':d.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}); };
+// 🚪 20 พ.ย. เวลาออกจากจุด (GPS · stop_departures) — ชุดเดียวกับ Order_Status / Driver_form (memory ssb-checkin-status-points)
+//   inside+ไม่มี left_at = ยังอยู่ในหมุด · exits>1 = ออกแล้ววนกลับ (left_at = ครั้งล่าสุด) · final = ถึงจุดถัดไป/โรงงาน (ล็อก)
+function devDur(min){ min=Math.max(0,Math.round(min)); const h=Math.floor(min/60),m=min%60; return h?h+' ชม.'+(m?' '+m+' น.':''):m+' น.'; }
+function devDepTxt(d, arrivedAt){
+  if(!d) return '';
+  const by={next_stop:'ถึงจุดถัดไปแล้ว',home:'ถึงโรงงาน/ลาน SSB แล้ว',backfill:'ย้อนหลังจาก dtc_s2s'}[d.final_by]||'';
+  if(d.inside) return `<span class="mini">🚪 ยังอยู่ในหมุด${d.exits?` · เคยออก ${d.exits} ครั้ง (วนกลับ)`:''}${d.left_at?` · ออกล่าสุด ${thShort(d.left_at)}`:''}</span>`;
+  const a=Date.parse(arrivedAt||''), l=Date.parse(d.left_at||''), stay=!isNaN(a)&&!isNaN(l)?` · อยู่ ${devDur((l-a)/60000)}`:'';
+  return `<span class="mini">🚪 ออก${d.final?'':'ล่าสุด'} <b>${thShort(d.left_at)}</b>${stay}${d.exits>1?` · ออก ${d.exits} ครั้ง`:''}${d.final?` · ✅ ${by}`:' · รอถึงจุดถัดไปค่อยล็อก'}</span>`;
+}
+function departFarmSec(){   // ไร่/Bulk: จุดเดียว (seq 1)
+  if(JOB.pk) return '';
+  const d=(JOB.departs||[]).find(x=>+x.seq===1); if(!d) return '';
+  const at=JOB.order&&JOB.order.arrived_at, iso=(()=>{ const m=String(at||'').match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+    return m?`${m[3]}-${('0'+m[2]).slice(-2)}-${('0'+m[1]).slice(-2)}T${('0'+m[4]).slice(-2)}:${m[5]}:00+07:00`:at; })();
+  return `<div class="sec"><h3>🚪 เวลาออกจากสวน/ลูกค้า<span class="r">GPS · ออกวนกลับ = บันทึกใหม่ จนถึงจุดถัดไป/โรงงาน</span></h3>
+    <div class="arow"><span class="sq">1</span><div class="nm"><div><b>${esc(d.stop_name||'')}</b></div>${devDepTxt(d, iso)}</div></div></div>`;
+}
 function arrivalsSec(){
-  const pk=JOB.pk; if(!pk||!pk.plan||!pk.plan.length) return '';
-  const arr={}, lg={}; (pk.arrivals||[]).forEach(a=>arr[a.seq]=a); (pk.logs||[]).forEach(l=>lg[l.seq]=l);
+  const pk=JOB.pk; if(!pk||!pk.plan||!pk.plan.length) return departFarmSec();
+  const arr={}, lg={}, dp={}; (pk.arrivals||[]).forEach(a=>arr[a.seq]=a); (pk.logs||[]).forEach(l=>lg[l.seq]=l); (JOB.departs||[]).forEach(d=>dp[d.seq]=d);
   const oc=ordCheckin();   // ไม่มี GPS รายจุด → ใช้เช็คอินของออเดอร์ (จุดแรก / ไม่ได้เช็คอิน = จุดช่องลูกค้า) = กติกาเดียวกับ order-tracker
   const rows=pk.plan.map(s=>{ const a=arr[s.seq], l=lg[s.seq];
     const arrive=a?`<span><span class="src gps">🛰️ ถึง ${thShort(a.arrived_at)}</span> <span class="mini">ห่างหมุด ${a.dist_m??'—'} ม.${a.notified?' · แจ้ง LINE แล้ว':''}</span></span>`
@@ -334,6 +352,7 @@ function arrivalsSec(){
       : !s.pin?'<span class="src no">⚠️ ไม่มีหมุด DTC — จับเวลาถึงไม่ได้</span>'
       : '<span class="mini">ยังไม่มีเวลาถึงจาก GPS</span>';
     return `<div class="arow"><span class="sq">${s.no||s.seq}</span><div class="nm"><div><b>${esc(s.name)}</b></div>${arrive}
+      ${dp[s.seq]?devDepTxt(dp[s.seq], a&&a.arrived_at):''}
       ${l?`<span class="mini">📝 คนขับบันทึกจุดนี้ ${thShort(l.created_at)}</span>`:''}
       ${!a&&l?`<button class="btn ghost sm" data-at="${esc(l.created_at)}" data-seq="${s.seq}" onclick="gpsCheck(this)">📍 ดูพิกัดรถตอนบันทึก</button>`:''}<div class="gpsres"></div></div></div>`; }).join('');
   return `<div class="sec"><h3>📍 เวลาถึงแต่ละจุด<span class="r">รถเข้ารัศมีหมุด DTC = จดเวลาถึงให้เอง</span></h3>${rows}
