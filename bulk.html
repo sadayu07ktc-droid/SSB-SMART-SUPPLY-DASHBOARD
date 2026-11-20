@@ -609,7 +609,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19j</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19k</span></div>
   </div>
   </div></main>
 </div>
@@ -1490,12 +1490,13 @@ function drawCustList(){
         ${c.radius_m?`<div class="sub" style="font-size:11.5px">รัศมี ${c.radius_m} ม.</div>`:''}</td>
       <td>${c.has_dest_scale?'<span class="yn y">✓ มี</span>':'<span class="yn n">ไม่มี</span>'}</td>
       <td>${c.need_slip_out?'<span class="yn y">✓ ต้องมี</span>':'<span class="yn n">ไม่ต้อง</span>'}</td>
+      <td>${WB_TH[c.weight_basis]?'<span class="yn y">'+WB_TH[c.weight_basis]+'</span>':'<span class="yn n">—</span>'}</td>
       <td><span class="chip ${st[0]}">${st[1]}</span>${c.note?`<div class="sub" style="font-size:11.5px;margin-top:3px">${esc(c.note)}</div>`:''}</td>
       ${ed?`<td style="white-space:nowrap">${st[1]==='รอยืนยันหมุด'?`<button class="btn sm pri" type="button" data-ok="${esc(c.cust_code)}">✓ ยืนยัน</button> `:''}${st[1]==='พร้อม'?`<button class="btn sm" type="button" data-un="${esc(c.cust_code)}" title="กลับเป็น รอยืนยันหมุด · พิกัดไม่เปลี่ยน">ยกเลิกการยืนยัน</button> `:''}<button class="btn sm" type="button" data-ed="${esc(c.cust_code)}">แก้ไข</button></td>`:''}</tr>`; }).join('');
   const miss=d.missing.length?`<div class="cmiss"><b>ลูกค้าในแพลนที่ยังไม่ได้ตั้งค่า (${d.missing.length})</b><span class="sub" style="font-size:12px">ยังไม่ตั้งค่า = คนขับกด "ถึงลูกค้า" เอง · ไม่มีขั้นชั่งปลายทาง</span>
     ${d.missing.map((x,i)=>`<div><span>${esc(x.cust_name||'—')}</span>${ed?`<button class="btn sm" type="button" data-add="${i}">+ ตั้งค่า</button>`:''}</div>`).join('')}</div>`:'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="cT">
-    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">พิกัดเช็คอิน · ตาชั่งปลายทาง · ใบชั่งตอนออก</div><h2 id="cT" style="color:#fff">📍 ลูกค้า Bulk · ${d.customers.length} ราย</h2></div>
+    <div class="dlghd"><div><div class="sub" style="color:#E9D9A6">พิกัดเช็คอิน · ตาชั่งปลายทาง · ใบชั่งตอนออก · ยึดน้ำหนัก</div><h2 id="cT" style="color:#fff">📍 ลูกค้า Bulk · ${d.customers.length} ราย</h2></div>
       <button type="button" class="dlgx" aria-label="ปิด" id="cX">✕</button></div>
     <div class="dlgbd">
       <div class="cinfo"><span>คนขับเข้าใกล้พิกัดลูกค้า = ระบบเช็คอิน "ถึงลูกค้า" ให้เอง (รัศมีเดียวกับรถไร่ · ตั้งรายลูกค้าได้) · พิกัดกรอกเอง ใช้ก่อนหมุด DTC
@@ -1503,7 +1504,7 @@ function drawCustList(){
         <span class="cxbar"><button class="btn sm xl" type="button" id="cXd" title="ไฟล์นี้ใช้เป็นแม่แบบอัปโหลดกลับ">⬇ ดาวน์โหลด Excel</button>${ed?`<button class="btn sm" type="button" id="cXu" title="แก้หลายรายพร้อมกันจากไฟล์ที่ดาวน์โหลด">⬆ อัปโหลด</button><input type="file" id="cXf" accept=".xlsx,.xls,.csv" hidden>`:''}
         ${ed?`<button class="btn sm pri" type="button" id="cAdd">＋ เพิ่มลูกค้า</button>`:''}
         ${ed?`<button class="btn sm" type="button" id="cRef" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>`:''}</span></div>
-      <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
+      <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>ยึดน้ำหนัก</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
         <tbody>${rows||`<tr><td colspan="7" class="empty">ยังไม่มีลูกค้า</td></tr>`}</tbody></table></div>
       ${miss}
       ${ed?'':'<div class="sub">ดูอย่างเดียว · แก้ได้เฉพาะ DEV / แอดมิน Bulk / ผู้จัดการ</div>'}
@@ -1532,6 +1533,8 @@ function drawCustList(){
 }
 /* 📥 Excel ลูกค้า Bulk · ดาวน์โหลด → แก้ → อัปโหลด → สรุป → ยืนยัน (แบบทะเบียนพนักงาน MySSB · skill webapp-excel-roundtrip) · 2026-11-19
    แถว 1 หัวไทย · แถว 2 คีย์อังกฤษ (ห้ามแก้) · ช่องว่าง = คงค่าเดิม · ลบแถว ≠ ลบลูกค้า · หลังบ้าน bulk-plan custImport ตรวจซ้ำทุกครั้ง */
+/* ⚖️ ยึดน้ำหนัก ต้นทาง/ปลายทาง · 19 พ.ย. คุณน้องขอ · bulk_customers.weight_basis origin/dest/null */
+const WB_TH={origin:'ต้นทาง',dest:'ปลายทาง'};
 const CX_COLS=[
   {k:'cust_name',h:'ชื่อลูกค้า',w:40,req:1,help:'ใช้จับคู่ลูกค้าเดิม (ไม่มีรหัส SAP แล้ว) · ชื่อไม่ตรงลูกค้าไหน = เพิ่มลูกค้าใหม่ · เปลี่ยนชื่อทำในเว็บ'},
   {k:'pin',h:'หมุด DTC',w:13,help:'รหัสหมุด เช่น ST-32551 (ดูในแผ่น "หมุด DTC") หรือชื่อหมุดตรงตัว'},
@@ -1541,6 +1544,7 @@ const CX_COLS=[
   {k:'radius_m',h:'รัศมีเช็คอิน (ม.)',w:12,help:'50–5000 · ว่าง = 300 ม. เท่ารถไร่'},
   {k:'has_dest_scale',h:'ตาชั่งปลายทาง',w:12,get:c=>c._plan?'':c.has_dest_scale?'มี':'ไม่มี',help:'มี / ไม่มี'},
   {k:'need_slip_out',h:'ใบชั่งตอนออก',w:12,get:c=>c._plan?'':c.need_slip_out?'ต้องมี':'ไม่ต้อง',help:'ต้องมี / ไม่ต้อง'},
+  {k:'weight_basis',h:'ยึดน้ำหนัก',w:12,get:c=>c._plan?'':WB_TH[c.weight_basis]||'',help:'ต้นทาง (ตาชั่ง SSB) / ปลายทาง (ตาชั่งลูกค้า) · ว่าง = คงค่าเดิม / ยังไม่ระบุ'},
   {k:'confirm',h:'ยืนยันหมุด',w:12,get:c=>c._plan?'':/^auto/.test(c.match_note||'')?'รอยืนยัน':'ยืนยันแล้ว',help:'ยืนยันแล้ว / รอยืนยัน · แก้หมุดหรือพิกัด = ยืนยันให้เอง (เหมือนกดบันทึกในเว็บ)'},
   {k:'note',h:'หมายเหตุ',w:30,help:'เช่น เข้าประตู 3 · ต้องจองคิวก่อน'},
   {k:'central',h:'ค่ากลาง (กม.)',w:16,ro:1,get:c=>((CUST&&CUST.central||{})[c.dtc_poi_name]||[]).map(x=>x.km+(x.jt?' ('+x.jt+')':'')).join(' · ')},
@@ -1662,6 +1666,12 @@ function editCust(c){
       <div class="lb">ขั้นตอนคนขับ</div>
       <div><label class="ck"><input type="checkbox" id="eScale"${c.has_dest_scale?' checked':''}><span>ปลายทางมีตาชั่ง<small>คนขับมีขั้น "ชั่งปลายทาง" + ถ่ายใบชั่งของลูกค้า</small></span></label>
         <label class="ck"><input type="checkbox" id="eSlip"${c.need_slip_out?' checked':''}><span>ออกจากลูกค้าต้องมีใบชั่ง<small>ต้องถ่ายรูปใบชั่งก่อนกด "ออกจากลูกค้า"</small></span></label></div>
+      <label for="eWB">ยึดน้ำหนัก</label>
+      <div><select id="eWB" style="max-width:280px">
+          <option value="">— ยังไม่ระบุ —</option>
+          <option value="origin"${c.weight_basis==='origin'?' selected':''}>ต้นทาง (ตาชั่ง SSB)</option>
+          <option value="dest"${c.weight_basis==='dest'?' selected':''}>ปลายทาง (ตาชั่งลูกค้า)</option></select>
+        <div class="hint">น้ำหนักที่ใช้ตกลงกับลูกค้า ยึดตาชั่งฝั่งไหน</div></div>
       <label for="eNote">หมายเหตุ</label>
       <textarea id="eNote" rows="2" placeholder="เช่น เข้าประตู 3 · ต้องจองคิวก่อน">${esc(c.note||'')}</textarea>
     </div></div>
@@ -1684,7 +1694,7 @@ function editCust(c){
     if(!pick&&!loc&&!confirmNoLoc()) return;
     const nm=$('eName').value.trim(); if(!nm){ toast('ใส่ชื่อลูกค้า',true); $('eName').focus(); return; }
     saveCust($('eYes'),{custCode:c.cust_code,custName:nm,poiId:pick,location:loc,radiusM:$('eRad').value,
-      hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,note:$('eNote').value.trim()},'บันทึก '+nm+' แล้ว'); };
+      hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,weightBasis:$('eWB').value,note:$('eNote').value.trim()},'บันทึก '+nm+' แล้ว'); };
   // ยังไม่มีพิกัด: เตือนครั้งแรก (ปุ่มเปลี่ยนเป็นยืนยัน) กดซ้ำ = บันทึกจริง
   function confirmNoLoc(){ const b=$('eYes'); if(b.dataset.warned) return true;
     b.dataset.warned='1'; b.textContent='บันทึกแบบไม่มีพิกัด'; toast('ยังไม่มีพิกัด — คนขับต้องกด "ถึงลูกค้า" เอง · กดบันทึกอีกครั้งเพื่อยืนยัน',true); return false; }
