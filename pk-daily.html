@@ -125,6 +125,13 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .yptab button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px;font-weight:600;font-size:13px;cursor:pointer;color:var(--ink)}
 .yptab button.on{background:var(--head);color:var(--head-ink);border-color:var(--head)}
 .yptab b{font-variant-numeric:tabular-nums;margin-left:3px}
+/* 🔎 ค้นหา + แถบวันเลื่อนแนวนอน (แบบ Order Hub · 20 พ.ย.) */
+.ypq{position:relative;margin-top:8px;flex:none}.ypq svg{position:absolute;left:12px;top:50%;width:17px;height:17px;transform:translateY(-50%);fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;pointer-events:none}
+.ypq input{width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:9px 36px 9px 38px;border:1px solid var(--line);border-radius:999px;background:var(--surface);color:var(--ink)}
+.ypq input:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand) 18%,transparent)}.ypq input::-webkit-search-cancel-button{display:none}
+.ypqx{position:absolute;right:6px;top:50%;transform:translateY(-50%);border:0;background:var(--surface2);color:var(--muted);width:26px;height:26px;border-radius:50%;cursor:pointer;font-size:13px}
+.ypdc.ypdays{flex:none;flex-wrap:nowrap;overflow-x:auto;padding-bottom:7px;scrollbar-width:thin;scrollbar-color:var(--muted) transparent;overscroll-behavior-x:contain}
+.ypdc.ypdays button{flex:none;white-space:nowrap}.ypdc.ypdays::-webkit-scrollbar{height:6px}.ypdc.ypdays::-webkit-scrollbar-thumb{background:color-mix(in srgb,var(--muted) 55%,transparent);border-radius:3px}
 .ypc .yph{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
 .ypc .yph b{font-size:16px}
 /* ✓ คีย์ SAP แล้ว (19 พ.ย.) รีเช็คแอดมิน · ไม่ส่งเมล · โชว์สถานะในหน้า FM-MK */
@@ -3216,7 +3223,7 @@ renderAll();route();
    LINE OA อยู่ในกลุ่มเงียบๆ (ไม่ตอบ) → line-webhook เก็บข้อความ → pk-yp แยกร้าน/สินค้า/ลัง/วันส่ง
    ลังรวม = จำนวน + แถมจริง (+N / "แถม N ลัง") · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง
    ลงแพลน = เพิ่มจุดส่งยี่ปั๊วเข้ารถที่เลือก (ลังตามออเดอร์) + บันทึกสถานะว่าลงแล้ว (ไม่ขึ้น Pending ซ้ำ) */
-const YP={msgs:[],src:'',groups:[],canEdit:false,tab:'p',err:'',busy:0,loaded:0,sel:{},day:'',flt:'',seen:null,fresh:new Set(),po:0};
+const YP={msgs:[],src:'',groups:[],canEdit:false,tab:'p',err:'',busy:0,loaded:0,sel:{},day:'',flt:'',q:'',seen:null,fresh:new Set(),po:0};
 /* 🧾 PO รอส่ง (คุณน้อง 12 พ.ย.): เซลส์ส่งรูป/PDF PO ในกลุ่ม → Edge pk-po อ่าน → pk-yp v13 ผูกข้อความนัดส่ง/รับที่อ้าง PO → m.p.po
    ปุ่ม FAB #bPo = ลิ้นชักเดียวกัน แต่เฉพาะ PO · รายชื่อลูกค้าเรียงตามคิว (เลยกำหนด → ใกล้สุด → รอนัด) · PO ที่มีวันแล้วขึ้นในชิปวันของ Pending ยี่ปั๊วด้วย */
 const ypIsPo=m=>!!(m.p&&m.p.po);
@@ -3463,8 +3470,19 @@ function poRow(m){const p=m.p||{},o=p.po||{},d=p.dlv,s=poSt(m),t0=new Date(Date.
     :s==='wait'?'<div class="pojump w"><span>⏳ <b>รอเซลส์นัดวันส่ง/วันเข้ารับ</b> · พอเซลส์แจ้งในกลุ่มว่า PO นี้ส่ง/รับวันไหน รายการนี้ย้ายไป Pending ยี่ปั๊วเอง</span></div>':'';
   return '<details class="porow" data-pomid="'+esc(m.mid)+'"'+(ypOpenD.has('po:'+m.mid)?' open':'')+'><summary><span class="pn">'+(nw?'<span class="tchip nw">🆕</span> ':'')+esc(p.shop||'(ไม่มีชื่อร้าน)')+'</span><span class="pd '+cls+'">'+esc(lab)+'</span>'
     +'<span class="ps">🧾 '+esc(o.no||'-')+(s==='wait'&&o.due?' · กำหนดตาม PO '+esc(dateTH(o.due)):'')+(p.pickup?' · 🙋 รับเอง':'')+'</span><span class="pq">'+ypQty(p)+'</span></summary>'+top+ypCard(m,s!=='wait')+'</details>';}
+/* 🔎 20 พ.ย. คุณน้อง "PK ควรทำแบบ Order Hub · ค้นหาได้ · วันที่เลื่อนบาร์ด้านล่าง"
+   ค้นหา = ลูกค้า / สินค้า (ชื่อที่เซลส์พิมพ์ + ชื่อตามฐาน + รหัส) / เซลส์ / เลข PO / SO / คนขับ-ทะเบียนรับเอง · หลายคำ = ต้องเจอทุกคำ · ไม่สนช่องว่าง/ตัวพิมพ์ */
+const ypQs=x=>String(x||'').toLowerCase().replace(/\s+/g,'');
+function ypQHit(m,q){q=q==null?YP.q:q;const w=String(q||'').trim().split(/\s+/).filter(Boolean).map(ypQs);if(!w.length)return true;
+  const p=m.p||{},o=p.po||{},k=p.pick||{};
+  const hay=ypQs([p.shop,m.sender,o.no,o.buyer,o.branch,p.so,k.driver,k.plate].concat(...(p.items||[]).map(i=>[i.n,i.pn,i.pc])).filter(Boolean).join('|'));
+  return w.every(t=>hay.includes(t));}
+let ypQT=0;
+function ypQIn(el){clearTimeout(ypQT);const v=el.value;ypQT=setTimeout(()=>{if(YP.q===v)return;YP.q=v;const c=el.selectionStart;ypDraw();
+  const n=$('ypQ');if(n){n.focus();try{n.setSelectionRange(c,c);}catch(e){}}},180);}
 const YP_REPBTN='<button type="button" class="yprep" data-yprep title="เรียกรายงาน Excel / PDF / JPEG · ค่าเริ่ม = ตัวกรองบนจอ">📊 รายงาน</button>';
-function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP.msgs.filter(ypIsPo):YP.msgs.filter(ypInYp),c=ypCnt(MS),pd=$('pdate').value;
+function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS0=PO?YP.msgs.filter(ypIsPo):YP.msgs.filter(ypInYp),MS=MS0.filter(m=>ypQHit(m)),c=ypCnt(MS),pd=$('pdate').value;
+  const dsl=H.querySelector('#ypDr .ypdays'),dsx=dsl?dsl.scrollLeft:0;
   const P0=MS.filter(m=>!ypSt(m)),days=[...new Set(P0.map(ypDayOf))].sort((a,b)=>a==='none'?1:b==='none'?-1:a.localeCompare(b));
   if(YP.day&&YP.day!==YP_RECENT&&!days.includes(YP.day))YP.day='';
   const rec=YP.day===YP_RECENT;
@@ -3481,9 +3499,11 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP
   if(YP.src==='nogroup')h+='<div class="ypban">ยังไม่ได้เชิญ LINE OA เข้ากลุ่ม “เซลส์แอดมิน” · ข้างล่างเป็น<b>ตัวอย่าง</b> '+YP.msgs.length+' ข้อความ (ลองลงแพลนได้ · สถานะไม่บันทึก)</div>';
   if(YP.err&&YP.loaded)h+='<div class="warn">โหลดล่าสุดไม่สำเร็จ: '+esc(YP.err)+'</div>';
   if(ypLive()||YP.msgs.length){h+='<div class="yptab" role="tablist">'+(PO?[['wait','⏳ รอนัด',pc.wait],['all','ทั้งหมด',pc.all],['q','📤 รอจัดส่ง',pc.q],['planned','✅ ลงแพลนแล้ว',pc.planned],['ignored','🙈 ซ่อน',pc.ignored]]
-      :[['p','⏳ Pending',c.p],['planned','✅ ลงแพลนแล้ว',c.planned],['ignored','🙈 ซ่อน',c.ignored]]).map(([k,l,n])=>'<button role="tab" data-yptab="'+k+'" aria-selected="'+(YP.tab===k)+'" class="'+(YP.tab===k?'on':'')+'">'+l+'<b>'+(n||0)+'</b></button>').join('')+'</div>';
+      :[['p','⏳ Pending',c.p],['planned','✅ ลงแพลนแล้ว',c.planned],['ignored','🙈 ซ่อน',c.ignored]]).map(([k,l,n])=>'<button role="tab" data-yptab="'+k+'" aria-selected="'+(YP.tab===k)+'" class="'+(YP.tab===k?'on':'')+'">'+l+'<b>'+(n||0)+'</b></button>').join('')+'</div>'
+      +'<div class="ypq"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg><input id="ypQ" type="search" enterkeyhint="search" autocomplete="off" placeholder="ค้นหา ลูกค้า / สินค้า / เซลส์" aria-label="ค้นหา ลูกค้า สินค้า เซลส์" value="'+esc(YP.q)+'">'+(YP.q?'<button type="button" class="ypqx" data-ypqx aria-label="ล้างคำค้น">✕</button>':'')+'</div>'
+      +(YP.q.trim()?'<div class="note" style="margin-top:6px">🔎 พบ <b>'+MS.length+'</b> จาก '+MS0.length+' ออเดอร์ ที่ตรงกับ “'+esc(YP.q.trim())+'”</div>':'');
     if(!PO&&YP.tab==='p'&&P0.length){const nwOf=d=>P0.filter(m=>(d===''||ypDayOf(m)===d)&&ypIsNew(m)).length,nwI=k=>k?'<i class="ypnw">ใหม่ '+k+'</i>':'';
-      h+='<div class="ypdc" role="group" aria-label="วันรับ/วันส่ง">'+[['','ทั้งหมด',P0.length],[YP_RECENT,'ส่งมาล่าสุด',P0.length]].concat(days.map(d=>[d,ypDayLab(d),P0.filter(m=>ypDayOf(m)===d).length]))
+      h+='<div class="ypdc ypdays" role="group" aria-label="วันรับ/วันส่ง">'+[['','ทั้งหมด',P0.length],[YP_RECENT,'ส่งมาล่าสุด',P0.length]].concat(days.map(d=>[d,ypDayLab(d),P0.filter(m=>ypDayOf(m)===d).length]))
         .map(([d,l,c])=>'<button type="button" data-ypday="'+esc(d)+'" class="'+(YP.day===d?'on':'')+'" aria-pressed="'+(YP.day===d)+'"'+(d===YP_RECENT?' title="ทุกวันรวมกัน เรียงตามเวลาที่เซลส์ส่งข้อความ ใหม่สุดอยู่บน"':'')+'>'+(d===YP_RECENT?'🕘 ':d?'📅 ':'')+esc(l)+(d===YP_RECENT?'':' · '+c)+nwI(nwOf(d===YP_RECENT?'':d))+'</button>').join('')+'</div>';
       {const nU=P0.filter(ypUnk).length,nS=P0.filter(ypNoSt).length;
        h+='<div class="ypdc ypfl" role="group" aria-label="กรองออเดอร์ที่ต้องแก้">'+(!(nU||nS||YP.flt)?'':[['unk','⚠️ สินค้าไม่ตรงฐาน',nU,'สินค้าบางบรรทัดยังไม่ตรงกับฐานข้อมูลสินค้า'],['nost','📍 ส่งเอง · ไม่พบร้าน/ค่ากลาง',nS,'เราส่งเอง (ไม่ใช่ลูกค้ารับเอง) แต่ไม่พบชื่อร้านในรายชื่อจุดส่ง หรือร้านยังไม่มีค่ากลาง']]
@@ -3492,7 +3512,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP
     else if(!PO&&YP.loaded&&MS.length)h+='<div class="ypdc ypfl">'+YP_REPBTN+'</div>';
     if(PO&&L.length){const t0=new Date(Date.now()+7*3600e3).toISOString().slice(0,10),late=L.filter(m=>poSt(m)==='q'&&m.p.dlv<t0).length;
       h+='<div class="note" style="margin-top:8px">ลูกค้า '+L.length+' ราย · เรียงตามคิวส่ง (ใกล้สุดอยู่บน)'+(late?' · <b style="color:var(--bad)">เลยวันนัด '+late+'</b>':'')+' · กดชื่อเพื่อดูรายการสินค้า</div>';}
-    h+=L.length?L.map(m=>PO?poRow(m):ypCard(m)).join(''):(YP.loaded?'<div class="note" style="text-align:center;padding:24px 0">'+(PO?(YP.tab==='all'||YP.tab==='wait'||YP.tab==='q'?'ไม่มี PO รอส่ง 🎉':'ไม่มีรายการ'):YP.tab==='p'?'ไม่มีออเดอร์ค้าง 🎉':'ไม่มีรายการ')+'</div>':'');
+    h+=L.length?L.map(m=>PO?poRow(m):ypCard(m)).join(''):(YP.loaded?'<div class="note" style="text-align:center;padding:24px 0">'+(PO?(YP.tab==='all'||YP.tab==='wait'||YP.tab==='q'?'ไม่มี PO รอส่ง 🎉':'ไม่มีรายการ'):YP.q.trim()?'ไม่พบออเดอร์ที่ตรงกับ “'+esc(YP.q.trim())+'”':YP.tab==='p'?'ไม่มีออเดอร์ค้าง 🎉':'ไม่มีรายการ')+'</div>':'');
     if(PO)h+='<div class="note">ระบบอ่านรูป/PDF PO ที่เซลส์ส่งในกลุ่มอัตโนมัติ (ทุก 5 นาที · ย้อน 60 วัน) · ⏳ รอนัด = ยังอยู่หน้านี้ · เซลส์แจ้งวัน เช่น “ร้าน… PO… นัดส่ง 14/11” → 📤 รอจัดส่ง ย้ายไป Pending ยี่ปั๊วเอง · ลงแพลนแล้ว = ✅</div>';
     else h+='<div class="note">อ่านจากข้อความ 14 วันล่าสุด · ลังรวม = จำนวน + แถมจริง (+N / แถม N ลัง) · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง · ถัง นับแยก + ต้องมี COA · ข้อความคุยทั่วไปไม่แสดง</div>';}
   h+='</div><div class="df"><button class="btn sm" data-ypre'+(ypLive()?'':' disabled')+'>↻ โหลดใหม่</button><button class="btn pri" data-ypx>ปิด</button></div></aside>'
@@ -3513,6 +3533,9 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP
   H.querySelectorAll('[data-ypday]').forEach(b=>b.onclick=()=>{YP.fresh.clear();ypSeeDay(b.dataset.ypday);});
   H.querySelectorAll('[data-ypflt]').forEach(b=>b.onclick=()=>{YP.flt=YP.flt===b.dataset.ypflt?'':b.dataset.ypflt;ypDraw();});
   const rpb=H.querySelector('[data-yprep]');if(rpb)rpb.onclick=()=>yrOpen();
+  const qi=$('ypQ');if(qi){qi.oninput=()=>ypQIn(qi);qi.onkeydown=e=>{if(e.key==='Escape'&&qi.value){e.stopPropagation();qi.value='';ypQIn(qi);}};}
+  const qx=H.querySelector('[data-ypqx]');if(qx)qx.onclick=()=>{YP.q='';ypDraw();const n=$('ypQ');if(n)n.focus();};
+  {const ds=H.querySelector('#ypDr .ypdays');if(ds){if(dsx)ds.scrollLeft=dsx;else{const on=ds.querySelector('button.on');if(on&&on.offsetLeft+on.offsetWidth>ds.clientWidth)ds.scrollLeft=on.offsetLeft-ds.clientWidth/2+on.offsetWidth/2;}}}
   const re=H.querySelector('[data-ypre]');if(re)re.onclick=()=>{YP.pend=1;ypLoad();};
   H.querySelectorAll('.ypc').forEach(card=>{const m=YP.msgs.find(x=>x.mid===card.dataset.ypm);if(!m)return;
     const sv=YP.sel[m.mid]=YP.sel[m.mid]||{},i1=card.querySelector('[data-ypst]'),i2=card.querySelector('[data-ypveh]');
@@ -3535,7 +3558,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS=PO?YP
 /* ---------- 📊 รายงาน Pending ยี่ปั๊ว (คุณน้อง 20 พ.ย. "เพิ่ม เรียกรายงาน") ----------
    ปุ่ม 📊 รายงาน ข้างชิปกรอง → popup 3 ขั้น: 1 เลือกข้อมูล (ค่าเริ่ม = ตัวกรองบนจอ · กดในนี้ไม่เปลี่ยนจอ) · 2 เลือกรายงาน · 3 Excel / PDF / JPEG
    ใช้ตัวสร้างชุดเดียวกับรายงานคนขับ (drHeader/drKpi/drPaged/drRender/drSheet) · ธีมเขียว SSB + ทอง ลายหยดน้ำมัน (ออเดอร์น้ำมันพืช Packing) */
-const YR={sts:new Set(),days:new Set(),prob:new Set(),how:new Set(),kind:'ord'};
+const YR={sts:new Set(),days:new Set(),prob:new Set(),how:new Set(),kind:'ord',q:''};   /* q = คำค้นบนจอ (ypQHit) */
 const YR_ST={p:['Pending','⏳ Pending'],planned:['ลงแพลนแล้ว','✅ ลงแพลนแล้ว'],ignored:['ซ่อน','🙈 ซ่อน']};
 Object.assign(DR_ST,{'Pending':['#8a5a0b','#fef0d9'],'ลงแพลนแล้ว':['#127a2e','#e7f5ee'],'ซ่อน':['#5f5e5a','#efefef']});
 Object.assign(DR_IC,{alert:'<path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 17.4v.1"/>',drop:'<path d="M12 3s6 6.4 6 10.6a6 6 0 01-12 0C6 9.4 12 3 12 3z"/>'});
@@ -3546,6 +3569,7 @@ const YR_KIND=[{k:'ord',ic:'list',clr:'#2D6A4F',t:'รายการออเ�
 const yrAll=()=>YP.msgs.filter(ypInYp);
 const yrHow=m=>m.p&&m.p.pickup?'pick':'dlv';
 function yrHit(m,ex){
+  if(YR.q&&!ypQHit(m,YR.q))return false;
   if(ex!=='sts'&&YR.sts.size&&!YR.sts.has(ypSt(m)||'p'))return false;
   if(ex!=='days'&&YR.days.size&&!YR.days.has(ypDayOf(m)))return false;
   if(ex!=='prob'&&YR.prob.size&&!((YR.prob.has('unk')&&ypUnk(m))||(YR.prob.has('nost')&&ypNoSt(m))))return false;
@@ -3555,15 +3579,16 @@ const yrDayCmp=(a,b)=>a===b?0:a==='none'?1:b==='none'?-1:a.localeCompare(b);
 const yrSort=(a,b)=>yrDayCmp(ypDayOf(a),ypDayOf(b))||String(a.at).localeCompare(String(b.at));
 const yrList=()=>yrAll().filter(m=>yrHit(m)).sort(yrSort);
 function yrFromScreen(){const p=YP.tab==='p';YR.sts=new Set([YP.tab in YR_ST?YP.tab:'p']);
-  YR.days=new Set(p&&YP.day&&YP.day!==YP_RECENT?[YP.day]:[]);YR.prob=new Set(p&&YP.flt?[YP.flt]:[]);YR.how=new Set();}
-function yrIsScreen(){const s={sts:YR.sts,days:YR.days,prob:YR.prob,how:YR.how};yrFromScreen();
-  const eq=(a,b)=>a.size===b.size&&[...a].every(x=>b.has(x)),r=eq(s.sts,YR.sts)&&eq(s.days,YR.days)&&eq(s.prob,YR.prob)&&eq(s.how,YR.how);Object.assign(YR,s);return r;}
+  YR.days=new Set(p&&YP.day&&YP.day!==YP_RECENT?[YP.day]:[]);YR.prob=new Set(p&&YP.flt?[YP.flt]:[]);YR.how=new Set();YR.q=YP.q.trim();}
+function yrIsScreen(){const s={sts:YR.sts,days:YR.days,prob:YR.prob,how:YR.how,q:YR.q};yrFromScreen();
+  const eq=(a,b)=>a.size===b.size&&[...a].every(x=>b.has(x)),r=eq(s.sts,YR.sts)&&eq(s.days,YR.days)&&eq(s.prob,YR.prob)&&eq(s.how,YR.how)&&s.q===YR.q;Object.assign(YR,s);return r;}
 const yrD=d=>{if(!d||d==='none')return 'ไม่พบวัน';const x=d.split('-').map(Number);if(x.length<3||!x[0])return d;
   return ['อา.','จ.','อ.','พ.','พฤ.','ศ.','ส.'][new Date(Date.UTC(x[0],x[1]-1,x[2])).getUTCDay()]+' '+x[2]+'/'+x[1]+'/'+String(x[0]+543).slice(2);};
 function yrScope(){const t=[YR.sts.size&&YR.sts.size<3?[...YR.sts].map(k=>YR_ST[k][0]).join(' + '):'ทุกสถานะ'];
   if(YR.days.size)t.push([...YR.days].sort(yrDayCmp).map(yrD).join(', '));
   if(YR.prob.size)t.push([...YR.prob].map(k=>k==='unk'?'สินค้าไม่ตรงฐาน':'ไม่พบร้าน/ค่ากลาง').join(' หรือ '));
   if(YR.how.size===1)t.push(YR.how.has('pick')?'ลูกค้ารับเอง':'ส่งด้วยรถเรา');
+  if(YR.q)t.push('ค้นหา “'+YR.q+'”');
   return t.join(' · ');}
 const yrAtTxt=a=>String(a||'').split(' + ').filter(Boolean).map(x=>x==='บางนา'?'คลังบางนา':x==='หนองใหญ่'?'โรงงานหนองใหญ่':x).join(' + ');
 const yrMoney=v=>(+v||0).toLocaleString('th-TH',{maximumFractionDigits:2});
@@ -3687,6 +3712,7 @@ function yrOpen(keep){if(keep!==true)yrFromScreen();const A=yrAll();if(!A.length
     +row('วันส่ง/รับ',all('days')+days.map(d=>chip('days',d,(d==='none'?'':'📅 ')+ypDayLab(d),YR.days.has(d),cnt('days',m=>ypDayOf(m)===d))).join(''))
     +row('ต้องแก้',all('prob')+[['unk','⚠️ สินค้าไม่ตรงฐาน',ypUnk],['nost','📍 ไม่พบร้าน/ค่ากลาง',ypNoSt]].map(a=>chip('prob',a[0],a[1],YR.prob.has(a[0]),cnt('prob',a[2]))).join(''))
     +row('วิธีรับ',all('how')+[['dlv','🚚 ส่งด้วยรถเรา'],['pick','🙋 ลูกค้ารับเอง']].map(a=>chip('how',a[0],a[1],YR.how.has(a[0]),cnt('how',m=>yrHow(m)===a[0]))).join(''))
+    +(YR.q||YP.q.trim()?row('ค้นหา',chip('q','*','ทั้งหมด',!YR.q,null)+(YP.q.trim()?chip('q','1','🔎 “'+esc(YP.q.trim())+'”',!!YR.q,null):'')):'')
     +(L.length?'':'<div style="font-size:12px;color:var(--bad);margin:0 0 8px 68px">ไม่มีออเดอร์ตามที่เลือก · ลองกด “ทั้งหมด”</div>')
     +'<div style="margin-top:10px">'+lab('2 · เลือกรายงาน')+'</div>'+YR_KIND.map(card).join('')
     +'<div style="margin-top:12px">'+lab('3 · เลือกรูปแบบไฟล์')+'</div><div style="display:flex;gap:8px">'
@@ -3697,6 +3723,7 @@ function yrOpen(keep){if(keep!==true)yrFromScreen();const A=yrAll();if(!A.length
   ov.onclick=e=>{if(e.target===ov)close();};$('yrX').onclick=close;
   const sc=$('yrScr');if(sc)sc.onclick=()=>yrOpen();
   ov.querySelectorAll('.yr-c').forEach(b=>b.onclick=()=>{if(b.disabled)return;const g=b.dataset.g,v=b.dataset.v,S=YR[g];
+    if(g==='q'){YR.q=v==='*'?'':YP.q.trim();yrOpen(true);return;}
     if(v==='*')S.clear();else{if(S.has(v))S.delete(v);else S.add(v);
       const op=g==='days'?days:YR_OPT[g];if(op&&S.size===op.length)S.clear();}   /* เลือกครบทุกตัว = ทั้งหมด (ต้องแก้ 2 ตัว = มีปัญหาอย่างใดอย่างหนึ่ง ไม่ใช่ทั้งหมด) */
     yrOpen(true);});
