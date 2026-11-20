@@ -39,7 +39,14 @@ button,select,input,textarea{font:inherit}
 .veh .dr{font-size:12px;color:var(--muted)}
 .veh .mt{margin-left:auto;text-align:right;font-size:12px;white-space:nowrap}
 .b{display:inline-block;border-radius:999px;padding:0 7px;font-size:11.5px;font-weight:700}
-.b.bad{background:var(--badtint);color:var(--bad)} .b.ok{background:var(--oktint);color:var(--ok)} .b.gold{background:var(--goldtint);color:#7A5A12}
+.b.bad{background:var(--badtint);color:var(--bad)} .b.ok{background:var(--oktint);color:var(--ok)} .b.gold{background:var(--goldtint);color:#7A5A12} .b.eq{background:#E0ECF8;color:#1E4E79;cursor:help}
+table.fm th.d.eqx{box-shadow:inset 0 -3px 0 #3B82C4} body.printing table.fm th.d.eqx{box-shadow:none}
+.eqb{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}.eqb .btn{font-size:12.5px}
+.ask{position:fixed;inset:0;background:rgba(15,23,20,.45);z-index:60;display:flex;align-items:center;justify-content:center;padding:16px}
+.ask-c{background:#fff;border-radius:14px;max-width:440px;width:100%;padding:16px 18px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.ask-c h4{margin:0 0 8px;font-size:16px}.ask-b{font-size:13.5px;line-height:1.6}.ask-b ul{margin:6px 0;padding-left:18px}
+.ask-c label{display:block;font-weight:700;font-size:13px;margin:10px 0 4px}.ask-c textarea{width:100%;min-height:60px;border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit}
+.ask-f{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .main{min-width:0}
 .msg{padding:28px;text-align:center;color:var(--muted)}
 .stats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
@@ -228,13 +235,24 @@ async function loadList() {
   }
   renderList();
 }
+// 🧰 อุปกรณ์ติดรถ (ไม่ใช่ข้อ FM) ที่คนขับแจ้งผิดปกติ → ป้ายแยกจาก FM X (20 พ.ย.)
+const GAUGE_TH = { low: 'เกจต่ำ', high: 'เกจสูง', missing: 'ไม่มีถัง' };
+const eqCond = (x) => {
+  const q = x.qty_expected != null && x.qty_found != null ? ' (พบ ' + x.qty_found + '/' + x.qty_expected + ')' : '';
+  if (GAUGE_TH[x.value_text]) return GAUGE_TH[x.value_text];
+  if (x.value_text === 'fail') return 'ไม่ผ่าน';
+  return (x.condition === 'ปกติ' ? 'ขาด' : x.condition) + q;
+};
+const eqTxt = (x) => x.name + (x.unit_no ? ' (ถัง ' + x.unit_no + ')' : '') + ' ' + eqCond(x) + (x.note ? ' — "' + x.note + '"' : '');
+const eqTip = (v) => (v.eq_x || []).map((d) => dTxt(d.date) + ': ' + d.items.map(eqTxt).join(', ')).join('\n');
 function renderList() {
   const q = $('q').value.trim().toLowerCase();
   const vs = LIST.vehicles.filter((v) => !q || (v.plate + ' ' + v.drivers.map((x) => x.name).join(' ')).toLowerCase().includes(q));
   $('vlist').innerHTML = vs.length ? vs.map((v) => '<button class="veh' + (CUR === v.id ? ' on' : '') + '" data-id="' + v.id + '"><div><div class="pl">' + esc(v.plate_head) + (v.plate_tail ? ' / ' + esc(v.plate_tail) : '') + '</div>' +
     '<div class="dr">' + esc(v.drivers.map((x) => x.name).join(', ') || 'รถสแปร์') + ' · ' + esc(v.job_group) + '</div></div>' +
     '<div class="mt">' + (v.days_checked ? '<span class="b ok">' + v.days_checked + ' วัน</span>' : '<span class="b" style="color:var(--faint)">ยังไม่มี</span>') +
-    (v.unverified ? '<br><span class="b bad">รอทวนสอบ ' + v.unverified + '</span>' : v.problem_days ? '<br><span class="b gold">มี X ' + v.problem_days + ' วัน</span>' : '') + '</div></button>').join('')
+    (v.unverified ? '<br><span class="b bad" title="วันที่ข้อ FM-TR-10 ไม่ผ่าน และยังไม่ทวนสอบ">รอทวนสอบ ' + v.unverified + '</span>' : v.problem_days ? '<br><span class="b gold" title="ข้อ FM-TR-10 ไม่ผ่าน / ผู้ทวนสอบพบ (ตรงกับตาราง)">FM X ' + v.problem_days + ' วัน</span>' : '') +
+    (v.eq_x_days ? '<br><span class="b eq" title="' + esc('อุปกรณ์ติดรถผิดปกติ (ไม่อยู่ในตาราง FM)\n' + eqTip(v)) + '">🧰 อุปกรณ์ X ' + v.eq_x_days + ' วัน</span>' : '') + '</div></button>').join('')
     : '<div class="msg">ไม่มีรถ</div>';
 }
 
@@ -250,7 +268,8 @@ async function openVeh(id) {
     '<div class="st"><b>' + s.checked + '</b><span>วันที่ส่งใบตรวจ</span></div>' +
     '<div class="st"><b style="color:var(--bad)">' + s.missing + '</b><span>รถวิ่งแต่ไม่ส่ง</span></div>' +
     '<div class="st"><b style="color:#9AA5A0">' + (s.idle || 0) + '</b><span>ไม่วิ่ง (ไม่ต้องส่ง)</span></div>' +
-    '<div class="st"><b style="color:var(--warn)">' + s.fail_days + '</b><span>วันที่มี X</span></div>' +
+    '<div class="st" title="ข้อ FM-TR-10 ไม่ผ่าน / ผู้ทวนสอบพบ = ตรงกับตารางด้านล่าง"><b style="color:var(--warn)">' + s.fail_days + '</b><span>วันที่มี X (FM)</span></div>' +
+    '<div class="st" title="อุปกรณ์ติดรถ หาย/ไม่มี/ชำรุด (ไม่อยู่ในตาราง FM) · กดที่วันในตาราง (ขีดฟ้า) ดูรายละเอียด"><b style="color:#1E4E79">' + (s.eq_days || 0) + '</b><span>🧰 อุปกรณ์ X</span></div>' +
     '<div class="st"><b style="color:var(--bad)">' + s.unverified + '</b><span>รอทวนสอบ</span></div>' +
     '<div class="st"><b>' + s.backdated + '</b><span>บันทึกย้อนหลัง</span></div></div>' + sheetHTML(d, true);
 }
@@ -292,7 +311,7 @@ function sheetHTML(d, live) {
     '<span>พนักงานขับรถประจำ: <b>' + esc(v.drivers.map((x) => x.name).join(', ') || 'รถสแปร์') + '</b></span></div>' +
     '<table class="fm"><colgroup><col class="c-no"><col class="c-name"><col class="c-crit">' + days.map(() => '<col>').join('') + '</colgroup>' +
     '<thead><tr><th>ข้อ</th><th>รายการตรวจ</th><th>วิธีดู / เกณฑ์ปกติ</th>' +
-    days.map((dd) => '<th class="d' + (dd.monday ? ' mon' : '') + (dd.missing ? ' miss' : dd.idle ? ' idle' : '') + (live && dd.check_id ? ' cl" data-day="' + dd.date : '') + '" title="' + dTxt(dd.date) + runTip(dd) + '">' + dd.day + '</th>').join('') + '</tr></thead><tbody>';
+    days.map((dd) => '<th class="d' + (dd.monday ? ' mon' : '') + (dd.missing ? ' miss' : dd.idle ? ' idle' : '') + (dd.eq_x ? ' eqx' : '') + (live && dd.check_id ? ' cl" data-day="' + dd.date : '') + '" title="' + dTxt(dd.date) + runTip(dd) + (dd.eq_x ? esc(' · 🧰 อุปกรณ์ X: ' + (dd.eq || []).filter((x) => !x.await).map(eqTxt).join(', ')) : '') + '">' + dd.day + '</th>').join('') + '</tr></thead><tbody>';
   let last = '';
   d.items.forEach((it) => {
     if (it.section !== last) { last = it.section; h += '<tr class="sec"><td colspan="' + (3 + days.length) + '">' + esc(sec[it.section] || it.section) + '</td></tr>'; }
@@ -302,7 +321,7 @@ function sheetHTML(d, live) {
   h += '<tr><td colspan="3" class="ft">ลายมือชื่อ พนักงานขับรถ</td>' + days.map((dd) => '<td class="vt' + (dd.missing ? ' miss' : dd.idle || dd.wait ? ' idle' : '') + cl(dd) + '" title="' + dTxt(dd.date) + runTip(dd) + '"><span>' + (dd.check_id ? esc(first(dd.driver_name)) : dd.missing ? 'ไม่ส่ง' : dd.idle ? 'ไม่วิ่ง' : dd.wait ? 'ยังไม่ออกรถ' : '') + '</span></td>').join('') + '</tr>' +
     '<tr><td colspan="3" class="ft">ผู้ทวนสอบ (หัวหน้างาน)</td>' + days.map((dd) => '<td class="vt' + cl(dd) + '"><span>' + (dd.verified_by ? esc(first(dd.verified_by)) : dd.fail ? '<b style="color:var(--bad)">รอ</b>' : '') + '</span></td>').join('') + '</tr>' +
     '</tbody></table>' +
-    '<div class="legend"><b>วิธีอ่าน:</b> ' + MARK['/'] + ' = ผ่าน · ' + MARK['X'] + ' = ไม่ผ่าน (คนขับแจ้ง) · ' + MARK['V'] + ' = ผู้ทวนสอบพบ · – = ไม่เกี่ยวกับรถคันนี้ / ไม่ใช่วันตรวจประจำสัปดาห์ · <b>ไม่ส่ง</b> = วันนั้นรถวิ่งงาน (มีออเดอร์ / ลงเวลา / GPS วิ่ง ≥ 20 กม.) แต่ไม่ส่งใบตรวจ · <span style="color:#9AA5A0">ไม่วิ่ง</span> = วันนั้นรถไม่ออกวิ่ง ไม่ต้องส่ง · <span style="color:#9AA5A0">ยังไม่ออกรถ</span> = วันนี้ (ยังไม่หมดวัน) ·<b class="star" style="color:var(--bad)">★</b> = ข้อห้ามออกรถ (ไม่ผ่าน ห้ามนำรถออกจนกว่าแก้ไข)</div>' +
+    '<div class="legend"><b>วิธีอ่าน:</b> ' + MARK['/'] + ' = ผ่าน · ' + MARK['X'] + ' = ไม่ผ่าน (คนขับแจ้ง) · ' + MARK['V'] + ' = ผู้ทวนสอบพบ · – = ไม่เกี่ยวกับรถคันนี้ / ไม่ใช่วันตรวจประจำสัปดาห์ · <b>ไม่ส่ง</b> = วันนั้นรถวิ่งงาน (มีออเดอร์ / ลงเวลา / GPS วิ่ง ≥ 20 กม.) แต่ไม่ส่งใบตรวจ · <span style="color:#9AA5A0">ไม่วิ่ง</span> = วันนั้นรถไม่ออกวิ่ง ไม่ต้องส่ง · <span style="color:#9AA5A0">ยังไม่ออกรถ</span> = วันนี้ (ยังไม่หมดวัน) · <span class="no-print"><span style="box-shadow:inset 0 -3px 0 #3B82C4;padding:0 3px">ขีดฟ้าใต้วันที่</span> = อุปกรณ์ติดรถผิดปกติ (ไม่อยู่ในตารางนี้ · กดที่วันดู) ·</span><b class="star" style="color:var(--bad)">★</b> = ข้อห้ามออกรถ (ไม่ผ่าน ห้ามนำรถออกจนกว่าแก้ไข)</div>' +
     '<h3 class="rp">บันทึกแจ้งซ่อม (ดึงจากใบตรวจอัตโนมัติ)</h3>' +
     '<table class="rp"><thead><tr><th>วันที่</th><th>อาการผิดปกติ (คนขับแจ้ง)</th><th>ผู้แจ้ง</th><th>วันที่ทวนสอบ · ผู้ทวนสอบ</th><th>การดำเนินการ</th><th>สถานะรถ</th>' + (live ? '<th class="no-print"></th>' : '') + '</tr></thead><tbody>' +
     (d.repairs.length ? d.repairs.map((r) => '<tr><td class="dt">' + dTxt(r.date) + '</td><td>' +
@@ -346,7 +365,10 @@ function openDay(date) {
   let h = '<div class="row" style="font-size:13px;color:var(--muted)">ผู้ส่ง: <b style="color:var(--ink)">' + esc(dd.driver_name || '') + '</b> · ส่งเมื่อ ' + esc(tTxt(dd.submitted_at)) + (dd.backdated ? ' · <b>บันทึกย้อนหลัง</b>' : '') + '</div>';
   h += fails.length ? '<div style="font-weight:700;font-size:13px;margin-bottom:4px">คนขับแจ้งผิดปกติ</div>' + fails.map((x) => '<div class="fl bad"><b>ข้อ ' + x.no + (x.star ? ' ★' : '') + ' ' + esc(x.name) + '</b>' + (x.case_label ? ' <a class="no-print ctag c-' + esc(x.case_status) + '" href="vehicle-equipment.html?view=fix&id=' + x.case_id + '" title="เปิดเคสแจ้งซ่อม">' + esc(x.case_label) + '</a>' : '') + '<div class="parts" style="color:var(--bad);font-weight:600">' + esc(x.parts.join(', ') || 'ผิดปกติ') + '</div>' +
     (x.note ? '<div>' + esc(x.note) + '</div>' : '') + (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + aftHTML(x) + '</div>').join('')
-    : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ คนขับแจ้งผ่านทุกข้อ</div>';
+    : '<div class="fl" style="background:var(--oktint);border-color:#86EFAC">✅ ข้อ FM-TR-10 คนขับแจ้งผ่านทุกข้อ</div>';
+  // 🧰 อุปกรณ์ติดรถ (ไม่ใช่ข้อ FM) · ของที่แจ้ง หาย/ไม่มี → แอดมินตัดสิน ไม่เคยได้รับจริง / หายจริง
+  const eqs = dd.eq || [], canEq = ME && ME.canEdit;
+  if (eqs.length) h += '<div style="font-weight:700;font-size:13px;margin:10px 0 4px">🧰 อุปกรณ์ติดรถที่แจ้งผิดปกติ <span style="font-weight:400;color:var(--muted)">(ไม่อยู่ในตาราง FM)</span></div>' + eqs.map((x, i) => eqHTML(x, i, canEq)).join('');
   // รูปทุกรูปที่คนขับถ่ายในใบนี้ (รวมข้อที่ผ่าน เช่น เกจถังดับเพลิง) · กดเปิดรูปเต็ม
   const phs = dd.photos || [];
   h += '<div style="font-weight:700;font-size:13px;margin:10px 0 4px">📷 รูปที่คนขับถ่าย' + (phs.length ? ' (' + phs.length + ')' : '') + (dd.odometer != null ? ' <span style="font-weight:400;color:var(--muted)">· เลขไมล์ ' + Number(dd.odometer).toLocaleString('th-TH') + ' กม.</span>' : '') + '</div>' +
@@ -370,6 +392,48 @@ function openDay(date) {
   $('drw').classList.add('open'); $('dim').classList.add('open');
 }
 function closeDrw() { $('drw').classList.remove('open'); $('dim').classList.remove('open'); }
+function eqHTML(x, i, canEdit) {
+  const cs = x.case_label ? ' <a class="no-print ctag c-' + esc(x.case_status) + '" href="vehicle-equipment.html?view=fix&id=' + x.case_id + '" title="เปิดเคสแจ้งซ่อม">' + esc(x.case_label) + '</a>' : '';
+  const btn = canEdit && x.short && !x.await && !x.case_id ? '<div class="eqb">' +
+    (x.in_ledger ? '<button class="btn gh" data-eqr="never|' + i + '" title="ปรับยอดถือเป็น 0 → ขาด รอเบิก ไม่นับ X">📦 ไม่เคยได้รับจริง</button>' : '') +
+    '<button class="btn gh" style="color:var(--bad)" data-eqr="lost|' + i + '" title="เปิดเคสแจ้งซ่อม">❌ หายจริง (เปิดเคส)</button></div>' : '';
+  return '<div class="fl' + (x.await ? '' : ' bad') + '"><b>' + esc(x.name) + (x.unit_no ? ' (ถัง ' + x.unit_no + ')' : '') + '</b>' +
+    (x.await ? ' <span class="b eq" style="cursor:default">ขาด รอเบิก</span>' : '') + cs +
+    '<div style="color:' + (x.await ? 'var(--muted)' : 'var(--bad)') + ';font-weight:600">' + esc(eqCond(x)) + '</div>' + (x.note ? '<div>คนขับ: ' + esc(x.note) + '</div>' : '') +
+    (x.await ? '<div style="font-size:12px;color:var(--muted)">แอดมินยืนยันไม่เคยได้รับ ' + esc(dTxt(x.await.since)) + (x.await.by ? ' โดย ' + esc(x.await.by) : '') + ' · ไม่นับ X จนกว่าจะเบิก</div>' : '') +
+    (x.photo_url ? '<img src="' + esc(x.photo_url) + '" alt="รูป" data-img="' + esc(x.photo_url) + '">' : '') + btn + '</div>';
+}
+// popup ยืนยันก่อนเขียน · คืนเหตุผล (ว่างได้) หรือ null = ยกเลิก
+function askBox(title, html, okLabel) {
+  return new Promise((res) => {
+    const w = document.createElement('div'); w.className = 'ask';
+    w.innerHTML = '<div class="ask-c" role="dialog" aria-modal="true" aria-label="' + esc(title) + '"><h4>' + esc(title) + '</h4><div class="ask-b">' + html + '</div>' +
+      '<label for="askWhy">เหตุผล / หมายเหตุ (ถ้ามี)</label><textarea id="askWhy" maxlength="200"></textarea>' +
+      '<div class="ask-f"><button class="btn gh" data-a="0">ยกเลิก</button><button class="btn pri" data-a="1">' + esc(okLabel) + '</button></div></div>';
+    document.body.appendChild(w); w.querySelector('textarea').focus();
+    const end = (yes) => { const v = w.querySelector('textarea').value.trim(); w.remove(); document.removeEventListener('keydown', key); res(yes ? v : null); };
+    const key = (e) => { if (e.key === 'Escape') end(false); };
+    document.addEventListener('keydown', key);
+    w.addEventListener('click', (e) => { e.stopPropagation(); const b = e.target.closest('[data-a]'); if (b) end(b.dataset.a === '1'); else if (e.target === w) end(false); });
+  });
+}
+async function eqResolveUI(kind, i, btn) {
+  const dd = VER.day, x = dd && (dd.eq || [])[i]; if (!x) return;
+  const v = SHEET.vehicle, plate = v.plate_head + (v.plate_tail ? ' / ' + v.plate_tail : ''), nm = esc(x.name) + (x.unit_no ? ' (ถัง ' + x.unit_no + ')' : '');
+  const body = kind === 'never'
+    ? 'บันทึกว่า <b>' + nm + '</b> ของรถ <b>' + esc(plate) + '</b> <b>ไม่เคยได้รับจริง</b> (คนขับแจ้ง ' + esc(eqCond(x)) + ' ใบ ' + esc(dTxt(dd.date)) + ')<ul>' +
+      '<li>ปรับยอดถือในสมุดเบิก-คืนของคันนี้เป็น 0 (บันทึก "ปรับยอด" พร้อมชื่อคุณ เวลา และเหตุผล)</li><li>ขึ้นเป็น <b>ขาด รอเบิก</b> ไม่นับเป็น X รวมใบที่แจ้งเรื่องนี้ไปแล้ว</li>' +
+      '<li>วันถัดไปคนขับติ๊ก "ไม่มี" ได้ ไม่นับ X จนกว่าจะเบิกจริง</li><li>ไม่ส่ง LINE</li></ul>'
+    : 'ยืนยันว่า <b>' + nm + '</b> ของรถ <b>' + esc(plate) + '</b> <b>หายจริง</b> (คนขับแจ้ง ' + esc(eqCond(x)) + ' ใบ ' + esc(dTxt(dd.date)) + ')<ul>' +
+      '<li>เปิดเคสแจ้งซ่อม แล้วไปสั่งการต่อที่ 🔧 แจ้งซ่อม</li><li>ยังนับเป็น X ตามที่คนขับแจ้ง</li><li>ไม่ส่ง LINE ตอนนี้ (ส่งตอนสั่งแก้ในหน้าแจ้งซ่อม)</li></ul>';
+  const why = await askBox(kind === 'never' ? '📦 ไม่เคยได้รับจริง' : '❌ หายจริง', body, kind === 'never' ? 'ยืนยัน ปรับยอดเป็น 0' : 'ยืนยัน เปิดเคส');
+  if (why == null) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'กำลังบันทึก…'; }
+  let r; try { r = await api({ action: 'eqResolve', kind, checkId: dd.check_id, itemCode: x.code, unitNo: x.unit_no || 1, reason: why }, true); } catch (e) { r = { error: 'เน็ตหลุด ลองใหม่' }; }
+  if (!r || !r.ok) { toast((r && r.error) || 'บันทึกไม่สำเร็จ'); if (r && r.errors) console.warn(r.errors); openDay(dd.date); return; }
+  toast(kind === 'never' ? 'บันทึกแล้ว: ' + x.name + ' ยอดถือ ' + r.qty_before + ' → 0 · ขาด รอเบิก' : r.existing ? 'มีเคสแจ้งซ่อมข้อนี้อยู่แล้ว (นับเห็นซ้ำ)' : 'เปิดเคสแจ้งซ่อม #' + (r.case_id || '') + ' แล้ว');
+  const date = dd.date; await openVeh(CUR); loadList(); openDay(date);
+}
 async function saveVerify() {
   const b = $('vSave'); b.disabled = true; b.textContent = 'กำลังบันทึก…';
   try {
@@ -426,6 +490,7 @@ document.addEventListener('click', (e) => {
   const r = t.closest('.seg button'); if (r) { VER.result = r.dataset.r; r.parentNode.querySelectorAll('button').forEach((x) => x.classList.toggle('on', x === r)); renderDef(); return; }
   const dv = t.closest('[data-dv]'); if (dv) { const c = dv.dataset.dv; if (VER.def[c]) delete VER.def[c]; else VER.def[c] = { parts: new Set(), note: '' }; renderDef(); return; }
   const pc = t.closest('[data-pc]'); if (pc) { const d = VER.def[pc.dataset.pc]; if (d) { d.parts.has(pc.dataset.p) ? d.parts.delete(pc.dataset.p) : d.parts.add(pc.dataset.p); renderDef(); } return; }
+  const eqr = t.closest('[data-eqr]'); if (eqr) { const [k, i] = eqr.dataset.eqr.split('|'); eqResolveUI(k, +i, eqr); return; }
   if (t.id === 'vSave') saveVerify();
 });
 $('dX').onclick = closeDrw; $('dim').onclick = closeDrw;

@@ -305,7 +305,8 @@ function holdHTML() {
   if (!rows.length) return '<div class="card msg">คันนี้ยังไม่มีชุดที่ต้องมี และยังไม่เคยเบิก</div>';
   return '<div class="card tw"><table class="t"><thead><tr><th>อุปกรณ์</th><th class="n">ต้องมี</th><th class="n">เบิกไปแล้ว</th><th class="n">ขาด/เกิน</th><th>ตรวจล่าสุด</th><th>เลขเครื่อง / หมดอายุ</th><th>ใช้มาแล้ว</th>' + (canEdit() ? '<th></th>' : '') + '</tr></thead><tbody>' +
     rows.map((i) => { const df = Number(i.qty_on_hand) - Number(i.qty_required || 0), sh = i.is_required && df < 0;
-      const found = i.found_qty == null && !i.found_condition ? '<span class="sm">–</span>' : (i.found_qty != null ? nf(i.found_qty) + ' ' : '') + (i.found_condition && i.found_condition !== 'ปกติ' ? '<span class="b bad">' + esc(i.found_condition) + '</span>' : '<span class="b ok">ปกติ</span>') + (i.mismatch ? ' <span class="b warn" title="ผลตรวจไม่ตรงยอดเบิก">≠</span>' : '');
+      const found = i.found_qty == null && !i.found_condition ? '<span class="sm">–</span>' : (i.found_qty != null ? nf(i.found_qty) + ' ' : '') + (i.found_condition && i.found_condition !== 'ปกติ' ? '<span class="b bad">' + esc(i.found_condition) + '</span>' : '<span class="b ok">ปกติ</span>') + (i.mismatch && !i.await_issue ? ' <span class="b warn" title="ผลตรวจไม่ตรงยอดเบิก">≠</span>' : '') +
+        (i.await_issue ? '<br><span class="b warn" title="' + esc('แอดมินยืนยันไม่เคยได้รับ ' + dTxt(i.await_issue.since) + (i.await_issue.by ? ' โดย ' + i.await_issue.by : '') + ' · คนขับติ๊ก ไม่มี ได้ ไม่นับ X จนกว่าจะเบิก') + '">📦 ขาด รอเบิก</span>' : '');
       const ser = [i.last_serial ? 'SN ' + esc(i.last_serial) : '', i.last_expiry ? 'หมด ' + dTxt(i.last_expiry) : ''].filter(Boolean).join('<br>') || '<span class="sm">–</span>';
       return '<tr class="si' + (sh ? ' short' : '') + '" data-vi="' + esc(i.code) + '" title="ดูประวัติรายการนี้ของคันนี้"><td><div class="nm">' + esc(i.name) + ' <span class="si-go">›</span></div><div class="sm">' + esc(i.category || '') + (i.item_active === false ? ' · เลิกใช้' : '') + '</div></td>' +
         '<td class="n">' + (i.is_required ? nf(i.qty_required) : '<span class="sm">–</span>') + '</td><td class="n">' + nf(i.qty_on_hand) + ' <span class="sm">' + esc(i.unit || '') + '</span></td>' +
@@ -801,7 +802,7 @@ async function rSpec() {
     const sub = pl + ' · ' + v.job_group + ' · ' + drv;
     if (K === 'hold') {
       const rows = ledger().filter((i) => i.is_required || Number(i.qty_on_hand) !== 0).sort((a, b) => (a.sort || 0) - (b.sort || 0));
-      const st = (i) => { const df = Number(i.qty_on_hand) - Number(i.qty_required || 0); return i.found_condition === 'ชำรุด' ? 'ชำรุด' : i.found_condition === 'หาย' ? 'หาย' : !i.is_required ? 'ไม่บังคับ' : df < 0 ? 'ขาด' : df > 0 ? 'เกิน' : 'ครบ'; };
+      const st = (i) => { const df = Number(i.qty_on_hand) - Number(i.qty_required || 0); return i.await_issue ? 'ขาด รอเบิก' : i.found_condition === 'ชำรุด' ? 'ชำรุด' : i.found_condition === 'หาย' ? 'หาย' : !i.is_required ? 'ไม่บังคับ' : df < 0 ? 'ขาด' : df > 0 ? 'เกิน' : 'ครบ'; };
       const sh = rows.filter((i) => i.is_required && Number(i.qty_on_hand) < Number(i.qty_required));
       return { title: 'อุปกรณ์ที่ถือ ' + pl, file: 'อุปกรณ์ติดรถ_' + (v.plate_head || v.plate), sub: sub + ' · ณ ' + dTxt(made),
         kpis: [['รายการที่ต้องมี', rows.filter((i) => i.is_required).length + ' รายการ', RT.mid], ['รายการที่ขาด', sh.length + ' รายการ', sh.length ? '#B91C1C' : '#15803D'],
@@ -846,7 +847,7 @@ async function rSpec() {
     st: { 3: { 'ส่งแล้ว': ['#127a2e', '#e7f5ee'], 'ยังไม่ส่ง': ['#8a5a0b', '#fef0d9'] }, 8: { 'ตรงกัน': ['#127a2e', '#e7f5ee'], 'ไม่ตรง': ['#a32d2d', '#fceded'], 'ยังไม่ตรวจ': ['#5f5e5a', '#efefef'] } },
     note: 'คนขับกรอกเดือนละ 1 ครั้ง · แอดมินสุ่มตรวจต่อสัปดาห์ แยกหน่วยงาน 4 ล้อ 2 / 6 ล้อ 3 / 10 ล้อ 4 คัน · ไม่ตรง = นับได้น้อยกว่าที่คนขับแจ้ง หรือเจอปัญหาที่คนขับไม่ได้แจ้ง' };
 }
-const RST = { 'ครบ': ['#127a2e', '#e7f5ee'], 'เกิน': ['#185fa5', '#e6f1fb'], 'ขาด': ['#a32d2d', '#fceded'], 'ชำรุด': ['#8a5a0b', '#fef0d9'], 'หาย': ['#a32d2d', '#fceded'], 'มีชำรุด/หาย': ['#8a5a0b', '#fef0d9'], 'ไม่บังคับ': ['#5f5e5a', '#efefef'] };
+const RST = { 'ขาด รอเบิก': ['#a32d2d', '#fceded'], 'ครบ': ['#127a2e', '#e7f5ee'], 'เกิน': ['#185fa5', '#e6f1fb'], 'ขาด': ['#a32d2d', '#fceded'], 'ชำรุด': ['#8a5a0b', '#fef0d9'], 'หาย': ['#a32d2d', '#fceded'], 'มีชำรุด/หาย': ['#8a5a0b', '#fef0d9'], 'ไม่บังคับ': ['#5f5e5a', '#efefef'] };
 const MVST = { 'เบิก': ['#127a2e', '#e7f5ee'], 'คืน': ['#185fa5', '#e6f1fb'], 'เปลี่ยน': ['#5f5e5a', '#efefef'], 'ชำรุด': ['#8a5a0b', '#fef0d9'], 'สูญหาย': ['#a32d2d', '#fceded'], 'ปรับยอด': ['#5f5e5a', '#efefef'] };
 const rMade = () => { const d = new Date(Date.now() + 7 * 3600000).toISOString(); return dTxt(d.slice(0, 10)) + ' ' + d.slice(11, 16) + ' น.'; };
 const rName = (spec, ext) => spec.file.replace(/[\\/:*?"<>|\s]+/g, '_') + '_' + bkk().replace(/-/g, '') + '.' + ext;
