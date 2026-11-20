@@ -30,6 +30,14 @@
 .hbc .ch{display:inline-block;font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;white-space:nowrap}
 .ch.wait{background:#ffedd5;color:#9a3412}.ch.ok{background:var(--goodbg);color:var(--good)}.ch.reject,.ch.cancel{background:var(--badbg);color:var(--bad)}
 .hbc .nt{font-size:12.5px;color:var(--warn)}
+.hbw{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.hbw span{font-size:14.5px;font-weight:800;border-radius:8px;padding:4px 10px;line-height:1.3;font-variant-numeric:tabular-nums}
+.hbw .d{background:#ffedd5;color:#9a3412}.hbw .t{background:#c2410c;color:#fff}
+.hbw .l{background:var(--surface2);color:var(--muted);font-weight:700;font-size:13px}
+.hbp{font-size:13.5px;color:var(--ink);margin-top:2px;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px}
+.hbp .st{font:700 12px/1.4 ui-monospace,Consolas,monospace;background:#e0f2fe;color:#075985;border-radius:6px;padding:1px 7px;letter-spacing:.02em}
+.hbp .st.no{background:var(--surface2);color:var(--muted);font-family:inherit;font-weight:600}
+.hbp small{color:var(--muted);font-size:12px;flex-basis:100%}
 .hbc .dv{font-size:13.5px;background:var(--surface2);border-radius:9px;padding:7px 10px}
 .hbf{display:grid;grid-template-columns:1fr 130px;gap:6px;margin-top:4px}
 .hbf select,.hbf input{font:inherit;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);min-width:0}
@@ -88,20 +96,34 @@
     const L = HB.rows.filter(r => HB.tab === 'no' ? (r.status === 'reject' || r.status === 'cancel') : r.status === HB.tab)
       .sort((a, b) => a.ship_date < b.ship_date ? -1 : a.ship_date > b.ship_date ? 1 : String(a.req_at) < String(b.req_at) ? -1 : 1);
     if (!L.length) h += '<div class="hbe">' + (HB.tab === 'wait' ? 'ไม่มีคำขอรอจัดรถ 🎉' : 'ไม่มีรายการ') + '</div>';
-    let last = '';
-    L.forEach(r => {
-      if (r.ship_date !== last) { last = r.ship_date; h += '<div class="hbd">ส่ง ' + dTH(r.ship_date) + (r.ship_date === today() ? ' · วันนี้' : r.ship_date < today() ? ' · เลยแล้ว' : '') + '</div>'; }
-      h += cardH(r);
-    });
+    L.forEach(r => { h += cardH(r); });   // วันส่ง/เวลาอยู่บนการ์ดแล้ว (ป้ายใหญ่) ไม่ต้องมีหัวกลุ่มซ้ำ
     body.innerHTML = h;
   }
   const ST = { wait: 'รอจัดรถ', ok: 'ยืนยันแล้ว', reject: 'ไม่มีรถ', cancel: 'Order Hub ยกเลิก' };
+  // เวลาส่งที่เซลส์พิมพ์ในหมายเหตุ ("ถึง 08.00 น." / "ถึงก่อน 11 โมง" / "เช้า") → ป้ายเวลาเด่น · ตัดออกจากหมายเหตุไม่ให้ซ้ำ
+  const TM = [/(?:ถึง(?:ก่อน)?\s*|ก่อน\s*)?\d{1,2}[.:]\d{2}(?:\s*-\s*\d{1,2}[.:]\d{2})?\s*(?:น\.?)?/, /(?:ถึง)?(?:ก่อน\s*)?\d{1,2}\s*โมง(?:เช้า|เย็น)?/, /(?:ช่วง)?(?:เช้า|บ่าย|เย็น)/];
+  function when(r) {
+    let t = '';
+    const notes = [r.plan_note, r.cond, r.req_note].filter(Boolean).map(s => {
+      s = String(s);
+      if (!t) for (const re of TM) { const m = s.match(re); if (m) { t = m[0].trim(); s = s.replace(m[0], '').replace(/^[\s,·\-–]+|[\s,·\-–]+$/g, ''); break; } }
+      return s.replace(/\s{2,}/g, ' ');
+    }).filter(Boolean);
+    if (t && /^\d/.test(t)) t = 'ถึง ' + t;
+    if (/^(เช้า|บ่าย|เย็น)$/.test(t)) t = 'ช่วง' + t;
+    if (t && !/น\.?$|โมง|เช้า|บ่าย|เย็น/.test(t)) t += ' น.';
+    return { t: t, notes: notes };
+  }
   function cardH(r) {
     const id = E(r.id), ed = HB.canEdit && HB.edit === r.id;
-    let h = '<article class="hbc ' + E(r.status) + '"><div class="h"><div><div class="n">' + E(r.company) + '</div><div class="s">' + E(r.place || '—') + '</div></div>'
+    const tm = when(r);
+    let h = '<article class="hbc ' + E(r.status) + '">'
+      + '<div class="hbw"><span class="d">ส่ง ' + dTH(r.ship_date) + (r.ship_date === today() ? ' · วันนี้' : r.ship_date < today() ? ' · เลยแล้ว' : '') + '</span>' + (tm.t ? '<span class="t">' + E(tm.t) + '</span>' : '') + (r.load_date ? '<span class="l">โหลด ' + dTH(r.load_date) + '</span>' : '') + '</div>'
+      + '<div class="h"><div><div class="n">' + E(r.company) + '</div><div class="hbp">' + E(r.place || '—')
+      + (r.dtc_id ? ' <span class="st" title="รหัสสถานที่ DTC GPS">' + E(r.dtc_id) + '</span>' + (r.dtc_name ? '<small>' + E(r.dtc_name) + '</small>' : '') : ' <span class="st no" title="ยังไม่ได้จับคู่สถานที่ใน DTC">ไม่มี ST</span>') + '</div></div>'
       + '<div style="text-align:right"><div class="q">' + E(qty(r)) + '</div><span class="ch ' + E(r.status) + '">' + ST[r.status] + '</span></div></div>'
-      + '<div class="s">' + E(r.product || '') + (r.load_date ? ' · โหลด ' + dTH(r.load_date) : '') + (r.bill ? ' · บิล ' + E(r.bill) : '') + (r.co_no ? ' · CO ' + E(r.co_no) : '') + '</div>'
-      + [r.plan_note, r.cond, r.req_note].filter(Boolean).map(t => '<div class="nt">📝 ' + E(t) + '</div>').join('')
+      + '<div class="s">' + E(r.product || '') + (r.bill ? ' · บิล ' + E(r.bill) : '') + (r.co_no ? ' · CO ' + E(r.co_no) : '') + '</div>'
+      + tm.notes.map(t => '<div class="nt">📝 ' + E(t) + '</div>').join('')
       + '<div class="s">ขอโดย ' + E(r.req_by || '-') + ' · ' + at(r.req_at) + '</div>';
     if (r.status === 'ok') h += '<div class="dv">🚚 <b>' + E(r.driver_name) + '</b> · ' + E(r.plate) + (r.pk_note ? ' · ' + E(r.pk_note) : '') + '<br><span class="s">ยืนยันโดย ' + E(r.by_name || '') + ' · ' + at(r.by_at) + (r.bulk_job_id ? ' · ลงหน้าจัดรถ Bulk แล้ว' : ' · ⚠️ ยังไม่ลงหน้าจัดรถ Bulk') + '</span></div>';
     if (r.status === 'reject' || r.status === 'cancel') h += '<div class="nt">เหตุผล: ' + E(r.reason || '-') + (r.by_name && r.status === 'reject' ? ' — ' + E(r.by_name) : '') + '</div>';
