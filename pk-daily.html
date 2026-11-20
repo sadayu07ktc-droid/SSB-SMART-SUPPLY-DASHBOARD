@@ -235,6 +235,21 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .imgbox img{display:block;width:100%;height:auto;border-radius:6px}
 .legend{display:flex;flex-wrap:wrap;gap:12px;font-size:12.5px;color:var(--muted);margin:10px 4px 0}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid rgba(0,0,0,.15)}
+/* 20 พ.ย. สรุปสถานะรถ PK แบบเดียวกับ Bulk: การ์ดตัวเลข + รูป (ซ้าย) + รายการรถ ✏️ สถานะ (ขวา) */
+.rhd{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 14px;margin-bottom:12px}.rhd h2{margin:0;font-size:20px}.rhd .note{margin:0}
+.rkpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.rkpi>div{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+.rkpi small{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--muted)}
+.rkpi b{display:block;font-size:30px;line-height:1.2;font-variant-numeric:tabular-nums}.rkpi em{font-style:normal;font-size:12.5px;color:var(--muted)}
+.rdot{display:inline-block;width:11px;height:11px;border-radius:50%;flex:none}.rdot.h{background:transparent!important;border:2.5px solid #9CA3AF;width:9px;height:9px}
+.rgrid.r2{grid-template-columns:minmax(0,560px) minmax(0,1fr)}
+.rg{background:var(--surface);border:1px solid var(--line);border-radius:14px;margin-top:10px;overflow:hidden}
+.rg h3{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin:0;padding:10px 14px;font-size:15px;background:var(--surface2)}.rg h3 small{font-weight:500;font-size:12.5px;color:var(--muted)}
+.rrow{display:flex;gap:11px;align-items:center;padding:10px 14px;border-top:1px solid var(--line)}.rrow.rep,.rrow.off{background:var(--badbg)}
+.rrow .rm{flex:1;min-width:0}.rrow .rm b{display:block;font-variant-numeric:tabular-nums}
+.rrow .rm small{display:block;color:var(--muted);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rrow .rm small.w{color:var(--bad);white-space:normal}
+.rrow .rr{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;max-width:48%}.rrow .rr .pill{white-space:normal;text-align:right}
+@media (max-width:900px){.rgrid.r2{grid-template-columns:minmax(0,1fr)}.rkpi{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .chat{background:var(--chat);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px}
 .chat .who{font-size:12px;color:#fff;opacity:.9}
 .flex{background:#fff;color:#1d2a22;border-radius:14px;overflow:hidden;box-shadow:0 4px 14px -6px rgba(0,0,0,.35)}
@@ -2935,18 +2950,59 @@ async function drawReport(){
 function fitText(x,t,cx,cy,max,align){align=align||'center';x.textAlign=align;let s=t;
   while(x.measureText(s).width>max&&s.length>4)s=s.slice(0,-2);if(s!==t)s=s.slice(0,-1)+'…';x.fillText(s,cx,cy);}
 async function renderReport(){
-  const c=counts(1),reps=VEH.filter(v=>kind(v)==='rep');
-  $('v-report').innerHTML='<div class="rgrid r1"><div><label class="opt"><input type="checkbox" id="wj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาลงสินค้าใต้ทะเบียน</label>'
+  /* 20 พ.ย. คุณน้อง "ทำแพทเทิร์นของ pk เหมือน bulk" → การ์ดตัวเลข + รูปสรุป (ซ้าย) + รายการรถแยกขนาดล้อ ✏️ สถานะ (ขวา) · bulk.html openVStat */
+  const c=counts(1),ed=!DS.on||DS.edit,iso=$('pdate').value;
+  const tile=(l,n,col,sub)=>'<div><small>'+(col?'<i class="rdot" style="background:'+col+'"></i>':'')+l+'</small><b style="color:'+(col||'var(--ink)')+'">'+n+'</b>'+(sub?'<em>'+sub+'</em>':'')+'</div>';
+  const job=(v,p,k)=>{if(v.tail||k==='rep'||k==='off')return '';const s0=p.stops[0];return s0?'📦 ลงสินค้า '+(s0.at||'--:--')+' '+s0.n+(p.stops.length>1?' +'+(p.stops.length-1)+' จุด':''):otOnly(p)?'🧭 งานอื่นๆ '+otLabel(p):'';};
+  const row=v=>{const p=PLAN[v.head],k=kind(v),d=drvOf(p.driver),j=job(v,p,k),tt=tailTxt(v),st=VST[v.head];
+    return '<div class="rrow '+k+'"><i class="rdot'+(k==='tail'?' h':'')+'" style="background:'+DOT[k==='off'?'rep':k]+'" aria-hidden="true"></i>'
+     +'<div class="rm"><b>'+esc(v.plate.split(',').map(x=>x.trim()).filter(Boolean).join(' / '))+'</b><small>'+esc([BRAND[v.head],v.shape,v.tail?'':(d?d.name:'ยังไม่มีคนขับ')].filter(Boolean).join(' · '))+'</small>'
+     +(j?'<small>'+esc(j)+'</small>':'')
+     +((k==='rep'||k==='off')&&st&&st.from?'<small>ตั้งแต่ '+esc(dShort(st.from))+(st.by?' · '+esc(st.by):'')+'</small>':'')+'</div>'
+     +'<div class="rr"><span class="pill '+KLAB[k][1]+'">'+esc(stTxt(v,k,p))+'</span>'+(tt?'<span class="pill p-job">✓ '+esc(tt)+'</span>':'')
+     +(ed&&!v.tail?'<button type="button" class="btn sm" data-rvs="'+esc(v.head)+'" aria-label="ตั้งสถานะรถ '+esc(v.plate)+'">✏️ สถานะ</button>':'')+'</div></div>';};
+  const gsum=vs=>{const n=ks=>vs.filter(v=>ks.includes(kind(v))).length,gt=n(['tail']),gn=n(['nod']),gp=n(['rep','off']);return (vs.length-gt)+' คัน · พร้อม '+n(['job','wait'])+(gn?' · ไม่มีคนขับ '+gn:'')+(gp?' · ซ่อม '+gp:'')+(gt?' · หางสำรอง '+gt:'');};
+  const G=['4 ล้อ','6 ล้อ','10/22 ล้อ'].map(g=>({g,vs:VEH.filter(v=>v.g===g&&!v.ext)})).filter(x=>x.vs.length);
+  $('v-report').innerHTML='<div class="rhd"><h2>🚛 สรุปสถานะรถ PK</h2><p class="note">'+esc(dateTH(iso))+' · ตามแพลนวันที่เลือก</p></div>'
+   +'<div class="rkpi">'+tile('รถทั้งหมด',c.all-c.tail,'',c.tail?'+ หางสำรอง '+c.tail:null)+tile('พร้อม มีคนขับ',c.job+c.wait,'#16A34A','วิ่งงาน '+c.job)+tile('ไม่มีคนขับ',c.nod,'#EAB308',null)+tile('ซ่อม',c.rep+c.off,'#DC2626',c.off?'งดวิ่ง '+c.off:null)+'</div>'
+   +'<div class="rgrid r2"><div><label class="opt"><input type="checkbox" id="wj"'+(WITHJOB?' checked':'')+'> แสดงคนขับ + เวลาลงสินค้าใต้ทะเบียน</label>'
    +'<div class="imgbox"><img id="rimg" alt="รูปสรุปสถานะรถ PK ประจำวัน"></div>'
    +'<div class="legend"><span><i style="background:#16A34A;border-radius:50%"></i>พร้อมใช้งาน มีคนขับ</span><span><i style="background:#EAB308;border-radius:50%"></i>พร้อม ไม่มีคนขับ</span><span><i style="background:#DC2626;border-radius:50%"></i>ซ่อม / งดวิ่ง + สาเหตุ</span><span><i style="background:transparent;border:2px solid #9CA3AF;border-radius:50%"></i>หางสำรอง</span></div>'
    +'<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px"><button class="btn" id="dl">⬇ รายงาน (Excel / PDF / JPEG)</button></div>'
-   +'<p class="note">รูปสร้างจากแพลนวันที่เลือกทุกครั้ง แก้รถในหน้าแพลนแล้วกลับมาที่หน้านี้ รูปจะเปลี่ยนตาม</p></div>'
-   +'</div>';
+   +'<p class="note">รูปสร้างจากแพลนวันที่เลือกทุกครั้ง · กดค้างที่รูปเพื่อบันทึก/ส่ง LINE ได้</p></div>'
+   +'<div class="rlist"><p class="note" style="margin:0">'+(ed?'กด ✏️ สถานะ เพื่อตั้งรถซ่อม / งดวิ่ง (ติดไปทุกวันจนกว่าจะกดพร้อมใช้งาน)':'ดูอย่างเดียว · ตั้งซ่อม/งดวิ่งได้เฉพาะคนที่แก้แพลนได้')+'</p>'
+   +G.map(x=>'<section class="rg"><h3>'+esc(x.g)+'<small>'+esc(gsum(x.vs))+'</small></h3>'+x.vs.map(row).join('')+'</section>').join('')
+   +(G.length?'':'<p class="note">ยังไม่มีรถ PK ในทะเบียนรถ</p>')+'</div></div>';
   $('wj').onchange=e=>{WITHJOB=e.target.checked;renderReport();};
   $('dl').onclick=openStatusExport;
+  $('v-report').querySelectorAll('[data-rvs]').forEach(b=>b.onclick=()=>rvsEdit(b.dataset.rvs));
   const src=await drawReport();if($('rimg')){$('rimg').src=src;}
 }
-
+/* ✏️ ตั้งสถานะรถจากหน้าสรุป (ตรรกะเดียวกับปุ่มสถานะในหน้าต่างแก้รถ: ซ่อม/งดวิ่ง = เอาจุดส่งออก · งานห้างต้องย้ายก่อน · vstSave ติดข้ามวัน) */
+async function rvsEdit(head){const v=VEH.find(x=>x.head===head);if(!v)return;const p0=PLAN[head],k=kind(v);
+  let cur=p0.status==='repair'||p0.status==='off'?p0.status:'ready',rs=String(p0.reason||'');
+  const SEG=[['ready','พร้อมใช้งาน'],['repair','ซ่อม'],['off','งดวิ่ง']],st=VST[head],nS=p0.stops.length;
+  const pr=askModal({title:'สถานะรถ '+v.plate.replace(',',' / '),icon:'🚛',ok:'บันทึก',cancel:'ยกเลิก',
+    html:'<p class="note" style="margin-top:0">'+esc([v.g,BRAND[head],(drvOf(p0.driver)||{}).name].filter(Boolean).join(' · '))+'</p>'
+     +'<div class="seg" role="radiogroup" aria-label="สถานะรถ">'+SEG.map(([x,l])=>'<button type="button" role="radio" data-rs="'+x+'" aria-checked="'+(cur===x)+'" class="'+(cur===x?'on':'')+'">'+l+'</button>').join('')+'</div>'
+     +'<label id="rvsL" style="display:block;margin-top:10px"'+(cur==='ready'?' hidden':'')+'>สาเหตุ (ขึ้นในรูปสรุปและรายงาน)<input class="in" id="rvsR" maxlength="200" placeholder="เช่น ซ่อมเปลี่ยนคลัตช์ คาดเสร็จ 21/11" value="'+esc(rs)+'"></label>'
+     +'<p class="note">📌 ซ่อม/งดวิ่ง มีผลตั้งแต่ '+esc(dShort($('pdate').value))+' และติดไปทุกวันจนกว่าจะกด “พร้อมใช้งาน”'
+     +(st&&st.from&&(k==='rep'||k==='off')?'<br>ตอนนี้: '+(st.s==='repair'?'ซ่อม':'งดวิ่ง')+' ตั้งแต่ '+esc(dShort(st.from))+(st.by?' โดย '+esc(st.by):''):'')
+     +((v.plate.split(',')[1]||'').trim()?'<br><span style="color:#15803D">✓ ตั้งที่ตัวหัว '+esc(head)+' · หาง '+esc(v.plate.split(',')[1].trim())+' ยังใช้งานได้</span>':'')
+     +(nS?'<br><span style="color:var(--bad)">⚠ คันนี้มีจุดส่ง '+nS+' จุด — ตั้งซ่อม/งดวิ่ง จะเอาจุดส่งออกจากรถคันนี้ (ย้ายไปคันอื่นในหน้าแพลน)</span>':'')+'</p>'});
+  const ov=[...document.querySelectorAll('.mov')].pop();
+  ov.querySelectorAll('[data-rs]').forEach(b=>b.addEventListener('click',()=>{cur=b.dataset.rs;ov.querySelectorAll('[data-rs]').forEach(x=>{const on=x.dataset.rs===cur;x.classList.toggle('on',on);x.setAttribute('aria-checked',String(on));});
+    $('rvsL').hidden=cur==='ready';if(cur!=='ready')$('rvsR').focus();}));
+  ov.querySelector('#rvsR').addEventListener('input',e=>{rs=e.target.value;});
+  if(!(await pr))return;
+  rs=cur==='ready'?'':rs.trim();
+  if(cur===(p0.status==='repair'||p0.status==='off'?p0.status:'ready')&&rs===String(p0.reason||'').trim()){toast('สถานะเดิม ไม่ได้เปลี่ยน');return;}
+  if(cur==='repair'&&!rs){toast('ใส่สาเหตุการซ่อมก่อน จะได้ขึ้นในรูปสรุป');return rvsEdit(head);}
+  if(cur!=='ready'&&p0.stops.some(isMall)){toast('รถคันนี้มีงานห้าง ให้แอดมินห้างย้ายงานไปคันอื่นในแพลนห้างก่อน');return;}
+  const p=JSON.parse(JSON.stringify(p0));p.status=cur;p.reason=rs;if(cur!=='ready'){p.stops=[];p.helpers=[];p.out=0;}
+  PLAN[head]=p;renderAll();
+  if(typeof vstSave==='function')vstSave(head,cur,rs);
+  if(!DS.on)toast('✅ '+v.plate.replace(',',' / ')+' → '+(cur==='ready'?'พร้อมใช้งาน':cur==='repair'?'ซ่อม':'งดวิ่ง')+' (เดโม)');}
 /* ---------- รายงานสถานะรถ (Excel / PDF / JPEG) · ข้อมูลชุดเดียวกับรูป: รถทุกคันของวันที่เลือก แบ่งตามขนาดล้อ ---------- */
 const RSC=[['ลำดับ',6,'c'],['ทะเบียน',20,'c'],['ยี่ห้อ / รูปทรง',24,'l'],['สถานะ',20,'c'],['สาเหตุ / หมายเหตุ',26,'l'],['คนขับ',22,'l'],['จุดแรก',30,'l'],['เวลาลงสินค้า',10,'c'],['จุดส่ง',9,'c']];
 const RS_ST={job:['พร้อม · วิ่งงาน','127A2E','E7F5EE'],wait:['พร้อม · รอมีงาน','127A2E','E7F5EE'],nod:['พร้อม · ไม่มีคนขับ','8A5A0B','FEF0D9'],
