@@ -327,6 +327,8 @@ body::after{width:52vw;height:52vw;right:-14vw;bottom:-18vw;background:radial-gr
 .sechd .sp,.ptools .sp{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
 .anote{margin:0 16px 10px;padding:8px 12px;border-radius:10px;background:var(--warnTint);color:var(--warn);font-size:12.5px}
 .atbl table{min-width:1220px}
+.atbl .drvl{display:flex;flex-direction:column;gap:3px;margin-top:4px;font-size:12px}.atbl .drvl .tag{font-size:11px}
+.atbl td:last-child .btn{white-space:nowrap}
 .atbl tr.off td{color:var(--muted)}.atbl tr.off td.cust{text-decoration:line-through}
 .atbl tr.hl td{background:var(--warnTint)}.atbl tr.nw td{background:var(--infoTint)}
 td.nt{font-size:12px;color:var(--muted);max-width:220px}
@@ -832,7 +834,7 @@ function render(){
   $('acts').innerHTML=`<button class="btn" type="button" id="custBtn">📍 ลูกค้า Bulk</button>`
     +(p?`<button class="btn" type="button" id="repBtn">🖨️ รายงาน</button>`:'')
     +(me.canEdit?`<button class="btn" type="button" id="dayBtn">📅 วันส่งใหม่</button>
-      <label class="btn up" for="fileIn"><span class="upic" aria-hidden="true">⬆</span>อัปโหลดแผนแอดมิน (Excel)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>`:'');
+      ${me.isDev?`<label class="btn up" for="fileIn" title="สำรองเฉพาะ DEV — ปกติแผนแอดมินมาจาก Order Hub เอง"><span class="upic" aria-hidden="true">⬆</span>อัปโหลด Excel (สำรอง)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>`:''}`:'');
   $('custBtn').onclick=openCustomers;
   if($('repBtn')) $('repBtn').onclick=bulkReport;
   if($('dayBtn')) $('dayBtn').onclick=()=>askDay();
@@ -886,18 +888,18 @@ function plannedHtml(r,x){
 }
 function renderAdmin(){
   const d=DATA, a=d.admin, box=$('adminBox'), me=d.me, p=d.plan;
-  if(!d.sendDate){ box.innerHTML=`<div class="empty">ยังไม่มีแผน${me.canEdit?' — กด "⬆ อัปโหลดแผนแอดมิน" แล้วเลือกไฟล์ที่แอดมินส่งมา หรือ "📅 วันส่งใหม่" เพื่อกรอกเอง':''}</div>`; return; }
-  if(!a){ box.innerHTML=`<div class="sechd"><h2>📥 แผนแอดมิน</h2><span class="sub">วันส่งนี้ยังไม่มีไฟล์แผนแอดมิน${me.canEdit?' — อัปโหลดได้ หรือกด "+ เพิ่มเที่ยว" กรอกเองในตารางแผน':''}</span></div>`; return; }
+  if(!d.sendDate){ box.innerHTML=`<div class="empty">ยังไม่มีแผน — แผนแอดมินจะมาจาก Order Hub เองเมื่อแอดมินลงแผนส่งรายวัน (แถว BULK)${me.canEdit?' · หรือกด "📅 วันส่งใหม่" เพื่อกรอกเอง':''}</div>`; return; }
+  if(!a){ box.innerHTML=`<div class="sechd"><h2>📥 แผนแอดมิน</h2><span class="sub">วันส่งนี้ยังไม่มีแผนจาก Order Hub${me.canEdit?' — กด "+ เพิ่มเที่ยว" กรอกเองในตารางแผนได้':''}</span></div>`; return; }
   const pl=adminPlanned(), rows=a.rows||[], df=a.diff||{}, chg={}, add={};
   (df.chg||[]).forEach(c=>chg[c.key]=c.txt); if(a.rev) (df.add||[]).forEach(x=>add[x.key]=1);
   const todo=rows.filter(r=>!pl[r.key]&&!offTag(r.tag)), done=rows.filter(r=>pl[r.key]).length;
   const gone=(df.del||[]).filter(x=>pl[x.key]);
   const ed=me.canEdit&&p&&!VIEWING;
   let h=`<div class="sechd"><h2>📥 แผนแอดมิน</h2>
-    <span class="sub">${revName(a.rev)} · ${thTime(a.uploaded_at)} · ${esc(a.uploaded_by_name||'')}${a.file_name?' · '+esc(a.file_name):''}</span>
+    <span class="sub">${a.file_name==='Order Hub'?'<span class="tag info">🧾 จาก Order Hub</span> อัปเดตล่าสุด '+thTime(a.uploaded_at)+' · '+esc(a.uploaded_by_name||''):revName(a.rev)+' · '+thTime(a.uploaded_at)+' · '+esc(a.uploaded_by_name||'')+(a.file_name?' · '+esc(a.file_name):'')}</span>
     ${(d.adminRevs||[]).length>1?`<span class="sub" title="${esc(d.adminRevs.map(v=>revName(v.rev)+' '+thTime(v.uploaded_at)+(v.rev?' แก้ '+((v.diff||{}).chg||[]).length+' เพิ่ม '+((v.diff||{}).add||[]).length+' ตัด '+((v.diff||{}).del||[]).length:'')).join('\n'))}">· อัปโหลด ${d.adminRevs.length} ครั้ง</span>`:''}
     <span class="tag ${todo.length?'wait':'okk'}">ลงแผนแล้ว ${done}/${rows.length} แถว</span>
-    <span class="sp">${ed&&todo.length?`<button type="button" class="btn sm" id="addAll">➕ ลงแผนทุกแถวที่ยังไม่ลง (${todo.length})</button>`:''}
+    <span class="sp">${ed&&todo.length?`<button type="button" class="btn sm" id="addAll" title="สร้างเที่ยวในตารางแผนทุกแถว (ยังไม่มีคนขับ) แล้วค่อยเลือกคนขับทีหลัง">➕ ลงตารางทุกแถว (${todo.length})</button>`:''}
       <button type="button" class="btn sm" id="admTg" aria-expanded="${ADM_OPEN}">${ADM_OPEN?'▴ ซ่อน':'▾ แสดง'}รายการ</button></span></div>`;
   if(a.rev&&((df.chg||[]).length||(df.add||[]).length||(df.del||[]).length))
     h+=`<div class="anote">แผนแอดมิน ${revName(a.rev)} เปลี่ยนจากฉบับก่อน: แก้ ${(df.chg||[]).length} · เพิ่ม ${(df.add||[]).length} · ตัดออก ${(df.del||[]).length}${(df.del||[]).length?' ('+df.del.map(x=>esc(x.cust+' '+x.prod)).join(', ')+')':''}
@@ -908,12 +910,29 @@ function renderAdmin(){
         <td class="cust">${esc(r.cust)}${add[r.key]?' <span class="tag info">ใหม่</span>':''}${chg[r.key]!=null?`<span class="chg">${esc(chg[r.key])}</span>`:''}</td>
         <td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td>${esc(r.bill)}</td><td>${tagHtml(r.tag)}</td>
         <td>${r.co?'<span class="co y">✓</span>':'<span class="co n">✗</span>'}</td><td class="num sm">${esc(r.so)}</td><td class="r num">${esc(r.price)}</td>
-        <td class="nt">${esc(r.note)}</td><td class="nt">${esc(r.time)}</td><td>${plannedHtml(r,x)}${off&&x?' <span class="tag bad">แอดมิน'+(/ยกเลิก/.test(r.tag)?'ยกเลิก':'เลื่อนส่ง')+'</span>':''}</td>
-        <td>${ed?`<button type="button" class="btn sm" data-add="${i}">+ ลงแผน</button>`:''}</td></tr>`; }).join('')+'</tbody></table></div>';
+        <td class="nt">${esc(r.note)}</td><td class="nt">${esc(r.time)}</td><td>${plannedHtml(r,x)}${drvList(r.key)}${off&&x?' <span class="tag bad">แอดมิน'+(/ยกเลิก/.test(r.tag)?'ยกเลิก':'เลื่อนส่ง')+'</span>':''}</td>
+        <td>${ed&&!off?rowBtn(r,i,x):''}</td></tr>`; }).join('')+'</tbody></table></div>';
   box.innerHTML=h;
   $('admTg').onclick=()=>{ ADM_OPEN=!ADM_OPEN; try{ localStorage.setItem('bulk_adm_open',ADM_OPEN?'1':'0'); }catch(e){} renderAdmin(); };
   if($('addAll')) $('addAll').onclick=()=>addAllAdmin(todo);
-  box.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>openTrip(null,preFromAdmin(rows[+b.dataset.add])));
+  box.querySelectorAll('[data-add]').forEach(b=>b.onclick=()=>openTrip(null,preFromAdmin(rows[+b.dataset.add]),{drv:1}));
+  box.querySelectorAll('[data-drv]').forEach(b=>b.onclick=()=>{ const j=(DATA.jobs||[]).find(y=>String(y.id)===b.dataset.drv); if(j) openTrip(j,null,{drv:1}); });
+}
+/* 🚛 เลือกคนขับจากแผนแอดมิน · 20 พ.ย. 69 คุณน้อง "ปุ่มนี้จะเปลี่ยนเป็น เลือกคนขับ" (เดิม + ลงแผน) */
+const rowJobs=key=>(DATA.jobs||[]).filter(j=>!j.cancelled&&j.admin_key===key).sort((a,b)=>(a.round_no||99)-(b.round_no||99)||a.line_no-b.line_no);
+const noDrv=j=>isCo(j)?!j.driver_name:!(j.driver_name||j.plate);
+const jLocked=j=>j.status==='gate_out'||j.status==='delivered';
+function rowBtn(r,i,x){
+  const js=rowJobs(r.key), jn=js.find(j=>noDrv(j)&&!jLocked(j));
+  if(jn) return `<button type="button" class="btn sm pri" data-drv="${jn.id}">🚛 เลือกคนขับ</button>`;
+  if(!js.length) return `<button type="button" class="btn sm pri" data-add="${i}">🚛 เลือกคนขับ</button>`;
+  if(r.qty_ton&&x&&x.ton<r.qty_ton-0.0005) return `<button type="button" class="btn sm" data-add="${i}">＋ เพิ่มรถ</button>`;
+  const one=js.length===1&&!jLocked(js[0])?js[0]:null;
+  return one?`<button type="button" class="btn sm" data-drv="${one.id}">เปลี่ยนคนขับ</button>`:'';
+}
+function drvList(key){
+  const js=rowJobs(key).filter(j=>!noDrv(j)); if(!js.length) return '';
+  return '<div class="drvl">'+js.map(j=>`<span>${esc(j.driver_name||j.carrier||'')}${j.plate?' · '+esc(j.plate):''} <span class="tag s-${esc(j.status)}">${esc((ST[j.status]||j.status).split(' · ')[0])}${j.gate_src==='gps'?' · GPS':''}</span></span>`).join('')+'</div>';
 }
 function custMatch(name){
   const n=nrm(name); if(!n) return '';
@@ -993,7 +1012,7 @@ function renderPlan(){
       <td class="nt">${esc(j.deliver_time||'')}</td><td>${j.doc_no?`<span class="docno">${esc(j.doc_no)}</span>${j.printed_at?'<small class="sub" style="display:block">พิมพ์ '+thTime(j.printed_at)+'</small>':''}`:'<span class="sub">—</span>'}</td>
       <td>${st}${j.change_txt&&j.status!=='_snap'?`<span class="chg">${esc(j.change_txt)}</span>`:''}${j.note?`<small class="sub nt" style="display:block">📝 ${esc(j.note)}</small>`:''}</td>
       <td>${j.status==='_snap'?'':`<button type="button" class="btn sm" data-ed="${j.id}" aria-label="${ed&&!j.cancelled?'แก้':'ดู'}เที่ยว #${j.line_no}">${ed&&!j.cancelled?'✎ แก้':'ดู'}</button>`}</td></tr>`;
-  }).join('')||`<tr><td colspan="${PCOLS}" class="empty">${jobs.length?'ไม่มีเที่ยวในตัวกรองนี้':'ยังไม่มีเที่ยว'+(ed?' — กด "+ ลงแผน" ที่แผนแอดมิน หรือ "+ เพิ่มเที่ยว"':'')}</td></tr>`;
+  }).join('')||`<tr><td colspan="${PCOLS}" class="empty">${jobs.length?'ไม่มีเที่ยวในตัวกรองนี้':'ยังไม่มีเที่ยว'+(ed?' — กด "🚛 เลือกคนขับ" ที่แผนแอดมิน หรือ "+ เพิ่มเที่ยว"':'')}</td></tr>`;
   const all=shown.filter(j=>!j.cancelled&&j.status!=='_snap');
   $('selAll').checked=all.length>0&&all.every(j=>SEL.has(j.id)); $('selAll').disabled=!all.length;
   $('selAll').onchange=e=>{ all.forEach(j=>e.target.checked?SEL.add(j.id):SEL.delete(j.id)); renderPlan(); };
@@ -1016,7 +1035,7 @@ $('planSel').addEventListener('change',e=>load(e.target.value));
 
 /* ── ✎ เพิ่ม/แก้เที่ยว ── */
 const F5_DEF={coa:false,coNo:'',bags:'',bagTo:'',cond:'',n2:false,flush:false,flushTxt:'',leaveBy:'',arriveBy:'',prevManual:false,prev:['','','']};
-function openTrip(j,pre){
+function openTrip(j,pre,opt){
   const d=DATA, me=d.me, p=d.plan;
   if(!p){ toast('ยังไม่มีแพลนของวันส่งนี้ — กด "📅 วันส่งใหม่" ก่อน',true); return; }
   const ro=!me.canEdit||!!(j&&j.cancelled);
@@ -1037,7 +1056,7 @@ function openTrip(j,pre){
   const dis=ro?' disabled':'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="tT">
     <div class="dlghd"><div><div class="sub">ส่ง ${thDate(p.send_date)} · โหลด ${thDate(p.load_date)}${j?' · เที่ยว #'+j.line_no:''}${j&&j.doc_no?' · ใบขนส่ง '+esc(j.doc_no):''}</div>
-      <h2 id="tT" style="color:#fff">${j?(ro?'ดูเที่ยว':'แก้เที่ยว'):'เพิ่มเที่ยว'}${t.adminKey?' <span style="font-size:12px;font-weight:500;opacity:.85">· จากแผนแอดมิน</span>':''}</h2></div>
+      <h2 id="tT" style="color:#fff">${opt&&opt.drv&&!ro?'🚛 เลือกคนขับ':j?(ro?'ดูเที่ยว':'แก้เที่ยว'):'เพิ่มเที่ยว'}${t.adminKey?' <span style="font-size:12px;font-weight:500;opacity:.85">· จากแผนแอดมิน</span>':''}</h2></div>
       <button type="button" class="dlgx" aria-label="ปิด" id="tX">✕</button></div>
     <div class="dlgbd">
       <div class="seg" role="radiogroup" aria-label="ประเภทรถ" id="tKind">${Object.keys(KIND).map(k=>`<button type="button" role="radio" data-k="${k}" aria-checked="${t.kind===k}" class="${t.kind===k?'on':''}"${dis}>${KIND[k]}</button>`).join('')}</div>
@@ -1138,7 +1157,8 @@ function openTrip(j,pre){
     try{ const r=await postB({action:'deleteTrip',id:j.id}); if(!r.ok){ toast(r.error||'ไม่สำเร็จ',true); return; }
       toast(r.deleted?'ลบเที่ยว #'+j.line_no+' แล้ว':'ยกเลิกเที่ยว #'+j.line_no+' แล้ว'); SEL.delete(j.id); close(); load(DATA.sendDate);
     }catch(e){ toast('ไม่แน่ใจว่าสำเร็จ — โหลดข้อมูลใหม่',true); load(DATA.sendDate); } };
-  (ro?$('tNo'):$('tCust')).focus();
+  if(opt&&opt.drv&&!ro){ const el=kind==='company'?$('tDrv'):$('tCar'); el.focus(); el.closest('fieldset').scrollIntoView({block:'center'}); }
+  else (ro?$('tNo'):$('tCust')).focus();
 }
 
 /* ── อัปโหลดแผนแอดมิน (Excel ที่แอดมินส่ง) ──
