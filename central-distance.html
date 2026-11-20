@@ -432,6 +432,17 @@ function render(){
     });
     h+='</div>';
   }
+  /* 📦 20 พ.ย. ร้าน Packing (ใบขอรถไร่ PK) — ค่าแรงจับค่ากลางจาก "ชื่อร้าน = ชื่อสถานี" ไม่ใช่รหัส → ไม่มีปุ่มผูก มีแค่เพิ่มสถานีชื่อเดียวกับร้าน */
+  const pkm=DATA.pkMissing||[];
+  if(pkm.length){
+    h+='<div class="card"><div class="ch">📦 ร้าน Packing ที่ยังไม่มีค่ากลาง</div><div class="note" style="margin-bottom:4px">จากใบขอรถไร่ไปวิ่ง Packing · ระบบจับค่ากลางด้วย<b>ชื่อร้านตรงกับชื่อสถานี</b> · ถ้ามีสถานีอยู่แล้วแต่สะกดต่าง ให้แก้ชื่อสถานีให้ตรงกับร้าน</div>';
+    pkm.forEach((m,i)=>{
+      h+='<div class="miss"><div><div class="t">'+esc(m.name)+'</div>'
+        +'<div class="s"><b>'+m.orders+'</b> ออเดอร์ · '+esc((m.ids||[]).join(', '))+(m.orders>(m.ids||[]).length?' …':'')+'</div></div>'
+        +'<div class="acts"><button class="btn sm" onclick="openNewFromPk('+i+')">+ เพิ่มสถานีใหม่</button></div></div>';
+    });
+    h+='</div>';
+  }
   h+='<div id="rmBox"></div>';   // ⚠️ คู่จุดค่าแรงรูทหลายจุดที่ยังไม่มีระยะ
 
   // 🏭 / 🔁 สลับตาราง (คุณน้อง 30 ต.ค.: ต้องมีชิปแยกระหว่างโรงงาน-ปลายทาง) · คู่ปลายทางอยู่ตาราง central_pairs
@@ -771,6 +782,10 @@ function openNewFromMiss(i){
   const k=(DATA.codes||[]).find(x=>x.code===c), multi=k&&k.pickups.length>1;
   openEdit(null,{station:m.name||c,garden_code:c,pickup_point:multi?(m.pickup||''):'',job_type:t});
 }
+function openNewFromPk(i){   // ชื่อสถานี = ชื่อร้านตรงตัว (ห้ามแก้ชื่อ ไม่งั้นจับไม่เจอ) · ไม่ใส่รหัส/จุดรับ
+  const m=(DATA.pkMissing||[])[i]; if(!m) return;
+  openEdit(null,{station:m.name,garden_code:'',pickup_point:'',job_type:'Packing'});
+}
 /* 📦 Packing: ค่าจ้างลงของ ตามชนิดรถ + ค่าตักพาเลท ต่อร้าน · ค่าเด็กลงของ (นอก/ใน) เรทเดียวทุกร้าน อยู่หน้าตั้งค่าค่าแรง */
 const PK_F=[['edPk4','pk_unload_4w'],['edPk6','pk_unload_6w'],['edPk10','pk_unload_10w'],['edPkT','pk_unload_trailer'],['edPkPal','pk_pallet_fee']];
 /* 📞 ข้อมูลร้าน (pk_store_info) → Edge pk-plan storeAll / saveStore · สิทธิ์แก้ = DEV / แอดมิน Packing / ผู้จัดการ (ระยะค่ากลางยังแก้ได้เฉพาะ DEV) */
@@ -954,6 +969,11 @@ async function exportCsv(b){
       const val={station:st,dtc_code:ssbPoi.text(st)||ssbPoi.text(m.name),job_type:/^LT-/i.test(m.code)?'ลาน':'สวน',garden_code:m.code,pickup_point:multi?(m.pickup||''):'',active:'ใช่',ref_name:(m.name||'')+' · ยังไม่มีค่ากลาง '+m.orders+' ออเดอร์ — กรอกระยะ'};
       rows.push(C.map(c=>cell(val[c[0]],c[4]?S.ro:S.miss)));
     });
+    (DATA.pkMissing||[]).forEach(m=>{   // 📦 ร้าน Packing ที่ยังไม่มีค่ากลาง · ชื่อสถานี = ชื่อร้านตรงตัว ไม่มีรหัส
+      if(used[norm(m.name)])return; used[norm(m.name)]=1; nMiss++;
+      const val={station:m.name,dtc_code:ssbPoi.text(m.name),job_type:'Packing',active:'ใช่',ref_name:'📦 ร้าน Packing · ยังไม่มีค่ากลาง '+m.orders+' ออเดอร์ — กรอกระยะ (ห้ามแก้ชื่อ)'};
+      rows.push(C.map(c=>cell(val[c[0]],c[4]?S.ro:S.miss)));
+    });
     const ws={}; rows.forEach((row,ri)=>row.forEach((v,ci)=>{ws[X.utils.encode_cell({r:ri,c:ci})]=v;}));
     ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:rows.length-1,c:C.length-1}});
     // หัวกลุ่มรวมเซลล์ตามช่วงคอลัมน์
@@ -981,7 +1001,8 @@ async function exportCsv(b){
       [H('อัตราค่าลง'),H('บรรทัดละ 1 อัตรา รูปแบบ "ยอด : รายละเอียด" (กด Alt+Enter ขึ้นบรรทัดใหม่ในช่อง) เช่น\n600 : ลากลง 1,456 ลัง\n800 : ลากลง 1,456 ลัง+ตัดชั้น (2L)\nคนขับเห็นแค่ยอดเงิน รายละเอียดไว้ให้แอดมินคิด')],
       [H('วิธีจ่ายค่าลง'),H('จ้างลง-จ่ายเงินสดหน้างาน / ตั้งหนี้ทีมลง-โอน / ตั้งหนี้ค่าลงสินค้าCJ')],
       [H('เอกสาร Invoice'),H('เหลือง(วางบิล)+ฟ้า(บัญชี) / ฟ้า (บัญชี)')],[H('พาเลท'),H('แลกเปลี่ยน(นำพาเลทกลับ) / โอนพาเลท / ไม่มี')],
-      [H('แถวสีเหลือง'),H('สวน/ลานที่ยังไม่มีค่ากลาง — กรอกระยะแล้วนำเข้า ระบบเพิ่มเป็นสถานีใหม่ (เว้นว่าง = ข้าม)')]];
+      [H('แถวสีเหลือง'),H('สวน/ลาน และร้าน Packing ที่ยังไม่มีค่ากลาง — กรอกระยะแล้วนำเข้า ระบบเพิ่มเป็นสถานีใหม่ (เว้นว่าง = ข้าม) · ร้าน Packing ห้ามแก้ชื่อ ระบบจับด้วยชื่อตรงตัว')],
+      [H('รหัส PK'),H('ห้ามใส่ — ใบขอรถไร่ Packing จับค่ากลางจากชื่อร้าน ไม่ใช่รหัส (ใส่แล้วนำเข้าไม่ผ่าน)')]];
     const wh={}; help.forEach((row,ri)=>row.forEach((v,ci)=>{wh[X.utils.encode_cell({r:ri,c:ci})]=v;}));
     wh['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:help.length-1,c:1}}); wh['!cols']=[{wch:26},{wch:100}];
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'ค่ากลาง'); X.utils.book_append_sheet(wb,wh,'วิธีใช้');
