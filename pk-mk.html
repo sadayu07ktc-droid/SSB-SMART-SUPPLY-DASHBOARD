@@ -380,7 +380,7 @@ async function draftDay(d){
     out.push(row); }));
   // ลูกค้ารับเอง: แพลนวันเสาร์รวมวันรับ อา./จ. ด้วย (คุณน้อง: "17 แพลนวันเสาร์ ลูกค้ารับเอง 19/10" · วันรับอยู่ในช่องขนส่ง) · แพลนวันจันทร์ข้ามร้านที่อยู่ในแพลนเสาร์แล้ว
   if(dowOf(d)===1){ try{ const sat=await api('action=get&date='+addDay(d,-2)); ((sat.doc&&sat.doc.rows)||[]).forEach(o=>{ if(o.mid) used.add(o.mid); }); }catch(_){} }
-  msgs.filter(m=>!used.has(m.mid)&&m.p.pickup&&pickDay(d,m.p.dlv)).forEach(m=>{ used.add(m.mid); out.push(fromMsg(m)); });
+  msgs.filter(m=>!used.has(m.mid)&&m.p.pickup&&pickDay(d,m.p.dlv)).forEach(m=>{ used.add(m.mid); out.push(...fromMsgs(m)); });
   if(!day.plan){
     msgs.filter(m=>!used.has(m.mid)&&!m.p.pickup&&m.st==='planned'&&m.planDate===d).forEach(m=>{ used.add(m.mid); const r=fromMsg(m); r.wh='ขึ้นของ '+dm(d)+(m.p.dlv&&m.p.dlv!==d?' ส่ง '+dm(m.p.dlv):''); out.push(r); });
     malls.filter(e=>e.date===addDay(d,1)).forEach(e=>out.push(fromMall(e)));   // PO ห้างส่งพรุ่งนี้ = ขึ้นของวันนี้
@@ -396,6 +396,10 @@ function placeOf(p){
     if(x) return x; }
   return '';
 }
+/* 20 พ.ย. ข้อความเดียวรับหลายที่ (p.multiAt · items[].at) → แถวละที่ขึ้นของ · แถวแรก mid เดิม แถวต่อไป mid:2 (ตรงกับ pk-daily ypMkRows) */
+function fromMsgs(m){ const p=m.p||{}, A=p.multiAt; if(!A||A.length<2) return [fromMsg(m)];
+  const out=A.map(at=>{ const its=(p.items||[]).filter(i=>(i.at||A[0])===at); return its.length?fromMsg(Object.assign({},m,{p:Object.assign({},p,{pickAt:at,items:its})})):null; }).filter(Boolean);
+  if(!out.length) return [fromMsg(m)]; out.forEach((r,i)=>{ r.mid=i?m.mid+':'+(i+1):m.mid; }); return out; }
 function fromMsg(m){ const p=m.p||{}, k=p.pick||{}, d=p.dlv||m.planDate||'';
   /* pk-yp v19 (18 พ.ย.): ชื่อ+หน่วยตามฐานข้อมูลสินค้า (i.pn/i.pu) · ไม่รู้จัก = ตามที่เซลส์พิมพ์ */
   const unitOf=i=>i.pu||(i.u==='ถัง'?'ถัง':/ปี๊บ|ปี๊ป/.test(i.n)?'ปี๊บ':'ลัง'), items=[];
@@ -455,7 +459,7 @@ function render(){
 }
 /* โหลดสถานะ คีย์ SAP ของร้านจากไลน์ในแพลนนี้ (เบา · เฉพาะ mid ที่อยู่ในหน้า) · ชุด mid เปลี่ยนค่อยโหลดใหม่ */
 async function sapSync(){
-  const mids=[...new Set(ROWS.map(o=>String(o.mid||'')).filter(x=>/^\d{5,25}$/.test(x)))].sort(), key=mids.join(',');
+  const mids=[...new Set(ROWS.map(o=>String(o.mid||'').split(':')[0]).filter(x=>/^\d{5,25}$/.test(x)))].sort(), key=mids.join(',');
   if(key===SAP_KEY) return; SAP_KEY=key; if(!mids.length){ SAP={}; return; }
   try{ const r=await fetch(EDGE_YP+'?action=sap&userId='+encodeURIComponent(MY_UID)+'&mids='+encodeURIComponent(key)).then(x=>x.json());
     if(!r.ok||key!==SAP_KEY) return; SAP=r.sap||{};
@@ -469,7 +473,7 @@ function ordHtml(o,i){
     +'<input class="shop" data-o="'+i+'" data-k="shop" value="'+esc(o.shop)+'" placeholder="บริษัท / ร้าน" aria-label="บริษัท">'
     +'<select data-o="'+i+'" data-k="loadAt" aria-label="ที่ขึ้นของ"><option value="หนองใหญ่"'+(o.loadAt!=='บางนา'?' selected':'')+'>🏭 ขึ้นของ หนองใหญ่</option><option value="บางนา"'+(o.loadAt==='บางนา'?' selected':'')+'>🏬 ขึ้นของ คลังบางนา</option></select>'
     +'<span class="badge">'+(o.src==='line'?'ยี่ปั๊ว · ไลน์':o.src==='mall'?'งานห้าง · PO':/^job:/.test(o.mid||'')?'ใบแจ้งงาน PK':'เพิ่มเอง')+'</span>'
-    +(o.src==='line'&&/^\d{5,25}$/.test(String(o.mid||''))?sapHtml(String(o.mid),SAP[String(o.mid)]):'')
+    +(o.src==='line'&&/^\d{5,25}(:\d+)?$/.test(String(o.mid||''))?sapHtml(String(o.mid).split(':')[0],SAP[String(o.mid).split(':')[0]]):'')
     +'<button class="ib" data-mv="'+i+'" data-d="-1" title="เลื่อนขึ้น" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-mv="'+i+'" data-d="1" title="เลื่อนลง" aria-label="เลื่อนลง"'+(i<ROWS.length-1?'':' disabled')+'>↓</button><button class="ib" data-del="'+i+'" title="เอาร้านนี้ออก" aria-label="เอาร้านนี้ออก">✕</button></div>'
     +'<table class="it"><thead><tr><th>ชนิดน้ำมัน / สินค้า</th><th class="q">จำนวน</th><th class="u">หน่วย</th><th class="p">ราคา</th><th></th></tr></thead><tbody>'
     +o.items.map((x,j)=>'<tr><td><input list="dlProd" data-o="'+i+'" data-j="'+j+'" data-k="n" value="'+esc(x.n)+'" placeholder="ใส่ชื่อสินค้า" aria-label="สินค้า"></td><td class="q"><input data-o="'+i+'" data-j="'+j+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td class="u"><input data-o="'+i+'" data-j="'+j+'" data-k="u" value="'+esc(x.u)+'" list="dlUnit" aria-label="หน่วย"></td><td class="p"><input data-o="'+i+'" data-j="'+j+'" data-k="price" value="'+esc(x.price)+'" placeholder="ราคา / แถม / ***" aria-label="ราคา"></td><td><button class="ib" data-deli="'+i+'" data-j="'+j+'" title="ลบรายการ" aria-label="ลบรายการ">✕</button></td></tr>').join('')
@@ -512,7 +516,7 @@ async function openYp(b){
     +'</div><div class="row" style="margin-top:10px"><button class="btn ghost" data-x>ยกเลิก</button><span class="grow"></span><button class="btn" id="ypGo">เพิ่มเข้าแพลน</button></div></div>';
   document.body.appendChild(w); const close=()=>w.remove();
   w.querySelectorAll('[data-x]').forEach(x=>x.onclick=close); w.onclick=e=>{if(e.target===w)close();};
-  $('ypGo').onclick=()=>{ const pick=[...w.querySelectorAll('input[data-i]:checked')].map(c=>ms[+c.dataset.i]); close(); if(!pick.length) return; pick.forEach(m=>ROWS.push(fromMsg(m))); DIRTY=true; render(); toast('เพิ่ม '+pick.length+' ร้าน · ตรวจ/เติมเลข SO ทะเบียน คนขับ แล้วกดบันทึก'); };
+  $('ypGo').onclick=()=>{ const pick=[...w.querySelectorAll('input[data-i]:checked')].map(c=>ms[+c.dataset.i]); close(); if(!pick.length) return; pick.forEach(m=>ROWS.push(...fromMsgs(m))); DIRTY=true; render(); toast('เพิ่ม '+pick.length+' ร้าน · ตรวจ/เติมเลข SO ทะเบียน คนขับ แล้วกดบันทึก'); };
 }
 
 /* ── ดึงงานห้าง (แพลน PO 7-11 ที่แอดมินห้างนำเข้าในหน้าแพลนรถประจำวัน) ── */

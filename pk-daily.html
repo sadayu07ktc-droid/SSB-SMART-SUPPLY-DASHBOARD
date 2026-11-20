@@ -3549,6 +3549,12 @@ function ypMkRow(m,d){const p=m.p||{},k=p.pick||{},dl=p.dlv||'',pick=ypPickup(m)
   return {src:'line',mid:m.mid,shop,loadAt:p.pickAt||'หนองใหญ่',trans:[head].concat(fl).join(' + ')+((dl||d)?' '+ypDm(dl||d):''),empty:m.emp?String(m.emp):'',so:p.so||'',
     plate:pick?(k.plate||''):(m.head?plOf(m.head):''),driver:pick?(k.driver||''):(dv?dv.name:''),
     wh:pick?(dl?'ลูกค้ารับ '+ypDm(dl):''):'ขึ้นของ '+ypDm(d)+(dl&&dl!==d?' ส่ง '+ypDm(dl):''),red:'',items};}
+/* 20 พ.ย. คุณน้อง "แยก 2 แถว": ข้อความเดียวรับหลายที่ (pk-yp p.multiAt · items[].at) → ฟอร์ม FM-MK แถวละที่ขึ้นของ
+   แถวแรก mid เดิม · แถวต่อไป mid:2, mid:3 (ส่งเมลพร้อมกัน · ผู้รับตามที่ขึ้นของของแต่ละแถว) */
+function ypMkRows(m,d){const p=m.p||{},A=p.multiAt;if(!A||A.length<2)return [ypMkRow(m,d)];
+  const out=A.map(at=>{const its=(p.items||[]).filter(i=>(i.at||A[0])===at);return its.length?ypMkRow(Object.assign({},m,{p:Object.assign({},p,{pickAt:at,items:its})}),d):null;}).filter(Boolean);
+  if(!out.length)return [ypMkRow(m,d)];out.forEach((r,i)=>{r.mid=i?m.mid+':'+(i+1):m.mid;});return out;}
+const ypMkSplitOf=(m,rows)=>(rows||[]).filter(o=>String(o.mid||'').indexOf(m.mid+':')===0);
 async function mkGet(d){const r=await fetch(mkUrl()+'?action=get&userId='+encodeURIComponent(MY_UID)+'&date='+d+'&t='+Date.now()).then(z=>z.json());if(!r.ok)throw new Error(r.error||'โหลดฟอร์มไม่ได้');return r;}
 async function mkPost(o){const r=await fetch(mkUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({userId:MY_UID},o))}).then(z=>z.json());if(!r.ok&&!r.dup)throw new Error(r.error||'ไม่สำเร็จ');return r;}
 const YPG={acc:{t:'บัญชี + เซลส์',h:'เปิดราคา · FM-MK-15',priced:1},wh:{t:'คลัง',h:'ปิดราคา · FM-MK-14 · แจ้งจัดสินค้า',priced:0}};
@@ -3561,11 +3567,13 @@ async function ypMailOpen(m,fresh){if(m.sample||!ypLive()){toast('หน้า�
   const S={d,row:null,rev:0,no:0,g:'acc',mode:'test',mail:null,sub:{},subEd:{},note:{},dirty:0,sib:[]};
   const fail=e=>{ov.querySelector('.mbody').innerHTML='<div class="warn">❌ '+esc(e.message||e)+'</div><div class="mact"><button class="btn ghost" data-x>ปิด</button></div>';ov.querySelector('[data-x]').onclick=close;};
   try{let g=await mkGet(d);const old=g.doc&&(g.doc.rows||[]).find(o=>o.mid===m.mid);
-    if(fresh||!old){const a=await mkPost({action:'addRows',date:d,rows:[old&&!fresh?old:ypMkRow(m,d)]});g=await mkGet(d);}
+    if(fresh||!old){const a=await mkPost({action:'addRows',date:d,rows:old&&!fresh?[old]:ypMkRows(m,d)});g=await mkGet(d);}
+    else if(m.p&&m.p.multiAt&&!ypMkSplitOf(m,g.doc.rows).length){const rs=ypMkRows(m,d).slice(1);if(rs.length){await mkPost({action:'addRows',date:d,rows:rs});g=await mkGet(d);}}   /* แถวเดิมจากก่อนแยก → เติมแถวที่ 2 */
     S.mode=g.mailMode||'test';ypMkSync(S,g,m);if(!S.row)throw new Error('ไม่พบร้านนี้ในฟอร์มวันที่ '+dateTH(d));
     {const sb=ypMkSibs(m,d),miss=sb.filter(x=>!(g.doc.rows||[]).some(o=>o.mid===x.mid));   /* ใบที่ยังไม่อยู่ในฟอร์ม (เช่น ลงแพลนแต่ปิดหน้าต่างเมล) → เติม */
-      if(miss.length){await mkPost({action:'addRows',date:d,rows:miss.map(x=>ypMkRow(x,d))});g=await mkGet(d);ypMkSync(S,g,m);}
-      S.sib=sb.map(x=>({m:x,on:ypMkSame(m,x)&&!ypSentOf(S,x.mid,'acc')&&!ypSentOf(S,x.mid,'wh')}));ypMkSibNo(S,g);}
+      if(miss.length){await mkPost({action:'addRows',date:d,rows:[].concat(...miss.map(x=>ypMkRows(x,d)))});g=await mkGet(d);ypMkSync(S,g,m);}
+      const sp=ypMkSplitOf(m,g.doc.rows).map(o=>{const its=(m.p.items||[]).filter(i=>i.at===o.loadAt);return {m:{mid:o.mid,p:Object.assign({},m.p,{items:its,cs:its.filter(i=>i.u!=='ถัง').reduce((a,i)=>a+(+i.q||0)+(+i.f||0),0),tk:its.filter(i=>i.u==='ถัง').reduce((a,i)=>a+(+i.q||0)+(+i.f||0),0),pb:0,po:null})},on:true,split:o.loadAt};});
+      S.sib=sp.concat(sb.map(x=>({m:x,on:ypMkSame(m,x)&&!ypSentOf(S,x.mid,'acc')&&!ypSentOf(S,x.mid,'wh')})));ypMkSibNo(S,g);}
     /* ช่องในการ์ด (คนขับ/ทะเบียน/เลข SO) ที่กรอกทีหลัง → เติมลงแถวฟอร์มเดิม (บันทึกฉบับใหม่ตอนกดพรีวิว/ส่ง) */
     const p0=m.p||{},k0=p0.pick||{},card={empty:m.emp?String(m.emp):'',so:p0.so||'',plate:ypPickup(m)?k0.plate||'':'',driver:ypPickup(m)?k0.driver||'':''};
     Object.keys(card).forEach(f=>{if(card[f]&&card[f]!==(S.row[f]||'')){S.row[f]=card[f];S.dirty=1;}});}
@@ -3574,11 +3582,11 @@ async function ypMailOpen(m,fresh){if(m.sample||!ypLive()){toast('หน้า�
     const it=r.items.map((x,i)=>'<tr><td><input class="in" data-it="'+i+'" data-k="n" value="'+esc(x.n)+'" list="ypProdL" aria-label="สินค้า"></td><td><input class="in r" data-it="'+i+'" data-k="q" value="'+esc(x.q)+'" inputmode="decimal" aria-label="จำนวน"></td><td><input class="in c" data-it="'+i+'" data-k="u" value="'+esc(x.u)+'" aria-label="หน่วย"></td><td><input class="in r" data-it="'+i+'" data-k="price" value="'+esc(x.price)+'" aria-label="ราคา"></td><td><button class="ib" data-itx="'+i+'" aria-label="ลบบรรทัด" title="ลบบรรทัด">✕</button></td></tr>').join('');
     const fld=(k,l,ph)=>'<label>'+l+'<input class="in" data-f="'+k+'" value="'+esc(r[k]||'')+'" placeholder="'+esc(ph||'')+'"></label>';
     const defSub=S.g==='acc'?'แพลนจัดส่งสินค้า ประจำวันที่ '+ypDot(d):'แพลนจัดส่งสินค้า แจ้งจัด '+ypMkShops(S).join(' / ')+' '+ypDot(d);
-    ov.querySelector('.ymb').innerHTML='<div class="ymh"><div><h3>✉️ เมลแผนการส่งมอบ · '+esc(r.shop)+'</h3><div class="note">'+(ypPickup(m)?'🙋 ลูกค้ารับเอง':'🚚 ส่งด้วยรถเรา')+' · ฟอร์มส่งสินค้า '+esc(dateTH(d))+' · <b>บันทึกลงฟอร์ม FM-MK แล้ว</b> (ฉบับที่ '+S.rev+' · ร้านที่ '+ypMkNos(S).join(', ')+')</div></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
+    ov.querySelector('.ymb').innerHTML='<div class="ymh"><div><h3>✉️ เมลแผนการส่งมอบ · '+esc(r.shop)+'</h3><div class="note">'+(ypPickup(m)?'🙋 ลูกค้ารับเอง':'🚚 ส่งด้วยรถเรา')+(m.p&&m.p.multiAt?' · ใบนี้ '+(r.loadAt==='บางนา'?'🏬 ขึ้นที่คลังบางนา':'🏭 ขึ้นที่โรงงานหนองใหญ่'):'')+' · ฟอร์มส่งสินค้า '+esc(dateTH(d))+' · <b>บันทึกลงฟอร์ม FM-MK แล้ว</b> (ฉบับที่ '+S.rev+' · ร้านที่ '+ypMkNos(S).join(', ')+')</div></div><button class="x" data-x aria-label="ปิด">✕</button></div>'
       +'<div class="mbody">'+(S.mode==='test'?'<div class="ytest">🧪 <b>โหมดทดสอบ</b> — เมลขึ้นต้น [เทสระบบ] + ป้ายแดง "ยังไม่ใช่แพลนจริง" แต่ส่งถึงผู้รับจริง</div>':S.mode==='off'?'<div class="warn">⛔ ปิดการส่งเมลอยู่ (PK_MAIL_MODE=off)</div>':'')
       +'<div class="seg ymg" role="group" aria-label="ส่งถึง">'+Object.keys(YPG).map(k=>{const s=ypSentOf(S,m.mid,k);return '<button type="button" data-g="'+k+'" aria-pressed="'+(k===S.g)+'" class="'+(k===S.g?'on':'')+'">'+esc(YPG[k].t)+' <small>'+esc(YPG[k].h)+'</small>'+(s?'<i class="ok">📨 ส่งแล้ว '+esc(ypTime(s))+'</i>':'')+'</button>';}).join('')+'</div>'
-      +((S.sib||[]).length?'<div class="ymsec">📦 ส่งพร้อมกันในเมลเดียว <span class="note">· รถ '+esc(plOf(m.head))+' วันเดียวกัน · ติ๊กใบที่จะรวม</span></div><div class="ymsib"><label><input type="checkbox" checked disabled> <b>'+esc(r.shop)+'</b> <span class="note">(ใบนี้ · ร้านที่ '+S.no+')</span></label>'
-        +S.sib.map((x,i)=>{const p=x.m.p||{},sn=ypSentOf(S,x.m.mid);return '<label><input type="checkbox" data-sib="'+i+'"'+(x.on?' checked':'')+(x.no?'':' disabled')+'> <b>'+esc(x.shop||p.shop||'')+'</b> <span class="note">'+esc(ypQty(p))+(p.po&&p.po.no?' · PO '+esc(p.po.no):'')+(x.no?' · ร้านที่ '+x.no:' · ไม่พบในฟอร์ม')+'</span>'+(sn?' <i class="ok">📨 ส่งแล้ว '+esc(ypTime(sn))+'</i>':'')+'</label>';}).join('')
+      +((S.sib||[]).length?'<div class="ymsec">📦 ส่งพร้อมกันในเมลเดียว <span class="note">· '+(S.sib.every(x=>x.split)?'ข้อความนี้รับ '+(S.sib.length+1)+' ที่ · แถวละที่ขึ้นของ':'รถ '+esc(plOf(m.head))+' วันเดียวกัน')+' · ติ๊กใบที่จะรวม</span></div><div class="ymsib"><label><input type="checkbox" checked disabled> <b>'+esc(r.shop)+'</b> <span class="note">(ใบนี้ · ร้านที่ '+S.no+')</span></label>'
+        +S.sib.map((x,i)=>{const p=x.m.p||{},sn=ypSentOf(S,x.m.mid);return '<label><input type="checkbox" data-sib="'+i+'"'+(x.on?' checked':'')+(x.no?'':' disabled')+'> <b>'+esc(x.shop||p.shop||'')+'</b> <span class="note">'+(x.split?(x.split==='บางนา'?'🏬 ขึ้นที่คลังบางนา':'🏭 ขึ้นที่โรงงานหนองใหญ่')+' · ':'')+esc(ypQty(p))+(p.po&&p.po.no?' · PO '+esc(p.po.no):'')+(x.no?' · ร้านที่ '+x.no:' · ไม่พบในฟอร์ม')+'</span>'+(sn?' <i class="ok">📨 ส่งแล้ว '+esc(ypTime(sn))+'</i>':'')+'</label>';}).join('')
         +'<div class="note">แก้สินค้า/ช่องด้านล่างได้เฉพาะใบนี้ · ใบอื่นแก้ที่ 📑 ฟอร์ม FM-MK</div></div>':'')
       +'<div class="ymsec">สินค้า'+((S.sib||[]).some(x=>x.on)?' · '+esc(r.shop):'')+' <span class="note">· แก้จำนวน/ราคาได้ · ราคา "แถม" = ของแถม</span></div>'
       +'<div class="ymt"><table><thead><tr><th>สินค้า</th><th>จำนวน</th><th>หน่วย</th><th>ราคา'+(G.priced?'':' <small>(ไม่โชว์ในเมลคลัง)</small>')+'</th><th></th></tr></thead><tbody>'+it+'</tbody></table></div>'
@@ -3644,7 +3652,7 @@ async function ypMkPreview(S,m,ov,btn,send,redraw){ypMkRead(S,ov);
   catch(e){toast('❌ '+(e.message||e)+(send?' · ตรวจสถานะก่อนกดส่งอีกครั้ง':''));}
   finally{if(btn.isConnected){btn.disabled=false;btn.textContent=lab;}}}
 /* คืน Pending → เอาร้านออกจากฟอร์ม FM-MK (ฉบับใหม่ · ฉบับที่ส่งเมลไปแล้วยังอยู่ในประวัติ) */
-async function ypMkDrop(m){if(m.sample||!ypLive())return;try{const g=await mkGet(ypMkDate(m));if(!g.doc||!(g.doc.rows||[]).some(o=>o.mid===m.mid))return;await mkPost({action:'addRows',date:ypMkDate(m),rows:[],drop:[m.mid]});}catch(e){toast('⚠️ เอาออกจากฟอร์ม FM-MK ไม่ได้: '+(e.message||e));}}
+async function ypMkDrop(m){if(m.sample||!ypLive())return;try{const g=await mkGet(ypMkDate(m));if(!g.doc||!(g.doc.rows||[]).some(o=>o.mid===m.mid))return;await mkPost({action:'addRows',date:ypMkDate(m),rows:[],drop:[m.mid].concat(ypMkSplitOf(m,g.doc.rows).map(o=>o.mid))});}catch(e){toast('⚠️ เอาออกจากฟอร์ม FM-MK ไม่ได้: '+(e.message||e));}}
 $('bYp').onclick=()=>ypOpen('');$('bPo').onclick=()=>ypOpen('po');ypBadge();
 /* 🏠 หน้าแรก Packing (pk-plan) · ส่ง uid ต่อถ้าเปิดมาพร้อม ?uid= */
 (()=>{const b=$('homeB'),u=new URLSearchParams(location.search).get('uid');if(b&&u)b.href+='?uid='+encodeURIComponent(u);})();
