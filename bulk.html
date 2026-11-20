@@ -186,6 +186,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .ctbl a{color:var(--brandInk);font-family:var(--f-num);font-size:12px;text-decoration:none;border-bottom:1px dashed currentColor}
 .src{display:inline-block;font-size:10.5px;font-weight:700;border-radius:6px;padding:0 6px;margin-left:4px;background:var(--surface2);color:var(--muted)}
 .yn{font-weight:700;font-size:12.5px}.yn.y{color:var(--ok)}.yn.n{color:var(--muted);font-weight:400}
+.wb{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap}.wb.origin{color:var(--warn);background:var(--warnTint)}.wb.dest{color:var(--info);background:var(--infoTint)}
 .c-ok{color:var(--ok);background:var(--okTint)}.c-wait{color:var(--warn);background:var(--warnTint)}.c-bad{color:var(--bad);background:var(--badTint)}
 .cmiss{background:var(--surface2);border-radius:10px;padding:10px 12px;font-size:13px;display:flex;flex-direction:column;gap:6px}
 .cmiss>div{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
@@ -609,7 +610,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-19k</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-20a</span></div>
   </div>
   </div></main>
 </div>
@@ -1490,7 +1491,7 @@ function drawCustList(){
         ${c.radius_m?`<div class="sub" style="font-size:11.5px">รัศมี ${c.radius_m} ม.</div>`:''}</td>
       <td>${c.has_dest_scale?'<span class="yn y">✓ มี</span>':'<span class="yn n">ไม่มี</span>'}</td>
       <td>${c.need_slip_out?'<span class="yn y">✓ ต้องมี</span>':'<span class="yn n">ไม่ต้อง</span>'}</td>
-      <td>${WB_TH[c.weight_basis]?'<span class="yn y">'+WB_TH[c.weight_basis]+'</span>':'<span class="yn n">—</span>'}</td>
+      <td>${WB_TH[c.weight_basis]?'<span class="wb '+c.weight_basis+'">'+WB_TH[c.weight_basis]+'</span>':'<span class="yn n">—</span>'}</td>
       <td><span class="chip ${st[0]}">${st[1]}</span>${c.note?`<div class="sub" style="font-size:11.5px;margin-top:3px">${esc(c.note)}</div>`:''}</td>
       ${ed?`<td style="white-space:nowrap">${st[1]==='รอยืนยันหมุด'?`<button class="btn sm pri" type="button" data-ok="${esc(c.cust_code)}">✓ ยืนยัน</button> `:''}${st[1]==='พร้อม'?`<button class="btn sm" type="button" data-un="${esc(c.cust_code)}" title="กลับเป็น รอยืนยันหมุด · พิกัดไม่เปลี่ยน">ยกเลิกการยืนยัน</button> `:''}<button class="btn sm" type="button" data-ed="${esc(c.cust_code)}">แก้ไข</button></td>`:''}</tr>`; }).join('');
   const miss=d.missing.length?`<div class="cmiss"><b>ลูกค้าในแพลนที่ยังไม่ได้ตั้งค่า (${d.missing.length})</b><span class="sub" style="font-size:12px">ยังไม่ตั้งค่า = คนขับกด "ถึงลูกค้า" เอง · ไม่มีขั้นชั่งปลายทาง</span>
