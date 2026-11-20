@@ -33,6 +33,11 @@
   .seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:var(--card)}
   .seg button{border:0;padding:8px 12px;font:inherit;font-size:12.5px;cursor:pointer;background:transparent;color:var(--txt2)}
   .seg button.on{background:var(--primary);color:#fff}
+  /* 🏷️ ประเภทงาน ติ๊กได้หลายอัน (20 พ.ย. 2569) */
+  .jtpick{display:flex;flex-wrap:wrap;gap:6px}
+  .jtpick button{border:1px solid var(--line2);border-radius:999px;padding:7px 13px;min-height:36px;font:inherit;font-size:13px;cursor:pointer;background:var(--card2);color:var(--txt)}
+  .jtpick button.on{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:700}
+  .jtpick button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .seg.wrap{flex-wrap:wrap;max-width:100%}.seg.wrap button{white-space:nowrap;flex:1 1 auto}   /* ชิปกรองในลิ้นชัก 📡 (6 ชิป) ขึ้นบรรทัดใหม่แทนโดนตัดบนจอแคบ */
   .btn{padding:9px 16px;border:0;border-radius:10px;background:var(--primary);color:#fff;font:inherit;font-size:13.5px;font-weight:700;cursor:pointer}
   .btn.ghost{background:transparent;border:1px solid var(--line2);color:var(--txt);font-weight:500}
@@ -223,11 +228,10 @@
     <h2 id="edTitle">แก้ค่ากลาง</h2>
     <div class="warnbox" id="edWarn"></div>
     <div class="f"><label for="edStation">ชื่อสถานี</label><input id="edStation" placeholder="เช่น ลาน คลองพลู"><div class="hint geo" id="edGeo"></div></div>
-    <div class="f2">
-      <div class="f"><label for="edKm">ระยะเที่ยวเดียว (กม.)</label><input id="edKm" type="number" step="1" min="1" inputmode="numeric" oninput="kmHint()"><div class="hint" id="edKmHint"></div></div>
-      <div class="f"><label for="edType">ประเภทงาน</label>
-        <select id="edType" onchange="pkShow()"><option value="">— ไม่ระบุ —</option><option>สวน</option><option>ลาน</option><option>Packing</option><option>Bulk</option><option>ส่งน้ำ</option><option>อื่นๆ</option></select></div>
-    </div>
+    <div class="f"><label for="edKm">ระยะเที่ยวเดียว (กม.)</label><input id="edKm" type="number" step="1" min="1" inputmode="numeric" oninput="kmHint()"><div class="hint" id="edKmHint"></div></div>
+    <div class="f"><label id="edTypeLb">ประเภทงาน (ติ๊กได้หลายประเภท)</label>
+      <input type="hidden" id="edType"><div class="jtpick" id="edTypeBox" role="group" aria-labelledby="edTypeLb"></div>
+      <div class="hint">สถานีที่รถหลายกลุ่มวิ่ง ติ๊กให้ครบทุกกลุ่ม · ระยะใช้ค่าเดียวกันทุกกลุ่ม · ไม่ติ๊กเลย = ไม่ระบุ</div></div>
     <div class="f" id="edTyBox" hidden><label for="edPkType">Type (เก็บสถิติงานคนขับ)</label>
       <select id="edPkType"><option value="">— ยังไม่ระบุ —</option><option>ห้าง</option><option>ยี่ปั๊ว</option><option>อื่นๆ</option></select></div>
     <div class="f"><label for="edCode">รหัสสวน / ลาน ที่ใช้ค่ากลางนี้</label>
@@ -480,7 +484,13 @@ async function tyPost(items){
   const r=await fetch(TYPE_EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({userId:MY_UID,items})});
   return r.json();
 }
-const jtOf=r=>{const t=String(r.job_type||'').trim();return JOB_TYPES.indexOf(t)>=0?t:'-';};
+/* 🏷️ ประเภทงานหลายค่า (20 พ.ย. 2569 คุณน้อง: สถานีเดียว รถไร่/Bulk/Packing วิ่งได้) · เก็บในช่อง job_type เดิม คั่น "," เรียงตาม JOB_TYPES
+   ⚠️ ห้ามเทียบ job_type ทั้งข้อความ (==='Packing') — ใช้ jtHas · Edge ที่อ่านช่องนี้ใช้ jtList แบบเดียวกัน (admin-writes/pk-daily/pk-plan/order-form/central-type) */
+const jtSplit=v=>String(v==null?'':v).split(/[,+\/|]/).map(t=>t.trim()).filter(Boolean);
+const jtHas=(v,t)=>jtSplit(v).indexOf(t)>=0;
+const jtNorm=v=>{const o=[];jtSplit(v).forEach(t=>{const c=JOB_TYPES.find(x=>norm(x)===norm(t))||t;if(o.indexOf(c)<0)o.push(c);});
+  const rk=t=>{const i=JOB_TYPES.indexOf(t);return i<0?99:i;};return o.sort((a,b)=>rk(a)-rk(b)).join(',');};
+const jtsOf=r=>{const a=jtSplit(r.job_type).filter(t=>JOB_TYPES.indexOf(t)>=0);return a.length?a:['-'];};   // สถานีหลายประเภท = นับ/ขึ้นในทุกชิปที่ติ๊ก
 function setView(k){VIEW=k;document.querySelectorAll('.kseg button').forEach(b=>b.classList.toggle('on',b.dataset.k===k));renderView();if(k==='pair'&&!PAIRS)pairLoad();}
 function setJT(t){JT=t;document.querySelectorAll('.jseg button').forEach(b=>b.classList.toggle('on',b.dataset.j===t));renderList();}
 function renderView(){
@@ -494,7 +504,7 @@ function renderView(){
       +'<input type="file" id="impPair" accept=".xlsx" hidden onchange="pairImport(this)">'
       +'<span class="note">ระยะระหว่างปลายทาง 2 ที่ (ใช้ทั้งสองทิศ) · แก้ได้เฉพาะ DEV · ค่าจาก DTC เพิ่มได้ที่ลิ้นชัก 📡</span></div>';
   }else{
-    const cnt={}; (DATA.rows||[]).forEach(r=>{const t=jtOf(r);cnt[t]=(cnt[t]||0)+1;});
+    const cnt={}; (DATA.rows||[]).forEach(r=>{jtsOf(r).forEach(t=>{cnt[t]=(cnt[t]||0)+1;});});
     h='<div class="tools"><div class="seg jseg" role="group" aria-label="ประเภทงาน" style="flex-wrap:wrap">'
       +JT_CHIPS.filter(c=>!c[0]||cnt[c[0]]).map(c=>'<button type="button" data-j="'+c[0]+'" class="'+(JT===c[0]?'on':'')+'" onclick="setJT(\''+c[0]+'\')">'+c[1]+' <small>'+(c[0]?cnt[c[0]]:(DATA.rows||[]).length)+'</small></button>').join('')+'</div></div>'
       +'<div class="tools" id="tyBox" hidden></div>'
@@ -701,7 +711,7 @@ function renderList(){
   if(VIEW==='pair') return renderPairs();
   const q=norm(($('q')||{}).value);
   let rows=(DATA.rows||[]).slice();
-  if(JT) rows=rows.filter(r=>jtOf(r)===JT);
+  if(JT) rows=rows.filter(r=>jtsOf(r).indexOf(JT)>=0);
   const tb=$('tyBox');
   if(tb){ tb.hidden=JT!=='Packing';
     if(JT==='Packing'){ const n={}; rows.forEach(r=>{const k=r.pk_type||'-';n[k]=(n[k]||0)+1;});
@@ -715,7 +725,7 @@ function renderList(){
     const nm=codeName(r.garden_code);
     return '<div class="row'+(r.active===false?' off':'')+'" tabindex="0" role="button" onclick="openEdit('+r.id+')" onkeydown="if(event.key===\'Enter\')openEdit('+r.id+')">'
       +'<div class="cA"><div class="st">'+esc(r.station)+ssbPoi.tag(r.station)+'</div><div class="meta">'
-        +(r.job_type?'<span class="pill">'+esc(r.job_type)+'</span>':'')
+        +jtSplit(r.job_type).map(t=>'<span class="pill">'+esc(t)+'</span>').join('')
         +(r.pk_type?'<span class="pill ok">🏷️ '+esc(r.pk_type)+'</span>':'')
         +(r.pickup_point?'<span class="pill warn">จุดรับ: '+esc(r.pickup_point)+'</span>':'')
         +(r.dp_type?'<span class="pill">⏱️ '+esc(r.dp_type)+(dpHours(r.dp_type)!=null?' · รอ '+nf(dpHours(r.dp_type))+' ชม.':' · ไม่มีในตาราง')+'</span>':'')
@@ -763,7 +773,7 @@ function openEdit(id,preset){
   $('edTitle').textContent=id?'แก้ค่ากลาง':'เพิ่มสถานี';
   $('edStation').value=ED.station||'';
   $('edKm').value=ED.km!=null?ED.km:'';
-  $('edType').value=ED.job_type||''; $('edPkType').value=ED.pk_type||'';
+  $('edType').value=jtNorm(ED.job_type); jtDraw(); $('edPkType').value=ED.pk_type||'';
   fillCodes(ED.garden_code||''); fillPickups();
   $('edPickup').value=ED.pickup_point||'';
   $('edNote').value=ED.note||'';
@@ -774,6 +784,16 @@ function openEdit(id,preset){
   geoStation();
   kmHint(); dupCheck(); openOv('ovEdit');
   setTimeout(()=>$(id?'edKm':'edStation').focus(),50);
+}
+function jtDraw(){
+  const cur=jtSplit($('edType').value), extra=cur.filter(t=>JOB_TYPES.indexOf(t)<0);   // ค่าเก่านอกรายการ คงไว้ให้เห็น กดเอาออกได้
+  $('edTypeBox').innerHTML=JOB_TYPES.concat(extra).map(t=>{const on=cur.indexOf(t)>=0;
+    return '<button type="button" class="'+(on?'on':'')+'" aria-pressed="'+on+'" data-t="'+esc(t)+'" onclick="jtTog(this.dataset.t)">'+(on?'✓ ':'')+esc(t)+'</button>';}).join('');
+}
+function jtTog(t){
+  const cur=jtSplit($('edType').value), i=cur.indexOf(t); if(i>=0)cur.splice(i,1); else cur.push(t);
+  $('edType').value=jtNorm(cur.join(',')); jtDraw(); pkShow();
+  const b=[...$('edTypeBox').children].find(x=>x.dataset.t===t); if(b)b.focus();
 }
 function openNewFromMiss(i){
   const m=DATA.missing[i];
@@ -803,7 +823,7 @@ function stRateRow(r){ return '<div class="f2 st-rate" style="grid-template-colu
   +'<button type="button" class="btn ghost sm" aria-label="ลบอัตรานี้" onclick="this.parentNode.remove()">✕</button></div>'; }
 function stAddRate(){ $('stRates').insertAdjacentHTML('beforeend',stRateRow({})); }
 function stFill(){
-  const box=$('edSt'), on=$('edType').value==='Packing'&&ED&&ED.id;
+  const box=$('edSt'), on=jtHas($('edType').value,'Packing')&&ED&&ED.id;
   box.hidden=!on; if(!on) return;
   const s=(STORES&&STORES[String(ED.id)])||{};
   $('stTeam').value=s.team||''; $('stPark').value=s.parking||''; $('stToll').value=s.toll||''; $('stPay').value=s.pay||''; $('stDoc').value=s.doc||''; $('stPal').value=s.pallet||'';
@@ -829,13 +849,13 @@ async function stSaveIfChanged(){   // คืน '' = ไม่ต้องบ�
   catch(e){ return 'บันทึกข้อมูลร้านไม่ได้ — ลองใหม่'; }
 }
 function pkShow(){
-  const on=$('edType').value==='Packing'; $('edPk').hidden=!on; $('edTyBox').hidden=!on; stFill();
+  const on=jtHas($('edType').value,'Packing'); $('edPk').hidden=!on; $('edTyBox').hidden=!on; stFill();
   if(on)$('edPkHelp').textContent='เด็กนอก 350/เที่ยว · เด็กใน 4 ล้อ 350/คน · 6-10 ล้อ/พ่วง 400/คน — แก้เรทที่หน้า ⚙️ ตั้งค่าต้นทุน/ค่าแรง · เลือกนอก/ใน และจำนวนคนในใบงานแต่ละเที่ยว · ช่อง ①② ว่าง = ไม่มี/ยังไม่รู้';
 }
 async function saveEdit(){
   const row={id:ED&&ED.id||undefined,station:$('edStation').value.trim(),km:$('edKm').value,job_type:$('edType').value,
     garden_code:$('edCode').value,pickup_point:$('edPickup').value.trim(),note:$('edNote').value.trim(),dp_type:$('edDp').value,active:$('edActive').checked};
-  const pk=row.job_type==='Packing';   // ไม่ใช่ Packing = ล้างค่าใช้จ่ายร้าน + Type
+  const pk=jtHas(row.job_type,'Packing');   // ไม่ใช่ Packing = ล้างค่าใช้จ่ายร้าน + Type
   const tyNew=pk?$('edPkType').value:'', tyChanged=String(ED&&ED.pk_type||'')!==tyNew;
   for(const [el,k] of PK_F){const s=pk?$(el).value.trim():'', v=s===''?null:Number(s);
     if(v!=null&&!(v>=0)){toast('ค่าใช้จ่ายต้องเป็นตัวเลข 0 ขึ้นไป',true);$(el).focus();return;}
@@ -994,7 +1014,7 @@ async function exportCsv(b){
       [H('')],[H('ค่าที่ใช้ได้',hb),H('',hb)],
       [H('รหัส DTC'),H('เลขหมุดใน DTC เช่น ST-32741 ไว้ยืนยันว่าเป็นที่เดียวกัน · ระบบหาจากชื่อสถานี · ว่าง = ไม่มีหมุดชื่อนี้ · อัปโหลดแล้วไม่อ่านคอลัมน์นี้')],
       [H('ระยะเที่ยวเดียว(กม.)'),H('ตัวเลข กม. เที่ยวเดียว SSB → สถานี (ระบบปัดเป็นกม.เต็ม · คิดค่าแรงไป-กลับ ×2)')],
-      [H('ประเภทงาน'),H(JOB_TYPES.join(' / '))],[H('ใช้งาน'),H('ใช่ / ไม่')],
+      [H('ประเภทงาน'),H(JOB_TYPES.join(' / ')+' · สถานีที่หลายกลุ่มวิ่ง ใส่หลายประเภทคั่นด้วย , เช่น Bulk,Packing')],[H('ใช้งาน'),H('ใช่ / ไม่')],
       [H('Type'),H('ห้าง / ยี่ปั๊ว / อื่นๆ · ใส่เฉพาะประเภทงาน Packing · เว้นว่าง = คงค่าเดิม (ล้างค่าทำได้ที่ฟอร์มแก้ในหน้าเว็บ)')],
       [H('ค่าใช้จ่ายร้าน (Packing)'),H('ตัวเลขบาท · ใส่เฉพาะประเภทงาน Packing')],
       [H('เบอร์ทีมลง 1 / 2'),H('เบอร์มือถือ 9–10 หลัก ขึ้นต้นด้วย 0 เช่น 083-472-4740')],
@@ -1120,30 +1140,31 @@ function buildPlan(tbl){
     ['job_type','garden_code','pickup_point','note','dp_type'].forEach(k=>{if(ix[k]<0)row[k]=base?String(base[k]||''):'';});
     if(!row.job_type&&base&&base.job_type) row.job_type=String(base.job_type);   // ช่องประเภทงานว่าง = คงค่าเดิม (30 ต.ค. · ไฟล์ที่ไม่ได้กรอกประเภทเคยล้าง Packing ทิ้ง)
     if(row.dp_type){const hit=(DATA.dpTypes||[]).find(d=>norm(d.dp_type)===norm(row.dp_type));if(hit)row.dp_type=hit.dp_type;}   // สะกดเว้นวรรคต่าง → ใช้ชื่อในตาราง
-    if(row.job_type){const jt=JOB_TYPES.find(x=>norm(x)===norm(row.job_type));   // packing / PACKING → Packing
-      if(jt)row.job_type=jt; else P.warn.push('แถว '+line+': ประเภทงาน "'+row.job_type+'" ไม่อยู่ในรายการ ('+JOB_TYPES.join(' / ')+')');}
+    if(row.job_type){const un=jtSplit(row.job_type).filter(t=>!JOB_TYPES.some(x=>norm(x)===norm(t)));   // packing / PACKING → Packing · หลายประเภทคั่น , (20 พ.ย.)
+      if(un.length)P.warn.push('แถว '+line+': ประเภทงาน "'+un.join(', ')+'" ไม่อยู่ในรายการ ('+JOB_TYPES.join(' / ')+')');
+      row.job_type=jtNorm(row.job_type);}
     if(ix.active<0)row.active=base?base.active!==false:true;
     // 📦 ค่าใช้จ่ายร้าน: มีคอลัมน์ในไฟล์ = ส่งทุกแถว (ว่าง = ไม่มี/ยังไม่รู้) · บันทึกเฉพาะ Packing
     if(hasPk){let bad='',lost=false;
       PK_COLS.forEach(([k,l])=>{const s=ix[k]<0?(base&&base[k]!=null?String(base[k]):''):g(k).replace(/,/g,''), v=s===''?null:Number(s);
         if(v!=null&&!(v>=0&&v<=100000))bad=l;
-        if(row.job_type!=='Packing'&&v!=null)lost=true;
-        row[k]=row.job_type==='Packing'?v:null;});
+        if(!jtHas(row.job_type,'Packing')&&v!=null)lost=true;
+        row[k]=jtHas(row.job_type,'Packing')?v:null;});
       if(bad){P.err.push('แถว '+line+' ('+station+'): '+bad+' ต้องเป็นตัวเลข 0 ขึ้นไป');continue;}
       if(lost)P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — ค่าใช้จ่ายร้านจะไม่ถูกบันทึก');}
     // 🏷️ Type: ช่องว่าง = คงค่าเดิม · ไม่ใช่ Packing = ไม่บันทึก (ย้ายออกจาก Packing = ล้าง) · บันทึกหลังค่ากลางผ่าน central-type
-    if(ixT>=0||(base&&base.pk_type&&row.job_type!=='Packing')){
+    if(ixT>=0||(base&&base.pk_type&&!jtHas(row.job_type,'Packing'))){
       const raw=ixT<0?'':String(c[ixT]==null?'':c[ixT]).trim(), ty=raw?PK_TYPES.find(x=>norm(x)===norm(raw)):'', old=base?String(base.pk_type||''):'';
       if(raw&&!ty){P.err.push('แถว '+line+' ('+station+'): Type "'+raw+'" ไม่อยู่ในรายการ ('+PK_TYPES.join(' / ')+')');continue;}
-      if(ty&&row.job_type!=='Packing') P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — Type จะไม่ถูกบันทึก');
-      const nu=row.job_type==='Packing'?(ty||old):'';
+      if(ty&&!jtHas(row.job_type,'Packing')) P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — Type จะไม่ถูกบันทึก');
+      const nu=jtHas(row.job_type,'Packing')?(ty||old):'';
       if(nu!==old){ if(base) P.ty.push({id:base.id,station,pk_type:nu,old}); else P.tyNew.push({station,pk_type:nu}); }
     }
     // 📞 ข้อมูลร้าน: ช่องว่าง = คงค่าเดิม · เฉพาะ Packing · บันทึกแยกผ่าน pk-plan (แอดมิน Packing ได้)
     if(hasSt){
       const gs=k=>ixS[k]<0?'':String(c[ixS[k]]==null?'':c[ixS[k]]).trim();
       const any=ST_COLS.some(([k])=>gs(k)!=='');
-      if(any&&row.job_type!=='Packing') P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — ข้อมูลร้านจะไม่ถูกบันทึก');
+      if(any&&!jtHas(row.job_type,'Packing')) P.warn.push('แถว '+line+' ('+station+'): ไม่ใช่ Packing — ข้อมูลร้านจะไม่ถูกบันทึก');
       else if(any){
         const old=base?((STORES[String(base.id)])||{}):{}, oPh=old.phones||[];
         const t1=gs('tel1').replace(/\D/g,''), t2=gs('tel2').replace(/\D/g,'');
@@ -1538,7 +1559,7 @@ const DTC_X={
       help:'แถวที่มีในตารางแล้ว = ชื่อเดิม (แก้ชื่อได้) · แถวที่ยังไม่มี = ชื่อจาก DTC (แก้ก่อนเพิ่มได้)'},
     {k:'km',h:'ระยะที่จะใช้ (กม.)',w:14,get:()=>'',
       help:'เว้นว่าง = ไม่เปลี่ยน / ไม่เพิ่ม · ใส่ตัวเลข เช่น 35 หรือ 35.5 · พิมพ์ DTC = ใช้ค่ากลาง DTC ของแถวนั้น (ปัดกม.เต็มแล้ว)'},
-    {k:'job_type',h:'ประเภทงาน',w:11,get:r=>r.current&&r.current.id?(cdRow(r.current.id).job_type||''):'',help:'สวน / ลาน / Packing / Bulk / ส่งน้ำ / อื่นๆ'},
+    {k:'job_type',h:'ประเภทงาน',w:11,get:r=>r.current&&r.current.id?(cdRow(r.current.id).job_type||''):'',help:'สวน / ลาน / Packing / Bulk / ส่งน้ำ / อื่นๆ · หลายประเภทคั่นด้วย ,'},
     {k:'garden_code',h:'รหัสสวน/ลาน',w:12,get:r=>r.current&&r.current.id?(cdRow(r.current.id).garden_code||''):'',help:'เช่น GD-0016 / LT-004 · ว่าง = ไม่ผูก (แถวเดิมคงค่าเดิม)'},
     {k:'pickup_point',h:'จุดรับ',w:14,get:r=>r.current&&r.current.id?(cdRow(r.current.id).pickup_point||''):'',help:'ใส่เฉพาะสวนที่มีหลายจุดรับ ระยะต่างกัน'}
   ],
