@@ -3840,15 +3840,15 @@ async function ypDestData(){const now=Date.now();if(ypDestData.d&&now-ypDestData
 async function ypDestPost(o){const x=await fetch(ypUrl(),{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},o))}).then(z=>z.json());if(!x.ok)throw new Error(x.error||'บันทึกไม่ได้');return x;}
 function ypDestRows(x){const P=new Map((x.pins||[]).map(([id,n,ll,k])=>[n,{id,n,ll,k}])),out=[],done=new Set();
   x.rows.slice().sort((a,b)=>a.shop.localeCompare(b.shop,'th')||b.n-a.n).forEach(r=>{done.add(r.key);const p=r.pin||{};
-    out.push([r.shop,p.id||'','','',p.id?r.st.name:'',r.st.name,r.st.km,r.n,p.ll||'',r.st.active?'ระบบจำแล้ว':'จุดนี้ปิดใช้งาน']);});
+    out.push([r.shop,p.id||'','','',p.id?r.st.name:'',r.st.name,r.st.km,r.n||'',p.ll||'',r.st.active?'ระบบจำแล้ว':'จุดนี้ปิดใช้งาน']);});
   const ex=[];yrAll().filter(m=>yrHow(m)==='dlv'&&!m.sample).forEach(m=>{const sh=ypShopClean((m.p||{}).shop),k=ypNorm(sh);if(!sh||k.length<2||done.has(k))return;done.add(k);
     const h=ypMatch(sh),lc=h?null:ypMatch(sh,true),po=h||lc?null:ypPinOut(sh),hp=h&&P.get(h.n),lp=lc&&P.get(lc.n);
-    ex.push(h?[sh,hp?hp.id:'','','',hp?hp.n:'',h.n,h.km,0,hp?hp.ll:'',hp?'ยังไม่จำ · ชื่อตรงค่ากลาง (อัปโหลดได้เลย)':'ยังไม่จำ · ค่ากลางไม่มีหมุด']
-      :lc?[sh,'','','',lp?lp.n+' ('+lp.id+')':'',lc.n,lc.km,0,lp?lp.ll:'','ชื่อมีสาขา · กรอกรหัสหมุดเอง']
-      :po?[sh,po.id,'','',po.n,'',null,0,po.ll,'หมุดยังไม่เข้าค่ากลาง · ใส่ กม.']
-      :[sh,'','','','','',null,0,'','ยังไม่มีหมุด · ปักหมุด DTC ก่อน']);});
+    ex.push(h?[sh,hp?hp.id:'','','',hp?hp.n:'',h.n,h.km,'',hp?hp.ll:'',hp?'ยังไม่จำ · ชื่อตรงค่ากลาง (อัปโหลดได้เลย)':'ยังไม่จำ · ค่ากลางไม่มีหมุด']
+      :lc?[sh,'','','',lp?lp.n+' ('+lp.id+')':'',lc.n,lc.km,'',lp?lp.ll:'','ชื่อมีสาขา · กรอกรหัสหมุดเอง']
+      :po?[sh,po.id,'','',po.n,'',null,'',po.ll,'หมุดยังไม่เข้าค่ากลาง · ใส่ กม.']
+      :[sh,'','','','','',null,'','','ยังไม่มีหมุด · ปักหมุด DTC ก่อน']);});
   ex.sort((a,b)=>a[0].localeCompare(b[0],'th'));return out.concat(ex);}
-const YPD_COLS=[{h:'ร้าน (ชื่อที่เซลส์พิมพ์)',x:34},{h:'รหัสหมุด DTC',x:14,a:'center'},{h:'กม. หมุดใหม่ (เที่ยวเดียว)',x:14},{h:'หมายเหตุ',x:20},{h:'ชื่อหมุด DTC (อ้างอิง)',x:34},{h:'จุดในค่ากลาง (อ้างอิง)',x:34},{h:'กม. ค่ากลาง',x:10},{h:'เคยส่ง (ครั้ง)',x:10},{h:'พิกัด',x:22},{h:'สถานะ',x:30,a:'center'}];
+const YPD_COLS=[{h:'ร้าน (ชื่อที่เซลส์พิมพ์)',x:34},{h:'รหัสหมุด DTC',x:14,a:'center'},{h:'กม. หมุดใหม่ (เที่ยวเดียว)',x:14},{h:'หมายเหตุ',x:20},{h:'ชื่อหมุด DTC (อ้างอิง)',x:34},{h:'จุดในค่ากลาง (อ้างอิง)',x:34},{h:'กม. ค่ากลาง',x:10},{h:'ลงแพลนผ่านระบบ (ครั้ง)',x:13},{h:'พิกัด',x:22},{h:'สถานะ',x:30,a:'center'}];
 async function ypDestXlsx(x){const R=ypDestRows(x),c=t=>R.filter(r=>r[9]===t).length;
   const pins=(x.pins||[]).filter(p=>/^ลูกค้า/.test(p[3])).sort((a,b)=>a[1].localeCompare(b[1],'th'));
   const help=['0) “ระบบจำจุดส่ง” = ชื่อร้านที่เซลส์พิมพ์ ↔ จุดส่งในค่ากลาง · ครั้งหน้าการ์ดเติมจุดส่งให้เอง (หลายจุด = ดรอปดาวน์) · จำได้ 2 ทาง: แอดมินกด ลงแพลน บนการ์ด / DEV อัปโหลดไฟล์นี้',
