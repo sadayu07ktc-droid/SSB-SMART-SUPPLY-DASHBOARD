@@ -1176,7 +1176,7 @@ async function xaRead(file) {
     const keys = aoa[kr].map((x) => String(x).trim()); seen.push(sheet);
     aoa.slice(kr + 1).forEach((r, i) => {
       const o = { _sheet: sheet, _line: kr + 2 + i }; let any = false;
-      keys.forEach((k, c) => { if (!k) return; let v = r[c] instanceof Date ? r[c].toISOString().slice(0, 10) : String(r[c] == null ? '' : r[c]).trim().replace(/^'/, ''); o[k] = v; if (v && XA_META.every((m) => m[0] !== k)) any = true; });
+      keys.forEach((k, c) => { if (!k) return; let v = r[c] instanceof Date ? new Date(r[c].getTime() + 432e5).toISOString().slice(0, 10) /* SheetJS 0.18.5: 23:59:56 วันก่อน → +12 ชม. */ : String(r[c] == null ? '' : r[c]).trim().replace(/^'/, ''); o[k] = v; if (v && XA_META.every((m) => m[0] !== k)) any = true; });
       if (any) rows.push(o);
     });
   });

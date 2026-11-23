@@ -1781,7 +1781,9 @@ async function xrtUpload(S,input){
     if(hi<0){toast('❌ ไม่พบหัวตาราง — ใช้ไฟล์ที่ดาวน์โหลดจากลิ้นชักนี้เป็นแม่แบบ',true);return;}
     const rows=[];
     for(let r=hi+1;r<aoa.length;r++){const o={_line:r+1};let any=false;
-      map.forEach((k,ci)=>{if(!k)return;let v=aoa[r][ci];v=(v==null?'':String(v)).trim().replace(/^'/,'');o[k]=v;if(v)any=true;});
+      map.forEach((k,ci)=>{if(!k)return;let v=aoa[r][ci];
+        if(v instanceof Date){const d=new Date(v.getTime()+432e5);v=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}   // SheetJS 0.18.5: วันที่ Excel = 23:59:56 วันก่อน → +12 ชม.
+        v=(v==null?'':String(v)).trim().replace(/^'/,'');o[k]=v;if(v)any=true;});
       if(any)rows.push(o);}
     if(!rows.length){toast('❌ ไฟล์ไม่มีข้อมูล',true);return;}
     if(rows.length>3000){toast('❌ ไฟล์ใหญ่เกิน 3,000 แถว',true);return;}

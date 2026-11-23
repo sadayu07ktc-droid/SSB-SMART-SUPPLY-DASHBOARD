@@ -623,7 +623,8 @@ async function xrtUpload(S, input){
     for (var r = hi + 1; r < aoa.length; r++){
       var o = { _line: r + 1 }, any = false;
       map.forEach(function(k, ci){ if (!k) return; var v = aoa[r][ci];
-        if (v instanceof Date) v = v.getFullYear() + '-' + p2(v.getMonth() + 1) + '-' + p2(v.getDate());
+        // SheetJS 0.18.5 cellDates ให้วันที่ Excel เป็น 23:59:56 ของ "วันก่อน" (เวลาไทย) → บวก 12 ชม. ให้ปัดเป็นวันที่ถูก
+        if (v instanceof Date) { v = new Date(v.getTime() + 432e5); v = v.getFullYear() + '-' + p2(v.getMonth() + 1) + '-' + p2(v.getDate()); }
         v = (v == null ? '' : String(v)).trim(); o[k] = v; if (v) any = true; });
       if (any) rows.push(o);
     }
