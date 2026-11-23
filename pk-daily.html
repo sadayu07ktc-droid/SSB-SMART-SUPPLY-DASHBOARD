@@ -3224,7 +3224,7 @@ renderAll();route();
    LINE OA อยู่ในกลุ่มเงียบๆ (ไม่ตอบ) → line-webhook เก็บข้อความ → pk-yp แยกร้าน/สินค้า/ลัง/วันส่ง
    ลังรวม = จำนวน + แถมจริง (+N / "แถม N ลัง") · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง
    ลงแพลน = เพิ่มจุดส่งยี่ปั๊วเข้ารถที่เลือก (ลังตามออเดอร์) + บันทึกสถานะว่าลงแล้ว (ไม่ขึ้น Pending ซ้ำ) */
-const YP={msgs:[],dests:new Map(),src:'',groups:[],canEdit:false,tab:'p',err:'',busy:0,loaded:0,sel:{},day:'',flt:'',q:'',seen:null,fresh:new Set(),po:0};
+const YP={msgs:[],dests:new Map(),pinsOut:[],src:'',groups:[],canEdit:false,tab:'p',err:'',busy:0,loaded:0,sel:{},day:'',flt:'',q:'',seen:null,fresh:new Set(),po:0};
 /* 🧾 PO รอส่ง (คุณน้อง 12 พ.ย.): เซลส์ส่งรูป/PDF PO ในกลุ่ม → Edge pk-po อ่าน → pk-yp v13 ผูกข้อความนัดส่ง/รับที่อ้าง PO → m.p.po
    ปุ่ม FAB #bPo = ลิ้นชักเดียวกัน แต่เฉพาะ PO · รายชื่อลูกค้าเรียงตามคิว (เลยกำหนด → ใกล้สุด → รอนัด) · PO ที่มีวันแล้วขึ้นในชิปวันของ Pending ยี่ปั๊วด้วย */
 const ypIsPo=m=>!!(m.p&&m.p.po);
@@ -3310,6 +3310,10 @@ function ypMatch(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=n
 function ypDestsSet(a){const M=new Map();(a||[]).forEach(([k,id,n,at])=>{if(!M.has(k))M.set(k,[]);M.get(k).push({id:+id,n:+n||1,at:at||''});});YP.dests=M;}
 function ypDests(shop){const L=YP.dests.get(ypNorm(shop))||[];return L.map(d=>({x:ST.find(y=>y.id===d.id),n:d.n,at:d.at})).filter(d=>d.x).sort((a,b)=>b.n-a.n||String(b.at).localeCompare(String(a.at)));}
 function ypDestHit(shop,id){const k=ypNorm(shop);if(!k||!id)return;const L=YP.dests.get(k)||[];const d=L.find(y=>y.id===id);if(d){d.n++;d.at=new Date().toISOString();}else L.push({id,n:1,at:new Date().toISOString()});YP.dests.set(k,L);}
+/* 23 พ.ย. คุณน้อง "ให้แมชจาก DTC เลย แล้วขึ้นฟ้องว่ายังไม่ดึงเข้าค่ากลาง" · pk-yp list.pinsOut = หมุดลูกค้า DTC ที่ยังไม่มีแถวในค่ากลาง */
+function ypPinOut(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=null;
+  YP.pinsOut.forEach(x=>{const n=ypNorm(x.n);if(n.length<3)return;if(n===k||n.includes(k)||k.includes(n)){const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});return best?best.x:null;}
+const ypMap=ll=>'https://www.google.com/maps?q='+encodeURIComponent(String(ll||'').replace(/\s+/g,''));
 /* ค่าเริ่มต้นช่องจุดส่ง: PO ตรงสาขา → เคยส่งที่เดียว → ชื่อตรงในค่ากลาง (ถ้าเคยส่งหลายที่ ต้องอยู่ในนั้น ไม่งั้นให้แอดมินเลือก) */
 function ypDefSt(p){const po=p.po&&ypMatchPo(p);if(po)return po;const ds=ypDests(p.shop);if(ds.length===1)return ds[0].x;const h=ypMatch(p.shop);if(!ds.length)return h;return h&&ds.some(d=>d.x.id===h.id)?h:null;}
 const ypInPlan=mid=>{for(const v of VEH){const p=PLAN[v.head];if(p&&p.stops.some(x=>x.yp===mid))return v.head;}return '';};
@@ -3327,7 +3331,7 @@ async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;const sig0=YP.loa
     if(x.denied){YP.denied=1;['bYp','bPo'].forEach(i=>{const b=$(i);if(b)b.hidden=true;});return;}
     if(!x.ok)throw new Error(x.error||'โหลดไม่ได้');
     const keep={};YP.msgs.forEach(m=>{if(m.sample&&m.st)keep[m.mid]=m.st;});   /* ตัวอย่าง = จำสถานะในหน้าเท่านั้น */
-    YP.msgs=(x.msgs||[]).map(m=>m.sample&&keep[m.mid]?Object.assign(m,{st:keep[m.mid]}):m);YP.src=x.src;YP.groups=x.groups||[];YP.canEdit=!!x.canEdit;ypDestsSet(x.dests);YP.err='';YP.loaded=1;YP.at=Date.now();ypSeenInit();}
+    YP.msgs=(x.msgs||[]).map(m=>m.sample&&keep[m.mid]?Object.assign(m,{st:keep[m.mid]}):m);YP.src=x.src;YP.groups=x.groups||[];YP.canEdit=!!x.canEdit;ypDestsSet(x.dests);YP.pinsOut=(x.pinsOut||[]).map(([id,n,ll,k])=>({id,n,ll,k}));YP.err='';YP.loaded=1;YP.at=Date.now();ypSeenInit();}
   catch(e){YP.err=String(e.message||e);}
   finally{YP.busy=0;}
   ypBadge();if(!$('ypDr'))return;
@@ -3464,7 +3468,8 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
       +'<input class="in" data-ypst list="ypStL" value="'+esc(stV)+'" placeholder="'+(ds.length?'หรือพิมพ์ค้นจุดอื่น':'ไม่พบในรายชื่อ · พิมพ์ชื่อร้าน')+'"></label>'
       +'<label>ชื่อคนขับ<select class="in" data-ypdrv><option value="">— เลือกคนขับ —</option>'+ypDrvOpts(sv.drv!=null?sv.drv:(sv.veh&&PLAN[sv.veh]?PLAN[sv.veh].driver:'')||'')+'</select></label>'
       +'<label>ทะเบียน<select class="in" data-ypveh><option value="">— เลือกทะเบียน —</option>'+ypVehOpts(sv.veh||'')+'</select></label>'+(p.pickup?'':empI)+'</div>'
-      +(stV?'':ds.length>1?'<div class="warn">📍 ร้านนี้ส่งได้ '+ds.length+' ที่ · เลือกจุดส่งรอบนี้จากดรอปดาวน์</div>':'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ในรายชื่อจุดส่ง · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV เพิ่มร้านที่หน้าค่ากลาง) · ลงด้วยสถานีครั้งเดียว ระบบจำให้ครั้งหน้า</div>')
+      +(stV?'':ds.length>1?'<div class="warn">📍 ร้านนี้ส่งได้ '+ds.length+' ที่ · เลือกจุดส่งรอบนี้จากดรอปดาวน์</div>':(pinO=>pinO?'<div class="warn">📍 เจอหมุด DTC <b>'+esc(pinO.n)+'</b> ('+esc(pinO.id)+' · <a href="'+esc(ypMap(pinO.ll))+'" target="_blank" rel="noopener">ดูแผนที่</a>) แต่<b>ยังไม่ดึงเข้าค่ากลาง</b> · ลงแพลนได้แต่ไม่มีระยะ/ค่าแรงจนกว่า DEV เพิ่มที่หน้าค่ากลาง</div>'
+        :'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ทั้งในค่ากลางและหมุด DTC · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV ปักหมุด + เพิ่มที่หน้าค่ากลาง) · ลงด้วยสถานีครั้งเดียว ระบบจำให้ครั้งหน้า</div>')(ypPinOut(p.shop)))
       +'<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-ypplan>➕ ลงแพลน '+qT+'</button></div>'+(p.pickup?'</details>':'');}
   else h+='<div class="note">ดูได้อย่างเดียว · ลงแพลนได้เฉพาะแอดมิน Packing</div>';
   return h+'</div>';}
@@ -3576,11 +3581,12 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS0=PO?Y
    ใช้ตัวสร้างชุดเดียวกับรายงานคนขับ (drHeader/drKpi/drPaged/drRender/drSheet) · ธีมเขียว SSB + ทอง ลายหยดน้ำมัน (ออเดอร์น้ำมันพืช Packing) */
 const YR={sts:new Set(),days:new Set(),prob:new Set(),how:new Set(),kind:'ord',q:''};   /* q = คำค้นบนจอ (ypQHit) */
 const YR_ST={p:['Pending','⏳ Pending'],planned:['ลงแพลนแล้ว','✅ ลงแพลนแล้ว'],ignored:['ซ่อน','🙈 ซ่อน']};
-Object.assign(DR_ST,{'Pending':['#8a5a0b','#fef0d9'],'ลงแพลนแล้ว':['#127a2e','#e7f5ee'],'ซ่อน':['#5f5e5a','#efefef']});
-Object.assign(DR_IC,{alert:'<path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 17.4v.1"/>',drop:'<path d="M12 3s6 6.4 6 10.6a6 6 0 01-12 0C6 9.4 12 3 12 3z"/>'});
+Object.assign(DR_ST,{'ครบ':['#127a2e','#e7f5ee'],'ยังไม่ดึงเข้าค่ากลาง':['#8a5a0b','#fef0d9'],'ไม่มีหมุดชื่อตรง':['#185fa5','#e6f1fb'],'ไม่พบหมุด DTC':['#a32d2d','#fceded'],'Pending':['#8a5a0b','#fef0d9'],'ลงแพลนแล้ว':['#127a2e','#e7f5ee'],'ซ่อน':['#5f5e5a','#efefef']});
+Object.assign(DR_IC,{pin:'<path d="M12 21s-7-6.3-7-11.5a7 7 0 0114 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',alert:'<path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 17.4v.1"/>',drop:'<path d="M12 3s6 6.4 6 10.6a6 6 0 01-12 0C6 9.4 12 3 12 3z"/>'});
 const YR_KIND=[{k:'ord',ic:'list',clr:'#2D6A4F',t:'รายการออเดอร์',d:'ร้านละ 1 แถว · วันส่ง ลัง/ปี๊บ/ถัง การชำระ สถานะ รถ/คนขับ',f:'รายการ',sub:'ร้านละ 1 แถว · แยกตามวันส่ง/วันรับ'},
   {k:'item',ic:'box',clr:'#B45309',t:'รายการสินค้าทุกบรรทัด',d:'ชื่อตามฐาน รหัส จำนวน แถม ราคา · เห็นบรรทัดที่ยังไม่ตรงฐาน',f:'สินค้า',sub:'สินค้าทุกบรรทัดของออเดอร์ที่เลือก · ⚠ = ยังไม่ตรงฐานสินค้า'},
   {k:'day',ic:'cal',clr:'#1E6FD9',t:'สรุปตามวันส่ง',d:'วันละ 1 แถว · ออเดอร์ ส่งเอง/รับเอง ลัง ปี๊บ ถัง และที่ต้องแก้',f:'สรุปรายวัน',sub:'จำนวนออเดอร์และลังของแต่ละวัน'},
+  {k:'loc',ic:'pin',clr:'#0E7490',t:'พิกัดจุดส่ง (ส่งเอง)',d:'เฉพาะออเดอร์ส่งด้วยรถเรา · จุดค่ากลาง กม. หมุด DTC พิกัด · ฟ้องร้านที่ยังไม่ดึงเข้าค่ากลาง',f:'พิกัดจุดส่ง',sub:'เฉพาะออเดอร์ที่ส่งด้วยรถเรา · ร้านละแถว (ร้านที่ส่งหลายที่ = แถวละจุด)'},
   {k:'prod',ic:'drop',clr:'#7C3AED',t:'สรุปตามสินค้า',d:'รวมจำนวน + แถมของแต่ละสินค้า · ใช้เตรียมของ / เช็คสต็อก',f:'สรุปสินค้า',sub:'รวมทุกออเดอร์ที่เลือก · เรียงมาก→น้อย'}];
 const yrAll=()=>YP.msgs.filter(ypInYp);
 const yrHow=m=>m.p&&m.p.pickup?'pick':'dlv';
@@ -3626,6 +3632,22 @@ const yrUnits=R=>{const u={};R.forEach(r=>{u[r.u]=(u[r.u]||0)+r.q+r.f;});return 
 function yrData(L){const O=L.map(yrOrd),s=f=>O.reduce((a,r)=>a+f(r),0);
   return {L,O,days:[...new Set(O.map(r=>r.day))].sort(yrDayCmp),n:O.length,dlv:O.filter(r=>!r.pick).length,pick:O.filter(r=>r.pick).length,
     cs:s(r=>r.cs),pb:s(r=>r.pb),tk:s(r=>r.tk),unk:O.filter(r=>r.unk).length,nost:O.filter(r=>r.nost).length,fix:O.filter(r=>r.unk||r.nost).length,per:yrScope()};}
+/* 📍 รายงานพิกัดจุดส่ง (คุณน้อง 23 พ.ย. "เพิ่มในปุ่มรายงานก็ได้ เฉพาะพิกัดที่เราต้องส่งเอง") · หมุดทั้งหมดโหลดตอนกดสร้างไฟล์ (pk-yp ?action=dests) แคช 5 นาที */
+const YR_LOC_ORD=['ไม่พบหมุด DTC','ยังไม่ดึงเข้าค่ากลาง','ไม่มีหมุดชื่อตรง','ครบ'];
+async function yrLocLoad(){if(yrLocLoad.d&&Date.now()-yrLocLoad.t<300e3)return yrLocLoad.d;let pins=[];
+  if(ypLive()){const x=await fetch(ypUrl()+'?action=dests&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());if(!x.ok)throw new Error(x.error||'โหลดหมุด DTC ไม่ได้');pins=x.pins||[];}
+  yrLocLoad.d={by:new Map(pins.map(([id,n,ll,k])=>[n,{id,n,ll,k}]))};yrLocLoad.t=Date.now();return yrLocLoad.d;}
+function yrLocs(X){const P=(yrLocLoad.d||{by:new Map()}).by,G=new Map();
+  X.L.filter(m=>yrHow(m)==='dlv').forEach(m=>{const p=m.p||{},br=(p.po&&p.po.branch)||'',k=ypNorm(p.shop)+'|'+br;let g=G.get(k);
+    if(!g){g={shop:(p.shop||'—')+(br?' · '+br:''),p,n:0,cs:0,days:new Set()};G.set(k,g);}g.n++;g.cs+=Math.max(0,(+p.cs||0)-(+p.pb||0));g.days.add(ypDayOf(m));});
+  const R=[];G.forEach(g=>{const ds=ypDests(g.p.shop),def=ypDefSt(g.p),base={shop:g.shop,n:g.n,cs:g.cs,days:[...g.days].filter(d=>d!=='none').sort()};
+    const stRow=(x,times,multi)=>{const pin=P.get(x.n)||null;return Object.assign({},base,{st:x.n,km:x.km==null?null:x.km,pin:pin&&pin.id,ll:pin&&pin.ll,times,multi,stat:pin?'ครบ':'ไม่มีหมุดชื่อตรง'});};
+    if(ds.length>1&&!(def&&g.p.po))ds.forEach((d,i)=>R.push(Object.assign(stRow(d.x,d.n,ds.length),i?{sub:1}:{})));
+    else if(def||ds.length){const x=def||ds[0].x,h=ds.find(d=>d.x.id===x.id);R.push(stRow(x,h?h.n:0,0));}
+    else{const po=ypPinOut(g.p.shop);R.push(Object.assign({},base,{st:'',km:null,pin:po&&po.id,ll:po&&po.ll,pinName:po&&po.n,stat:po?'ยังไม่ดึงเข้าค่ากลาง':'ไม่พบหมุด DTC'}));}});
+  const sk=r=>YR_LOC_ORD.indexOf(r.stat),grp=new Map();R.forEach(r=>{if(!grp.has(r.shop))grp.set(r.shop,[]);grp.get(r.shop).push(r);});
+  return [...grp.values()].sort((a,b)=>Math.min(...a.map(sk))-Math.min(...b.map(sk))||b[0].n-a[0].n||a[0].shop.localeCompare(b[0].shop,'th')).flat();}
+const yrLocNote=r=>r.stat==='ยังไม่ดึงเข้าค่ากลาง'?'หมุด DTC “'+r.pinName+'” · DEV เพิ่มที่หน้าค่ากลาง':r.stat==='ไม่พบหมุด DTC'?'ไม่มีหมุดลูกค้าชื่อคล้าย · ปักหมุด DTC ก่อน':[r.multi?'ส่งได้ '+r.multi+' ที่':'',r.times?'เคยส่ง '+r.times+' ครั้ง':'',r.stat==='ไม่มีหมุดชื่อตรง'?'ชื่อในค่ากลางไม่ตรงชื่อหมุด DTC':''].filter(Boolean).join(' · ');
 const YR_FOOT='ลังรวม = จำนวน + แถมจริง (+N / แถม N ลัง) · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง · ปี๊บ/ถัง นับแยก';
 /* ───── หน้า A4 (PDF / JPEG) ───── */
 function yrDrops(){return '<svg width="560" height="150" viewBox="0 0 560 150" style="position:absolute;right:-12px;top:-6px;opacity:.2" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round">'
@@ -3663,6 +3685,15 @@ function yrPages(kind,X){const o=YR_KIND.find(x=>x.k===kind),first=yrHeader('อ
       return [{html:'<b>'+esc(d==='none'?'ไม่พบวันส่ง':dateTH(d))+'</b>'},R.length,yrZ(c(r=>!r.pick)),yrZ(c(r=>r.pick)),yrZ(s(r=>r.cs)),yrZ(s(r=>r.pb)),yrZ(s(r=>r.tk)),yrZ(c(r=>r.st==='p')),yrZ(c(r=>r.st==='planned')),
         c(r=>r.unk)?yrRed(comma(c(r=>r.unk))):'–',c(r=>r.nost)?yrRed(comma(c(r=>r.nost))):'–'];});
     tot=['รวม '+X.days.length+' วัน',comma(X.n),yrZ(X.dlv),yrZ(X.pick),yrZ(X.cs),yrZ(X.pb),yrZ(X.tk),yrZ(X.O.filter(r=>r.st==='p').length),yrZ(X.O.filter(r=>r.st==='planned').length),yrZ(X.unk),yrZ(X.nost)];}
+  else if(kind==='loc'){const R=yrLocs(X),c=t=>R.filter(r=>r.stat===t).length,ns=new Set(R.map(r=>r.shop)).size;let i=0;
+    const fst=yrHeader('ออเดอร์ยี่ปั๊ว · '+o.t,o.sub,X.per)+'<div style="display:flex;gap:10px;margin:12px 0 10px">'
+      +drKpi('truck',DRT.main,'ร้านที่ส่งเอง',comma(ns),'ร้าน',comma(R.filter(r=>!r.sub).reduce((a,r)=>a+r.n,0))+' ออเดอร์ · '+comma(R.length)+' จุด')
+      +drKpi('pin','#127a2e','ครบ (ค่ากลาง + หมุด)',c('ครบ'),'จุด','ชื่อไม่ตรงหมุด '+c('ไม่มีหมุดชื่อตรง'))
+      +drKpi('alert','#8a5a0b','ยังไม่ดึงเข้าค่ากลาง',c('ยังไม่ดึงเข้าค่ากลาง'),'ร้าน','มีหมุด DTC แล้ว · DEV เพิ่มที่หน้าค่ากลาง')
+      +drKpi('alert','#B42318','ไม่พบหมุด DTC',c('ไม่พบหมุด DTC'),'ร้าน','ต้องปักหมุดก่อน')+'</div>';
+    cols=[{h:'#',w:30,a:'center'},{h:'ร้าน (ที่เซลส์พิมพ์)',w:0},{h:'ออเดอร์',w:52,a:'right'},{h:'ลัง',w:52,a:'right'},{h:'จุดส่ง (ค่ากลาง)',w:200},{h:'กม.',w:46,a:'right'},{h:'หมุด DTC',w:84,a:'center'},{h:'พิกัด',w:136},{h:'สถานะ',w:128,a:'center'},{h:'หมายเหตุ',w:170}];
+    rows=R.map(r=>[r.sub?'':++i,r.sub?{html:'<span style="color:#94a3b8">″</span>'}:{html:'<b>'+esc(r.shop)+'</b>'},r.sub?'':r.n,r.sub?'':yrN(r.cs),r.st?r.st:yrRed('— ไม่มีในค่ากลาง'),r.km==null?'':comma(r.km),r.pin||'',r.ll||'',drBadge(r.stat),{html:'<span style="color:#64748b">'+esc(yrLocNote(r))+'</span>'}]);
+    return drPaged(cont,X.per,foot,cols,rows,['','รวม '+ns+' ร้าน · '+R.length+' จุด','','','','','','','',''],fst,17,23);}
   else{const P=yrProds(X.L);
     cols=[{h:'#',w:36,a:'center'},{h:'สินค้า (ตามฐานข้อมูล)',w:0},{h:'รหัส',w:140,a:'center'},{h:'หน่วย',w:56,a:'center'},{h:'ออเดอร์',w:72,a:'right'},{h:'จำนวน',w:80,a:'right'},{h:'แถม',w:68,a:'right'},{h:'รวม',w:80,a:'right'},{h:'หมายเหตุ',w:200}];
     rows=P.map((o,i)=>[i+1,o.ok?{html:'<b>'+esc(o.name)+'</b>'}:{html:'<span style="color:#B42318;font-weight:700">⚠ </span><span style="color:#9A5B06">'+esc(o.name)+'</span>'},o.code,o.u,o.n,yrN(o.q),o.f?'+'+comma(o.f):'',{html:'<b>'+comma(o.t)+'</b>'},
@@ -3688,6 +3719,11 @@ function yrSheet(kind,X){const o=YR_KIND.find(x=>x.k===kind),Z='#,##0;-#,##0;"-"
     rows:X.days.map(d=>{const R=X.O.filter(r=>r.day===d),c=f=>R.filter(f).length,s=f=>R.reduce((a,r)=>a+f(r),0);
       return [d==='none'?'ไม่พบวันส่ง':dateTH(d),R.length,c(r=>!r.pick),c(r=>r.pick),s(r=>r.cs),s(r=>r.pb),s(r=>r.tk),c(r=>r.st==='p'),c(r=>r.st==='planned'),c(r=>r.st==='ignored'),c(r=>r.unk),c(r=>r.nost)];}),
     total:['รวม '+X.days.length+' วัน',X.n,X.dlv,X.pick,X.cs,X.pb,X.tk,X.O.filter(r=>r.st==='p').length,X.O.filter(r=>r.st==='planned').length,X.O.filter(r=>r.st==='ignored').length,X.unk,X.nost]});
+  if(kind==='loc'){const R=yrLocs(X),c=t=>R.filter(r=>r.stat===t).length,ns=new Set(R.map(r=>r.shop)).size;return Object.assign(base,{status:9,emoji:'📍',
+    kpis:[['ร้านที่ส่งเอง',ns],['จุดส่ง',R.length],['ครบ',c('ครบ')],['ยังไม่ดึงเข้าค่ากลาง',c('ยังไม่ดึงเข้าค่ากลาง')],['ไม่พบหมุด DTC',c('ไม่พบหมุด DTC')],['ชื่อไม่ตรงหมุด',c('ไม่มีหมุดชื่อตรง')]],
+    cols:[{h:'ร้าน (ที่เซลส์พิมพ์)',x:30},{h:'ออเดอร์',x:9},{h:'ลัง',x:9,z:Z},{h:'วันส่ง',x:22},{h:'จุดส่ง (ค่ากลาง)',x:36},{h:'กม.',x:8,z:Z},{h:'หมุด DTC',x:12,a:'center'},{h:'ชื่อหมุด DTC',x:34},{h:'พิกัด',x:22},{h:'สถานะ',x:20,a:'center'},{h:'หมายเหตุ',x:40},{h:'Google Maps',x:44}],
+    rows:R.map(r=>[r.shop,r.sub?'':r.n,r.sub?'':r.cs,r.sub?'':r.days.map(yrD).join(', '),r.st||'— ไม่มีในค่ากลาง',r.km==null?'':r.km,r.pin||'',r.pinName||(r.pin?r.st:''),r.ll||'',r.stat,yrLocNote(r),r.ll?ypMap(r.ll):'']),
+    total:['รวม '+ns+' ร้าน',R.filter(r=>!r.sub).reduce((a,r)=>a+r.n,0),'',R.length+' จุด','','','','','','','','']});}
   const P=yrProds(X.L);return Object.assign(base,{
     cols:[{h:'ลำดับ',x:7,a:'center'},{h:'สินค้า (ตามฐานข้อมูล)',x:42},{h:'รหัส',x:21,a:'center'},{h:'หน่วย',x:8,a:'center'},{h:'ออเดอร์',x:9},{h:'จำนวน',x:10,z:Z},{h:'แถม',x:8,z:Z},{h:'รวม',x:10,z:Z},{h:'หมายเหตุ / ชื่อที่เซลส์พิมพ์',x:44}],
     rows:P.map((o,i)=>[i+1,o.ok?o.name:'⚠ '+o.name,o.code,o.u,o.n,o.q,o.f,o.t,o.ok?'':'ยังไม่ตรงฐาน · '+[...o.typed].slice(0,3).join(' / ')]),
@@ -3695,6 +3731,7 @@ function yrSheet(kind,X){const o=YR_KIND.find(x=>x.k===kind),Z='#,##0;-#,##0;"-"
 const yrStamp=()=>{const d=new Date();return d.getFullYear()+dr2(d.getMonth()+1)+dr2(d.getDate());};
 async function yrGo(kind,fmt,b,close){if(yrGo.busy)return;yrGo.busy=1;const t0=b.innerHTML;b.disabled=true;b.innerHTML='<span style="font-size:20px">⏳</span><b style="font-size:12px">กำลังสร้าง…</b>';
   try{const L=yrList();if(!L.length){toast('ไม่มีออเดอร์ตามที่เลือก');return;}
+    if(kind==='loc'){if(!L.some(m=>yrHow(m)==='dlv')){toast('ไม่มีออเดอร์ที่ส่งด้วยรถเรา ตามที่เลือก');return;}await yrLocLoad();}
     const X=yrData(L),o=YR_KIND.find(x=>x.k===kind),base='ออเดอร์ยี่ปั๊ว_'+o.f+'_'+yrStamp();
     if(fmt==='xlsx')await drXlsx([yrSheet(kind,X)],base);else await drRender(yrPages(kind,X),fmt,base);
     close();}
