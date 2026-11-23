@@ -149,6 +149,7 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .ypc pre{white-space:pre-wrap;font:inherit;font-size:13px;background:var(--surface2);border-radius:8px;padding:8px 10px;margin:6px 0 0}
 .ypa{display:grid;grid-template-columns:1fr 1fr;gap:8px}.ypa.ypa3{grid-template-columns:1fr 1fr 110px}.ypa.ypa3>label:first-child{grid-column:1/-1}.ypa.ypa1{grid-template-columns:150px;margin-bottom:8px}
 .ypa label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted);min-width:0}
+.ypds{display:flex;gap:6px;align-items:center}.ypds select{flex:1;min-width:0;border-color:var(--brand)}.ypds .btn{flex:none;padding:6px 10px}
 .ypb{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .tchip.ypk{background:var(--infobg);color:var(--info);border-color:color-mix(in srgb,var(--info) 35%,transparent);font-size:12px;vertical-align:2px}
 .ypm .r{background:var(--badbg);color:var(--bad);border-color:color-mix(in srgb,var(--bad) 35%,transparent)}
@@ -3223,7 +3224,7 @@ renderAll();route();
    LINE OA อยู่ในกลุ่มเงียบๆ (ไม่ตอบ) → line-webhook เก็บข้อความ → pk-yp แยกร้าน/สินค้า/ลัง/วันส่ง
    ลังรวม = จำนวน + แถมจริง (+N / "แถม N ลัง") · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง
    ลงแพลน = เพิ่มจุดส่งยี่ปั๊วเข้ารถที่เลือก (ลังตามออเดอร์) + บันทึกสถานะว่าลงแล้ว (ไม่ขึ้น Pending ซ้ำ) */
-const YP={msgs:[],src:'',groups:[],canEdit:false,tab:'p',err:'',busy:0,loaded:0,sel:{},day:'',flt:'',q:'',seen:null,fresh:new Set(),po:0};
+const YP={msgs:[],dests:new Map(),src:'',groups:[],canEdit:false,tab:'p',err:'',busy:0,loaded:0,sel:{},day:'',flt:'',q:'',seen:null,fresh:new Set(),po:0};
 /* 🧾 PO รอส่ง (คุณน้อง 12 พ.ย.): เซลส์ส่งรูป/PDF PO ในกลุ่ม → Edge pk-po อ่าน → pk-yp v13 ผูกข้อความนัดส่ง/รับที่อ้าง PO → m.p.po
    ปุ่ม FAB #bPo = ลิ้นชักเดียวกัน แต่เฉพาะ PO · รายชื่อลูกค้าเรียงตามคิว (เลยกำหนด → ใกล้สุด → รอนัด) · PO ที่มีวันแล้วขึ้นในชิปวันของ Pending ยี่ปั๊วด้วย */
 const ypIsPo=m=>!!(m.p&&m.p.po);
@@ -3299,11 +3300,18 @@ const ypUrl=()=>String(PKD_URL).replace(/pk-daily(?=[^\/]*$)/,'pk-yp');
 const ypNorm=x=>String(x||'').toLowerCase().replace(/ร้าน|บจก\.?|หจก\.?|จำกัด|บริษัท|\s|[.\-()\/,'"]/g,'');
 /* 20 พ.ย. คุณน้อง "เพิ่มฟิลเตอร์ ออเดอร์ที่แมชสินค้าไม่เจอ แล้วก็ ชื่อลูกค้า กับ ค่ากลางไม่เจอ กรณีเราส่งเอง" (ชิปใต้แท็บ Pending) */
 const ypUnk=m=>!m.sample&&(+(m.p&&m.p.unk)||0)>0;
-function ypNoSt(m){const p=m.p||{};if(p.pickup||m.sample)return false;if((YP.sel[m.mid]||{}).st)return false;const hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop);return !hit||hit.km==null;}
+function ypNoSt(m){const p=m.p||{};if(p.pickup||m.sample)return false;if((YP.sel[m.mid]||{}).st)return false;const hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop);if(ypDests(p.shop).length)return false;return !hit||hit.km==null;}
 function ypMatch(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=null;
   ST.forEach(x=>{if(tyOf({id:x.id})==='ห้าง')return;const n=ypNorm(x.n);if(n.length<3)return;
     if(n===k||n.includes(k)||k.includes(n)){const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});
   return best?best.x:null;}
+/* 📍 23 พ.ย. คุณน้อง "เซลส์ส่งชื่อร้านมา บางทีส่งหลายที่แล้วแต่รอบ → ฐาน PK ว่าร้านนี้ส่งที่ไหนบ้าง ขึ้นดรอปดาวน์"
+   pk-yp v26 dests [[ชื่อร้าน ypNorm, central_distances.id, ครั้ง, ล่าสุด]] (ตาราง pk_shop_dests) · ระบบจำเองตอนกด ลงแพลน ด้วยสถานีค่ากลาง */
+function ypDestsSet(a){const M=new Map();(a||[]).forEach(([k,id,n,at])=>{if(!M.has(k))M.set(k,[]);M.get(k).push({id:+id,n:+n||1,at:at||''});});YP.dests=M;}
+function ypDests(shop){const L=YP.dests.get(ypNorm(shop))||[];return L.map(d=>({x:ST.find(y=>y.id===d.id),n:d.n,at:d.at})).filter(d=>d.x).sort((a,b)=>b.n-a.n||String(b.at).localeCompare(String(a.at)));}
+function ypDestHit(shop,id){const k=ypNorm(shop);if(!k||!id)return;const L=YP.dests.get(k)||[];const d=L.find(y=>y.id===id);if(d){d.n++;d.at=new Date().toISOString();}else L.push({id,n:1,at:new Date().toISOString()});YP.dests.set(k,L);}
+/* ค่าเริ่มต้นช่องจุดส่ง: PO ตรงสาขา → เคยส่งที่เดียว → ชื่อตรงในค่ากลาง (ถ้าเคยส่งหลายที่ ต้องอยู่ในนั้น ไม่งั้นให้แอดมินเลือก) */
+function ypDefSt(p){const po=p.po&&ypMatchPo(p);if(po)return po;const ds=ypDests(p.shop);if(ds.length===1)return ds[0].x;const h=ypMatch(p.shop);if(!ds.length)return h;return h&&ds.some(d=>d.x.id===h.id)?h:null;}
 const ypInPlan=mid=>{for(const v of VEH){const p=PLAN[v.head];if(p&&p.stops.some(x=>x.yp===mid))return v.head;}return '';};
 const ypSt=m=>m.st||(ypInPlan(m.mid)?'planned':'');
 const ypCnt=a=>{const c={p:0,planned:0,ignored:0};(a||YP.msgs).forEach(m=>{const t=ypSt(m)||'p';c[t]=(c[t]||0)+1;});return c;};
@@ -3319,7 +3327,7 @@ async function ypLoad(){if(!ypLive()||YP.busy)return;YP.busy=1;const sig0=YP.loa
     if(x.denied){YP.denied=1;['bYp','bPo'].forEach(i=>{const b=$(i);if(b)b.hidden=true;});return;}
     if(!x.ok)throw new Error(x.error||'โหลดไม่ได้');
     const keep={};YP.msgs.forEach(m=>{if(m.sample&&m.st)keep[m.mid]=m.st;});   /* ตัวอย่าง = จำสถานะในหน้าเท่านั้น */
-    YP.msgs=(x.msgs||[]).map(m=>m.sample&&keep[m.mid]?Object.assign(m,{st:keep[m.mid]}):m);YP.src=x.src;YP.groups=x.groups||[];YP.canEdit=!!x.canEdit;YP.err='';YP.loaded=1;YP.at=Date.now();ypSeenInit();}
+    YP.msgs=(x.msgs||[]).map(m=>m.sample&&keep[m.mid]?Object.assign(m,{st:keep[m.mid]}):m);YP.src=x.src;YP.groups=x.groups||[];YP.canEdit=!!x.canEdit;ypDestsSet(x.dests);YP.err='';YP.loaded=1;YP.at=Date.now();ypSeenInit();}
   catch(e){YP.err=String(e.message||e);}
   finally{YP.busy=0;}
   ypBadge();if(!$('ypDr'))return;
@@ -3448,10 +3456,15 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
     const empI='<label>ลังเปล่า (จำนวน)<input class="in" data-ypemp inputmode="numeric" maxlength="6" value="'+esc(sv.emp||'')+'" placeholder="0"></label>';   /* คุณน้อง 19 พ.ย. → คอลัมน์ "ลังเปล่า" ใน FM-MK */
     if(p.pickup)h+='<div class="ypa ypa1">'+empI+'</div>';
     if(p.pickup)h+='<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-yppick>✅ ลูกค้ารับเอง · ปิดรายการ</button></div><details class="ypalt" data-ypdt="alt"'+(ypOpenD.has(m.mid+':alt')?' open':'')+'><summary>เปลี่ยนเป็นส่งด้วยรถเรา</summary>';
-    h+='<div class="ypa'+(p.pickup?'':' ypa3')+'"><label>จุดส่ง (ค่ากลาง)<input class="in" data-ypst list="ypStL" value="'+esc(sv.st!=null?sv.st:hit?hit.n:'')+'" placeholder="ไม่พบในรายชื่อ · พิมพ์ชื่อร้าน"></label>'
+    const ds=ypDests(p.shop),def=ypDefSt(p),stV=sv.st!=null?sv.st:def?def.n:'';
+    h+='<div class="ypa'+(p.pickup?'':' ypa3')+'"><label>จุดส่ง (ค่ากลาง)'
+      +(ds.length?'<span class="ypds"><select class="in" data-ypds aria-label="จุดส่งที่ร้านนี้เคยส่ง"><option value="">📍 ร้านนี้เคยส่ง '+ds.length+' ที่ · เลือก</option>'
+        +ds.map(d=>'<option value="'+d.x.id+'"'+(d.x.n===stV?' selected':'')+'>'+esc(d.x.n)+(d.x.km?' · '+d.x.km+' กม.':'')+' · ส่ง '+d.n+' ครั้ง</option>').join('')+'</select>'
+        +'<button type="button" class="btn sm" data-ypdsx title="ลบจุดที่เลือกออกจากร้านนี้ (จำผิด)" aria-label="ลบจุดที่เลือกออกจากร้านนี้"'+(ds.some(d=>d.x.n===stV)?'':' disabled')+'>✕</button></span>':'')
+      +'<input class="in" data-ypst list="ypStL" value="'+esc(stV)+'" placeholder="'+(ds.length?'หรือพิมพ์ค้นจุดอื่น':'ไม่พบในรายชื่อ · พิมพ์ชื่อร้าน')+'"></label>'
       +'<label>ชื่อคนขับ<select class="in" data-ypdrv><option value="">— เลือกคนขับ —</option>'+ypDrvOpts(sv.drv!=null?sv.drv:(sv.veh&&PLAN[sv.veh]?PLAN[sv.veh].driver:'')||'')+'</select></label>'
       +'<label>ทะเบียน<select class="in" data-ypveh><option value="">— เลือกทะเบียน —</option>'+ypVehOpts(sv.veh||'')+'</select></label>'+(p.pickup?'':empI)+'</div>'
-      +(hit||sv.st?'':'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ในรายชื่อจุดส่ง · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV เพิ่มร้านที่หน้าค่ากลาง)</div>')
+      +(stV?'':ds.length>1?'<div class="warn">📍 ร้านนี้ส่งได้ '+ds.length+' ที่ · เลือกจุดส่งรอบนี้จากดรอปดาวน์</div>':'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ในรายชื่อจุดส่ง · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV เพิ่มร้านที่หน้าค่ากลาง) · ลงด้วยสถานีครั้งเดียว ระบบจำให้ครั้งหน้า</div>')
       +'<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-ypplan>➕ ลงแพลน '+qT+'</button></div>'+(p.pickup?'</details>':'');}
   else h+='<div class="note">ดูได้อย่างเดียว · ลงแพลนได้เฉพาะแอดมิน Packing</div>';
   return h+'</div>';}
@@ -3539,7 +3552,10 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS0=PO?Y
   const re=H.querySelector('[data-ypre]');if(re)re.onclick=()=>{YP.pend=1;ypLoad();};
   H.querySelectorAll('.ypc').forEach(card=>{const m=YP.msgs.find(x=>x.mid===card.dataset.ypm);if(!m)return;
     const sv=YP.sel[m.mid]=YP.sel[m.mid]||{},i1=card.querySelector('[data-ypst]'),i2=card.querySelector('[data-ypveh]');
-    if(i1)i1.oninput=()=>{sv.st=i1.value;};{const i3=card.querySelector('[data-ypemp]');if(i3)i3.oninput=()=>{i3.value=i3.value.replace(/[^0-9]/g,'');sv.emp=i3.value;};}const i4=card.querySelector('[data-ypdrv]');ypDrvShort(i4);
+    const i5=card.querySelector('[data-ypds]'),bx=card.querySelector('[data-ypdsx]'),dsSync=()=>{if(!i5)return;const o=[...i5.options].find(z=>z.value&&ST.find(y=>String(y.id)===z.value&&y.n===i1.value));i5.value=o?o.value:'';if(bx)bx.disabled=!o;};
+    if(i1)i1.oninput=()=>{sv.st=i1.value;dsSync();};
+    if(i5)i5.onchange=()=>{const x=ST.find(y=>String(y.id)===i5.value);if(x){i1.value=x.n;sv.st=x.n;}if(bx)bx.disabled=!x;};
+    if(bx)bx.onclick=()=>ypDestDel(m,i5,bx);{const i3=card.querySelector('[data-ypemp]');if(i3)i3.oninput=()=>{i3.value=i3.value.replace(/[^0-9]/g,'');sv.emp=i3.value;};}const i4=card.querySelector('[data-ypdrv]');ypDrvShort(i4);
     if(i2)i2.onchange=()=>{sv.veh=i2.value;const P=PLAN[i2.value];if(i4&&!i4.value&&P&&P.driver){i4.value=P.driver;sv.drv=P.driver;}};
     if(i4)i4.onchange=()=>{sv.drv=i4.value;if(i2&&!i2.value&&i4.value){const d=drvOf(i4.value),h=ypDrvHead(i4.value)||(d&&d.head&&PLAN[d.head]&&PLAN[d.head].status==='ready'?d.head:'');if(h&&[...i2.options].some(o=>o.value===h)){i2.value=h;sv.veh=h;}}};
     const bp=card.querySelector('[data-ypplan]');if(bp)bp.onclick=()=>ypPlan(m,card,bp);
@@ -3764,12 +3780,18 @@ async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data
   const dBack=dMove.map(h=>[h,PLAN[h].driver]);dMove.forEach(h=>{PLAN[h].driver='';});P.driver=drv;   /* ตั้งคนขับตอนลงจริง (ยกเลิกกล่องวันที่ = ไม่แตะ) */
   P.stops.push(stop);const nm0=x?x.n:stop.n,nAdd=[p.coa?'พก COA (ถัง) '+nm0:'',p.cheque?'รับเช็ค '+nm0:'',p.cash?'เก็บเงินสด '+nm0:'',p.receipt?'ใบเสร็จ '+nm0:'',p.prepay?'โอนเงินก่อน '+nm0:''].filter(t=>t&&!String(P.note||'').includes(t)).join(' · '),note0=P.note;if(nAdd)P.note=(P.note?P.note+' · ':'')+nAdd;
   btn.disabled=true;
-  try{await ypMark(m,'planned',{planDate:pd,head});m.head=head;m.planDate=pd;m.nAdd=nAdd;}
+  try{await ypMark(m,'planned',Object.assign({planDate:pd,head},x?{stId:x.id,shop:p.shop||''}:{}));m.head=head;m.planDate=pd;m.nAdd=nAdd;if(x)ypDestHit(p.shop,x.id);}
   catch(e){P.stops=P.stops.filter(y=>y!==stop);P.note=note0;P.driver=dOld;dBack.forEach(([h,d])=>{PLAN[h].driver=d;});toast('❌ '+(e.message||e));btn.disabled=false;return;}
   delete YP.sel[m.mid];if(PM!=='all')setPM('all');else renderAll();ypBadge();ypDraw();
   toast('✅ ลง '+(stop.n)+' '+ypQty(p)+' เข้ารถ '+plOf(head)+' · '+(((drvOf(drv)||{}).name)||'')+' แล้ว · อย่าลืมกดบันทึกแพลน');
   if(soT&&soT!==String(p.so||''))await ypPlate(m,{plate:'',driver:'',so:soT});
   ypMailOpen(m,true);}   /* ✉️ เด้งเมล FM-MK ต่อทันที (บันทึกลงฟอร์มอัตโนมัติ) */
+async function ypDestDel(m,sel,btn){const p=m.p||{},x=ST.find(y=>String(y.id)===(sel&&sel.value));if(!x)return;
+  if(!(await askModal({icon:'📍',title:'ลบจุดส่งออกจากร้านนี้?',html:'<p>ร้าน <b>'+esc(p.shop||'')+'</b><br>จะไม่โชว์ <b>'+esc(x.n)+'</b> ในดรอปดาวน์อีก<br><span class="note">ไม่กระทบแพลน/ออเดอร์ที่ลงไปแล้ว · ลงแพลนจุดนี้อีกครั้ง = ระบบจำใหม่</span></p>',ok:'ลบออก',cancel:'ไม่ลบ',danger:1})))return;
+  const k=ypNorm(p.shop);btn.disabled=true;
+  try{if(ypLive()&&!m.sample){const r=await fetch(ypUrl(),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'destDel',userId:MY_UID,key:k,stId:x.id})}).then(z=>z.json());if(!r.ok)throw new Error(r.error||'ลบไม่ได้');}
+    YP.dests.set(k,(YP.dests.get(k)||[]).filter(d=>d.id!==x.id));const sv=YP.sel[m.mid];if(sv&&sv.st===x.n)delete sv.st;ypDraw();toast('✅ ลบ '+x.n+' ออกจากร้าน '+(p.shop||'')+' แล้ว');}
+  catch(e){toast('❌ '+(e.message||e));btn.disabled=false;}}
 async function ypPick(m,btn){{const c=btn.closest('.ypc'),e=c&&c.querySelector('[data-ypemp]');m.emp=e?e.value.replace(/[^0-9]/g,''):'';}const old=m.head,oldD=m.planDate,d=(m.p&&m.p.dlv)||$('pdate').value;m.head='รับเอง';m.planDate=d;
   if(!(await ypSet(m,'planned',btn,{planDate:d,head:'รับเอง'}))){m.head=old;m.planDate=oldD;return;}toast('✅ '+((m.p&&m.p.shop)||'')+' ลูกค้ารับเอง · ปิดรายการแล้ว');
   ypMailOpen(m,true);}   /* รับเองก็ต้องส่งเมล (คุณน้อง 10 พ.ย.) */
