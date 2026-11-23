@@ -165,7 +165,7 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .ypdc button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--ink)}
 .ypdc button.on{background:var(--head);color:var(--head-ink);border-color:var(--head)}
 .ypfl button{border-color:#e3b25c;color:#92400e}.ypfl button.on{background:#b45309;border-color:#b45309;color:#fff}
-.ypfl button.yprep{margin-left:auto;border-color:var(--brand);color:var(--brand);background:var(--surface)}.ypfl button.yprep:hover{background:var(--brand);color:var(--brand-ink)}
+.ypfl button.yprep+button.yprep{margin-left:6px}.ypfl button.yprep{margin-left:auto;border-color:var(--brand);color:var(--brand);background:var(--surface)}.ypfl button.yprep:hover{background:var(--brand);color:var(--brand-ink)}
 [data-ssb-theme=dark] .ypfl button:not(.on):not(.yprep){color:#f6c46b}@media (prefers-color-scheme:dark){:root:not([data-ssb-theme=light]) .ypfl button:not(.on):not(.yprep){color:#f6c46b}}
 .ypnw{font-style:normal;background:var(--bad);color:#fff;border-radius:999px;padding:0 6px;margin-left:4px;font-size:11px;font-weight:700}
 .ypc.ypnew{border-color:var(--bad);box-shadow:0 0 0 2px color-mix(in srgb,var(--bad) 22%,transparent)}
@@ -3301,18 +3301,21 @@ const ypNorm=x=>String(x||'').toLowerCase().replace(/ร้าน|บจก\.?|�
 /* 20 พ.ย. คุณน้อง "เพิ่มฟิลเตอร์ ออเดอร์ที่แมชสินค้าไม่เจอ แล้วก็ ชื่อลูกค้า กับ ค่ากลางไม่เจอ กรณีเราส่งเอง" (ชิปใต้แท็บ Pending) */
 const ypUnk=m=>!m.sample&&(+(m.p&&m.p.unk)||0)>0;
 function ypNoSt(m){const p=m.p||{};if(p.pickup||m.sample)return false;if((YP.sel[m.mid]||{}).st)return false;const hit=(p.po&&ypMatchPo(p))||ypMatch(p.shop);if(ypDests(p.shop).length)return false;return !hit||hit.km==null;}
-function ypMatch(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=null;
+/* 23 พ.ย. คุณน้อง "วัชราวรรณสาขามาบยางพร / สาขาระยอง มันคนละที่นะ พิกัด" → ชื่อที่มี "สาขา…" ต้องเจอชื่อสาขานั้นในจุด · ชื่อสั้นที่อยู่ในหลายจุด = ไม่เดา
+   loose=true = แบบเดิม (ไว้บอกว่า "มีชื่อคล้าย" เท่านั้น ห้ามใช้เป็นค่าเริ่มต้น) */
+const ypBrOk=(k,n)=>{const i=k.indexOf('สาขา');if(i<0)return true;const br=k.slice(i+4);return br.length<2||n.includes(br);};
+function ypMatch(shop,loose){const k=ypNorm(shop);if(k.length<3)return null;let best=null,wide=0;
   ST.forEach(x=>{if(tyOf({id:x.id})==='ห้าง')return;const n=ypNorm(x.n);if(n.length<3)return;
-    if(n===k||n.includes(k)||k.includes(n)){const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});
-  return best?best.x:null;}
+    if(n===k||n.includes(k)||k.includes(n)){if(!loose&&n!==k&&!ypBrOk(k,n))return;if(n!==k&&n.includes(k))wide++;const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});
+  if(!best)return null;if(!loose&&best.sc<1000&&wide>1)return null;return best.x;}
 /* 📍 23 พ.ย. คุณน้อง "เซลส์ส่งชื่อร้านมา บางทีส่งหลายที่แล้วแต่รอบ → ฐาน PK ว่าร้านนี้ส่งที่ไหนบ้าง ขึ้นดรอปดาวน์"
    pk-yp v26 dests [[ชื่อร้าน ypNorm, central_distances.id, ครั้ง, ล่าสุด]] (ตาราง pk_shop_dests) · ระบบจำเองตอนกด ลงแพลน ด้วยสถานีค่ากลาง */
-function ypDestsSet(a){const M=new Map();(a||[]).forEach(([k,id,n,at])=>{if(!M.has(k))M.set(k,[]);M.get(k).push({id:+id,n:+n||1,at:at||''});});YP.dests=M;}
+function ypDestsSet(a){const M=new Map();(a||[]).forEach(([k,id,n,at])=>{if(!M.has(k))M.set(k,[]);M.get(k).push({id:+id,n:+n||0,at:at||''});});YP.dests=M;}
 function ypDests(shop){const L=YP.dests.get(ypNorm(shop))||[];return L.map(d=>({x:ST.find(y=>y.id===d.id),n:d.n,at:d.at})).filter(d=>d.x).sort((a,b)=>b.n-a.n||String(b.at).localeCompare(String(a.at)));}
 function ypDestHit(shop,id){const k=ypNorm(shop);if(!k||!id)return;const L=YP.dests.get(k)||[];const d=L.find(y=>y.id===id);if(d){d.n++;d.at=new Date().toISOString();}else L.push({id,n:1,at:new Date().toISOString()});YP.dests.set(k,L);}
 /* 23 พ.ย. คุณน้อง "ให้แมชจาก DTC เลย แล้วขึ้นฟ้องว่ายังไม่ดึงเข้าค่ากลาง" · pk-yp list.pinsOut = หมุดลูกค้า DTC ที่ยังไม่มีแถวในค่ากลาง */
 function ypPinOut(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=null;
-  YP.pinsOut.forEach(x=>{const n=ypNorm(x.n);if(n.length<3)return;if(n===k||n.includes(k)||k.includes(n)){const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});return best?best.x:null;}
+  YP.pinsOut.forEach(x=>{const n=ypNorm(x.n);if(n.length<3)return;if(n===k||n.includes(k)||k.includes(n)){if(n!==k&&!ypBrOk(k,n))return;const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});return best?best.x:null;}
 const ypMap=ll=>'https://www.google.com/maps?q='+encodeURIComponent(String(ll||'').replace(/\s+/g,''));
 /* ค่าเริ่มต้นช่องจุดส่ง: PO ตรงสาขา → เคยส่งที่เดียว → ชื่อตรงในค่ากลาง (ถ้าเคยส่งหลายที่ ต้องอยู่ในนั้น ไม่งั้นให้แอดมินเลือก) */
 function ypDefSt(p){const po=p.po&&ypMatchPo(p);if(po)return po;const ds=ypDests(p.shop);if(ds.length===1)return ds[0].x;const h=ypMatch(p.shop);if(!ds.length)return h;return h&&ds.some(d=>d.x.id===h.id)?h:null;}
@@ -3463,13 +3466,13 @@ function ypCard(m,ro){const p=m.p||{},st=ypSt(m),its=p.items||[],pd=$('pdate').v
     const ds=ypDests(p.shop),def=ypDefSt(p),stV=sv.st!=null?sv.st:def?def.n:'';
     h+='<div class="ypa'+(p.pickup?'':' ypa3')+'"><label>จุดส่ง (ค่ากลาง)'
       +(ds.length?'<span class="ypds"><select class="in" data-ypds aria-label="จุดส่งที่ร้านนี้เคยส่ง"><option value="">📍 ร้านนี้เคยส่ง '+ds.length+' ที่ · เลือก</option>'
-        +ds.map(d=>'<option value="'+d.x.id+'"'+(d.x.n===stV?' selected':'')+'>'+esc(d.x.n)+(d.x.km?' · '+d.x.km+' กม.':'')+' · ส่ง '+d.n+' ครั้ง</option>').join('')+'</select>'
+        +ds.map(d=>'<option value="'+d.x.id+'"'+(d.x.n===stV?' selected':'')+'>'+esc(d.x.n)+(d.x.km?' · '+d.x.km+' กม.':'')+(d.n?' · ส่ง '+d.n+' ครั้ง':' · นำเข้า ยังไม่เคยส่ง')+'</option>').join('')+'</select>'
         +'<button type="button" class="btn sm" data-ypdsx title="ลบจุดที่เลือกออกจากร้านนี้ (จำผิด)" aria-label="ลบจุดที่เลือกออกจากร้านนี้"'+(ds.some(d=>d.x.n===stV)?'':' disabled')+'>✕</button></span>':'')
       +'<input class="in" data-ypst list="ypStL" value="'+esc(stV)+'" placeholder="'+(ds.length?'หรือพิมพ์ค้นจุดอื่น':'ไม่พบในรายชื่อ · พิมพ์ชื่อร้าน')+'"></label>'
       +'<label>ชื่อคนขับ<select class="in" data-ypdrv><option value="">— เลือกคนขับ —</option>'+ypDrvOpts(sv.drv!=null?sv.drv:(sv.veh&&PLAN[sv.veh]?PLAN[sv.veh].driver:'')||'')+'</select></label>'
       +'<label>ทะเบียน<select class="in" data-ypveh><option value="">— เลือกทะเบียน —</option>'+ypVehOpts(sv.veh||'')+'</select></label>'+(p.pickup?'':empI)+'</div>'
-      +(stV?'':ds.length>1?'<div class="warn">📍 ร้านนี้ส่งได้ '+ds.length+' ที่ · เลือกจุดส่งรอบนี้จากดรอปดาวน์</div>':(pinO=>pinO?'<div class="warn">📍 เจอหมุด DTC <b>'+esc(pinO.n)+'</b> ('+esc(pinO.id)+' · <a href="'+esc(ypMap(pinO.ll))+'" target="_blank" rel="noopener">ดูแผนที่</a>) แต่<b>ยังไม่ดึงเข้าค่ากลาง</b> · ลงแพลนได้แต่ไม่มีระยะ/ค่าแรงจนกว่า DEV เพิ่มที่หน้าค่ากลาง</div>'
-        :'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ทั้งในค่ากลางและหมุด DTC · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV ปักหมุด + เพิ่มที่หน้าค่ากลาง) · ลงด้วยสถานีครั้งเดียว ระบบจำให้ครั้งหน้า</div>')(ypPinOut(p.shop)))
+      +(stV?'':ds.length>1?'<div class="warn">📍 ร้านนี้ส่งได้ '+ds.length+' ที่ · เลือกจุดส่งรอบนี้จากดรอปดาวน์</div>':((lc=>lc?'<div class="warn">⚠ ค่ากลางมีชื่อคล้าย <b>'+esc(lc.n)+'</b> แต่ไม่แน่ใจว่าเป็นจุดเดียวกัน (ชื่อมีสาขา / คล้ายหลายจุด) · เลือกจุดส่งเองครั้งแรก ระบบจะจำ · หรือ DEV ผูกด้วยไฟล์ 📍 จุดส่งร้าน</div>':'')(ypMatch(p.shop,true))||(pinO=>pinO?'<div class="warn">📍 เจอหมุด DTC <b>'+esc(pinO.n)+'</b> ('+esc(pinO.id)+' · <a href="'+esc(ypMap(pinO.ll))+'" target="_blank" rel="noopener">ดูแผนที่</a>) แต่<b>ยังไม่ดึงเข้าค่ากลาง</b> · ลงแพลนได้แต่ไม่มีระยะ/ค่าแรงจนกว่า DEV เพิ่มที่หน้าค่ากลาง</div>'
+        :'<div class="warn">⚠ ไม่พบร้าน “'+esc(p.shop)+'” ทั้งในค่ากลางและหมุด DTC · ลงแพลนได้แต่จะไม่มีระยะ/ค่ากลาง (ให้ DEV ปักหมุด + เพิ่มที่หน้าค่ากลาง) · ลงด้วยสถานีครั้งเดียว ระบบจำให้ครั้งหน้า</div>')(ypPinOut(p.shop))))
       +'<div class="ypb"><button class="btn sm" data-ypign>🙈 ไม่ใช่ออเดอร์</button><button class="btn sm pri" data-ypplan>➕ ลงแพลน '+qT+'</button></div>'+(p.pickup?'</details>':'');}
   else h+='<div class="note">ดูได้อย่างเดียว · ลงแพลนได้เฉพาะแอดมิน Packing</div>';
   return h+'</div>';}
@@ -3498,7 +3501,7 @@ function ypQHit(m,q){q=q==null?YP.q:q;const w=String(q||'').trim().split(/\s+/).
 let ypQT=0;
 function ypQIn(el){clearTimeout(ypQT);const v=el.value;ypQT=setTimeout(()=>{if(YP.q===v)return;YP.q=v;const c=el.selectionStart;ypDraw();
   const n=$('ypQ');if(n){n.focus();try{n.setSelectionRange(c,c);}catch(e){}}},180);}
-const YP_REPBTN='<button type="button" class="yprep" data-yprep title="เรียกรายงาน Excel / PDF / JPEG · ค่าเริ่ม = ตัวกรองบนจอ">📊 รายงาน</button>';
+const YP_REPBTN='<button type="button" class="yprep" data-ypdest title="ร้านเดียวหลายจุดส่ง · ดาวน์โหลด Excel (แอดมิน) / อัปโหลด (DEV)">📍 จุดส่งร้าน</button><button type="button" class="yprep" data-yprep title="เรียกรายงาน Excel / PDF / JPEG · ค่าเริ่ม = ตัวกรองบนจอ">📊 รายงาน</button>';
 function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS0=PO?YP.msgs.filter(ypIsPo):YP.msgs.filter(ypInYp),MS=MS0.filter(m=>ypQHit(m)),c=ypCnt(MS),pd=$('pdate').value;
   const dsl=H.querySelector('#ypDr .ypdays'),dsx=dsl?dsl.scrollLeft:0;
   const P0=MS.filter(m=>!ypSt(m)),days=[...new Set(P0.map(ypDayOf))].sort((a,b)=>a==='none'?1:b==='none'?-1:a.localeCompare(b));
@@ -3551,6 +3554,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS0=PO?Y
   H.querySelectorAll('[data-ypday]').forEach(b=>b.onclick=()=>{YP.fresh.clear();ypSeeDay(b.dataset.ypday);});
   H.querySelectorAll('[data-ypflt]').forEach(b=>b.onclick=()=>{YP.flt=YP.flt===b.dataset.ypflt?'':b.dataset.ypflt;ypDraw();});
   const rpb=H.querySelector('[data-yprep]');if(rpb)rpb.onclick=()=>yrOpen();
+  const dsb=H.querySelector('[data-ypdest]');if(dsb)dsb.onclick=()=>ypDestOpen(dsb);
   const qi=$('ypQ');if(qi){qi.oninput=()=>ypQIn(qi);qi.onkeydown=e=>{if(e.key==='Escape'&&qi.value){e.stopPropagation();qi.value='';ypQIn(qi);}};}
   const qx=H.querySelector('[data-ypqx]');if(qx)qx.onclick=()=>{YP.q='';ypDraw();const n=$('ypQ');if(n)n.focus();};
   {const ds=H.querySelector('#ypDr .ypdays');if(ds){if(dsx)ds.scrollLeft=dsx;else{const on=ds.querySelector('button.on');if(on&&on.offsetLeft+on.offsetWidth>ds.clientWidth)ds.scrollLeft=on.offsetLeft-ds.clientWidth/2+on.offsetWidth/2;}}}
@@ -3581,7 +3585,7 @@ function ypDraw(){const H=$('drawerHost');if(!H)return;const PO=!!YP.po,MS0=PO?Y
    ใช้ตัวสร้างชุดเดียวกับรายงานคนขับ (drHeader/drKpi/drPaged/drRender/drSheet) · ธีมเขียว SSB + ทอง ลายหยดน้ำมัน (ออเดอร์น้ำมันพืช Packing) */
 const YR={sts:new Set(),days:new Set(),prob:new Set(),how:new Set(),kind:'ord',q:''};   /* q = คำค้นบนจอ (ypQHit) */
 const YR_ST={p:['Pending','⏳ Pending'],planned:['ลงแพลนแล้ว','✅ ลงแพลนแล้ว'],ignored:['ซ่อน','🙈 ซ่อน']};
-Object.assign(DR_ST,{'ครบ':['#127a2e','#e7f5ee'],'ยังไม่ดึงเข้าค่ากลาง':['#8a5a0b','#fef0d9'],'ไม่มีหมุดชื่อตรง':['#185fa5','#e6f1fb'],'ไม่พบหมุด DTC':['#a32d2d','#fceded'],'Pending':['#8a5a0b','#fef0d9'],'ลงแพลนแล้ว':['#127a2e','#e7f5ee'],'ซ่อน':['#5f5e5a','#efefef']});
+Object.assign(DR_ST,{'ต้องเลือกจุดเอง':['#6b21a8','#f3e8ff'],'ผูกแล้ว':['#127a2e','#e7f5ee'],'จุดนี้ปิดใช้งาน':['#5f5e5a','#efefef'],'ยังไม่ผูก · ชื่อตรงค่ากลาง':['#185fa5','#e6f1fb'],'ยังไม่ผูก · ค่ากลางไม่มีหมุด':['#8a5a0b','#fef0d9'],'ชื่อมีสาขา · กรอกรหัสหมุดเอง':['#6b21a8','#f3e8ff'],'หมุดยังไม่เข้าค่ากลาง · ใส่ กม.':['#8a5a0b','#fef0d9'],'ยังไม่มีหมุด · ปักหมุด DTC ก่อน':['#a32d2d','#fceded'],'อยู่ในค่ากลาง':['#127a2e','#e7f5ee'],'ยังไม่อยู่ในค่ากลาง':['#8a5a0b','#fef0d9'],'ครบ':['#127a2e','#e7f5ee'],'ยังไม่ดึงเข้าค่ากลาง':['#8a5a0b','#fef0d9'],'ไม่มีหมุดชื่อตรง':['#185fa5','#e6f1fb'],'ไม่พบหมุด DTC':['#a32d2d','#fceded'],'Pending':['#8a5a0b','#fef0d9'],'ลงแพลนแล้ว':['#127a2e','#e7f5ee'],'ซ่อน':['#5f5e5a','#efefef']});
 Object.assign(DR_IC,{pin:'<path d="M12 21s-7-6.3-7-11.5a7 7 0 0114 0C19 14.7 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>',alert:'<path d="M12 3.5l9 16H3z"/><path d="M12 10v4.5M12 17.4v.1"/>',drop:'<path d="M12 3s6 6.4 6 10.6a6 6 0 01-12 0C6 9.4 12 3 12 3z"/>'});
 const YR_KIND=[{k:'ord',ic:'list',clr:'#2D6A4F',t:'รายการออเดอร์',d:'ร้านละ 1 แถว · วันส่ง ลัง/ปี๊บ/ถัง การชำระ สถานะ รถ/คนขับ',f:'รายการ',sub:'ร้านละ 1 แถว · แยกตามวันส่ง/วันรับ'},
   {k:'item',ic:'box',clr:'#B45309',t:'รายการสินค้าทุกบรรทัด',d:'ชื่อตามฐาน รหัส จำนวน แถม ราคา · เห็นบรรทัดที่ยังไม่ตรงฐาน',f:'สินค้า',sub:'สินค้าทุกบรรทัดของออเดอร์ที่เลือก · ⚠ = ยังไม่ตรงฐานสินค้า'},
@@ -3633,7 +3637,7 @@ function yrData(L){const O=L.map(yrOrd),s=f=>O.reduce((a,r)=>a+f(r),0);
   return {L,O,days:[...new Set(O.map(r=>r.day))].sort(yrDayCmp),n:O.length,dlv:O.filter(r=>!r.pick).length,pick:O.filter(r=>r.pick).length,
     cs:s(r=>r.cs),pb:s(r=>r.pb),tk:s(r=>r.tk),unk:O.filter(r=>r.unk).length,nost:O.filter(r=>r.nost).length,fix:O.filter(r=>r.unk||r.nost).length,per:yrScope()};}
 /* 📍 รายงานพิกัดจุดส่ง (คุณน้อง 23 พ.ย. "เพิ่มในปุ่มรายงานก็ได้ เฉพาะพิกัดที่เราต้องส่งเอง") · หมุดทั้งหมดโหลดตอนกดสร้างไฟล์ (pk-yp ?action=dests) แคช 5 นาที */
-const YR_LOC_ORD=['ไม่พบหมุด DTC','ยังไม่ดึงเข้าค่ากลาง','ไม่มีหมุดชื่อตรง','ครบ'];
+const YR_LOC_ORD=['ไม่พบหมุด DTC','ต้องเลือกจุดเอง','ยังไม่ดึงเข้าค่ากลาง','ไม่มีหมุดชื่อตรง','ครบ'];
 async function yrLocLoad(){if(yrLocLoad.d&&Date.now()-yrLocLoad.t<300e3)return yrLocLoad.d;let pins=[];
   if(ypLive()){const x=await fetch(ypUrl()+'?action=dests&userId='+encodeURIComponent(MY_UID)+'&t='+Date.now()).then(z=>z.json());if(!x.ok)throw new Error(x.error||'โหลดหมุด DTC ไม่ได้');pins=x.pins||[];}
   yrLocLoad.d={by:new Map(pins.map(([id,n,ll,k])=>[n,{id,n,ll,k}]))};yrLocLoad.t=Date.now();return yrLocLoad.d;}
@@ -3644,10 +3648,11 @@ function yrLocs(X){const P=(yrLocLoad.d||{by:new Map()}).by,G=new Map();
     const stRow=(x,times,multi)=>{const pin=P.get(x.n)||null;return Object.assign({},base,{st:x.n,km:x.km==null?null:x.km,pin:pin&&pin.id,ll:pin&&pin.ll,times,multi,stat:pin?'ครบ':'ไม่มีหมุดชื่อตรง'});};
     if(ds.length>1&&!(def&&g.p.po))ds.forEach((d,i)=>R.push(Object.assign(stRow(d.x,d.n,ds.length),i?{sub:1}:{})));
     else if(def||ds.length){const x=def||ds[0].x,h=ds.find(d=>d.x.id===x.id);R.push(stRow(x,h?h.n:0,0));}
+    else if(ypMatch(g.p.shop,true)){const lc=ypMatch(g.p.shop,true),pin=P.get(lc.n);R.push(Object.assign({},base,{st:'',km:null,pin:pin&&pin.id,ll:pin&&pin.ll,pinName:lc.n,stat:'ต้องเลือกจุดเอง'}));}
     else{const po=ypPinOut(g.p.shop);R.push(Object.assign({},base,{st:'',km:null,pin:po&&po.id,ll:po&&po.ll,pinName:po&&po.n,stat:po?'ยังไม่ดึงเข้าค่ากลาง':'ไม่พบหมุด DTC'}));}});
   const sk=r=>YR_LOC_ORD.indexOf(r.stat),grp=new Map();R.forEach(r=>{if(!grp.has(r.shop))grp.set(r.shop,[]);grp.get(r.shop).push(r);});
   return [...grp.values()].sort((a,b)=>Math.min(...a.map(sk))-Math.min(...b.map(sk))||b[0].n-a[0].n||a[0].shop.localeCompare(b[0].shop,'th')).flat();}
-const yrLocNote=r=>r.stat==='ยังไม่ดึงเข้าค่ากลาง'?'หมุด DTC “'+r.pinName+'” · DEV เพิ่มที่หน้าค่ากลาง':r.stat==='ไม่พบหมุด DTC'?'ไม่มีหมุดลูกค้าชื่อคล้าย · ปักหมุด DTC ก่อน':[r.multi?'ส่งได้ '+r.multi+' ที่':'',r.times?'เคยส่ง '+r.times+' ครั้ง':'',r.stat==='ไม่มีหมุดชื่อตรง'?'ชื่อในค่ากลางไม่ตรงชื่อหมุด DTC':''].filter(Boolean).join(' · ');
+const yrLocNote=r=>r.stat==='ต้องเลือกจุดเอง'?'ค่ากลางมีชื่อคล้าย “'+r.pinName+'” แต่ชื่อมีสาขา/คล้ายหลายจุด · DEV ผูกด้วยไฟล์ 📍 จุดส่งร้าน':r.stat==='ยังไม่ดึงเข้าค่ากลาง'?'หมุด DTC “'+r.pinName+'” · DEV เพิ่มที่หน้าค่ากลาง':r.stat==='ไม่พบหมุด DTC'?'ไม่มีหมุดลูกค้าชื่อคล้าย · ปักหมุด DTC ก่อน':[r.multi?'ส่งได้ '+r.multi+' ที่':'',r.times?'เคยส่ง '+r.times+' ครั้ง':'',r.stat==='ไม่มีหมุดชื่อตรง'?'ชื่อในค่ากลางไม่ตรงชื่อหมุด DTC':''].filter(Boolean).join(' · ');
 const YR_FOOT='ลังรวม = จำนวน + แถมจริง (+N / แถม N ลัง) · /N = แถมเฉลี่ยลงราคาแล้ว ไม่นับลัง · ปี๊บ/ถัง นับแยก';
 /* ───── หน้า A4 (PDF / JPEG) ───── */
 function yrDrops(){return '<svg width="560" height="150" viewBox="0 0 560 150" style="position:absolute;right:-12px;top:-6px;opacity:.2" fill="none" stroke="#fff" stroke-width="2" stroke-linejoin="round">'
@@ -3690,7 +3695,7 @@ function yrPages(kind,X){const o=YR_KIND.find(x=>x.k===kind),first=yrHeader('อ
       +drKpi('truck',DRT.main,'ร้านที่ส่งเอง',comma(ns),'ร้าน',comma(R.filter(r=>!r.sub).reduce((a,r)=>a+r.n,0))+' ออเดอร์ · '+comma(R.length)+' จุด')
       +drKpi('pin','#127a2e','ครบ (ค่ากลาง + หมุด)',c('ครบ'),'จุด','ชื่อไม่ตรงหมุด '+c('ไม่มีหมุดชื่อตรง'))
       +drKpi('alert','#8a5a0b','ยังไม่ดึงเข้าค่ากลาง',c('ยังไม่ดึงเข้าค่ากลาง'),'ร้าน','มีหมุด DTC แล้ว · DEV เพิ่มที่หน้าค่ากลาง')
-      +drKpi('alert','#B42318','ไม่พบหมุด DTC',c('ไม่พบหมุด DTC'),'ร้าน','ต้องปักหมุดก่อน')+'</div>';
+      +drKpi('alert','#B42318','ไม่พบหมุด DTC',c('ไม่พบหมุด DTC'),'ร้าน','ต้องปักหมุดก่อน'+(c('ต้องเลือกจุดเอง')?' · ต้องเลือกจุดเอง '+c('ต้องเลือกจุดเอง'):''))+'</div>';
     cols=[{h:'#',w:30,a:'center'},{h:'ร้าน (ที่เซลส์พิมพ์)',w:0},{h:'ออเดอร์',w:52,a:'right'},{h:'ลัง',w:52,a:'right'},{h:'จุดส่ง (ค่ากลาง)',w:200},{h:'กม.',w:46,a:'right'},{h:'หมุด DTC',w:84,a:'center'},{h:'พิกัด',w:136},{h:'สถานะ',w:128,a:'center'},{h:'หมายเหตุ',w:170}];
     rows=R.map(r=>[r.sub?'':++i,r.sub?{html:'<span style="color:#94a3b8">″</span>'}:{html:'<b>'+esc(r.shop)+'</b>'},r.sub?'':r.n,r.sub?'':yrN(r.cs),r.st?r.st:yrRed('— ไม่มีในค่ากลาง'),r.km==null?'':comma(r.km),r.pin||'',r.ll||'',drBadge(r.stat),{html:'<span style="color:#64748b">'+esc(yrLocNote(r))+'</span>'}]);
     return drPaged(cont,X.per,foot,cols,rows,['','รวม '+ns+' ร้าน · '+R.length+' จุด','','','','','','','',''],fst,17,23);}
@@ -3720,7 +3725,7 @@ function yrSheet(kind,X){const o=YR_KIND.find(x=>x.k===kind),Z='#,##0;-#,##0;"-"
       return [d==='none'?'ไม่พบวันส่ง':dateTH(d),R.length,c(r=>!r.pick),c(r=>r.pick),s(r=>r.cs),s(r=>r.pb),s(r=>r.tk),c(r=>r.st==='p'),c(r=>r.st==='planned'),c(r=>r.st==='ignored'),c(r=>r.unk),c(r=>r.nost)];}),
     total:['รวม '+X.days.length+' วัน',X.n,X.dlv,X.pick,X.cs,X.pb,X.tk,X.O.filter(r=>r.st==='p').length,X.O.filter(r=>r.st==='planned').length,X.O.filter(r=>r.st==='ignored').length,X.unk,X.nost]});
   if(kind==='loc'){const R=yrLocs(X),c=t=>R.filter(r=>r.stat===t).length,ns=new Set(R.map(r=>r.shop)).size;return Object.assign(base,{status:9,emoji:'📍',
-    kpis:[['ร้านที่ส่งเอง',ns],['จุดส่ง',R.length],['ครบ',c('ครบ')],['ยังไม่ดึงเข้าค่ากลาง',c('ยังไม่ดึงเข้าค่ากลาง')],['ไม่พบหมุด DTC',c('ไม่พบหมุด DTC')],['ชื่อไม่ตรงหมุด',c('ไม่มีหมุดชื่อตรง')]],
+    kpis:[['ร้านที่ส่งเอง',ns],['จุดส่ง',R.length],['ครบ',c('ครบ')],['ยังไม่ดึงเข้าค่ากลาง',c('ยังไม่ดึงเข้าค่ากลาง')],['ไม่พบหมุด DTC',c('ไม่พบหมุด DTC')],['ต้องเลือกจุดเอง',c('ต้องเลือกจุดเอง')],['ชื่อไม่ตรงหมุด',c('ไม่มีหมุดชื่อตรง')]],
     cols:[{h:'ร้าน (ที่เซลส์พิมพ์)',x:30},{h:'ออเดอร์',x:9},{h:'ลัง',x:9,z:Z},{h:'วันส่ง',x:22},{h:'จุดส่ง (ค่ากลาง)',x:36},{h:'กม.',x:8,z:Z},{h:'หมุด DTC',x:12,a:'center'},{h:'ชื่อหมุด DTC',x:34},{h:'พิกัด',x:22},{h:'สถานะ',x:20,a:'center'},{h:'หมายเหตุ',x:40},{h:'Google Maps',x:44}],
     rows:R.map(r=>[r.shop,r.sub?'':r.n,r.sub?'':r.cs,r.sub?'':r.days.map(yrD).join(', '),r.st||'— ไม่มีในค่ากลาง',r.km==null?'':r.km,r.pin||'',r.pinName||(r.pin?r.st:''),r.ll||'',r.stat,yrLocNote(r),r.ll?ypMap(r.ll):'']),
     total:['รวม '+ns+' ร้าน',R.filter(r=>!r.sub).reduce((a,r)=>a+r.n,0),'',R.length+' จุด','','','','','','','','']});}
@@ -3823,6 +3828,78 @@ async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data
   toast('✅ ลง '+(stop.n)+' '+ypQty(p)+' เข้ารถ '+plOf(head)+' · '+(((drvOf(drv)||{}).name)||'')+' แล้ว · อย่าลืมกดบันทึกแพลน');
   if(soT&&soT!==String(p.so||''))await ypPlate(m,{plate:'',driver:'',so:soT});
   ypMailOpen(m,true);}   /* ✉️ เด้งเมล FM-MK ต่อทันที (บันทึกลงฟอร์มอัตโนมัติ) */
+/* 📍 23 พ.ย. คุณน้อง "ร้านเดียวมีพิกัดส่ง 2–3 ที่ ใช้การอัปโหลดได้มั้ย" → "อัปโหลดให้แค่ DEV ส่วนดาวน์โหลดให้แอดมินทำได้"
+   ไฟล์ 1 แถว = 1 จุดส่ง · อ่านกลับเฉพาะ ร้าน + รหัสหมุด DTC + กม. (หมุดใหม่) · pk-yp v28 destsImport ตรวจก่อน → popup สรุป → บันทึก · ไม่ลบของเดิม */
+async function ypDestData(){const now=Date.now();if(ypDestData.d&&now-ypDestData.t<60e3)return ypDestData.d;
+  const x=await fetch(ypUrl()+'?action=dests&userId='+encodeURIComponent(MY_UID)+'&t='+now).then(z=>z.json());if(!x.ok)throw new Error(x.error||'โหลดฐานจุดส่งไม่ได้');
+  ypDestData.d=x;ypDestData.t=now;yrLocLoad.d={by:new Map((x.pins||[]).map(([id,n,ll,k])=>[n,{id,n,ll,k}]))};yrLocLoad.t=now;return x;}
+async function ypDestPost(o){const x=await fetch(ypUrl(),{method:'POST',body:JSON.stringify(Object.assign({userId:MY_UID},o))}).then(z=>z.json());if(!x.ok)throw new Error(x.error||'บันทึกไม่ได้');return x;}
+function ypDestRows(x){const P=new Map((x.pins||[]).map(([id,n,ll,k])=>[n,{id,n,ll,k}])),out=[],done=new Set();
+  x.rows.slice().sort((a,b)=>a.shop.localeCompare(b.shop,'th')||b.n-a.n).forEach(r=>{done.add(r.key);const p=r.pin||{};
+    out.push([r.shop,p.id||'','','',p.id?r.st.name:'',r.st.name,r.st.km,r.n,p.ll||'',r.st.active?'ผูกแล้ว':'จุดนี้ปิดใช้งาน']);});
+  const ex=[];yrAll().filter(m=>yrHow(m)==='dlv'&&!m.sample).forEach(m=>{const sh=(m.p||{}).shop||'',k=ypNorm(sh);if(k.length<2||done.has(k))return;done.add(k);
+    const h=ypMatch(sh),lc=h?null:ypMatch(sh,true),po=h||lc?null:ypPinOut(sh),hp=h&&P.get(h.n),lp=lc&&P.get(lc.n);
+    ex.push(h?[sh,hp?hp.id:'','','',hp?hp.n:'',h.n,h.km,0,hp?hp.ll:'',hp?'ยังไม่ผูก · ชื่อตรงค่ากลาง':'ยังไม่ผูก · ค่ากลางไม่มีหมุด']
+      :lc?[sh,'','','',lp?lp.n+' ('+lp.id+')':'',lc.n,lc.km,0,lp?lp.ll:'','ชื่อมีสาขา · กรอกรหัสหมุดเอง']
+      :po?[sh,po.id,'','',po.n,'',null,0,po.ll,'หมุดยังไม่เข้าค่ากลาง · ใส่ กม.']
+      :[sh,'','','','','',null,0,'','ยังไม่มีหมุด · ปักหมุด DTC ก่อน']);});
+  ex.sort((a,b)=>a[0].localeCompare(b[0],'th'));return out.concat(ex);}
+const YPD_COLS=[{h:'ร้าน (ชื่อที่เซลส์พิมพ์)',x:34},{h:'รหัสหมุด DTC',x:14,a:'center'},{h:'กม. หมุดใหม่ (เที่ยวเดียว)',x:14},{h:'หมายเหตุ',x:20},{h:'ชื่อหมุด DTC (อ้างอิง)',x:34},{h:'จุดในค่ากลาง (อ้างอิง)',x:34},{h:'กม. ค่ากลาง',x:10},{h:'เคยส่ง (ครั้ง)',x:10},{h:'พิกัด',x:22},{h:'สถานะ',x:30,a:'center'}];
+async function ypDestXlsx(x){const R=ypDestRows(x),c=t=>R.filter(r=>r[9]===t).length;
+  const pins=(x.pins||[]).filter(p=>/^ลูกค้า/.test(p[3])).sort((a,b)=>a[1].localeCompare(b[1],'th'));
+  const help=['1) ชีต “จุดส่งร้าน” · 1 แถว = 1 จุดส่ง · ร้านที่ส่ง 3 ที่ = 3 แถว ชื่อร้านเหมือนกัน',
+    '2) ช่องที่ระบบอ่านตอนอัปโหลด มี 3 ช่อง: ร้าน (ชื่อที่เซลส์พิมพ์) · รหัสหมุด DTC (ST-xxxx) · กม. หมุดใหม่ · ช่องอื่นเป็นข้อมูลอ้างอิง แก้ไปก็ไม่มีผล',
+    '3) ค้นรหัสหมุดได้ที่ชีต “หมุดลูกค้า DTC” · ร้านสาขาที่ยังไม่มีหมุด ต้องปักหมุดใน DTC ก่อน (รอบดึงหมุดทุกคืน 02:00)',
+    '4) กม. หมุดใหม่ = ใส่เฉพาะหมุดที่ยังไม่อยู่ในค่ากลาง · ระบบสร้างแถวค่ากลาง (Packing) ให้ · กม.เต็ม เที่ยวเดียว เหมือนหน้าค่ากลาง',
+    '5) อัปโหลดได้เฉพาะ DEV · ก่อนบันทึกมี popup สรุป ผูกใหม่ / ผูกไว้แล้ว / ผิด ให้ตรวจ',
+    '6) อัปโหลด = เพิ่มการผูกอย่างเดียว ไม่ลบของเดิม · ลบจุดที่ผิดใช้ปุ่ม ✕ บนการ์ดออเดอร์',
+    '7) ตอนลงแพลน การ์ดของร้านที่มีหลายจุดจะขึ้นดรอปดาวน์ให้เลือกจุดส่งรอบนั้น'];
+  await drXlsx([
+    {name:'จุดส่งร้าน',emoji:'📍',title:'จุดส่งของร้าน (ร้านเดียวหลายที่)',sub:'1 แถว = 1 จุดส่ง · อ่านกลับเฉพาะ ร้าน / รหัสหมุด / กม. หมุดใหม่',period:'ทั้งหมด',status:9,
+      kpis:[['ผูกแล้ว (จุด)',c('ผูกแล้ว')],['ร้านผูกแล้ว',new Set(x.rows.map(r=>r.key)).size],['ร้านส่งเองที่ยังไม่ผูก',R.length-c('ผูกแล้ว')-c('จุดนี้ปิดใช้งาน')],['ชื่อมีสาขา · กรอกเอง',c('ชื่อมีสาขา · กรอกรหัสหมุดเอง')]],
+      cols:YPD_COLS,rows:R,foot:'※ อัปโหลดกลับได้เฉพาะ DEV · อ่านเฉพาะ 3 ช่องแรก · ไม่ลบของเดิม · ดูชีต “วิธีใช้”'},
+    {name:'หมุดลูกค้า DTC',emoji:'📌',title:'หมุดลูกค้า DTC (ไว้ค้นรหัส ST)',sub:'คัดลอกรหัสไปใส่ชีตจุดส่งร้าน',period:'ทั้งหมด',status:4,
+      cols:[{h:'รหัสหมุด',x:13,a:'center'},{h:'ชื่อหมุด DTC',x:40},{h:'ประเภท',x:22},{h:'พิกัด',x:22},{h:'ค่ากลาง',x:18,a:'center'},{h:'กม.',x:8},{h:'Google Maps',x:44}],
+      rows:pins.map(p=>{const t=ST.find(y=>y.n===p[1]);return [p[0],p[1],p[3],p[2],t?'อยู่ในค่ากลาง':'ยังไม่อยู่ในค่ากลาง',t&&t.km!=null?t.km:'',ypMap(p[2])];})},
+    {name:'วิธีใช้',emoji:'📖',title:'วิธีใช้ไฟล์จุดส่งร้าน',sub:'ดาวน์โหลด = แอดมิน · อัปโหลด = DEV',period:'—',cols:[{h:'ขั้นตอน',x:130}],rows:help.map(t=>[t])}],
+    'จุดส่งร้าน_'+yrStamp());}
+async function ypDestOpen(btn){let x;if(btn)btn.disabled=true;try{x=await ypDestData();}catch(e){toast('❌ '+(e.message||e));return;}finally{if(btn)btn.disabled=false;}
+  const nShop=new Set(x.rows.map(r=>r.key)).size,ov=document.createElement('div');ov.className='mov';
+  ov.innerHTML='<div class="mbox" role="dialog" aria-modal="true" aria-label="จุดส่งของร้าน" style="max-width:500px;padding:18px">'
+    +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><b style="flex:1;font-size:16px">📍 จุดส่งของร้าน (ร้านเดียวหลายที่)</b><button type="button" data-x aria-label="ปิด" style="border:0;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button></div>'
+    +'<div style="font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:12px">ผูกแล้ว <b style="color:var(--ink)">'+nShop+' ร้าน · '+x.rows.length+' จุด</b><br>ไฟล์มีร้านที่ผูกแล้ว + ร้านในออเดอร์ส่งเองที่ยังไม่ผูก · 1 แถว = 1 จุดส่ง (ร้านที่ส่ง 3 ที่ = 3 แถว)</div>'
+    +'<div style="display:flex;gap:8px"><button type="button" class="btn" data-dl style="flex:1;padding:12px">⬇ ดาวน์โหลด Excel</button>'
+    +'<button type="button" class="btn pri" data-ul style="flex:1;padding:12px"'+(x.canImport?'':' disabled title="อัปโหลดได้เฉพาะ DEV"')+'>⬆ อัปโหลด'+(x.canImport?'':' (เฉพาะ DEV)')+'</button></div>'
+    +'<input type="file" accept=".xlsx,.xls" hidden data-f>'
+    +'<div style="font-size:11.5px;color:var(--muted);margin-top:10px">'+(x.canImport?'อัปโหลด = เพิ่มการผูกอย่างเดียว ไม่ลบของเดิม · ตรวจก่อนบันทึกทุกครั้ง':'แอดมินดาวน์โหลด กรอกรหัสหมุด แล้วส่งไฟล์ให้ DEV อัปโหลด')+'</div></div>';
+  document.body.appendChild(ov);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close();};ov.querySelector('[data-x]').onclick=close;
+  ov.querySelector('[data-dl]').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await ypDestXlsx(x);}catch(er){toast('❌ ดาวน์โหลดไม่สำเร็จ: '+(er.message||er));}finally{b.disabled=false;}};
+  const f=ov.querySelector('[data-f]');ov.querySelector('[data-ul]').onclick=()=>f.click();
+  f.onchange=async()=>{const file=f.files[0];f.value='';if(!file)return;close();await ypDestUpload(file);};}
+function ypDestParse(A){const hi=A.findIndex(r=>r.some(v=>/^ร้าน/.test(String(v).trim()))&&r.some(v=>/รหัสหมุด/.test(String(v))));
+  if(hi<0)throw new Error('ไม่พบหัวคอลัมน์ “ร้าน” และ “รหัสหมุด DTC” · ใช้ไฟล์ที่ดาวน์โหลดจากปุ่ม 📍 จุดส่งร้าน');
+  const H=A[hi].map(v=>String(v).trim()),ci=re=>H.findIndex(v=>re.test(v)),cS=ci(/^ร้าน/),cP=ci(/รหัสหมุด/),cK=ci(/^กม\..*ใหม่/),rows=[];
+  for(let i=hi+1;i<A.length;i++){const r=A[i]||[],shop=String(r[cS]==null?'':r[cS]).trim(),st=String(r[cP]==null?'':r[cP]).trim();
+    if((!shop&&!st)||/^※/.test(shop))continue;rows.push({r:i+1,shop,st,km:cK>=0?String(r[cK]==null?'':r[cK]).trim():''});}
+  if(!rows.length)throw new Error('ไฟล์ไม่มีแถวข้อมูล');return rows;}
+const YPD_KIND={new:['✅ ผูกใหม่','#127a2e'],newcd:['🆕 สร้างค่ากลาง + ผูก','#185fa5'],err:['🔴 ผิด','#a32d2d'],nocd:['🟠 หมุดยังไม่อยู่ในค่ากลาง','#8a5a0b'],blank:['… ยังไม่กรอกรหัสหมุด','#64748b'],dup:['ซ้ำในไฟล์','#64748b'],same:['⏸ ผูกไว้แล้ว','#64748b']};
+function ypDestSum(pv){const K=Object.keys(YPD_KIND),it=pv.items.slice().sort((a,b)=>K.indexOf(a.kind)-K.indexOf(b.kind)||a.r-b.r),show=it.filter(x=>x.kind!=='same').slice(0,300);
+  return '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">'+K.filter(k=>pv.cnt[k]).map(k=>'<span style="font-size:12px;font-weight:700;padding:4px 9px;border-radius:9px;border:1px solid var(--line);color:'+YPD_KIND[k][1]+'">'+YPD_KIND[k][0]+' '+pv.cnt[k]+'</span>').join('')+'</div>'
+    +(show.length?'<div style="max-height:46vh;overflow:auto;border:1px solid var(--line);border-radius:10px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr style="position:sticky;top:0;background:var(--surface)">'
+      +['แถว','ร้าน','หมุด','จุดค่ากลาง','ผล'].map(h=>'<th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)">'+h+'</th>').join('')+'</tr></thead><tbody>'
+      +show.map(x=>'<tr><td style="padding:5px 8px;color:var(--muted)">'+x.r+'</td><td style="padding:5px 8px"><b>'+esc(x.shop)+'</b></td><td style="padding:5px 8px">'+esc(x.st||'')+(x.pin?'<div style="color:var(--muted)">'+esc(x.pin)+'</div>':'')+'</td>'
+        +'<td style="padding:5px 8px">'+esc(x.station||'')+(x.km!=null&&x.station?' · '+x.km+' กม.':'')+'</td><td style="padding:5px 8px;color:'+YPD_KIND[x.kind][1]+';font-weight:600">'+esc(x.msg||'')+'</td></tr>').join('')+'</tbody></table></div>'
+      +(it.filter(x=>x.kind!=='same').length>300?'<div style="font-size:11px;color:var(--muted);margin-top:6px">แสดง 300 แถวแรก</div>':''):'<div style="font-size:13px;color:var(--muted)">ทุกแถวผูกไว้แล้ว ไม่มีอะไรต้องบันทึก</div>');}
+async function ypDestUpload(file){let rows,pv;
+  try{await mxLoad('xlsx');const wb=XLSX.read(await file.arrayBuffer(),{type:'array'}),ws=wb.Sheets['จุดส่งร้าน']||wb.Sheets[wb.SheetNames[0]];
+    rows=ypDestParse(XLSX.utils.sheet_to_json(ws,{header:1,defval:''}));toast('⏳ กำลังตรวจ '+rows.length+' แถว…');pv=await ypDestPost({action:'destsImport',rows,commit:false});}
+  catch(e){toast('❌ '+(e.message||e));return;}
+  const n=(pv.cnt.new||0)+(pv.cnt.newcd||0);
+  const ok=await askModal({icon:'📍',title:'ตรวจไฟล์จุดส่งร้าน · '+file.name,wide:true,html:ypDestSum(pv)+(n?'<div style="font-size:12px;color:var(--muted);margin-top:10px">บันทึกเฉพาะ ✅/🆕 · แถวอื่นข้าม · ไม่ลบของเดิม</div>':''),ok:n?'💾 บันทึก '+n+' จุด':'ปิด',cancel:n?'ยกเลิก':''});
+  if(!ok||!n)return;
+  try{const r=await ypDestPost({action:'destsImport',rows,commit:true});ypDestData.d=null;
+    toast('✅ ผูกจุดส่งแล้ว '+r.saved+' จุด'+(r.created?' · สร้างแถวค่ากลางใหม่ '+r.created+' จุด (รีเฟรชหน้าเพื่อให้ขึ้นในรายชื่อจุดส่ง)':''));YP.pend=1;ypLoad();}
+  catch(e){toast('❌ บันทึกไม่สำเร็จ: '+(e.message||e));}}
 async function ypDestDel(m,sel,btn){const p=m.p||{},x=ST.find(y=>String(y.id)===(sel&&sel.value));if(!x)return;
   if(!(await askModal({icon:'📍',title:'ลบจุดส่งออกจากร้านนี้?',html:'<p>ร้าน <b>'+esc(p.shop||'')+'</b><br>จะไม่โชว์ <b>'+esc(x.n)+'</b> ในดรอปดาวน์อีก<br><span class="note">ไม่กระทบแพลน/ออเดอร์ที่ลงไปแล้ว · ลงแพลนจุดนี้อีกครั้ง = ระบบจำใหม่</span></p>',ok:'ลบออก',cancel:'ไม่ลบ',danger:1})))return;
   const k=ypNorm(p.shop);btn.disabled=true;
