@@ -183,18 +183,17 @@
   <main class="main"><div class="wrap">
     <div class="bar">
       <button class="btn ghost" style="width:38px;height:38px;padding:0" onclick="history.length>1?history.back():location.href='./'" aria-label="กลับ">←</button>
-      <div><h1>แจกงาน Packing</h1><div class="sub">อัปโหลดใบ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน" → ตรวจ → บันทึก → แจกงาน <span style="opacity:.6">· build 2026-11-05d</span></div></div>
+      <div><h1>แจกงาน Packing</h1><div class="sub">แพลนงานรถ PK รายวัน → แจกงาน → ติดตามคนขับรับงาน <span style="opacity:.6">· build 2026-11-23a</span></div></div>
     </div>
     <div class="road" aria-hidden="true"></div>
     <div id="body"><div class="msg">กำลังเข้าสู่ระบบ…</div></div>
   </div></main>
 </div>
-<input type="file" id="file" accept=".xlsx,.xls" hidden>
 <div class="toast" id="toast"></div>
 <script>
 const EDGE='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-plan';
 const LIFF_ID='2010274217-Ot7vGhri';
-let MY_UID='', ME=null, PLAN=null, LK=null, UP=null, BUSY=false;
+let MY_UID='', ME=null, PLAN=null, BUSY=false;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const S=x=>String(x==null?'':x).replace(/\s+/g,' ').trim();
@@ -203,86 +202,24 @@ const thDate=iso=>{const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/);ret
 async function get(a,extra){const r=await fetch(EDGE+'?action='+a+'&userId='+encodeURIComponent(MY_UID)+(extra||''));return r.json();}
 async function post(b){const r=await fetch(EDGE,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},b))});return r.json();}
 
-/* ── อ่านไฟล์รายวัน (SheetJS) · คอลัมน์ A=0: ล้อ · ชื่อ · นามสกุล · ทะเบียน · ลูกค้า · เวลาลง · พาเลท · ลัง · ค่าลง · เด็กรถ · นัดเด็กรถ ──
-   ⚙️ กติกาเดียวกับที่ทดสอบกับไฟล์ ก.ย. 69 (ตรง 403/439) · ห้ามใช้ \b กับภาษาไทย */
-const PK_GROUPS=/^(4 ?ล้อ|6 ?ล้อ|10 ?ล้อ)/;   // เฉพาะรถ PK (คุณน้อง 27 ต.ค.) · ไม่เอา ขนส่งนอก / รถฝ่ายไร่
-const NOJOB=/^(รอมีงาน|ออกเวร|รถสแปร์|สแปร์|แสปร์|ซ่อม|กลับจาก|ลา(\s|$|ป่วย|กิจ|พัก|บวช|คลอด)|หางผ้าใบสแปร์|หยุด|พักร้อน|เป็นเด็กรถ|แป็นเด็กรถ|เรียนงาน|ขาดงาน|ติดแอร์|ติดพัดลม|ติดฟิล์ม|ทำกระจก|ล้างรถ|ต่อภาษี|ต่อทะเบียน|ตรวจสภาพ|เช็คระยะ|ลงปูน|ซื้อของ|ลากหาง|ถ่ายน้ำมัน|เปลี่ยนน้ำมัน|เปลี่ยนยาง|ปะยาง|เข้าอู่|เข้าศูนย์|อัดจารบี|ล้างแอร์|เติมแอร์|\.+$|-+$)/;   // ถ่ายน้ำมันเครื่อง/ซ่อมบำรุงรถ = ไม่ใช่งาน (คุณน้อง 27 ต.ค.)
-const DAY_JOB=/ดับเพลิง|ดับพลิง/;   // แสปร์ดับเพลิง = งานกดรับ ค่าแรงรายวัน (คุณน้อง 27 ต.ค.) · = pk-plan DAY_JOB
-function parseSheet(aoa){
-  let date='';
-  for(const r of aoa.slice(0,4)){ const m=r.map(S).join(' ').match(/(\d{1,2})\.(\d{1,2})\.(25\d\d|20\d\d)/); if(m){ let y=+m[3]; if(y>2400)y-=543; date=y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2); break; } }
-  const rows=[],off=[]; let g='',start=false,last=null,skipped=0;
-  aoa.forEach((c,i)=>{
-    const line=c.map(S).join(' ');
-    if(/รายชื่อเด็กรถ/.test(line)){ start=null; return; }
-    if(start===null) return;
-    if(!start){ if(/ทะเบียนรถ/.test(line)&&/ลูกค้า/.test(line)) start=true; return; }
-    if(S(c[0])) g=S(c[0]);
-    const plate=S(c[3]), job=S(c[4]);
-    if(!plate&&S(c[9])&&last){ last.helpers.push(S(c[9])); return; }
-    last=null;
-    if(!plate||!PK_GROUPS.test(g)||!job) return;
-    if(!DAY_JOB.test(job)&&NOJOB.test(job)){ skipped++; off.push({row:i+1,name:S(S(c[1])+' '+S(c[2])).replace(/^\.+\s*/,''),plate,job}); return; }   // เก็บไว้โชว์คิวคนขับ (ลา/ซ่อม/รอมีงาน…)   // ไม่ใช่งาน (รอมีงาน/ซ่อม/ลา/ออกเวร/สแปร์/ซื้อของ…) = ตัดออกเลย (คุณน้อง 27 ต.ค.)
-    last={row:i+1,group:g,name:S(S(c[1])+' '+S(c[2])).replace(/^\.+\s*/,''),plate,job,time:S(c[5]),pallet:S(c[6]),cases:S(c[7]),fee:S(c[8]),helpers:S(c[9])?[S(c[9])]:[],helperTime:S(c[10]),pick:true};
-    rows.push(last);
-  });
-  return {date,rows,skipped,off};
-}
-function xlsxLib(){ if(window.XLSX) return Promise.resolve(window.XLSX);
-  return new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';s.onload=()=>ok(window.XLSX);s.onerror=()=>no(new Error('โหลดตัวอ่าน Excel ไม่ได้'));document.head.appendChild(s);}); }
-async function onFile(f){
-  if(!f) return;
-  try{
-    const X=await xlsxLib(), wb=X.read(await f.arrayBuffer(),{type:'array'});
-    const aoa=X.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]],{header:1,raw:false,defval:''});
-    const p=parseSheet(aoa);
-    if(!p.date) return toast('อ่านวันที่ไม่ได้ — แถวบนสุดต้องมีวันที่ เช่น "อังคาร 1.9.2569"',true);
-    if(!p.rows.length) return toast('ไม่พบรถ PK ในไฟล์ — ใช้ไฟล์ "แจ้งงานคนขับและเด็กรถ ขนส่ง PK ประจำวัน"',true);
-    UP={fileName:f.name,date:p.date,rows:p.rows,skipped:p.skipped,off:p.off,pv:null};
-    await runPreview();
-  }catch(e){ toast('อ่านไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
-}
-async function runPreview(){
-  if(!UP) return;
-  const d=await post({action:'preview',date:UP.date,fileName:UP.fileName,rows:UP.rows});
-  if(!d.ok){ toast('❌ '+(d.error||'ตรวจไฟล์ไม่สำเร็จ'),true); if(!UP.pv){UP=null;} return; }
-  UP.pv=d; render();
-}
-function setRow(i,k,v){ const r=UP.rows[i]; if(!r) return; r[k]=v; clearTimeout(setRow._t); setRow._t=setTimeout(runPreview,250); }
-async function saveUp(b){
-  if(BUSY||!UP||!UP.pv) return; BUSY=true; b.disabled=true; b.textContent='กำลังบันทึก…';
-  try{
-    const d=await post({action:'commit',date:UP.date,fileName:UP.fileName,rows:UP.rows,off:UP.off||[]});
-    if(!d.ok){ toast('❌ '+(d.error||'บันทึกไม่สำเร็จ'),true); if(d.table){UP.pv=d;render();} return; }
-    const ln=d.line&&!d.line.error?' · ส่งการ์ด LINE: ใหม่ '+(d.line.sentNew||0)+' / แก้ '+(d.line.chg||0)+' / ยกเลิก '+(d.line.cx||0):'';
-    toast('✅ บันทึกแพลน '+thDate(UP.date)+' '+d.revName+' แล้ว'+(d.remembered?' · จำการจับคู่ '+d.remembered+' รายการ':'')+ln);
-    const date=UP.date; UP=null; await load(date);
-  }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดใหม่ให้ตรวจ',true); }
-  finally{ BUSY=false; }
-}
-
 /* ── วาด ── */
 const howTag=h=>h?'<span class="how">'+esc(h)+'</span>':'';
-function drvCell(r,i,edit){
+function drvCell(r){
   const nm=r.driver_name?esc(r.driver_name)+(r.driver_active!==false?'':' <span class="tag bad" title="ยังไม่ได้เปิดใช้ LINE — จะไม่ได้การ์ดงาน">LINE ยังไม่เปิด</span>'):'<span class="miss">❌ หาไม่เจอ</span>';
-  let h=nm+'<span class="how">ในไฟล์: '+esc(r.driver_raw||'—')+(r.driver_how?' · '+esc(r.driver_how):'')+'</span>';
-  if(edit&&LK){ const cur=UP.rows[i].driverCode||'';
-    h+='<select aria-label="เลือกคนขับ" onchange="setRow('+i+',\'driverCode\',this.value)"><option value="">'+(r.driver_code?'— เปลี่ยนคนขับ —':'— เลือกคนขับ —')+'</option>'
-      +LK.drivers.filter(d=>d.group==='Packing'||d.code===cur||d.code===r.driver_code).map(d=>'<option value="'+esc(d.code)+'"'+(d.code===cur?' selected':'')+'>'+esc(d.name)+' · '+esc(d.group)+(d.active?'':' (LINE ยังไม่เปิด)')+'</option>').join('')+'</select>'; }
+  const raw=S(r.driver_raw), how=raw&&raw!==S(r.driver_name)?'ในไฟล์: '+raw:'';
+  let h=nm+(how||r.driver_how?'<span class="how">'+esc(how)+(how&&r.driver_how?' · ':'')+esc(r.driver_how||'')+'</span>':'');
   return h;
 }
 // หลายจุดส่ง ("A + B + C") = 1 บรรทัดต่อจุด เลือกสถานีได้ทีละจุด · แถวเก่าไม่มี stops = จุดเดียว
 const stopsOf=r=>Array.isArray(r.stops)?r.stops:(r.station_id||r.dest_text?[{name:r.dest_text,station_id:r.station_id,station_name:r.station_name,km:r.station_km,how:r.station_how}]:[]);
-function stCell(r,i,edit){
+function stCell(r){
   if(r.pay_mode==='day') return '<span class="tag out">ค่าแรงรายวัน</span><span class="how">ไม่มีปลายทาง · ไม่ต้องผูกค่ากลาง</span>';
   const ss=stopsOf(r), multi=ss.length>1;
   if(!ss.length) return '<span class="miss">ยังไม่ผูกค่ากลาง</span>';
   const LK_KM=(PLAN&&PLAN.longKm)||300, far=ss.some(s=>Number(s.km)>=LK_KM);
   return (far?'<span class="tag k-busy" title="ปลายทาง ≥ '+LK_KM+' กม. — นับเข้าคิวระยะไกล">🛣️ งานไกล</span>':'')+(multi?'<span class="tag ok">ส่ง '+ss.length+' จุด</span>':'')+ss.map((s,k)=>{
     let h='<div class="stop">'+(multi?'<b>'+(k+1)+'.</b> ':'')+(s.station_name?esc(s.station_name)+ssbPoi.tag(s.station_name)+(s.km?' <span class="tag">'+esc(s.km)+' กม.</span>':''):'<span class="miss">'+(multi?esc(s.name)+' — ':'')+'ยังไม่ผูกค่ากลาง</span>')+howTag(s.how);
-    if(!edit) h+=storeInfo(s);
-    if(edit&&LK){ const cur=((UP.rows[i].stationIds||[])[k])||'';
-      h+='<input list="stList" placeholder="พิมพ์ค้นสถานี…" aria-label="เลือกสถานีค่ากลาง จุดที่ '+(k+1)+'" value="'+esc(cur?((LK.stations.find(x=>String(x.id)===String(cur))||{}).name||''):'')+'" onchange="pickSt('+i+','+k+',this.value)">'; }
+    h+=storeInfo(s);
     return h+'</div>';
   }).join('');
 }
@@ -295,9 +232,6 @@ function storeInfo(s){
   return '<div class="store">'+(st.team||st.phones.length?'📞 '+esc(st.team||'ทีมลง')+' '+st.phones.map(p=>'<a href="tel:'+esc(p)+'">'+esc(telFmt(p))+'</a>').join(' · '):'')
     +(fee||park?'<span class="how">'+(fee?'ค่าลง '+fee:'')+(park?(fee?' · ':'')+'จอด '+esc(park):'')+'</span>':'')+'</div>';
 }
-function pickSt(i,k,name){ const s=LK.stations.find(x=>x.name===name), r=UP.rows[i]; if(!r) return;
-  const ids=(r.stationIds||[]).slice(); ids[k]=s?s.id:''; setRow(i,'stationIds',ids);
-  if(name&&!s) toast('ไม่พบสถานีชื่อนี้ — เลือกจากรายการ',true); }
 function qtyCell(r){
   const ss=stopsOf(r), unit=(v,u)=>esc(v)+(/^\d+$/.test(v)?' '+u:'');
   if(ss.length>1&&ss.some(s=>s.pallets||s.cases)) return ss.map((s,k)=>'<div class="stop"><b>'+(k+1)+'.</b> '+(s.pallets?unit(s.pallets,'เลท')+' ':'')+(s.cases?unit(s.cases,'ลัง'):'')+'</div>').join('');
@@ -319,22 +253,19 @@ function extrasCell(extras,stops){
   return (docs.length?'<span class="tag out" title="คนขับต้องรับเอกสารกลับ">📄 รับเอกสารกลับ '+esc(docs.join(' · '))+'</span>':'')
     +(e.rest?'<span class="how">+ '+esc(e.rest)+'</span>':'');
 }
-const KIND={add:'ใหม่',chg:'แก้ไข',same:'เหมือนเดิม',del:'ตัดออก',skip:'ไม่สร้างงาน'};
-function jobRows(list,edit){
+function jobRows(list){
   return list.map((r,i)=>{
     const cf=r.cf||[], c=k=>cf.indexOf(k)>=0?' class="cf"':'';
-    const idx=edit?UP.rows.findIndex(x=>x.row===r.excel_row):-1;
     return '<tr class="'+esc(r.kind||'')+'">'
-      +(edit?'<td>'+(r.kind==='del'?'':'<input type="checkbox" aria-label="สร้างงาน" '+(r.pick?'checked':'')+' onchange="setRow('+idx+',\'pick\',this.checked)">')+'</td>':'')
       +'<td>'+esc(r.truck_group||'')+String(r.plate||r.plate_raw||'').split(',').map(x=>x.trim()).filter(Boolean).map(x=>'<span class="how" style="white-space:nowrap">'+esc(x)+'</span>').join('')+'</td>'   /* พ่วง: หัว / หาง คนละบรรทัด */
-      +'<td'+c('driver_code')+'>'+drvCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
+      +'<td'+c('driver_code')+'>'+drvCell(r)+'</td>'
       +'<td'+c('job_text')+'>'+esc(r.job_text)+extrasCell(r.extras,r.stops)+'</td>'
-      +'<td'+c('stops')+'>'+stCell(r,idx,edit&&r.kind!=='del'&&r.pick)+'</td>'
+      +'<td'+c('stops')+'>'+stCell(r)+'</td>'
       +'<td'+c('unload_time')+'>'+esc(r.unload_time||'—')+'</td>'
       +'<td'+(cf.indexOf('pallets')>=0||cf.indexOf('cases')>=0?' class="cf"':'')+'>'+qtyCell(r)+'</td>'
       +'<td'+c('unload_fee_text')+'>'+esc(r.unload_fee_text||'')+'</td>'
       +'<td'+c('helper_txt')+'>'+helperCell(r.helpers,r.helper_time)+'</td>'
-      +'<td>'+(edit?'<span class="tag'+(r.kind==='add'?' ok':r.kind==='del'?' bad':'')+'">'+KIND[r.kind]+'</span>'+(r.txt?'<span class="how">'+esc(r.txt)+'</span>':''):savedStat(r))+'</td>'
+      +'<td>'+savedStat(r)+'</td>'
       +'</tr>';
   }).join('');
 }
@@ -351,24 +282,11 @@ function savedStat(r){
     +(!busy&&ME&&ME.canEdit?'<button class="btn ghost" style="padding:3px 9px;font-size:11.5px;margin-top:4px;white-space:nowrap" onclick="trJob(this,'+Number(r.id)+')">🚜 ขอรถไร่</button>':'');
 }
 const STAT={new:'ยังไม่แจก',sent:'แจกแล้ว · รอรับ',accepted:'รับงานแล้ว',started:'เริ่มงาน',done:'เสร็จ'};
-const HEAD=edit=>'<tr>'+(edit?'<th>สร้าง</th>':'')+'<th>รถ</th><th>คนขับ</th><th>งาน (ตามไฟล์)</th><th>ปลายทาง (ค่ากลาง)</th><th>เวลาลง</th><th>พาเลท/ลัง</th><th>ค่าลง</th><th>เด็กรถ</th><th>'+(edit?'เทียบฉบับก่อน':'สถานะ')+'</th></tr>';
+const HEAD=()=>'<tr><th>รถ</th><th>คนขับ</th><th>งาน</th><th>ปลายทาง (ค่ากลาง)</th><th>เวลาลง</th><th>พาเลท/ลัง</th><th>ค่าลง</th><th>เด็กรถ</th><th>สถานะ</th></tr>';
 function render(){
   let h='';
-  if(UP&&UP.pv){
-    const d=UP.pv, c=d.counts;
-    h+='<div class="card"><div class="row"><b style="font-size:15px">ตรวจไฟล์ '+esc(UP.fileName)+'</b><span class="tag">วันที่ '+thDate(d.date)+'</span><span class="tag">'+esc(d.revName)+'</span>'+(d.dispatched?'<span class="tag out">แจกงานแล้ว — บันทึกฉบับนี้ระบบส่งการ์ดให้คนขับเฉพาะงานที่เพิ่ม/แก้/ตัดออก</span>':'')+'</div>'
-      +'<div class="kpis"><div class="kpi"><b>'+c.picked+'</b><span>งานที่จะสร้าง (จาก '+c.rows+' งานในไฟล์)</span></div>'
-      +'<div class="kpi'+(c.noDriver?' bad':'')+'"><b>'+c.noDriver+'</b><span>หาคนขับไม่เจอ (ต้องแก้)</span></div>'
-      +'<div class="kpi'+(c.noStation?' warn':'')+'"><b>'+c.noStation+'</b><span>ยังไม่ผูกค่ากลาง (ครบทุกจุด)'+(c.multi?' · หลายจุด '+c.multi+' งาน':'')+(c.day?' · รายวัน '+c.day:'')+'</span></div>'
-      +'<div class="kpi'+(c.noLine?' warn':'')+'"><b>'+c.noLine+'</b><span>คนขับยังไม่เปิด LINE</span></div>'
-      +(d.isNew?'':'<div class="kpi"><b>+'+c.add+' / ~'+c.chg+' / −'+c.del+'</b><span>ใหม่ / แก้ / ตัดออก</span></div>')+'</div>'
-      +'<div class="note">แถวที่ไม่ใช่งาน (รอมีงาน/ซ่อม/ลา/ออกเวร/รถสแปร์/เป็นเด็กรถ/ลงปูน/ซื้อของ/ลากหาง) ตัดออกให้แล้ว'+(UP.skipped?' '+UP.skipped+' แถว':'')+' · แสปร์ดับเพลิง = งานค่าแรงรายวัน · เอาติ๊ก "สร้าง" ออก = ไม่สร้างงานแถวนั้น · เลือกคนขับ/สถานีเองครั้งเดียว ระบบจำไว้ใช้ครั้งหน้า · ปลายทางที่ยังไม่ผูก ค่าแรงจะคิดจากระยะจริง</div>'
-      +'<div class="tw" style="margin-top:10px"><table>'+HEAD(true)+jobRows(d.table,true)+'</table></div>'
-      +'<div class="sticky"><button class="btn ghost" onclick="UP=null;render()">ยกเลิก</button><span class="grow"></span>'
-      +'<button class="btn" onclick="saveUp(this)"'+(c.noDriver||!c.picked||d.unchanged?' disabled':'')+'>💾 บันทึกแพลน '+esc(d.revName)+' ('+c.picked+' งาน)</button></div></div>';
-  }
   h+='<div class="card"><div class="row"><b style="font-size:15px">แพลนที่บันทึกแล้ว</b><span class="grow"></span>'
-    +(ME&&ME.canEdit?'<button class="btn gold" onclick="$(\'file\').click()">⬆ อัปโหลดใบแจ้งงานประจำวัน</button>':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
+    +(ME&&ME.canEdit?'':'<span class="sub">ดูได้อย่างเดียว</span>')+'</div>';
   const plans=(PLAN&&PLAN.plans)||[];
   if(plans.length) h+='<div class="row" style="margin-top:10px">'+plans.map(p=>'<button class="chip'+(PLAN.plan&&PLAN.plan.id===p.id?' on':'')+'" onclick="load(\''+p.work_date+'\')">'+thDate(p.work_date)+(p.rev?' · R'+p.rev:'')+(p.dispatched_at?' ✓':'')+'</button>').join('')+'</div>';
   if(PLAN&&PLAN.plan){
@@ -378,12 +296,11 @@ function render(){
       +'<div class="kpi"><b>'+live.filter(j=>['accepted','started','done'].indexOf(j.status)>=0).length+' / '+live.filter(j=>!j.farm_req_id).length+'</b><span>คนขับรับงานแล้ว</span></div>'
       +'<div class="kpi'+(miss?' warn':'')+'"><b>'+miss+'</b><span>ยังไม่ผูกค่ากลาง</span></div>'
       +'<div class="kpi"><b>'+(pl.rev?'Revised '+pl.rev:'ฉบับแรก')+'</b><span>'+((PLAN.revs||[]).slice(-1)[0]?esc(PLAN.revs.slice(-1)[0].uploaded_by_name||''):'')+'</span></div></div>'
-      +'<div class="tw" style="margin-top:8px"><table>'+HEAD(false)+jobRows(js,false)+'</table></div>'
+      +'<div class="tw" style="margin-top:8px"><table>'+HEAD()+jobRows(js)+'</table></div>'
       +dispBar(pl,live);
-  } else if(!(UP&&UP.pv)) h+='<div class="msg">ยังไม่มีแพลน — กด "อัปโหลดใบแจ้งงานประจำวัน"</div>';
+  } else h+='<div class="msg">ยังไม่มีแพลน</div>';
   h+='</div>';
   h+=trCard();
-  if(LK) h+='<datalist id="stList">'+LK.stations.map(s=>'<option value="'+esc(s.name)+'">'+esc((s.type||'')+(s.km?' · '+s.km+' กม.':''))+'</option>').join('')+'</datalist>';
   $('body').innerHTML=h;
 }
 /* ── 🚜 ขอรถไร่ → pk_requests (Waiting) → ไปโผล่ที่งานไร่: หน้าติดตามออเดอร์ ชิป "📦 Packing ค้างจัดรถ" → แอดมินไร่สร้างออเดอร์ + หาคนขับ ── */
@@ -430,7 +347,7 @@ function dqRender(){
   else if(DQ.tab==='long') h+=dqTabs()+longHtml(d);
   else{
     h+=dqTabs()+'<div class="row" style="margin-top:10px">'+DQ_F.map(f=>{ const n=ds.filter(f[2]).length; return '<button class="chip'+(DQ.f===f[0]?' on':'')+'" onclick="DQ.f=\''+f[0]+'\';dqRender()">'+f[1]+' <b>'+n+'</b></button>'; }).join('')+'</div>'
-      +'<div class="note" style="margin-top:6px">'+(d.plan?'แพลน '+thDate(d.date)+(d.plan.rev?' · Revised '+d.plan.rev:'')+(d.plan.hasOff?'':' · ⚠️ ไฟล์ฉบับนี้อัปโหลดก่อนมีระบบคิว — ไม่มีข้อมูล ลา/ซ่อม/รอมีงาน (อัปโหลดใหม่จะมี)'):'ยังไม่มีแพลนวันที่ '+thDate(d.date)+' — โชว์ได้แค่ ลาที่แจ้งในระบบ')+'</div>';
+      +'<div class="note" style="margin-top:6px">'+(d.plan?'แพลน '+thDate(d.date)+(d.plan.rev?' · Revised '+d.plan.rev:'')+(d.plan.hasOff?'':' · ⚠️ แพลนนี้ไม่มีข้อมูล ลา/ซ่อม/รอมีงาน'):'ยังไม่มีแพลนวันที่ '+thDate(d.date)+' — โชว์ได้แค่ ลาที่แจ้งในระบบ')+'</div>';
     const fl=(DQ_F.find(f=>f[0]===DQ.f)||DQ_F[0])[2], rows=ds.filter(fl);
     h+='<div class="dq-list">'+(rows.length?rows.map(x=>'<div class="dq"><div class="dq-h"><b>'+esc(x.name)+'</b><span class="tag">'+esc(x.code)+'</span>'
         +'<span class="tag k-'+esc(x.kind)+'">'+esc(x.label)+'</span>'+(x.lineActive?'':'<span class="tag bad">LINE ยังไม่เปิด</span>')+(x.checkin?'<span class="tag ok">ลงเวลา '+esc(x.checkin)+'</span>':'')+'</div>'
@@ -556,7 +473,6 @@ async function load(date){
   if(!d.ok){ $('body').innerHTML='<div class="msg">'+esc(d.error||'โหลดไม่สำเร็จ')+' <button class="btn ghost" onclick="load()">↻ ลองใหม่</button></div>'; return; }
   PLAN=d; ME=d.me; render(); if(ME&&ME.name) navWho({name:ME.name});
   if(!TR) trLoad();
-  if(!LK&&ME.canEdit){ get('lookups').then(x=>{ if(x.ok){LK=x; if(UP&&UP.pv) render();} }).catch(()=>{}); }
 }
 /* ── เมนูซ้าย + ผู้ใช้ด้านล่าง · ลิงก์ตามเมนูแดชบอร์ด (ส่ง uid ให้หน้าเราเองเหมือน index.html) ── */
 const NAV_IC={db:'<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',box:'<path d="M21 8l-9-5-9 5v8l9 5 9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
@@ -619,7 +535,6 @@ async function navLogout(){   // เหมือนแดชบอร์ด/Bulk
   btn.onclick=()=>{ col=!col; apply(); btn.blur(); try{ localStorage.setItem('pk_nav_collapsed',col?'1':'0'); }catch(e){} };
   apply(); navDraw();
 })();
-$('file').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; onFile(f); };
 (async function(){
   try{
     await liff.init({liffId:LIFF_ID});
@@ -630,7 +545,7 @@ $('file').onchange=e=>{ const f=e.target.files[0]; e.target.value=''; onFile(f);
     let info=null; try{ info=await ssbAdminPinInfo(MY_UID); }catch(e){}
     if(info) navWho({role:info.isDev?'DEV':(NAV_ROLE[info.adminType]||'')});
     const ok = info&&info.isDev ? await ssbPinGate(MY_UID) : await ssbAdminPin(MY_UID,{info,text:'เข้าหน้าแจกงาน Packing'});
-    if(ok){ ssbPoi.load(MY_UID).then(()=>{ if(PLAN&&!UP) render(); }); load(); } else $('body').innerHTML='<div class="msg">🔐 ต้องใส่ PIN ก่อนเข้าหน้านี้<br><button class="btn" style="margin-top:12px" onclick="location.reload()">ใส่ PIN อีกครั้ง</button></div>';
+    if(ok){ ssbPoi.load(MY_UID).then(()=>{ if(PLAN) render(); }); load(); } else $('body').innerHTML='<div class="msg">🔐 ต้องใส่ PIN ก่อนเข้าหน้านี้<br><button class="btn" style="margin-top:12px" onclick="location.reload()">ใส่ PIN อีกครั้ง</button></div>';
   }catch(e){$('body').innerHTML='<div class="msg">LIFF error: '+esc(e)+'</div>';}
 })();
 </script>
