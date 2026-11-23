@@ -346,7 +346,14 @@ function arrivalsSec(){
   const pk=JOB.pk; if(!pk||!pk.plan||!pk.plan.length) return departFarmSec();
   const arr={}, lg={}, dp={}; (pk.arrivals||[]).forEach(a=>arr[a.seq]=a); (pk.logs||[]).forEach(l=>lg[l.seq]=l); (JOB.departs||[]).forEach(d=>dp[d.seq]=d);
   const oc=ordCheckin();   // ไม่มี GPS รายจุด → ใช้เช็คอินของออเดอร์ (จุดแรก / ไม่ได้เช็คอิน = จุดช่องลูกค้า) = กติกาเดียวกับ order-tracker
-  const rows=pk.plan.map(s=>{ const a=arr[s.seq], l=lg[s.seq];
+  // 🚀 23 พ.ย. seq 0 = เวลาออกจาก SSB จริง (GPS · dtc_s2s · SQL fill_ssb_departures) เทียบเวลาคนขับกดเริ่มงาน — ชุดเดียวกับ Order_Status / Driver_form
+  const d0=dp[0], st0=String(JOB.order.started_at||'').trim(), stIso=(()=>{ const m=st0.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})\s+(\d{1,2}):(\d{2})/);
+    return m?`${+m[3]>2400?+m[3]-543:m[3]}-${('0'+m[2]).slice(-2)}-${('0'+m[1]).slice(-2)}T${('0'+m[4]).slice(-2)}:${m[5]}:00+07:00`:st0; })();
+  const dMin=d0&&d0.left_at?(Date.parse(stIso)-Date.parse(d0.left_at))/60000:NaN;
+  const ssbRow=d0&&d0.left_at?`<div class="arow"><span class="sq">🚀</span><div class="nm"><div><b>ออกจาก SSB</b></div>
+      <span><span class="src gps">🛰️ ออก ${thShort(d0.left_at)}</span> <span class="mini">หมุด ${esc(d0.stop_name||'')} · GPS (DTC)</span></span>
+      ${st0?`<span class="mini">👆 คนขับกดเริ่มงาน ${esc(st0)}${isNaN(dMin)||Math.abs(dMin)<10?'':dMin>0?' · หลัง GPS '+devDur(dMin):' · ก่อน GPS '+devDur(-dMin)}</span>`:''}</div></div>`:'';
+  const rows=ssbRow+pk.plan.map(s=>{ const a=arr[s.seq], l=lg[s.seq];
     const arrive=a?`<span><span class="src gps">🛰️ ถึง ${thShort(a.arrived_at)}</span> <span class="mini">ห่างหมุด ${a.dist_m??'—'} ม.${a.notified?' · แจ้ง LINE แล้ว':''}</span></span>`
       : oc&&oc.seq===s.seq?`<span>${srcChip(oc.src)} <span class="mini">เวลาถึง ${esc(oc.at)}</span></span>`
       : !s.pin?'<span class="src no">⚠️ ไม่มีหมุด DTC — จับเวลาถึงไม่ได้</span>'
