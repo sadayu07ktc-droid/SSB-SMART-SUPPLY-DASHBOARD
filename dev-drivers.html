@@ -353,6 +353,23 @@ function departFarmSec(){   // ไร่/Bulk: จุดเดียว (seq 1)
   return `<div class="sec"><h3>🚪 เวลาออกจากสวน/ลูกค้า<span class="r">GPS · ออกวนกลับ = บันทึกใหม่ จนถึงจุดถัดไป/โรงงาน</span></h3>
     <div class="arow"><span class="sq">1</span><div class="nm"><div><b>${esc(d.stop_name||'')}</b></div>${devDepTxt(d, iso)}</div></div></div>`;
 }
+// 🟠 24 พ.ย. เริ่มงานในระบบล่าช้า + เลขไมล์ DTC + ดุมล้อเทียบ DTC (JOB.odo = view v_trip_odo) — ชุดเดียวกับ Order_Status / wage.html
+//   ช้า = กดเริ่มงานหลังรถออกจาก SSB (GPS) ≥30 นาที · ดุมล้อต่าง DTC >10% = เตือน (ดุมล้อไม่ได้ใช้คิดค่าแรง ใช้เทียบอย่างเดียว)
+function odoSec(){
+  const d=JOB&&JOB.odo; if(!d) return '';
+  const n=v=>v==null||v===''?'–':Number(v).toLocaleString('en-US',{maximumFractionDigits:1});
+  const row=(k,v)=>`<div class="arow"><div class="nm" style="display:flex;justify-content:space-between;gap:10px"><span class="mini">${k}</span><b style="font-variant-numeric:tabular-nums">${v}</b></div></div>`;
+  const late=d.late, warn=d.hub_warn, pct=d.hub_diff_pct;
+  let h=`<div class="sec"><h3>${late?'🟠 เริ่มงานในระบบล่าช้า '+devDur(d.late_min):'🚀 ออกจาก SSB · เลขไมล์'}<span class="r">GPS (DTC) · ช้า ≥30 นาที = ป้าย</span></h3>`;
+  h+=row('รถออกจาก SSB (GPS)',thShort(d.out_at))+row('คนขับกดเริ่มงาน',thShort(d.press_at)+(isNaN(+d.late_min)||Math.abs(d.late_min)<10?'':d.late_min>0?' · หลัง GPS '+devDur(d.late_min):' · ก่อน GPS '+devDur(-d.late_min)));
+  if(d.back_at) h+=row('กลับถึง SSB (GPS)',thShort(d.back_at));
+  if(d.odo_out!=null) h+=row('เลขไมล์ DTC ออกจริง',n(d.odo_out))+row('เลขไมล์ DTC ตอนกดเริ่ม',n(d.odo_press))+(d.gap_km!=null?row('ช่วงที่หายไป (กดช้า)','~'+n(d.gap_km)+' กม.'):'')+(d.odo_back!=null?row('เลขไมล์ DTC กลับถึง SSB',n(d.odo_back)):'');
+  else h+=`<div class="note">เลขไมล์ DTC ณ ออกจริง: ${d.odo_at?'ดึงไม่ได้ (DTC ไม่มีข้อมูลช่วงนั้น)':'รอดึง รอบ 03:25 / 12:55'}</div>`;
+  if(d.hub_km!=null||d.dtc_km!=null) h+=`<div class="arow"><div class="nm"><div><b>${warn?'⚙️ ':''}ทั้งเที่ยว: ดุมล้อเทียบ DTC</b></div></div></div>`
+    +row('ดุมล้อ',n(d.hub_km)+' กม.')+row('DTC'+(d.dtc_src==='gps'?' (ออกจริง→กลับ SSB)':d.dtc_src==='press'?' (เลขไมล์ตอนกด)':''),n(d.dtc_km)+' กม.')
+    +(pct!=null?row('ต่าง',`<span style="color:${warn?'#c2410c':'inherit'}">${pct>0?'+':''}${pct}%${warn?' · เกิน 10% และ 10 กม.':''}</span>`):'');
+  return h+`<div class="note">ดุมล้อใช้เทียบอย่างเดียว · ค่าแรงใช้ค่ากลาง</div></div>`;
+}
 function arrivalsSec(){
   const pk=JOB.pk; if(!pk||!pk.plan||!pk.plan.length) return departFarmSec();
   const arr={}, lg={}, dp={}; (pk.arrivals||[]).forEach(a=>arr[a.seq]=a); (pk.logs||[]).forEach(l=>lg[l.seq]=l); (JOB.departs||[]).forEach(d=>dp[d.seq]=d);
@@ -586,7 +603,7 @@ function drawPanel(){
     <div class="grid">${FLOW.filter(([,k])=>!L.hideTime.has(k)).map(([st,k,t])=>fld('order.'+k,L.tLabel[k]||t,o[k],{ph:'เช่น 12/11/2026 10:49:00'})).join('')}</div>
     ${checkinHtml()}
     <button class="btn ghost" style="margin-top:9px;padding:6px 12px;font-size:12px" onclick="fillNow()">🕒 ใส่ "ตอนนี้" ให้ขั้นของสถานะที่เลือก (ถ้ายังว่าง)</button></div>`;
-  h+=arrivalsSec();
+  h+=odoSec()+arrivalsSec();
   h+=`<div class="sec"><h3>🛣️ เลขไมล์ · ดุมล้อ · สภาพรถ ต่อจุด</h3><table class="pts"><tr><th>จุด</th><th>เลขไมล์</th><th>ดุมล้อ</th><th>สภาพรถ</th></tr>
     ${PTS.filter(([c])=>!L.hidePt.has(c)).map(([c,t])=>`<tr><td>${esc(L.ptLabel[c]||t)}</td><td>${fld('lw.mile_'+c,'',lw['mile_'+c],{num:1})}</td><td>${fld('lw.hub_'+c,'',lw['hub_'+c],{num:1})}</td>
       <td>${fld('lw.load_'+c,'',lw['load_'+c]||'',{sel:['','เบา','หนัก']})}</td></tr>`).join('')}</table>

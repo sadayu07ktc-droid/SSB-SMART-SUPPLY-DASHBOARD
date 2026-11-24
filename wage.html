@@ -833,15 +833,15 @@ function fmtD(iso){if(!iso)return'—';const p=iso.split('-');return p[2]+'-'+p[
  *   ① ค่าที่บันทึกไว้ + ต้นทุนบริษัท + ข้อมูลดิบ จาก Supabase (wage-stored · <1 วิ) → ครบทั้งลิ้นชัก
  *   ② "เทียบกับตั้งค่าปัจจุบัน" = GAS getWageMonitor คิดสด (15-60 วิ) → กดปุ่มเมื่อต้องการ (ไม่ยิงทุกครั้งที่เปิด = ประหยัดโควต้า GAS)
  *   ยังไม่เคยบันทึกค่าแรง / Supabase ไม่ตอบ → คิดสดที่ GAS อัตโนมัติแบบเดิม */
-let DR_SEQ=0, DR_ZONES=null, DR_DEST=null, DR_GPS=null, DR_BILL=null;   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท · DR_DEST = ปลายทาง+ประวัติแก้หมุด · DR_GPS = จุดจอดจาก GPS (Promise/ผล) · DR_BILL = เลขบิลน้ำมันที่ระบบอ่านจากรูป (12 พ.ย.)
+let DR_SEQ=0, DR_ZONES=null, DR_DEST=null, DR_GPS=null, DR_BILL=null, DR_ODO=null;   // DR_ODO = 🟠 เริ่มงานล่าช้า/เลขไมล์ DTC/ดุมเทียบ DTC (24 พ.ย.)   // DR_ZONES = ตาราง⑬ ของเที่ยวที่เปิดอยู่ (จาก wage-stored) ไว้อธิบายเลท · DR_DEST = ปลายทาง+ประวัติแก้หมุด · DR_GPS = จุดจอดจาก GPS (Promise/ผล) · DR_BILL = เลขบิลน้ำมันที่ระบบอ่านจากรูป (12 พ.ย.)
 async function openDetail(orderId){
-  const seq=++DR_SEQ; DR_ZONES=null; DR_DEST=null; DR_GPS=null; DR_BILL=null;
+  const seq=++DR_SEQ; DR_ZONES=null; DR_DEST=null; DR_GPS=null; DR_BILL=null; DR_ODO=null;
   $('ov').classList.add('on');$('dr').classList.add('on');$('dr').scrollTop=0;$('drOid').textContent=orderId;
   $('drBody').innerHTML='<div class="dload" role="status" aria-live="polite"><span class="dring" aria-hidden="true"></span><span class="dltx">กำลังโหลดค่าเที่ยว</span></div>';
   try{
     const q=await api({action:'getWageStored',userId:MY_UID,orderId});
     if(seq!==DR_SEQ)return;
-    DR_DEST=q&&q.destInfo||null; DR_BILL=q&&q.fuelBill||null;
+    DR_DEST=q&&q.destInfo||null; DR_BILL=q&&q.fuelBill||null; DR_ODO=q&&q.odo||null;
     if(q&&q.ok&&q.stored&&q.stored.snapshot){
       DR_ZONES=q.zones||null; q.stored.settingsAt=q.settingsAt||'';
       renderDetail(orderId,{wage:q.info||{},stored:q.stored,cost:q.cost||null,raw:q.raw},true); return;
@@ -1112,6 +1112,25 @@ function renderRaw(raw,row){
     h+=SEC(g.t,g.c);
     ks.forEach(k=>{used[k]=1;h+=row(k,g.wt?wtPill(raw[k]):fmtN(raw[k]));});
   });
+  // 🟠 24 พ.ย. เริ่มงานในระบบล่าช้า + เลขไมล์ DTC ออกจริง + ดุมล้อเทียบ DTC (wage-stored odo = view v_trip_odo · ช้า ≥30 น. · ดุมต่าง >10%)
+  //   ชุดเดียวกับ Order_Status / dev-drivers · ดุมล้อไม่ได้ใช้คิดค่าแรง (ใช้ค่ากลาง) — เทียบอย่างเดียว
+  const d=DR_ODO;
+  if(d){
+    const n=v=>v==null||v===''?'–':Number(v).toLocaleString('th-TH',{maximumFractionDigits:1});
+    const t=iso=>{const x=new Date(iso);return iso&&!isNaN(x)?x.toLocaleString('th-TH',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'–';};
+    const dur=m=>{m=Math.max(0,Math.round(m));const hh=Math.floor(m/60),mm=m%60;return hh?hh+' ชม.'+(mm?' '+mm+' น.':''):mm+' น.';};
+    const OR='color:#c2410c;font-weight:700';
+    h+=SEC(d.late?'🟠 เริ่มงานในระบบล่าช้า '+dur(d.late_min):'🚀 ออกจาก SSB (GPS)','#ea580c');
+    h+=row('รถออกจาก SSB (GPS)',t(d.out_at))+row('คนขับกดเริ่มงาน',t(d.press_at),d.late?OR:'');
+    if(d.odo_out!=null){
+      h+=row('เลขไมล์ DTC ออกจริง',n(d.odo_out))+row('เลขไมล์ DTC ตอนกดเริ่ม',n(d.odo_press));
+      if(d.gap_km!=null)h+=row('ช่วงที่หายไป (กดช้า)','~'+n(d.gap_km)+' กม.',d.late?OR:'');
+    }else if(d.late)h+=row('เลขไมล์ DTC ออกจริง','<span style="color:var(--txt2)">'+(d.odo_at?'DTC ไม่มีข้อมูลช่วงนั้น':'รอดึง (03:25 / 12:55)')+'</span>');
+    if(d.hub_km!=null||d.dtc_km!=null){
+      h+=row('ดุมล้อ ทั้งเที่ยว (กม.)',n(d.hub_km))+row('DTC ทั้งเที่ยว (กม.)'+(d.dtc_src==='gps'?' · ออกจริง→กลับ':''),n(d.dtc_km));
+      if(d.hub_diff_pct!=null)h+=row('ดุมล้อต่างจาก DTC',(d.hub_diff_pct>0?'+':'')+d.hub_diff_pct+'%'+(d.hub_warn?' ⚠️ เกิน 10% และ 10 กม.':''),d.hub_warn?OR:'');
+    }
+  }
   // 📏 ระยะทาง — จับ ระยะเบา/ระยะหนัก/%วิ่งหนัก + คำนวณ "รวมระยะทาง"
   const distKeys=Object.keys(raw).filter(k=>!SKIP[k]&&!used[k]&&!isUrl(raw[k])&&/ระยะเบา|ระยะหนัก|%วิ่งหนัก/.test(k));
   if(distKeys.length){
