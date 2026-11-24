@@ -445,7 +445,7 @@
     try{
       if(/^https:\/\/liff\.line\.me\/2010274217-BF41B8c2/.test(url) && window.ssbSession && ssbSession.get()
          && !(window.liff && liff.isInClient && liff.isInClient()))
-        url = '/Order_form/?v=3&t=' + Date.now();
+        url = '/Order_form/?v=3&gate=1&t=' + Date.now();   // gate=1 → ขึ้นหน้าเลือกกลุ่มทันที ไม่รอฟอร์มไร่ (24 พ.ย.)
     }catch(e){}
     try{
       if(window.top && window.top!==window.self){ window.top.location.href = url; return; }

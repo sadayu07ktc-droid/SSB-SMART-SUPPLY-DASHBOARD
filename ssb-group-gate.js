@@ -4,7 +4,8 @@
  *   ป้ายบนหัวหน้า (กดเพื่อเปลี่ยนกลุ่ม):  ssbGroupChip(el, g, function(){ ...เรียก ssbGroupGate ใหม่... })
  *   ต้องโหลด ssb-pin-gate.js ก่อน (ssbAdminPinInfo / ssbAdminPin)
  *   สิทธิ์ = admin-perms getPinInfo.groups: DEV ทุกกลุ่ม · ADMIN=ไร่ · ADMIN_BULK=Bulk · ADMIN_PK=Packing · MANAGER/EXECUTIVE=ทุกกลุ่ม
- *   opts.off = { Bulk:'ยังไม่เปิดใช้' } → การ์ดนั้นกดไม่ได้ (เช่น ฟอร์มที่ยังไม่มี)
+ *   opts.off = { Bulk:'ยังไม่เปิดใช้' } → การ์ดนั้นกดไม่ได้ (เช่น ฟอร์มที่ยังไม่มี) · หรือ function(info) คืน object เดียวกัน (คิดจากสิทธิ์ที่โหลดมา)
+ *   opts.quiet = true → ไม่ใช่แอดมิน/ตรวจสิทธิ์ไม่ผ่าน ปิดหน้าเงียบๆ คืน null (ใช้ตอนเปิดล่วงหน้าก่อนรู้บทบาท · Order_form 24 พ.ย.)
  *   กลุ่มของออเดอร์: ssbOrderGroup(jobType) → Packing/Bulk/ไร่ (ปาล์ม = ไร่)
  */
 (function () {
@@ -76,9 +77,11 @@
     var info = null;
     try { info = await window.ssbGroupInfo(uid); } catch (e) {}
     var grid = w.querySelector('#gg-grid');
+    // opts.quiet (24 พ.ย.): เปิดหน้าเลือกกลุ่มล่วงหน้าก่อนรู้บทบาท → ไม่ใช่แอดมิน/ตรวจไม่ผ่าน = ปิดเงียบๆ ให้หน้าเดิมทำงานต่อ
+    if (opts.quiet && (!info || !info.ok || !info.isAdmin)) { w.hidden = true; w.innerHTML = ''; return null; }
     if (!info || !info.ok) { grid.innerHTML = '<div class="gg-msg">ตรวจสิทธิ์ไม่สำเร็จ — ลองเปิดหน้านี้ใหม่</div>'; return null; }
     if (!info.isAdmin) { grid.innerHTML = '<div class="gg-msg">🔒 เมนูนี้สำหรับแอดมินเท่านั้น</div>'; return null; }
-    var allow = info.groups || [], off = opts.off || {}, last = lastOf(opts.key || 'x');
+    var allow = info.groups || [], off = (typeof opts.off === 'function' ? opts.off(info) : opts.off) || {}, last = lastOf(opts.key || 'x');
     return await new Promise(function (resolve) {
       grid.innerHTML = ORDER.map(function (k) {
         var g = G[k], ok = allow.indexOf(k) >= 0 && !off[k], isLast = ok && k === last;
