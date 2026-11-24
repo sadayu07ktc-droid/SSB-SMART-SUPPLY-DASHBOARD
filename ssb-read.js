@@ -36,7 +36,10 @@
     // ตัวอ่านเล็กๆ หน้าสถานะออเดอร์ + หน้าจัดการผู้ใช้ (repo Order_Status / User_Management)
     getPkSummary: 'ssb-misc', getPkWaiting: 'ssb-misc', getRampList: 'ssb-misc', getReassignDrivers: 'ssb-misc', getUsers: 'ssb-misc' };
   // getWageReport: แยกกลุ่ม ไร่/Bulk/Packing ตามสิทธิ์แอดมิน (2026-10-14) — GAS ไม่กรองกลุ่ม ห้ามถอยไป GAS
-  var EDGE_ONLY = { getWageStored: 1, getPermInfo: 1, getWageReport: 1 };
+  // getOrderTracker (24 พ.ย. ปิดช่อง "รู้ UID = ดูงานคนนั้น"): Edge ตรวจบัตรเซ็น → ห้ามถอยไป GAS (GAS ไม่ตรวจบัตร)
+  var EDGE_ONLY = { getWageStored: 1, getPermInfo: 1, getWageReport: 1, getOrderTracker: 1 };
+  // 🔐 action ที่แนบบัตรเซ็น (ssbAuth) ไปใน header x-ssb-auth · ไม่มีบัตร = ไม่แนบ (Edge ตัดสินตามสวิตช์ off/log/enforce)
+  var AUTH_ACTIONS = { getOrderTracker: 1 };
   // action ที่ช้าเพราะรอระบบนอก (DTC ประวัติ/สรุป GPS 5–15 วิ) → รอ Edge นานกว่าค่าเริ่ม 10 วิ ก่อนถอยไป GAS
   var TIMEOUT = { getWageMonitor: 30000, getDriverRounds: 30000, getSummary: 30000, getDtcTodayChart: 60000 };   // กราฟระยะวิ่งจริง: ประวัติ GPS ทุกคัน ~30 วิ (GAS ~180 วิ)
   window.ssbFetch = async function (url, init) {
@@ -45,14 +48,16 @@
       var u = new URL(url, location.href);
       if (method === 'GET' && ACTIONS[u.searchParams.get('action')]) {
         var ac = new AbortController(), tm = setTimeout(function () { ac.abort(); }, TIMEOUT[u.searchParams.get('action')] || 10000);
-        var r = await fetch(BASE + ACTIONS[u.searchParams.get('action')] + '?' + u.searchParams.toString(), { signal: ac.signal });
+        var opt = { signal: ac.signal }, tok = AUTH_ACTIONS[u.searchParams.get('action')] && window.ssbAuth ? window.ssbAuth.get() : '';
+        if (tok) opt.headers = { 'x-ssb-auth': tok };
+        var r = await fetch(BASE + ACTIONS[u.searchParams.get('action')] + '?' + u.searchParams.toString(), opt);
         var t = await r.text(); clearTimeout(tm);
         var j = JSON.parse(t);
         if (j && (j.ok || EDGE_ONLY[u.searchParams.get('action')])) return new Response(t, { status: 200, headers: { 'Content-Type': 'application/json' } });   // edge-only: ส่งคำตอบ Edge (เช่น denied) ตรงๆ
       }
     } catch (e) { try { console.warn('ssb-read → GAS', e); } catch (_) {} }
     // action ที่มีแต่ฝั่ง Supabase (GAS ไม่รู้จัก) → ไม่ต้องถอยไป GAS ให้เสียเวลา
-    try { if (EDGE_ONLY[new URL(url, location.href).searchParams.get('action')]) return new Response('{"ok":false,"error":"edge unavailable"}', { status: 200, headers: { 'Content-Type': 'application/json' } }); } catch (_) {}
+    try { if (EDGE_ONLY[new URL(url, location.href).searchParams.get('action')]) return new Response('{"ok":false,"success":false,"error":"ระบบไม่ตอบ กรุณาลองใหม่อีกครั้ง (edge unavailable)"}', { status: 200, headers: { 'Content-Type': 'application/json' } }); } catch (_) {}
     return fetch(url, init);
   };
 
@@ -70,6 +75,38 @@
     } catch (e) { try { console.warn(fn + ' → GAS', e); } catch (_) {} }
     var g = await fetch(gasUrl, { method: 'POST', body: JSON.stringify(body) });
     return g.json();
+  };
+})();
+
+/* ── 🔐 บัตรเซ็นยืนยันตัวตน (ssbAuth) · 2026-11-24 ─────────────────────────────────────
+ *   คุณน้อง "ปิดช่อง order-tracker": เดิม Edge เชื่อ userId ที่ส่งมาเฉยๆ → ตอนนี้แนบบัตรที่ Edge ssb-auth เซ็นให้
+ *   ได้บัตร: ID token ของ LIFF (liff.getIDToken · LIFF ต้องเปิด scope openid) → ssb-auth ตรวจกับ LINE → บัตร HMAC อายุ 30 วัน
+ *   เก็บ localStorage 'ssb_auth_v1' {u,t,e} ใช้ร่วมทุกหน้าในโดเมน · แดชบอร์ด (ตัวออกบัตร SSO) ขอบัตรตอนล็อกอิน → แอดมินที่เข้าหน้าอื่นผ่านบัตร SSO มีบัตรนี้ด้วย
+ *   ssbAuth.get(uid?)    → บัตรที่ยังไม่หมดอายุ (ระบุ uid = ต้องเป็นของคนนั้น) ไม่มี = ''
+ *   ssbAuth.ensure(uid?) → มีบัตรแล้วคืนเลย · ไม่มี → ขอใหม่จาก ID token (LIFF ต้อง init แล้ว) · ไม่ได้ = ''
+ *   ssbAuth.clear()      → ทิ้งบัตร (ออกจากระบบ / ?login=1 / Edge ตอบ authRequired) */
+(function () {
+  var KEY = 'ssb_auth_v1', URL_ = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/ssb-auth', busy = null;
+  var read = function () { try { var c = JSON.parse(localStorage.getItem(KEY) || 'null'); return c && c.t && c.u && Number(c.e) > Date.now() + 60000 ? c : null; } catch (e) { return null; } };
+  window.ssbAuth = {
+    get: function (uid) { var c = read(); return c && (!uid || c.u === uid) ? c.t : ''; },
+    clear: function () { try { localStorage.removeItem(KEY); } catch (e) {} },
+    ensure: function (uid) {
+      var have = window.ssbAuth.get(uid); if (have) return Promise.resolve(have);
+      if (busy) return busy;
+      var idt = ''; try { idt = (window.liff && liff.getIDToken && liff.getIDToken()) || ''; } catch (e) {}
+      if (!idt) return Promise.resolve('');
+      busy = fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'issue', idToken: idt }) })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (!d || !d.ok || !d.token) { try { console.warn('ssbAuth', d && (d.code || d.error)); } catch (e) {} return ''; }
+          try { localStorage.setItem(KEY, JSON.stringify({ u: d.uid, t: d.token, e: d.exp })); } catch (e) {}
+          return uid && d.uid !== uid ? '' : d.token;
+        })
+        .catch(function () { return ''; })
+        .then(function (t) { busy = null; return t; });
+      return busy;
+    }
   };
 })();
 
@@ -91,7 +128,7 @@
     set: function (p) {
       try { localStorage.setItem(KEY, JSON.stringify({ uid: p.uid, name: p.name || '', pic: p.pic || '', role: p.role || '', t: Date.now() })); } catch (e) {}
     },
-    clear: function () { try { localStorage.removeItem(KEY); } catch (e) {} }
+    clear: function () { try { localStorage.removeItem(KEY); } catch (e) {} if (window.ssbAuth) window.ssbAuth.clear(); }
   };
   var isIssuer = /\/SSB-SMART-SUPPLY-DASHBOARD\/(index\.html)?$/.test(location.pathname);   // แดชบอร์ดหลักล็อกอินจริงเสมอ
   // 🔁 เปลี่ยนบัญชี (2026-11-19): ลิงก์ที่มี ?login=1 → ทิ้งบัตร + ทิ้งล็อกอิน LINE ที่ค้างในเบราว์เซอร์ → หน้าจะให้ล็อกอิน LINE ใหม่
@@ -99,7 +136,7 @@
   try {
     var qs = new URLSearchParams(location.search);
     if (qs.get('login') === '1') {
-      window.ssbSession.clear();
+      window.ssbSession.clear();   // ทิ้งบัตรเซ็น ssbAuth ไปด้วย
       for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i); if (k && k.indexOf('LIFF_STORE') === 0) localStorage.removeItem(k); }
       localStorage.removeItem('ssb_admin_pin_v1');
       qs.delete('login'); var q = qs.toString();
