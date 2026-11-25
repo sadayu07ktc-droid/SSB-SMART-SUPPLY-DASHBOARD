@@ -213,7 +213,7 @@
   .rtab[aria-selected="true"] .tx small{color:#BFE3D8}
   .rtab[aria-selected="true"] .bd{background:rgba(255,255,255,.2);color:#fff}
   .rtab[aria-selected="true"]:hover{transform:none}
-  .nav-toggle{position:absolute;right:-15px;top:20px;z-index:6;width:30px;height:30px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
+  .nav-toggle{position:absolute;right:-15px;top:66px;z-index:6;width:30px;height:30px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
     background:var(--tg-bg);color:var(--tg-ink);border:1px solid rgba(15,40,30,.08);box-shadow:0 6px 16px -6px rgba(10,40,28,.45),0 1px 0 rgba(255,255,255,.9) inset;
     transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .2s,color .2s}
   .nav-toggle svg{transition:transform .3s cubic-bezier(.22,1,.36,1)}
@@ -222,14 +222,17 @@
   @media(min-width:721px){
     .dash.nav-collapsed{grid-template-columns:90px minmax(0,1fr)}
     .dash.nav-collapsed .side{width:76px;padding:18px 8px 14px;z-index:30;transition:width .28s cubic-bezier(.22,1,.36,1) .12s,box-shadow .2s,background .2s}
-    .dash.nav-collapsed .side:hover,.dash.nav-collapsed .side:has(:focus-visible){width:236px;background:var(--glass-2);box-shadow:var(--glass-shadow),0 24px 60px -20px rgba(10,92,76,.45)}
-    .dash.nav-collapsed .side:hover .nav-toggle svg,.dash.nav-collapsed .side:has(:focus-visible) .nav-toggle svg{transform:none}
+    /* .nopeek = เพิ่งกดหุบ เมาส์ยังอยู่บนแถบ → ยังไม่กางจนกว่าเมาส์จะออกจากแถบ (25 พ.ย. "กดหุบก็ไม่ได้") */
+    .dash.nav-collapsed:not(.nopeek) .side:hover,.dash.nav-collapsed .side:has(:focus-visible){width:236px;background:var(--glass-2);box-shadow:var(--glass-shadow),0 24px 60px -20px rgba(10,92,76,.45)}
+    .dash.nav-collapsed:not(.nopeek) .side:hover .nav-toggle svg,.dash.nav-collapsed .side:has(:focus-visible) .nav-toggle svg{transform:none}
     .dash.nav-collapsed .brand{padding-left:13px;overflow:hidden;padding-bottom:28px;margin-bottom:-14px}
+    .dash.nav-collapsed .sback{padding-left:21px}
     .dash.nav-collapsed .rtab{padding:10px 0 10px 18px;overflow:hidden}
     .dash.nav-collapsed .rtab:hover{transform:none}
     .dash.nav-collapsed .side .bt,.dash.nav-collapsed .side .nsec,.dash.nav-collapsed .rtab .tx,.dash.nav-collapsed .rtab .bd{opacity:0;transition:opacity .15s}
-    .dash.nav-collapsed .side:hover :is(.bt,.nsec,.tx,.bd),.dash.nav-collapsed .side:has(:focus-visible) :is(.bt,.nsec,.tx,.bd){opacity:1;transition:opacity .2s .25s}
+    .dash.nav-collapsed:not(.nopeek) .side:hover :is(.bt,.nsec,.tx,.bd),.dash.nav-collapsed .side:has(:focus-visible) :is(.bt,.nsec,.tx,.bd){opacity:1;transition:opacity .2s .25s}
     /* หุบอยู่: เลขงานค้างเป็นจุดเล็กมุมไอคอน */
+    .dash.nav-collapsed.nopeek .side .rtab .bd:not(.z),
     .dash.nav-collapsed .side:not(:hover):not(:has(:focus-visible)) .rtab .bd:not(.z){opacity:1;position:absolute;left:32px;top:3px;min-width:0;padding:0 5px;font-size:9.5px;line-height:15px}
   }
   @media(max-width:720px){
@@ -237,6 +240,8 @@
     .side{position:static;min-width:0;margin:12px 12px 0;max-height:none;border-radius:20px;padding:10px}
     .brand,.nsec,.nav-toggle{display:none}
     .side{padding:8px 6px}
+    .sback{width:auto;align-self:flex-start;margin:2px 8px 6px}
+    .pgt .pgdev{display:inline-block}
     .side nav{flex-direction:row;gap:4px;overflow-x:auto;padding:4px 8px 6px}
     .rtab{flex:1 1 0;min-width:max-content;justify-content:center;gap:5px;width:auto;margin:0;padding:8px 7px}
     .rtab .ic{width:auto;font-size:15px}
@@ -247,6 +252,39 @@
     .rtab:hover{transform:none}
   }
   @media(prefers-reduced-motion:reduce){.rtab,.nav-toggle,.nav-toggle svg,.dash.nav-collapsed .side{transition:none}.rtab:hover{transform:none}}
+
+  /* ── 25 พ.ย. ทั้งหน้าเป็นกระจกเขียว · เอาหัวเขียวออก (กลับ/DEV/ตัวเลข ย้ายเข้าแถบซ้าย+แถวชิป) ── */
+  .backbtn{color:var(--ink);background:var(--glass-2);border:1px solid var(--line);border-radius:12px;padding:7px 12px;white-space:nowrap;
+    -webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+  .backbtn:hover{background:var(--surface);border-color:var(--pine)}
+  .sback{width:100%;justify-content:flex-start;overflow:hidden;margin-bottom:12px}
+  .devtag{background:var(--dev-bg);color:var(--dev);font-size:10px;padding:2px 9px}
+  .brand small .devtag{display:inline-block;margin-top:3px}
+  .pgt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 12px}
+  .pgt h1{font-size:21px;font-weight:700;color:var(--ink);letter-spacing:-.01em}
+  .pgt .rl{font-size:15px;font-weight:500;color:var(--ink-soft)}
+  .pgt .pgdev{display:none}
+  #cnt{margin-left:auto;font-size:12.5px;color:var(--ink-soft);white-space:nowrap}
+  .hint{background:var(--glass);border-color:var(--glass-line);border-left-color:var(--dev);border-radius:14px;box-shadow:var(--glass-shadow);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
+  .chip{background:var(--glass-2);border-color:var(--glass-line);box-shadow:0 1px 2px rgba(10,40,28,.05)}
+  .chip.on{background:linear-gradient(135deg,#1F8A6F,#0A5C4C);border-color:transparent;box-shadow:0 6px 14px -6px rgba(10,92,76,.6)}
+  .search{background:var(--glass-2);border-color:var(--glass-line);border-radius:12px;box-shadow:0 1px 2px rgba(10,40,28,.05)}
+  .card{background:var(--glass-2);border-color:var(--glass-line);border-radius:16px;box-shadow:var(--glass-shadow)}
+  .card:hover{background:var(--surface)}
+  #dw{background:var(--glass-2);border-left:1px solid var(--glass-line);border-radius:22px 0 0 22px;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%)}
+  .dwhead,.jvhead{background:var(--glass-2);color:var(--ink);border-bottom:1px solid var(--line);
+    -webkit-backdrop-filter:blur(18px) saturate(160%);backdrop-filter:blur(18px) saturate(160%)}
+  .dwhead .sub,.jvhead .sub{color:var(--ink-soft)}
+  .xbtn{background:var(--surface);border:1px solid var(--line);color:var(--ink)}
+  .xbtn:hover{border-color:var(--pine)}
+  #jv{background:radial-gradient(circle at 0 0,color-mix(in srgb,var(--blob1) 55%,transparent),transparent 42%),
+    radial-gradient(circle at 100% 100%,color-mix(in srgb,var(--blob2) 50%,transparent),transparent 45%),var(--bg)}
+  .phone{background:var(--glass)}
+  .sec{background:var(--glass-2);border-color:var(--glass-line);border-radius:16px;box-shadow:var(--glass-shadow)}
+  .savebar{background:var(--glass-2);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px)}
+  @media(max-width:720px){.sback{width:auto;align-self:flex-start;margin:2px 8px 6px}.pgt .pgdev{display:inline-block}.pgt h1{font-size:19px}}
   .wins{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:14px 16px 0}
   .win{text-align:left;font:inherit;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
   .win b{font-size:14px}.win span{font-size:11.5px;color:var(--ink-faint)}
@@ -266,26 +304,21 @@
   @media(prefers-reduced-motion:reduce){#dw,#scrim,.card{transition:none}.ring{animation-duration:3s}}
 </style>
 
-<header><div class="bar">
-  <button class="backbtn" onclick="goBack()">← กลับ</button>
-  <div><div class="eyebrow">SSB Smart Supply · Developer</div><h1>ดูหน้างานทุกฟอร์ม</h1></div>
-  <span class="devtag">DEV ONLY</span>
-  <div class="spacer"></div>
-  <span id="cnt" style="font-size:12.5px;color:#BFE3D8"></span>
-</div></header>
-
 <div class="dash" id="dash">
 <aside class="side" id="side">
-  <div class="brand"><span class="logo">🛠️</span><span class="bt">Developer<small>ดูทุกฟอร์ม</small></span></div>
+  <button class="backbtn sback" onclick="goBack()" title="กลับ"><span aria-hidden="true">←</span><span class="bt">กลับ</span></button>
+  <div class="brand"><span class="logo">🛠️</span><span class="bt">Developer<small><span class="devtag">DEV ONLY</span></small></span></div>
   <div class="nsec">ฟอร์มของใคร</div>
   <nav id="roles" role="tablist" aria-orientation="vertical" aria-label="ฟอร์มของใคร"></nav>
 </aside>
 <main>
+  <div class="pgt"><h1>ดูหน้างานทุกฟอร์ม</h1><span class="rl" id="pgRole"></span><span class="devtag pgdev">DEV ONLY</span></div>
   <div class="hint" id="hint"></div>
   <div class="tools">
     <div id="chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     <input class="search" id="q" placeholder="ค้นชื่อ / รหัส / ทะเบียน" oninput="render()">
     <label class="ck"><input type="checkbox" id="onlyAct" onchange="render()"> เฉพาะคนที่มีงานค้าง</label>
+    <span id="cnt"></span>
   </div>
   <div class="list" id="list"><div class="ldr"><div class="ring"></div>กำลังโหลดรายชื่อคนขับ…</div></div>
 </main>
@@ -508,6 +541,7 @@ function drawRoles(){
       +`<span class="ic" aria-hidden="true">${ic}</span><span class="tx"><b>${esc(nm)}</b><small>${esc(d)}</small></span>`
       +(n!=null?`<span class="bd${n?'':' z'}" aria-label="มีงานค้าง ${n}">${n}</span>`:'')+`</button>`; }).join('');
   $('#hint').innerHTML='<span style="font-size:15px">🛠️</span><div>'+HINT[ROLE]+'</div>';
+  const cur=ROLES.find(r=>r[0]===ROLE); $('#pgRole').textContent=cur?'· '+cur[1]:'';
   $('#q').placeholder=ROLE==='Driver'?'ค้นชื่อ / รหัส / ทะเบียน':'ค้นชื่อ / รหัส';
   $('#chips').style.display=ROLE==='Driver'?'flex':'none';
 }
@@ -536,7 +570,8 @@ async function setRole(k){
   b.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
   side.appendChild(b);
   const set=c=>{ dash.classList.toggle('nav-collapsed',c); b.setAttribute('aria-expanded',c?'false':'true'); };
-  b.onclick=()=>{ const c=!dash.classList.contains('nav-collapsed'); set(c); try{ localStorage.setItem('ssb_dev_nav_collapsed',c?'1':'0'); }catch(e){} };
+  side.addEventListener('mouseleave',()=>dash.classList.remove('nopeek'));
+  b.onclick=()=>{ const c=!dash.classList.contains('nav-collapsed'); set(c); dash.classList.toggle('nopeek',c); try{ localStorage.setItem('ssb_dev_nav_collapsed',c?'1':'0'); }catch(e){} };
   let c0=false; try{ c0=localStorage.getItem('ssb_dev_nav_collapsed')==='1'; }catch(e){} set(c0);
 })();
 function renderPeople(){
