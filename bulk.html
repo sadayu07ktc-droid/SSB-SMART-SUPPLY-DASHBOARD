@@ -331,7 +331,8 @@ body::after{width:52vw;height:52vw;right:-14vw;bottom:-18vw;background:radial-gr
 .atbl td:last-child .btn{white-space:nowrap}
 .atbl tr.off td{color:var(--muted)}.atbl tr.off td.cust{text-decoration:line-through}
 .atbl tr.hl td{background:var(--warnTint)}.atbl tr.nw td{background:var(--infoTint)}
-td.nt{font-size:12px;color:var(--muted);max-width:220px}
+td.nt{font-size:13px;color:var(--ink);line-height:1.5;min-width:130px;max-width:260px;white-space:normal;overflow-wrap:anywhere}   /* 25 พ.ย. คุณน้อง: หมายเหตุอ่านง่าย (เดิมเทาจาง 12px) */
+.ck.nw{white-space:nowrap}.fdoch{font-size:12px;color:var(--muted);flex-basis:100%}
 td.sm{font-size:12px}
 .tag{display:inline-block;font-size:11px;font-weight:700;border-radius:7px;padding:1px 7px;white-space:nowrap;background:var(--surface2);color:var(--muted)}
 .tag.bad{color:var(--bad);background:var(--badTint)}.tag.warn{color:var(--warn);background:var(--warnTint)}.tag.info{color:var(--info);background:var(--infoTint)}
@@ -612,7 +613,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-20b</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25a</span></div>
   </div>
   </div></main>
 </div>
@@ -1034,6 +1035,15 @@ $('rows').addEventListener('click',async e=>{
 $('planSel').addEventListener('change',e=>load(e.target.value));
 
 /* ── ✎ เพิ่ม/แก้เที่ยว ── */
+/* 🧾 25 พ.ย. คุณน้อง: ลูกค้าต้องแนบ COA ไหม + ถุงกรองกี่ใบ (ค่าเริ่ม 3 ทุกลูกค้า) ตั้งที่ ฐานข้อมูล › ลูกค้า Bulk / Excel
+   ใบขนส่งติ๊ก/เติมให้เอง · เที่ยวที่บันทึกแบบใหม่ (form5.v=2) = ใช้ตามที่บันทึก · ผู้รับถุงกรอง = ชื่อคนขับ */
+function custDocOf(code,name){
+  const cs=(DATA&&DATA.customers)||[], n=nrm(name);
+  const c=(code&&cs.find(x=>x.cust_code===code))||(n&&cs.find(x=>nrm(x.cust_name)===n||(x.aliases||[]).some(a=>nrm(a)===n)))||null;
+  return c?{coa:!!c.need_coa,bags:c.filter_bags==null?3:+c.filter_bags,name:c.cust_name}:{coa:false,bags:3,name:''};
+}
+function f5Fill(f,cd){ if(!cd||f.v===2) return f;
+  if(!f.coa&&cd.coa) f.coa=true; if(!String(f.bags||'').trim()&&cd.bags>0) f.bags=String(cd.bags); return f; }
 const F5_DEF={coa:false,coNo:'',bags:'',bagTo:'',cond:'',n2:false,flush:false,flushTxt:'',leaveBy:'',arriveBy:'',prevManual:false,prev:['','','']};
 function openTrip(j,pre,opt){
   const d=DATA, me=d.me, p=d.plan;
@@ -1044,7 +1054,7 @@ function openTrip(j,pre,opt){
       roundNo:j.round_no||'',deliverTime:j.deliver_time||'',note:j.note||'',carrier:j.carrier||'',driverName:j.driver_name||'',plate:j.plate||'',adminKey:j.admin_key||''}
     :Object.assign({kind:'company',custName:'',custCode:'',dest:'',prod:'',qtyText:'',bill:'A',co:false,coClosed:false,loaded:false,soNo:'',price:'',roundNo:'',deliverTime:'',note:'',
       carrier:'',driverName:'',plate:'',adminKey:''},pre||{});
-  const f5=Object.assign({},F5_DEF,(j&&j.form5)||{}); f5.prev=[0,1,2].map(i=>(f5.prev||[])[i]||'');
+  const f5=f5Fill(Object.assign({},F5_DEF,(j&&j.form5)||{}),custDocOf(t.custCode,t.custName)); f5.prev=[0,1,2].map(i=>(f5.prev||[])[i]||'');
   const dv=t.kind==='company'&&t.driverName?(d.drivers.find(x=>x.name===t.driverName)||null):null;
   let m=$('dlgTrip'); if(!m){ m=document.createElement('div'); m.id='dlgTrip'; m.className='dlg'; document.body.appendChild(m); }
   const close=()=>{ m.hidden=true; m.innerHTML=''; document.removeEventListener('keydown',onKey); };
@@ -1087,8 +1097,10 @@ function openTrip(j,pre,opt){
         <label>ออกจากโรงงานก่อนเวลา<input id="fLeave" value="${esc(f5.leaveBy)}"${dis}></label>
         <label>ส่งถึงลูกค้าก่อนเวลา<input id="fArr" value="${esc(f5.arriveBy)}" placeholder="เว้นว่าง = ใช้เวลาส่งสินค้า"${dis}></label>
         <div class="full ckrow"><span class="lbx">เอกสารแนบ</span><label class="ck"><input type="checkbox" id="fCoa"${f5.coa?' checked':''}${dis}> ใบ COA</label>
-          <label class="ck">ใบ CO (ตามช่อง CO) เลขที่ <input id="fCoNo" class="mini" value="${esc(f5.coNo)}"${dis}></label>
-          <label class="ck">ถุงกรอง <input id="fBags" class="mini" style="width:56px" value="${esc(f5.bags)}"${dis}> ใบ · ผู้รับ <input id="fBagTo" class="mini" value="${esc(f5.bagTo)}"${dis}></label></div>
+          <label class="ck nw">ใบ CO เลขที่ <input id="fCoNo" class="mini" value="${esc(f5.coNo)}" placeholder="ตามช่อง CO"${dis}></label>
+          <label class="ck nw">ถุงกรอง <input id="fBags" class="mini" style="width:52px;text-align:center" inputmode="numeric" value="${esc(f5.bags)}"${dis}> ใบ</label>
+          <span class="ck nw sub">ผู้รับ = คนขับ (ชื่อขึ้นในใบขนส่งเอง)</span>
+          <span class="fdoch" id="fDocH"></span></div>
         <div class="full ckrow"><span class="lbx">สภาพรถ</span>
           <label class="ck"><input type="radio" name="fCond" value="ok"${f5.cond==='ok'?' checked':''}${dis}> ปกติ ไม่เป็นสนิม สีไม่ลอกร่อน</label>
           <label class="ck"><input type="radio" name="fCond" value="rust"${f5.cond==='rust'?' checked':''}${dis}> เป็นสนิม สีลอกร่อน</label>
@@ -1117,7 +1129,14 @@ function openTrip(j,pre,opt){
   applyKind();
   const qh=()=>{ const v=$('tQty').value.trim(), n=tonOf(v); $('tQtyH').textContent=!v?'':n?'= '+tons(n)+' ตัน ('+fmt(n*1000)+' กก.)':'ไม่ใช่ตัน — เก็บตามที่เขียน'; };
   $('tQty').oninput=qh; qh();
-  $('tCust').addEventListener('change',()=>{ const c=custMatch($('tCust').value); if(c&&!$('tCode').value) $('tCode').value=c; });
+  $('tCust').addEventListener('change',()=>{ const c=custMatch($('tCust').value); if(c&&!$('tCode').value) $('tCode').value=c; docSync(); });
+  // 🧾 ค่าตั้งลูกค้า → ติ๊ก COA / ถุงกรอง ให้เอง (จนกว่าจะแก้เอง) · เที่ยวที่บันทึกแบบใหม่แล้วไม่แตะ
+  let docTouched=!!(j&&j.form5&&j.form5.v===2);
+  ['fCoa','fBags'].forEach(id=>$(id).addEventListener('input',()=>{ docTouched=true; }));
+  function docSync(init){ const cd=custDocOf($('tCode').value,$('tCust').value.trim());
+    $('fDocH').textContent=cd.name?'ค่าตั้งลูกค้า '+cd.name+': '+(cd.coa?'ต้องแนบใบ COA':'ไม่ต้องแนบ COA')+' · ถุงกรอง '+cd.bags+' ใบ':'ไม่ได้ผูกลูกค้า — ถุงกรองค่าเริ่ม 3 ใบ';
+    if(init||docTouched||ro) return; $('fCoa').checked=cd.coa; $('fBags').value=cd.bags>0?String(cd.bags):''; }
+  $('tCode').addEventListener('change',()=>docSync()); docSync(1);
   let lastAuto=dv?dv.plate:'';
   $('tDrv').onchange=()=>{ const x=d.drivers.find(y=>y.code===$('tDrv').value); const pl=$('tPlate');
     if(x&&(!pl.value||pl.value===lastAuto)){ pl.value=x.plate||''; lastAuto=pl.value; prevLoad(); } };
@@ -1136,7 +1155,7 @@ function openTrip(j,pre,opt){
     qtyText:$('tQty').value.trim(), bill:$('tBill').value.trim(), roundNo:$('tRound').value, deliverTime:$('tTime').value.trim(), soNo:$('tSo').value.trim(), price:$('tPrice').value.trim(),
     note:$('tNote').value.trim(), co:$('tCo').checked, coClosed:$('tCoC').checked, loaded:$('tLoaded').checked,
     driverCode:kind==='company'?$('tDrv').value:'', carrier:kind==='company'?'บริษัท':$('tCar').value.trim(), driverName:kind==='company'?'':$('tDName').value.trim(), plate:$('tPlate').value.trim(),
-    form5:{coa:$('fCoa').checked, coNo:$('fCoNo').value.trim(), bags:$('fBags').value.trim(), bagTo:$('fBagTo').value.trim(), cond:(m.querySelector('[name=fCond]:checked')||{}).value||'',
+    form5:{coa:$('fCoa').checked, coNo:$('fCoNo').value.trim(), bags:$('fBags').value.trim(), bagTo:'', v:2, cond:(m.querySelector('[name=fCond]:checked')||{}).value||'',
       n2:$('fN2').checked, flush:$('fFlush').checked, flushTxt:$('fFlushT').value.trim(), leaveBy:$('fLeave').value.trim(), arriveBy:$('fArr').value.trim(),
       prevManual:$('fPrevM').checked, prev:[0,1,2].map(i=>$('fPrev'+i).value.trim())} });
   const save=async(andPrint,btn)=>{
@@ -1409,14 +1428,14 @@ async function printTrips(ids){
   try{
     const r=await postB({action:'printData',ids});
     if(!r.ok){ toast(r.error||'เตรียมใบขนส่งไม่สำเร็จ',true); return; }
-    $('printArea').innerHTML=r.jobs.map(j=>fmTr01(j,r.plan||DATA.plan,(r.prev||{})[j.id]||[],r.by)).join('');
+    $('printArea').innerHTML=r.jobs.map(j=>fmTr01(j,r.plan||DATA.plan,(r.prev||{})[j.id]||[],r.by,(r.custDoc||{})[j.cust_code])).join('');
     if(r.issued&&r.issued.length) toast('ออกเลขที่ใบ '+r.issued.join(', '));
     await (document.fonts&&document.fonts.ready||Promise.resolve());
     setTimeout(()=>{ window.print(); load(DATA.sendDate); },250);
   }catch(e){ toast('ไม่แน่ใจว่าออกเลขสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(DATA.sendDate); }
 }
-function fmTr01(j,pl,prev,by){
-  const f=Object.assign({},F5_DEF,j.form5||{}), e=esc, now=new Date(), hm=p2(now.getHours())+':'+p2(now.getMinutes());
+function fmTr01(j,pl,prev,by,cdoc){
+  const f=f5Fill(Object.assign({},F5_DEF,j.form5||{}),cdoc||custDocOf(j.cust_code,j.cust_name)), bagTo=f.bagTo||j.driver_name||'', e=esc, now=new Date(), hm=p2(now.getHours())+':'+p2(now.getMinutes());
   const pv=f.prevManual?(f.prev||[]):prev.map(x=>x.prod), p3=[0,1,2].map(i=>pv[i]||'');
   const X=on=>`<span class="xb">${on?'✓':''}</span>`, U=(v,w)=>`<span class="uv"${w?` style="min-width:${w}mm"`:''}>${e(v)||'&nbsp;'}</span>`, D=w=>`<span class="dt" style="width:${w}mm"></span>`;
   const qt=String(j.qty_text||'').trim(), isT=tonOf(qt)>0&&!/^\s*[\d.,]+\s*(ถัง|ลิตร|ตู้|กก|kg)/i.test(qt);
@@ -1430,7 +1449,7 @@ function fmTr01(j,pl,prev,by){
     <div class="fl c"><b>ชนิดน้ำมัน</b> ${U(j.prod_name,60)}</div>
     <div class="fl"><b>ชื่อลูกค้า</b> ${U(j.cust_name,40)} <b class="bill">${e(billCode(j))}</b> <b>สถานที่จัดส่ง</b> ${U(j.dest,34)} <b>จำนวนที่ต้องเติม</b> ${U(qv,14)} ${isT||!qt?'ตัน':''}</div>
     <div class="fl"><span>วันที่ส่งสินค้า</span> ${U(thDate(pl.send_date),24)} <span class="ml">เอกสารแนบ</span> ${X(f.coa)} ใบ Certificate of Analysis (COA.) ${X(j.co)} ใบ CO ${f.coNo?U(f.coNo,22):D(22)}</div>
-    <div class="fl ind">${X(!!f.bags)} ถุงกรองจำนวน ${f.bags?U(f.bags,8):D(8)} ใบ ${f.bagTo?U(f.bagTo,40):D(40)} ผู้รับ</div>
+    <div class="fl ind">${X(!!f.bags)} ถุงกรองจำนวน ${f.bags?U(f.bags,8):D(8)} ใบ ${bagTo?U(bagTo,40):D(40)} ผู้รับ</div>
     <div class="fl"><span>บริษัทขนส่ง</span> ${U(j.carrier||'',36)} <span>ทะเบียนรถ</span> ${U(j.plate||'',38)} <span>ชื่อคนขับ</span> ${U(j.driver_name||'',42)}</div>
     <div class="fl"><span>ผู้สั่งจ่าย</span> ${U(by||'',40)} <span>วันที่</span> ${U(thDate(pl.load_date||pl.send_date),26)} <span>เวลา</span> ${U(hm,14)} น.</div>
   </div>
@@ -1512,6 +1531,8 @@ function drawCustList(){
       <td>${c.has_dest_scale?'<span class="yn y">✓ มี</span>':'<span class="yn n">ไม่มี</span>'}</td>
       <td>${c.need_slip_out?'<span class="yn y">✓ ต้องมี</span>':'<span class="yn n">ไม่ต้อง</span>'}</td>
       <td>${WB_TH[c.weight_basis]?'<span class="wb '+c.weight_basis+'">'+WB_TH[c.weight_basis]+'</span>':'<span class="yn n">—</span>'}</td>
+      <td>${c.need_coa?'<span class="yn y">✓ ต้องแนบ</span>':'<span class="yn n">ไม่ต้อง</span>'}</td>
+      <td class="num" style="text-align:center">${c.filter_bags==null?3:c.filter_bags}</td>
       <td><span class="chip ${st[0]}">${st[1]}</span>${c.note?`<div class="sub" style="font-size:11.5px;margin-top:3px">${esc(c.note)}</div>`:''}</td>
       ${ed?`<td style="white-space:nowrap">${st[1]==='รอยืนยันหมุด'?`<button class="btn sm pri" type="button" data-ok="${esc(c.cust_code)}">✓ ยืนยัน</button> `:''}${st[1]==='พร้อม'?`<button class="btn sm" type="button" data-un="${esc(c.cust_code)}" title="กลับเป็น รอยืนยันหมุด · พิกัดไม่เปลี่ยน">ยกเลิกการยืนยัน</button> `:''}<button class="btn sm" type="button" data-ed="${esc(c.cust_code)}">แก้ไข</button></td>`:''}</tr>`; }).join('');
   const miss=d.missing.length?`<div class="cmiss"><b>ลูกค้าในแพลนที่ยังไม่ได้ตั้งค่า (${d.missing.length})</b><span class="sub" style="font-size:12px">ยังไม่ตั้งค่า = คนขับกด "ถึงลูกค้า" เอง · ไม่มีขั้นชั่งปลายทาง</span>
@@ -1525,8 +1546,8 @@ function drawCustList(){
         <span class="cxbar"><button class="btn sm xl" type="button" id="cXd" title="ไฟล์นี้ใช้เป็นแม่แบบอัปโหลดกลับ">⬇ ดาวน์โหลด Excel</button>${ed?`<button class="btn sm" type="button" id="cXu" title="แก้หลายรายพร้อมกันจากไฟล์ที่ดาวน์โหลด">⬆ อัปโหลด</button><input type="file" id="cXf" accept=".xlsx,.xls,.csv" hidden>`:''}
         ${ed?`<button class="btn sm pri" type="button" id="cAdd">＋ เพิ่มลูกค้า</button>`:''}
         ${ed?`<button class="btn sm" type="button" id="cRef" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>`:''}</span></div>
-      <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>ยึดน้ำหนัก</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
-        <tbody>${rows||`<tr><td colspan="7" class="empty">ยังไม่มีลูกค้า</td></tr>`}</tbody></table></div>
+      <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>ยึดน้ำหนัก</th><th>ใบ COA</th><th>ถุงกรอง (ใบ)</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
+        <tbody>${rows||`<tr><td colspan="9" class="empty">ยังไม่มีลูกค้า</td></tr>`}</tbody></table></div>
       ${miss}
       ${ed?'':'<div class="sub">ดูอย่างเดียว · แก้ได้เฉพาะ DEV / แอดมิน Bulk / ผู้จัดการ</div>'}
     </div></div>`;
@@ -1566,8 +1587,10 @@ const CX_COLS=[
   {k:'has_dest_scale',h:'ตาชั่งปลายทาง',w:12,get:c=>c._plan?'':c.has_dest_scale?'มี':'ไม่มี',help:'มี / ไม่มี'},
   {k:'need_slip_out',h:'ใบชั่งตอนออก',w:12,get:c=>c._plan?'':c.need_slip_out?'ต้องมี':'ไม่ต้อง',help:'ต้องมี / ไม่ต้อง'},
   {k:'weight_basis',h:'ยึดน้ำหนัก',w:12,get:c=>c._plan?'':WB_TH[c.weight_basis]||'',help:'ต้นทาง (ตาชั่ง SSB) / ปลายทาง (ตาชั่งลูกค้า) · ว่าง = คงค่าเดิม / ยังไม่ระบุ'},
+  {k:'need_coa',h:'แนบใบ COA',w:12,get:c=>c._plan?'':c.need_coa?'ต้องแนบ':'ไม่ต้อง',help:'ต้องแนบ / ไม่ต้อง · ต้องแนบ = ใบขนส่งติ๊ก "ใบ COA" ให้เอง'},
+  {k:'filter_bags',h:'ถุงกรอง (ใบ)',w:11,get:c=>c._plan?'':String(c.filter_bags==null?3:c.filter_bags),help:'ตัวเลข 0–99 · ค่าเริ่ม 3 ทุกลูกค้า · 0 = ไม่ใช้ถุงกรอง · ใบขนส่งเติมจำนวนให้เอง ผู้รับ = ชื่อคนขับ'},
   {k:'confirm',h:'ยืนยันหมุด',w:12,get:c=>c._plan?'':/^auto/.test(c.match_note||'')?'รอยืนยัน':'ยืนยันแล้ว',help:'ยืนยันแล้ว / รอยืนยัน · แก้หมุดหรือพิกัด = ยืนยันให้เอง (เหมือนกดบันทึกในเว็บ)'},
-  {k:'note',h:'หมายเหตุ',w:30,help:'เช่น เข้าประตู 3 · ต้องจองคิวก่อน'},
+  {k:'note',h:'หมายเหตุ',w:46,help:'เช่น เข้าประตู 3 · ต้องจองคิวก่อน · ข้อความยาวขึ้นบรรทัดใหม่ในช่องเอง'},
   {k:'central',h:'ค่ากลาง (กม.)',w:16,ro:1,get:c=>((CUST&&CUST.central||{})[c.dtc_poi_name]||[]).map(x=>x.km+(x.jt?' ('+x.jt+')':'')).join(' · ')},
   {k:'status',h:'สถานะ',w:22,ro:1,get:c=>c._plan?'ยังไม่ตั้งค่า (อยู่ในแพลน)':custState(c)[1]}];
 async function custXDownload(b){
@@ -1584,10 +1607,13 @@ async function custXDownload(b){
     const rows=CUST.customers.slice().sort((a,b)=>String(a.cust_name||'').localeCompare(String(b.cust_name||''),'th'))
       .concat(CUST.missing.map(x=>({cust_name:x.cust_name,_plan:1})));
     const aoa=[CX_COLS.map(x=>c(x.h+(x.ro?' (อ่านอย่างเดียว)':x.k==='cust_name'?' (ห้ามแก้ชื่อแถวเดิม)':''),sh)),CX_COLS.map(x=>c(x.ro?'_'+x.k:x.k,sk))];
-    rows.forEach((r,i)=>aoa.push(CX_COLS.map(x=>c(x.get?x.get(r):x.k==='pin'?r.dtc_poi_id:r[x.k],x.ro?sro:(x.k==='weight_basis'&&swb[r.weight_basis])||(i%2?sz:sd)))));
+    const swr=s=>Object.assign({},s,{alignment:{wrapText:true,vertical:'top'}}), ctr=s=>Object.assign({},s,{alignment:{horizontal:'center'}});
+    const scoa={font:F({bold:true,color:{rgb:'157A40'}}),fill:{fgColor:{rgb:'DCF3E3'}},border:bd,alignment:{horizontal:'center'}};   // COA ต้องแนบ = เขียว
+    rows.forEach((r,i)=>{ const b0=i%2?sz:sd; aoa.push(CX_COLS.map(x=>c(x.get?x.get(r):x.k==='pin'?r.dtc_poi_id:r[x.k],
+      x.ro?sro:(x.k==='weight_basis'&&swb[r.weight_basis])||(x.k==='need_coa'&&r.need_coa&&scoa)||(x.k==='note'?swr(b0):x.k==='filter_bags'||x.k==='need_coa'?ctr(b0):b0)))); });   // 📝 หมายเหตุ ตัดบรรทัด
     const ws={}; aoa.forEach((row,ri)=>row.forEach((cell,ci)=>{ ws[X.utils.encode_cell({r:ri,c:ci})]=cell; }));
     ws['!ref']=X.utils.encode_range({s:{r:0,c:0},e:{r:aoa.length-1,c:CX_COLS.length-1}});
-    ws['!cols']=CX_COLS.map(x=>({wch:x.w})); ws['!rows']=[{hpt:30},{hpt:13}]; ws['!freeze']={xSplit:1,ySplit:2};
+    ws['!cols']=CX_COLS.map(x=>({wch:x.w})); ws['!rows']=[{hpt:30},{hpt:13}].concat(rows.map(r=>({hpt:Math.max(16,15*Math.ceil(String(r.note||'').length/44))}))); ws['!freeze']={xSplit:1,ySplit:2};
     const help=[['วิธีใช้ไฟล์ ลูกค้า Bulk'],[''],
       ['1. แก้ในแผ่น "ลูกค้า Bulk" แล้วกด ⬆ อัปโหลด ในหน้า ฐานข้อมูล › ลูกค้า Bulk'],
       ['2. ห้ามแก้แถวที่ 2 (ชื่อคอลัมน์อังกฤษ) และชื่อลูกค้าของแถวเดิม — ระบบใช้ชื่อจับคู่ (ไม่มีรหัส SAP แล้ว) · เปลี่ยนชื่อลูกค้าทำในเว็บ'],
@@ -1695,6 +1721,10 @@ function editCust(c){
           <option value="origin"${c.weight_basis==='origin'?' selected':''}>ต้นทาง (ตาชั่ง SSB)</option>
           <option value="dest"${c.weight_basis==='dest'?' selected':''}>ปลายทาง (ตาชั่งลูกค้า)</option></select>
         <div class="hint">น้ำหนักที่ใช้ตกลงกับลูกค้า ยึดตาชั่งฝั่งไหน</div></div>
+      <div class="lb">เอกสารแนบใบขนส่ง</div>
+      <div><label class="ck"><input type="checkbox" id="eCoa"${c.need_coa?' checked':''}><span>ต้องแนบใบ COA<small>ใบขนส่ง FM-TR-01 ติ๊ก "ใบ COA" ให้เอง</small></span></label>
+        <label class="ck" style="align-items:center">ถุงกรอง <input type="number" id="eBags" min="0" max="99" step="1" value="${c.filter_bags==null?3:c.filter_bags}" style="width:80px;text-align:center"> ใบ
+          <small class="hint" style="margin:0">ค่าเริ่ม 3 · 0 = ไม่ใช้ · ผู้รับ = ชื่อคนขับ</small></label></div>
       <label for="eNote">หมายเหตุ</label>
       <textarea id="eNote" rows="2" placeholder="เช่น เข้าประตู 3 · ต้องจองคิวก่อน">${esc(c.note||'')}</textarea>
     </div></div>
@@ -1717,7 +1747,7 @@ function editCust(c){
     if(!pick&&!loc&&!confirmNoLoc()) return;
     const nm=$('eName').value.trim(); if(!nm){ toast('ใส่ชื่อลูกค้า',true); $('eName').focus(); return; }
     saveCust($('eYes'),{custCode:c.cust_code,custName:nm,poiId:pick,location:loc,radiusM:$('eRad').value,
-      hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,weightBasis:$('eWB').value,note:$('eNote').value.trim()},'บันทึก '+nm+' แล้ว'); };
+      hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,weightBasis:$('eWB').value,needCoa:$('eCoa').checked,filterBags:$('eBags').value===''?3:$('eBags').value,note:$('eNote').value.trim()},'บันทึก '+nm+' แล้ว'); };
   // ยังไม่มีพิกัด: เตือนครั้งแรก (ปุ่มเปลี่ยนเป็นยืนยัน) กดซ้ำ = บันทึกจริง
   function confirmNoLoc(){ const b=$('eYes'); if(b.dataset.warned) return true;
     b.dataset.warned='1'; b.textContent='บันทึกแบบไม่มีพิกัด'; toast('ยังไม่มีพิกัด — คนขับต้องกด "ถึงลูกค้า" เอง · กดบันทึกอีกครั้งเพื่อยืนยัน',true); return false; }
