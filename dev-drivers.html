@@ -174,13 +174,79 @@
   .gbox.no{border-left-color:var(--red);background:var(--red-bg)}
   .gbox a{color:var(--blue);font-weight:600;margin-left:8px;white-space:nowrap}
 
-  /* ── 24 พ.ย. แท็บฟอร์มของใคร (คนขับ / คนสวน / ทีมตัด) + ปุ่มหน้าต่างฟอร์ม ── */
-  .roles{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-  .rtab{display:flex;align-items:center;gap:9px;font:inherit;font-size:14px;font-weight:700;padding:10px 16px;border-radius:12px;background:var(--surface);border:1px solid var(--line);color:var(--ink-soft);cursor:pointer}
-  .rtab small{font-size:11.5px;font-weight:500;color:var(--ink-faint)}
-  .rtab:hover{border-color:var(--pine)}
-  .rtab[aria-selected="true"]{background:var(--pine-deep);border-color:var(--pine-deep);color:#fff}
-  .rtab[aria-selected="true"] small{color:#BFE3D8}
+  /* ── 25 พ.ย. แถบเมนูซ้ายกระจกเขียว (คนขับ / คนสวน / ทีมตัด) — skill webapp-glass-sidebar ใช้สี SSB ── */
+  :root{--glass:rgba(255,255,255,.6);--glass-2:rgba(255,255,255,.82);--glass-line:rgba(255,255,255,.9);
+    --glass-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 18px 40px -22px rgba(10,92,76,.38),0 2px 6px -3px rgba(10,92,76,.12);
+    --blob1:#A7DCC6;--blob2:#F1DDA6;--tg-bg:#fff;--tg-ink:#15241D}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--glass:rgba(21,32,25,.58);--glass-2:rgba(27,39,33,.86);--glass-line:rgba(120,200,170,.15);
+    --glass-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 20px 44px -24px rgba(0,0,0,.8);--blob1:#0F4D3C;--blob2:#4A3A12;--tg-bg:#E4EDE7;--tg-ink:#0D1512}}
+  :root[data-theme="dark"]{--glass:rgba(21,32,25,.58);--glass-2:rgba(27,39,33,.86);--glass-line:rgba(120,200,170,.15);
+    --glass-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 20px 44px -24px rgba(0,0,0,.8);--blob1:#0F4D3C;--blob2:#4A3A12;--tg-bg:#E4EDE7;--tg-ink:#0D1512}
+  body::before,body::after{content:'';position:fixed;z-index:-1;border-radius:50%;filter:blur(70px);opacity:.55;pointer-events:none}
+  body::before{width:42vw;height:42vw;left:-12vw;top:4vw;background:radial-gradient(circle,var(--blob1),transparent 68%)}
+  body::after{width:46vw;height:46vw;right:-16vw;bottom:-18vw;background:radial-gradient(circle,var(--blob2),transparent 66%)}
+  .dash{display:grid;grid-template-columns:236px minmax(0,1fr);max-width:1440px;margin:0 auto;position:relative;isolation:isolate}
+  .dash>main{max-width:none;margin:0;min-width:0}
+  .side{position:sticky;top:14px;align-self:start;z-index:5;margin:18px 0 18px 14px;max-height:calc(100vh - 28px);border-radius:26px;padding:18px 14px 14px;
+    display:flex;flex-direction:column;overflow:visible;background:var(--glass);border:1px solid var(--glass-line);box-shadow:var(--glass-shadow);
+    -webkit-backdrop-filter:blur(22px) saturate(170%);backdrop-filter:blur(22px) saturate(170%)}
+  .brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700;color:var(--ink);padding:2px 6px 14px;white-space:nowrap}
+  .brand .logo{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:16px;
+    background:linear-gradient(135deg,#3FA98F,#0A5C4C 65%,#073F34);box-shadow:0 6px 14px -6px rgba(10,92,76,.75),0 1px 0 rgba(255,255,255,.45) inset}
+  .brand small{display:block;font-size:11px;font-weight:500;color:var(--ink-faint);margin-top:1px}
+  .nsec{font-size:10.5px;font-weight:700;letter-spacing:.1em;color:var(--ink-faint);padding:0 8px 6px;white-space:nowrap}
+  .side nav{display:flex;flex-direction:column;overflow:auto;scrollbar-width:none;padding:6px 8px 10px;margin:0 -8px}
+  .side nav::-webkit-scrollbar{display:none}
+  .rtab{position:relative;display:flex;align-items:center;gap:10px;width:100%;text-align:left;font:inherit;padding:10px 12px;margin-bottom:5px;border-radius:14px;
+    border:1px solid transparent;background:none;color:var(--ink-soft);cursor:pointer;white-space:nowrap;
+    transition:background .2s,color .2s,transform .2s cubic-bezier(.22,1,.36,1),box-shadow .2s}
+  .rtab .ic{width:20px;flex:none;text-align:center;font-size:17px;line-height:1}
+  .rtab .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+  .rtab .tx b{font-size:14px;font-weight:700;color:var(--ink)}
+  .rtab .tx small{font-size:11px;font-weight:500;color:var(--ink-faint);overflow:hidden;text-overflow:ellipsis}
+  .rtab .bd{flex:none;min-width:22px;text-align:center;font-family:var(--mono);font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--amber-bg);color:var(--amber)}
+  .rtab .bd.z{background:var(--surface-3);color:var(--ink-faint);font-weight:500}
+  .rtab:hover{background:var(--glass-2);transform:translateX(3px);box-shadow:0 6px 16px -10px rgba(10,92,76,.35)}
+  .rtab[aria-selected="true"]{border-color:rgba(255,255,255,.3);background:linear-gradient(135deg,#1F8A6F,#0A5C4C);
+    box-shadow:0 10px 24px -8px rgba(10,92,76,.6),0 0 0 4px rgba(14,124,102,.14),0 1px 0 rgba(255,255,255,.35) inset}
+  .rtab[aria-selected="true"] .tx b{color:#fff}
+  .rtab[aria-selected="true"] .tx small{color:#BFE3D8}
+  .rtab[aria-selected="true"] .bd{background:rgba(255,255,255,.2);color:#fff}
+  .rtab[aria-selected="true"]:hover{transform:none}
+  .nav-toggle{position:absolute;right:-15px;top:20px;z-index:6;width:30px;height:30px;padding:0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    background:var(--tg-bg);color:var(--tg-ink);border:1px solid rgba(15,40,30,.08);box-shadow:0 6px 16px -6px rgba(10,40,28,.45),0 1px 0 rgba(255,255,255,.9) inset;
+    transition:transform .25s cubic-bezier(.22,1,.36,1),box-shadow .2s,color .2s}
+  .nav-toggle svg{transition:transform .3s cubic-bezier(.22,1,.36,1)}
+  .nav-toggle:hover{color:var(--pine);transform:scale(1.08)}
+  .dash.nav-collapsed .nav-toggle svg{transform:rotate(180deg)}
+  @media(min-width:721px){
+    .dash.nav-collapsed{grid-template-columns:90px minmax(0,1fr)}
+    .dash.nav-collapsed .side{width:76px;padding:18px 8px 14px;z-index:30;transition:width .28s cubic-bezier(.22,1,.36,1) .12s,box-shadow .2s,background .2s}
+    .dash.nav-collapsed .side:hover,.dash.nav-collapsed .side:has(:focus-visible){width:236px;background:var(--glass-2);box-shadow:var(--glass-shadow),0 24px 60px -20px rgba(10,92,76,.45)}
+    .dash.nav-collapsed .side:hover .nav-toggle svg,.dash.nav-collapsed .side:has(:focus-visible) .nav-toggle svg{transform:none}
+    .dash.nav-collapsed .brand{padding-left:13px;overflow:hidden;padding-bottom:28px;margin-bottom:-14px}
+    .dash.nav-collapsed .rtab{padding:10px 0 10px 18px;overflow:hidden}
+    .dash.nav-collapsed .rtab:hover{transform:none}
+    .dash.nav-collapsed .side .bt,.dash.nav-collapsed .side .nsec,.dash.nav-collapsed .rtab .tx,.dash.nav-collapsed .rtab .bd{opacity:0;transition:opacity .15s}
+    .dash.nav-collapsed .side:hover :is(.bt,.nsec,.tx,.bd),.dash.nav-collapsed .side:has(:focus-visible) :is(.bt,.nsec,.tx,.bd){opacity:1;transition:opacity .2s .25s}
+    /* หุบอยู่: เลขงานค้างเป็นจุดเล็กมุมไอคอน */
+    .dash.nav-collapsed .side:not(:hover):not(:has(:focus-visible)) .rtab .bd:not(.z){opacity:1;position:absolute;left:32px;top:3px;min-width:0;padding:0 5px;font-size:9.5px;line-height:15px}
+  }
+  @media(max-width:720px){
+    .dash{grid-template-columns:minmax(0,1fr)}
+    .side{position:static;min-width:0;margin:12px 12px 0;max-height:none;border-radius:20px;padding:10px}
+    .brand,.nsec,.nav-toggle{display:none}
+    .side{padding:8px 6px}
+    .side nav{flex-direction:row;gap:4px;overflow-x:auto;padding:4px 8px 6px}
+    .rtab{flex:1 1 0;min-width:max-content;justify-content:center;gap:5px;width:auto;margin:0;padding:8px 7px}
+    .rtab .ic{width:auto;font-size:15px}
+    .rtab .tx{flex:none}
+    .rtab .tx b{font-size:13px}
+    .rtab .tx small{display:none}
+    .rtab .bd{min-width:0;padding:1px 6px;font-size:10.5px}
+    .rtab:hover{transform:none}
+  }
+  @media(prefers-reduced-motion:reduce){.rtab,.nav-toggle,.nav-toggle svg,.dash.nav-collapsed .side{transition:none}.rtab:hover{transform:none}}
   .wins{display:grid;grid-template-columns:1fr 1fr;gap:9px;padding:14px 16px 0}
   .win{text-align:left;font:inherit;display:flex;flex-direction:column;gap:2px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
   .win b{font-size:14px}.win span{font-size:11.5px;color:var(--ink-faint)}
@@ -208,8 +274,13 @@
   <span id="cnt" style="font-size:12.5px;color:#BFE3D8"></span>
 </div></header>
 
+<div class="dash" id="dash">
+<aside class="side" id="side">
+  <div class="brand"><span class="logo">🛠️</span><span class="bt">Developer<small>ดูทุกฟอร์ม</small></span></div>
+  <div class="nsec">ฟอร์มของใคร</div>
+  <nav id="roles" role="tablist" aria-orientation="vertical" aria-label="ฟอร์มของใคร"></nav>
+</aside>
 <main>
-  <div class="roles" id="roles" role="tablist" aria-label="ฟอร์มของใคร"></div>
   <div class="hint" id="hint"></div>
   <div class="tools">
     <div id="chips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
@@ -218,6 +289,7 @@
   </div>
   <div class="list" id="list"><div class="ldr"><div class="ring"></div>กำลังโหลดรายชื่อคนขับ…</div></div>
 </main>
+</div>
 
 <div id="scrim"></div>
 <aside id="dw" role="dialog" aria-modal="true" tabindex="-1"></aside>
@@ -427,24 +499,46 @@ const HINT={
     งานที่ทีมนี้ตัด (team_code) ที่มีคนขับแล้ว จิ้มงาน = เปิดจอคนขับ + แผงแก้ไขแบบเดิม`};
 let ROLE=(()=>{ const q=new URLSearchParams(location.search).get('role'); if(ROLES.some(r=>r[0]===q)) return q;
   try{ const v=localStorage.getItem('ssb_dev_role'); if(ROLES.some(r=>r[0]===v)) return v; }catch(e){} return 'Driver'; })();
-const PEOPLE={}; let CUR_P=null, PJOBS=[];
+const PEOPLE={}, PEOPLE_P={}; let CUR_P=null, PJOBS=[], DRV_OK=false;
+/* เลขบนแท็บ = จำนวนคนที่มีงานค้าง (ยังไม่โหลด = ไม่โชว์) */
+function roleActive(k){ const a=k==='Driver'?(DRV_OK?DRIVERS:null):PEOPLE[k]; return a?a.filter(p=>p.active>0).length:null; }
 function drawRoles(){
-  $('#roles').innerHTML=ROLES.map(([k,t,d])=>`<button class="rtab" role="tab" aria-selected="${ROLE===k}" onclick="setRole('${k}')">${t}<small>${d}</small></button>`).join('');
+  $('#roles').innerHTML=ROLES.map(([k,t,d])=>{ const sp=t.indexOf(' '), ic=t.slice(0,sp), nm=t.slice(sp+1), n=roleActive(k);
+    return `<button class="rtab" role="tab" aria-selected="${ROLE===k}" title="${esc(nm)} — ${esc(d)}${n!=null?' · มีงานค้าง '+n:''}" onclick="setRole('${k}')">`
+      +`<span class="ic" aria-hidden="true">${ic}</span><span class="tx"><b>${esc(nm)}</b><small>${esc(d)}</small></span>`
+      +(n!=null?`<span class="bd${n?'':' z'}" aria-label="มีงานค้าง ${n}">${n}</span>`:'')+`</button>`; }).join('');
   $('#hint').innerHTML='<span style="font-size:15px">🛠️</span><div>'+HINT[ROLE]+'</div>';
   $('#q').placeholder=ROLE==='Driver'?'ค้นชื่อ / รหัส / ทะเบียน':'ค้นชื่อ / รหัส';
   $('#chips').style.display=ROLE==='Driver'?'flex':'none';
+}
+/* โหลดรายชื่อคนสวน/ทีม ครั้งเดียวต่อหน้า (ใช้ร่วมกันระหว่างกดแท็บกับโหลดเลขล่วงหน้า) */
+function getPeople(k){
+  if(PEOPLE[k]) return Promise.resolve({ok:true});
+  if(!PEOPLE_P[k]) PEOPLE_P[k]=apiGet({action:'people',role:k})
+    .then(r=>{ if(r&&r.ok){ PEOPLE[k]=r.people||[]; drawRoles(); } else delete PEOPLE_P[k]; return r||{}; })
+    .catch(e=>{ delete PEOPLE_P[k]; return {ok:false,error:'โหลดไม่สำเร็จ'}; });
+  return PEOPLE_P[k];
 }
 async function setRole(k){
   if(k===ROLE) return; ROLE=k; try{ localStorage.setItem('ssb_dev_role',k); }catch(e){}
   drawRoles(); $('#q').value='';
   if(k==='Driver'){ render(); return; }
   if(!PEOPLE[k]){ $('#list').innerHTML=ldr('กำลังโหลดรายชื่อ…'); $('#cnt').textContent='';
-    const r=await apiGet({action:'people',role:k});
+    const r=await getPeople(k);
     if(ROLE!==k) return;
-    if(!r.ok){ $('#list').innerHTML=`<div class="empty">${esc(r.error||'โหลดไม่สำเร็จ')}</div>`; return; }
-    PEOPLE[k]=r.people||[]; }
+    if(!r.ok){ $('#list').innerHTML=`<div class="empty">${esc(r.error||'โหลดไม่สำเร็จ')}</div>`; return; } }
   render();
 }
+/* ปุ่มหุบแถบเมนู (วงกลมลูกศรที่ขอบ) · จำสถานะในเครื่อง */
+(function(){
+  const dash=$('#dash'), side=$('#side'), b=document.createElement('button');
+  b.type='button'; b.className='nav-toggle'; b.title='ย่อ/ขยายเมนู'; b.setAttribute('aria-label','ย่อ/ขยายเมนู');
+  b.innerHTML='<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg>';
+  side.appendChild(b);
+  const set=c=>{ dash.classList.toggle('nav-collapsed',c); b.setAttribute('aria-expanded',c?'false':'true'); };
+  b.onclick=()=>{ const c=!dash.classList.contains('nav-collapsed'); set(c); try{ localStorage.setItem('ssb_dev_nav_collapsed',c?'1':'0'); }catch(e){} };
+  let c0=false; try{ c0=localStorage.getItem('ssb_dev_nav_collapsed')==='1'; }catch(e){} set(c0);
+})();
 function renderPeople(){
   const all=PEOPLE[ROLE]||[], q=$('#q').value.trim().toLowerCase(), oa=$('#onlyAct').checked;
   const rows=all.filter(p=>(!oa||p.active>0) && (!q||[p.name,p.code,p.sub].join(' ').toLowerCase().includes(q)))
@@ -512,9 +606,10 @@ async function load(){
   if(r.denied){ $('#gate').innerHTML='<div class="box"><div class="deny">🚫</div><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>หน้านี้สำหรับ DEV เท่านั้น</p></div>'; return; }
   $('#gate').style.display='none';
   if(!r.ok){ $('#list').innerHTML=`<div class="empty">${esc(r.error||'โหลดไม่สำเร็จ')}</div>`; return; }
-  DRIVERS=r.drivers||[];
+  DRIVERS=r.drivers||[]; DRV_OK=true;
+  ['Owner','Team'].forEach(k=>{ if(k!==ROLE) getPeople(k); });   // เลขงานค้างบนแท็บ (รายชื่อเล็ก โหลดครั้งเดียว)
   if(ROLE!=='Driver'){ const k=ROLE; ROLE='Driver'; setRole(k); return; }
-  render();
+  drawRoles(); render();
 }
 function render(){
   if(ROLE!=='Driver') return renderPeople();
