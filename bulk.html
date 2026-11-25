@@ -620,7 +620,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25c</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25d</span></div>
   </div>
   </div></main>
 </div>
@@ -1091,7 +1091,7 @@ function openTrip(j,pre,opt){
         <label>สถานที่จัดส่ง<input id="tDest" value="${esc(t.dest)}"${dis}></label>
         <label>ชนิดน้ำมัน *<input id="tProd" value="${esc(t.prod)}"${dis}></label>
         <label>จำนวน *<input id="tQty" value="${esc(t.qtyText)}" placeholder="30 = ตัน · หรือ 10 ถัง / 40,000 ลิตร"${dis}><small class="hint" id="tQtyH"></small></label>
-        <label>บิล<input id="tBill" value="${esc(t.bill)}"${dis}></label>
+        <label>บิล <small>(อักษรบริษัท + A/B)</small><input id="tBill" value="${esc(billCode({bill:t.bill,prod_name:t.prod}))}" maxlength="3" autocapitalize="characters"${dis}><small class="hint" id="tBillH"></small></label>
         <label>รอบ<input id="tRound" type="number" min="1" max="20" inputmode="numeric" value="${esc(t.roundNo)}"${dis}></label>
         <label>เวลาส่งสินค้า<input id="tTime" value="${esc(t.deliverTime)}" placeholder="ถึง 08.00 น."${dis}></label>
         <label>เลขที่ SO<input id="tSo" value="${esc(t.soNo)}"${dis}></label>
@@ -1165,6 +1165,14 @@ function openTrip(j,pre,opt){
     Q.onkeydown=e=>{ if(e.key==='Escape'){ const L=$('tCodeList'); if(L) L.hidden=true; } }; }
   if(!$('tCode').value&&!ro&&t.kind!=='pickup'){ const g=custGuess(t.custName); if(g){ $('tCode').value=g.cust_code; codeGuess=true; } }
   drawCode();
+  /* 🧾 25 พ.ย. คุณน้อง "รหัสบิลใบ 5 ส่วนต้องขึ้น 2 หลัก" — ช่องบิลโชว์/บันทึกเป็น อักษรบริษัท(ตามชนิดน้ำมัน) + A/B เช่น VA
+     เปลี่ยนชนิดน้ำมัน = เปลี่ยนอักษรบริษัทตาม (คงชนิด A/B) · ชนิดน้ำมันไม่อยู่ในฐาน = เหลือตัวเดียว + เตือนส้ม */
+  const billSync=re=>{ const el=$('tBill'), h=$('tBillH'); if(!el) return; const pr=$('tProd').value, p=prodOf(pr);
+    let b=el.value.trim().toUpperCase(); if(re&&/^[A-Z]{2}$/.test(b)) b=b.slice(1); if(!ro) el.value=billCode({bill:b,prod_name:pr});
+    const v=el.value.trim();
+    h.textContent=!v?'':/^[A-Z]{2}$/i.test(v)?((deptOf(v[0].toUpperCase())||{}).name||'')+(p&&p._guess?' · จับจากรหัสในชื่อน้ำมัน':''):'ชนิดน้ำมันยังไม่อยู่ในฐานข้อมูล — รหัสบิลยังไม่มีอักษรบริษัท';
+    h.style.color=/^[A-Z]{2}$/i.test(v)||!v?'':'var(--warn)'; };
+  if($('tBill')){ billSync(false); if(!ro){ $('tProd').addEventListener('change',()=>billSync(true)); $('tBill').addEventListener('change',()=>billSync(false)); } }
   $('tCust').addEventListener('change',()=>{ if($('tCode').value&&!codeGuess){ docSync(); return; } const c=custMatch($('tCust').value), g=c?null:custGuess($('tCust').value);
     if(c) setCode(c,false); else if(g) setCode(g.cust_code,true); else docSync(); });
   // 🧾 ค่าตั้งลูกค้า → ติ๊ก COA / ถุงกรอง ให้เอง (จนกว่าจะแก้เอง) · เที่ยวที่บันทึกแบบใหม่แล้วไม่แตะ
