@@ -3388,8 +3388,11 @@ function ypCov(a,b){const A=ypBig(a),B=ypBig(b);if(!A.size||!B.size)return 0;let
 function ypMatchPo(p){const o=p&&p.po;if(!o)return null;
   const src=[o.short,o.buyer,p.shop].map(x=>String(x||'').trim()).filter(Boolean);if(!src.length)return null;
   const first=x=>String(x||'').trim().split(/\s+/)[0]||'';
-  const C=ST.filter(x=>{if(tyOf({id:x.id})==='ห้าง')return false;const f=ypTone(first(x.n)),fl=ypLoose(first(x.n));if(fl.length<3)return false;
-    return src.some(z=>{const zl=ypLoose(first(z));return (zl.length>=3&&ypLoose(x.n).includes(zl))||ypCov(ypTone(z.split(/\s+/).slice(0,2).join('')),f)>=0.6;});});
+  /* 25 พ.ย. คุณน้อง "แก้เลย": PO โบว์เบเกอรี่เฮ้าส์ → ร้านสุภาพเบเกอร์ / เบสท์ ซัพพลาย 2015 → พัทยาเบสท์ฟูดส์ (ผิด) · ชื่อต้องอยู่ต้นชื่อจุด (ตัด บ./ร้าน/บริษัท ก่อน) ไม่ใช่กลางคำ
+     ตัวอักษรคล้าย (PO อ่านเพี้ยน ศรีธิคำ → ศรีธำคำ) ต้องขึ้นต้น 2 ตัวเหมือนกันด้วย · ไม่แน่ใจ = ไม่เดา ให้แอดมินเลือก */
+  const hd=x=>String(x||'').trim().replace(/^(บ\.|บมจ\.?|บจก\.?|หจก\.?|บริษัท|ร้าน)\s*/,'');
+  const C=ST.filter(x=>{if(tyOf({id:x.id})==='ห้าง')return false;const h=hd(x.n),f=ypTone(first(h)),fl=ypLoose(first(h));if(fl.length<3)return false;const nl=ypLoose(h);
+    return src.some(z=>{const zl=ypLoose(first(z)),zt=ypTone(z.split(/\s+/).slice(0,2).join(''));return (zl.length>=3&&nl.startsWith(zl))||(zt.slice(0,2)===f.slice(0,2)&&ypCov(zt,f)>=0.6);});});
   if(!C.length)return null;
   const br0=String(o.branch||'').trim(),br=ypLoose(br0);
   if(br.length<2)return C.length===1?C[0]:null;
