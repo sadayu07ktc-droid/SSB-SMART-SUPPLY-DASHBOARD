@@ -3304,10 +3304,19 @@ function ypNoSt(m){const p=m.p||{};if(p.pickup||m.sample)return false;if((YP.sel
 /* 23 พ.ย. คุณน้อง "วัชราวรรณสาขามาบยางพร / สาขาระยอง มันคนละที่นะ พิกัด" → ชื่อที่มี "สาขา…" ต้องเจอชื่อสาขานั้นในจุด · ชื่อสั้นที่อยู่ในหลายจุด = ไม่เดา
    loose=true = แบบเดิม (ไว้บอกว่า "มีชื่อคล้าย" เท่านั้น ห้ามใช้เป็นค่าเริ่มต้น) */
 const ypBrOk=(k,n)=>{const i=k.indexOf('สาขา');if(i<0)return true;const br=k.slice(i+4);return br.length<2||n.includes(br);};
-function ypMatch(shop,loose){const k=ypNorm(shop);if(k.length<3)return null;let best=null,wide=0;
+function ypMatch0(shop,loose){const k=ypNorm(shop);if(k.length<3)return null;let best=null,wide=0;
   ST.forEach(x=>{if(tyOf({id:x.id})==='ห้าง')return;const n=ypNorm(x.n);if(n.length<3)return;
     if(n===k||n.includes(k)||k.includes(n)){if(!loose&&n!==k&&!ypBrOk(k,n))return;if(n!==k&&n.includes(k))wide++;const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});
   if(!best)return null;if(!loose&&best.sc<1000&&wide>1)return null;return best.x;}
+/* 25 พ.ย. คุณน้อง "เคสชื่อลูกค้า 1 คนส่งหลายที่ ให้เซลส์พิมพ์ ชื่อลูกค้า เว้นวรรค สถานที่ส่ง → พิกัดระบุง่าย"
+   ชื่อเต็มไม่ตรงจุดไหน → แยก "ชื่อลูกค้า | สถานที่" ตรงช่องว่าง (ลองชื่อยาวสุดก่อน · วงเล็บ = ช่องว่าง) ต้องเจอทั้งสองส่วนในชื่อจุด
+   เช่น "ศรีธิคำ สะพานสี่" → ศรีธิคำมาร์เกตติ้ง สะพานสี่ · เจอหลายจุดเท่ากัน = ไม่เดา (ให้แอดมินเลือก) · ใช้ทั้งค่ากลาง (ST) และหมุด DTC (pinsOut) */
+function ypSpMatch(L,shop,isSt){const t=ypShopClean(shop).replace(/[()]/g,' ').trim().split(/\s+/).filter(Boolean);if(t.length<2)return null;
+  for(let i=t.length-1;i>=1;i--){const c=ypLoose(t.slice(0,i).join('')),w=ypLoose(t.slice(i).join(''));if(c.length<3||w.length<2)continue;
+    const H=L.filter(x=>{if(isSt&&tyOf({id:x.id})==='ห้าง')return false;const n=ypLoose(x.n),j=n.indexOf(c);return j>=0&&(n.slice(0,j)+n.slice(j+c.length)).includes(w);});
+    if(H.length===1)return H[0];if(H.length>1)return null;}
+  return null;}
+function ypMatch(shop,loose){const r=ypMatch0(shop,loose);return r||loose?r:ypSpMatch(ST,shop,true);}
 /* 📍 23 พ.ย. คุณน้อง "เซลส์ส่งชื่อร้านมา บางทีส่งหลายที่แล้วแต่รอบ → ฐาน PK ว่าร้านนี้ส่งที่ไหนบ้าง ขึ้นดรอปดาวน์"
    pk-yp v26 dests [[ชื่อร้าน ypNorm, central_distances.id, ครั้ง, ล่าสุด]] (ตาราง pk_shop_dests) · ระบบจำเองตอนกด ลงแพลน ด้วยสถานีค่ากลาง */
 function ypDestsSet(a){const M=new Map();(a||[]).forEach(([k,id,n,at])=>{if(!M.has(k))M.set(k,[]);M.get(k).push({id:+id,n:+n||0,at:at||''});});YP.dests=M;}
@@ -3317,8 +3326,9 @@ function ypDests(shop){if(shop&&typeof shop==='object'){const p=shop,to=ypPoTo(p
   const L=YP.dests.get(ypNorm(shop))||[];return L.map(d=>({x:ST.find(y=>y.id===d.id),n:d.n,at:d.at})).filter(d=>d.x).sort((a,b)=>b.n-a.n||String(b.at).localeCompare(String(a.at)));}
 function ypDestHit(shop,id){const k=ypNorm(shop);if(!k||!id)return;const L=YP.dests.get(k)||[];const d=L.find(y=>y.id===id);if(d){d.n++;d.at=new Date().toISOString();}else L.push({id,n:1,at:new Date().toISOString()});YP.dests.set(k,L);}
 /* 23 พ.ย. คุณน้อง "ให้แมชจาก DTC เลย แล้วขึ้นฟ้องว่ายังไม่ดึงเข้าค่ากลาง" · pk-yp list.pinsOut = หมุดลูกค้า DTC ที่ยังไม่มีแถวในค่ากลาง */
-function ypPinOut(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=null;
+function ypPinOut0(shop){const k=ypNorm(shop);if(k.length<3)return null;let best=null;
   YP.pinsOut.forEach(x=>{const n=ypNorm(x.n);if(n.length<3)return;if(n===k||n.includes(k)||k.includes(n)){if(n!==k&&!ypBrOk(k,n))return;const sc=(n===k?1000:0)+Math.min(n.length,k.length);if(!best||sc>best.sc)best={x,sc};}});return best?best.x:null;}
+const ypPinOut=shop=>ypPinOut0(shop)||ypSpMatch(YP.pinsOut||[],shop,false);
 const ypMap=ll=>'https://www.google.com/maps?q='+encodeURIComponent(String(ll||'').replace(/\s+/g,''));
 /* ค่าเริ่มต้นช่องจุดส่ง: PO ตรงสาขา → เคยส่งที่เดียว → ชื่อตรงในค่ากลาง (ถ้าเคยส่งหลายที่ ต้องอยู่ในนั้น ไม่งั้นให้แอดมินเลือก) */
 function ypDefSt(p){const to=ypPoTo(p);if(to){const pd=ypDests(p.shop+'@'+to);if(pd.length===1)return pd[0].x;if(pd.length>1)return null;}const po=p.po&&ypMatchPo(p);if(po)return po;const ds=ypDests(p.shop);if(ds.length===1)return ds[0].x;const h=ypMatch(p.shop);if(!ds.length)return h;return h&&ds.some(d=>d.x.id===h.id)?h:null;}
@@ -3837,6 +3847,12 @@ async function ypPlan(m,card,btn){const p=m.p||{},head=card.querySelector('[data
 function ypShopClean(sh){let t=String(sh||'').trim();for(;;){const u=t.replace(/^\s*(แก้ไข|เพิ่มออเดอร์|เพิ่ม|ออเดอร์|จำนวน)\s*/,'');if(u===t)break;t=u;}
   return !t||/^[*#]/.test(t)||/แจ้งราคา|เนื่องจาก|ไม่มีของ/.test(t)?'':t;}
 const ypDestMsg=x=>x.kind==='new'?'จำจุดส่งใหม่':x.kind==='same'?'ระบบจำไว้แล้ว':String(x.msg||'').replace('+ ผูก','+ จำจุดส่ง');
+/* 25 พ.ย. คุณน้อง "สถานที่ในไฟล์ Excel ต้องอัปเดตทุกวัน แอดมินเพิ่มหมุดใหม่ เปลี่ยนชื่อตลอด" → ไฟล์สร้างสดทุกครั้งที่กด · บอกเวลาหมุด DTC อัปเดตล่าสุด (pk-yp v30 poiAt)
+   เกิน 30 ชม. = เตือน (รอบดึงหมุดทุกคืน 02:00 ไม่ได้รัน) */
+function ypPoiAge(x){const t=Date.parse(x&&x.poiAt||'');if(!t)return {txt:'',old:false};
+  return {txt:new Date(t).toLocaleString('th-TH',{day:'numeric',month:'short',year:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:'Asia/Bangkok'}),old:Date.now()-t>30*3600e3};}
+/* 25 พ.ย. คุณน้อง "ชื่อลูกค้าที่เซลส์แจ้งในไลน์ (ไม่ใช่ PO) 1 คนอาจส่งหลายที่ หรือเปิดบิลอีกชื่อ → ระบุชื่อที่เปิดบิล · ส่งหลายที่ = ชื่อลูกค้า เว้นวรรค สถานที่ส่ง พิกัดจะระบุง่าย" */
+const YP_NAME_RULE='📌 การพิมพ์ชื่อลูกค้า (บรรทัดแรกของออเดอร์)\n1) ใช้ชื่อที่เปิดบิล\n2) ลูกค้าที่ส่งหลายที่ พิมพ์ ชื่อลูกค้า เว้นวรรค สถานที่ส่ง\n   เช่น ศรีธิคำ สะพานสี่ / ศรีธิคำ ตลาดอมร\nระบบจะเลือกพิกัดจุดส่งให้เอง';
 async function ypDestData(){const now=Date.now();if(ypDestData.d&&now-ypDestData.t<60e3)return ypDestData.d;
   const x=await fetch(ypUrl()+'?action=dests&userId='+encodeURIComponent(MY_UID)+'&t='+now).then(z=>z.json());if(!x.ok)throw new Error(x.error||'โหลดฐานจุดส่งไม่ได้');
   ypDestData.d=x;ypDestData.t=now;yrLocLoad.d={by:new Map((x.pins||[]).map(([id,n,ll,k])=>[n,{id,n,ll,k}]))};yrLocLoad.t=now;return x;}
@@ -3856,7 +3872,7 @@ function ypDestRows(x){const P=new Map((x.pins||[]).map(([id,n,ll,k])=>[n,{id,n,
       :row('','','',null,'','ยังไม่มีหมุด · ปักหมุด DTC ก่อน'));});
   ex.sort((a,b)=>a[0].localeCompare(b[0],'th')||String(a[2]).localeCompare(String(b[2]),'th'));return out.concat(ex);}
 const YPD_COLS=[{h:'ร้าน (ชื่อที่เซลส์พิมพ์)',x:30},{h:'PO (อ้างอิง)',x:20},{h:'สถานที่ส่งตาม PO',x:24},{h:'รหัสหมุด DTC',x:14,a:'center'},{h:'กม. หมุดใหม่ (เที่ยวเดียว)',x:14},{h:'หมายเหตุ',x:18},{h:'ชื่อหมุด DTC (อ้างอิง)',x:32},{h:'จุดในค่ากลาง (อ้างอิง)',x:32},{h:'กม. ค่ากลาง',x:10},{h:'ลงแพลนผ่านระบบ (ครั้ง)',x:13},{h:'พิกัด',x:22},{h:'สถานะ',x:30,a:'center'}];
-async function ypDestXlsx(x){const R=ypDestRows(x),c=t=>R.filter(r=>r[11]===t).length;
+async function ypDestXlsx(x){const R=ypDestRows(x),c=t=>R.filter(r=>r[11]===t).length,pa=ypPoiAge(x);
   const pins=(x.pins||[]).filter(p=>/^ลูกค้า/.test(p[3])).sort((a,b)=>a[1].localeCompare(b[1],'th'));
   const help=['0) “ระบบจำจุดส่ง” = ชื่อร้านที่เซลส์พิมพ์ ↔ จุดส่งในค่ากลาง · ครั้งหน้าการ์ดเติมจุดส่งให้เอง (หลายจุด = ดรอปดาวน์) · จำได้ 2 ทาง: แอดมินกด ลงแพลน บนการ์ด / DEV อัปโหลดไฟล์นี้',
     '1) ชีต “จุดส่งร้าน” · 1 แถว = 1 จุดส่ง · ร้านที่ส่ง 3 ที่ = 3 แถว ชื่อร้านเหมือนกัน',
@@ -3866,9 +3882,11 @@ async function ypDestXlsx(x){const R=ypDestRows(x),c=t=>R.filter(r=>r[11]===t).l
     '4) กม. หมุดใหม่ = ใส่เฉพาะหมุดที่ยังไม่อยู่ในค่ากลาง · ระบบสร้างแถวค่ากลาง (Packing) ให้ · กม.เต็ม เที่ยวเดียว เหมือนหน้าค่ากลาง',
     '5) อัปโหลดได้เฉพาะ DEV · ก่อนบันทึกมี popup สรุป จำใหม่ / จำไว้แล้ว / ผิด ให้ตรวจ',
     '6) อัปโหลด = เพิ่มอย่างเดียว ไม่ลบของเดิม · ลบจุดที่ผิดใช้ปุ่ม ✕ บนการ์ดออเดอร์',
-    '7) ตอนลงแพลน การ์ดของร้านที่มีหลายจุดจะขึ้นดรอปดาวน์ให้เลือกจุดส่งรอบนั้น'];
+    '7) ตอนลงแพลน การ์ดของร้านที่มีหลายจุดจะขึ้นดรอปดาวน์ให้เลือกจุดส่งรอบนั้น',
+    '8) ไฟล์นี้สร้างจากข้อมูลล่าสุดทุกครั้งที่กดดาวน์โหลด · หมุด DTC ดึงทุกคืนตี 2 (ชื่อในค่ากลางเปลี่ยนตามตี 2:10) · แอดมินเพิ่ม/เปลี่ยนชื่อหมุดบ่อย = ดาวน์โหลดใหม่ทุกวัน อย่าใช้ไฟล์เก่า'+(pa.txt?' · ไฟล์นี้ใช้หมุด ณ '+pa.txt:''),
+    '9) กติกาชื่อลูกค้าให้เซลส์ (ออเดอร์ไลน์ที่ไม่ใช่ PO): บรรทัดแรก = ชื่อที่เปิดบิล · ส่งหลายที่ = ชื่อลูกค้า เว้นวรรค สถานที่ส่ง (เช่น ศรีธิคำ สะพานสี่) → ระบบเลือกจุดที่มีทั้ง 2 คำให้เอง'];
   await drXlsx([
-    {name:'จุดส่งร้าน',emoji:'📍',title:'จุดส่งของร้าน (ร้านเดียวหลายที่)',sub:'1 แถว = 1 จุดส่ง · อ่านกลับเฉพาะ ร้าน / สถานที่ส่งตาม PO / รหัสหมุด / กม. หมุดใหม่',period:'ทั้งหมด',status:11,
+    {name:'จุดส่งร้าน',emoji:'📍',title:'จุดส่งของร้าน (ร้านเดียวหลายที่)',sub:'1 แถว = 1 จุดส่ง · อ่านกลับเฉพาะ ร้าน / สถานที่ส่งตาม PO / รหัสหมุด / กม. หมุดใหม่'+(pa.txt?' · หมุด DTC ณ '+pa.txt:''),period:'ทั้งหมด',status:11,
       kpis:[['จุดส่งที่ระบบจำแล้ว',c('ระบบจำแล้ว')],['ร้านที่ระบบจำจุดส่งแล้ว',new Set(x.rows.map(r=>r.key)).size],['ร้านที่ระบบยังไม่รู้จุดส่ง',R.length-c('ระบบจำแล้ว')-c('จุดนี้ปิดใช้งาน')],['ชื่อมีสาขา · กรอกเอง',c('ชื่อมีสาขา · กรอกรหัสหมุดเอง')]],
       cols:YPD_COLS,rows:R,foot:'※ อัปโหลดกลับได้เฉพาะ DEV · อ่านเฉพาะ 3 ช่องแรก · ไม่ลบของเดิม · ดูชีต “วิธีใช้”'},
     {name:'หมุดลูกค้า DTC',emoji:'📌',title:'หมุดลูกค้า DTC (ไว้ค้นรหัส ST)',sub:'คัดลอกรหัสไปใส่ชีตจุดส่งร้าน',period:'ทั้งหมด',status:4,
@@ -3877,16 +3895,20 @@ async function ypDestXlsx(x){const R=ypDestRows(x),c=t=>R.filter(r=>r[11]===t).l
     {name:'วิธีใช้',emoji:'📖',title:'วิธีใช้ไฟล์จุดส่งร้าน',sub:'ดาวน์โหลด = แอดมิน · อัปโหลด = DEV',period:'—',cols:[{h:'ขั้นตอน',x:130}],rows:help.map(t=>[t])}],
     'จุดส่งร้าน_'+yrStamp());}
 async function ypDestOpen(btn){let x;if(btn)btn.disabled=true;try{x=await ypDestData();}catch(e){toast('❌ '+(e.message||e));return;}finally{if(btn)btn.disabled=false;}
-  const nShop=new Set(x.rows.map(r=>r.key)).size,ov=document.createElement('div');ov.className='mov';
+  const nShop=new Set(x.rows.map(r=>r.key)).size,pa=ypPoiAge(x),ov=document.createElement('div');ov.className='mov';
   ov.innerHTML='<div class="mbox" role="dialog" aria-modal="true" aria-label="จุดส่งของร้าน" style="max-width:500px;padding:18px">'
     +'<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><b style="flex:1;font-size:16px">📍 จุดส่งของร้าน (ร้านเดียวหลายที่)</b><button type="button" data-x aria-label="ปิด" style="border:0;background:none;font-size:20px;color:var(--muted);cursor:pointer">✕</button></div>'
-    +'<div style="font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:12px">ระบบจำจุดส่งแล้ว <b style="color:var(--ink)">'+nShop+' ร้าน · '+x.rows.length+' จุด</b><br>ไฟล์มีร้านที่ระบบจำแล้ว + ร้านในออเดอร์ส่งเองที่ระบบยังไม่รู้จุดส่ง · 1 แถว = 1 จุดส่ง (ร้านที่ส่ง 3 ที่ = 3 แถว)</div>'
+    +'<div style="font-size:12.5px;color:var(--muted);line-height:1.65;margin-bottom:12px">ระบบจำจุดส่งแล้ว <b style="color:var(--ink)">'+nShop+' ร้าน · '+x.rows.length+' จุด</b><br>ไฟล์มีร้านที่ระบบจำแล้ว + ร้านในออเดอร์ส่งเองที่ระบบยังไม่รู้จุดส่ง · 1 แถว = 1 จุดส่ง (ร้านที่ส่ง 3 ที่ = 3 แถว)'
+    +(pa.txt?'<br><span style="color:'+(pa.old?'#a32d2d':'var(--ink)')+'">'+(pa.old?'⚠ ':'🕘 ')+'หมุด DTC อัปเดตล่าสุด <b>'+esc(pa.txt)+'</b></span>'+(pa.old?' · เกิน 1 วัน แจ้ง DEV กด 📍 ดึงหมุดล่าสุด':' · ดึงจาก DTC ทุกคืนตี 2 · ไฟล์สร้างใหม่ทุกครั้งที่กด ดาวน์โหลดใหม่ทุกวัน'):'')+'</div>'
     +'<div style="display:flex;gap:8px"><button type="button" class="btn" data-dl style="flex:1;padding:12px">⬇ ดาวน์โหลด Excel</button>'
     +'<button type="button" class="btn pri" data-ul style="flex:1;padding:12px"'+(x.canImport?'':' disabled title="อัปโหลดได้เฉพาะ DEV"')+'>⬆ อัปโหลด'+(x.canImport?'':' (เฉพาะ DEV)')+'</button></div>'
+    +'<div style="margin-top:12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font-size:12.5px;line-height:1.6"><div style="display:flex;align-items:center;gap:8px;margin-bottom:4px"><b style="flex:1">📌 กติกาชื่อลูกค้าให้เซลส์ (ออเดอร์ไลน์ที่ไม่ใช่ PO)</b><button type="button" class="btn" data-cp style="padding:4px 10px;font-size:12px">คัดลอกส่งเซลส์</button></div>'
+    +'1) บรรทัดแรก = <b>ชื่อที่เปิดบิล</b><br>2) ส่งหลายที่ = <b>ชื่อลูกค้า เว้นวรรค สถานที่ส่ง</b> เช่น “ศรีธิคำ สะพานสี่” → ระบบเลือกจุดในค่ากลาง/หมุด DTC ที่มีทั้ง 2 คำให้เอง</div>'
     +'<input type="file" accept=".xlsx,.xls" hidden data-f>'
     +'<div style="font-size:11.5px;color:var(--muted);margin-top:10px">'+(x.canImport?'อัปโหลด = เพิ่มอย่างเดียว ไม่ลบของเดิม · ตรวจก่อนบันทึกทุกครั้ง':'แอดมินดาวน์โหลด กรอกรหัสหมุด แล้วส่งไฟล์ให้ DEV อัปโหลด')+'</div></div>';
   document.body.appendChild(ov);const close=()=>ov.remove();ov.onclick=e=>{if(e.target===ov)close();};ov.querySelector('[data-x]').onclick=close;
   ov.querySelector('[data-dl]').onclick=async e=>{const b=e.currentTarget;b.disabled=true;try{await ypDestXlsx(x);}catch(er){toast('❌ ดาวน์โหลดไม่สำเร็จ: '+(er.message||er));}finally{b.disabled=false;}};
+  ov.querySelector('[data-cp]').onclick=async e=>{const b=e.currentTarget;try{await navigator.clipboard.writeText(YP_NAME_RULE);}catch(er){const t=document.createElement('textarea');t.value=YP_NAME_RULE;document.body.appendChild(t);t.select();try{document.execCommand('copy');}catch(e2){}t.remove();}b.textContent='คัดลอกแล้ว ✓';toast('คัดลอกข้อความแล้ว · วางในกลุ่มไลน์เซลส์ได้เลย');};
   const f=ov.querySelector('[data-f]');ov.querySelector('[data-ul]').onclick=()=>f.click();
   f.onchange=async()=>{const file=f.files[0];f.value='';if(!file)return;close();await ypDestUpload(file);};}
 function ypDestParse(A){const hi=A.findIndex(r=>r.some(v=>/^ร้าน/.test(String(v).trim()))&&r.some(v=>/รหัสหมุด/.test(String(v))));
