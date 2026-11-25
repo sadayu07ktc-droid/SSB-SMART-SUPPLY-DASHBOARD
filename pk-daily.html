@@ -157,6 +157,11 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 .ypa label.ypneed>.in,.ypa label.ypneed .ypds>.in{border:2px solid var(--warn);background:var(--warnbg)}
 .ypa label.ypnocd>.in{border:2px dashed var(--warn)}
 .ypa label.ypnocd .ypreq.nocd{display:inline-block}
+/* 25 พ.ย. คุณน้อง "โชว ST บวก ค่ากลาง ด้วย" · บรรทัดใต้ช่องจุดส่ง */
+.ypa .ypsti{display:flex;flex-wrap:wrap;gap:6px;font-size:12px;color:var(--muted)}
+.ypa .ypsti:empty{display:none}
+.ypa .ypsti b{font-weight:700;color:var(--ink,inherit);font-variant-numeric:tabular-nums}
+.ypa .ypsti .no{color:var(--warn);font-weight:700}
 .ypds{display:flex;gap:6px;align-items:center}.ypds select{flex:1;min-width:0;border-color:var(--brand)}.ypds .btn{flex:none;padding:6px 10px}
 .ypb{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .tchip.ypk{background:var(--infobg);color:var(--info);border-color:color-mix(in srgb,var(--info) 35%,transparent);font-size:12px;vertical-align:2px}
@@ -1624,7 +1629,7 @@ async function jHpSync(j){if(!frLive()||!j.fr||!j.fr.rid||!/^PKR-/.test(j.fr.rid
 const MPIN={by:null,all:[],at:0,busy:false};
 function mpinLoad(){if(MPIN.busy||(MPIN.at&&Date.now()-MPIN.at<600e3))return;MPIN.busy=true;
   ypDestData().then(x=>{MPIN.all=x.pins||[];MPIN.by=new Map(MPIN.all.map(([id,n,ll,k])=>[n,{id,n,ll,k}]));}).catch(e=>{console.warn('mpin',e);})
-    .finally(()=>{MPIN.busy=false;MPIN.at=Date.now();const q=$('jsq');if(JE&&JE.j&&q&&JE.q){const p=q.selectionStart;syncJ();drawJob();const n=$('jsq');if(n){n.focus();n.setSelectionRange(p,p);}}});}
+    .finally(()=>{MPIN.busy=false;MPIN.at=Date.now();document.querySelectorAll('#ypDr .ypc').forEach(c=>{try{ypNeedSync(c);}catch(e){}});const q=$('jsq');if(JE&&JE.j&&q&&JE.q){const p=q.selectionStart;syncJ();drawJob();const n=$('jsq');if(n){n.focus();n.setSelectionRange(p,p);}}});}
 function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   let h='<aside class="drawer" aria-label="งานห้าง '+esc(j.id)+'"><div class="dh"><div><div class="stc">'+(j.isNew?'<span class="rv w">งานใหม่</span>':jstPill(j))+'</div><h3>'+esc(j.id)+' · งานห้าง</h3><div class="m">'+esc(SZL[j.size])+(j.head?' · '+esc(plOf(j.head)):' · ยังไม่มีทะเบียน')+'</div></div><button class="x" id="jx" aria-label="ปิด">✕</button></div><div class="db">';
   h+='<div class="box"><span class="lb">① ขนาดรถ</span><div class="seg">'+SIZES.map(z=>'<button data-sz="'+z+'" class="'+(j.size===z?'on':'')+'">'+SZL[z]+'</button>').join('')+'</div>'
@@ -3974,10 +3979,16 @@ async function ypDestUpload(file){let rows,pv;
   try{const r=await ypDestPost({action:'destsImport',rows,commit:true});ypDestData.d=null;
     toast('✅ ระบบจำจุดส่งแล้ว '+r.saved+' จุด'+(r.pinned?' · ผูกหมุด (ยังไม่มีค่ากลาง) '+r.pinned+' ร้าน':'')+(r.created?' · สร้างแถวค่ากลางใหม่ '+r.created+' จุด (รีเฟรชหน้าเพื่อให้ขึ้นในรายชื่อจุดส่ง)':''));YP.pend=1;ypLoad();}
   catch(e){toast('❌ บันทึกไม่สำเร็จ: '+(e.message||e));}}
+function ypStInfo(v){v=String(v||'').trim();if(!v)return '';const st=ST.find(y=>y.n===v),A=(MPIN.by&&MPIN.by.get(v))||(YP.pinsOut||[]).find(y=>y.n===v)||[...YP.spins.values()].flat().find(y=>y.n===v);
+  const pin=A?'<span>📍 <b>'+esc(A.id)+'</b></span>':MPIN.by?'<span class="no">ไม่มีหมุดชื่อตรง</span>':'';
+  const km=st?(st.km!=null&&st.km!==''?'<span>ค่ากลาง <b>'+esc(st.km)+'</b> กม.</span>':'<span class="no">ค่ากลางยังไม่มี กม.</span>'):'<span class="no">ยังไม่มีค่ากลาง</span>';
+  return pin+km;}
 function ypNeedSync(card){[['[data-ypst]',1],['[data-ypdrv]',0],['[data-ypveh]',0]].forEach(([q,isSt])=>{const el=card.querySelector(q),lb=el&&el.closest('label');if(!lb)return;
     if(!lb.querySelector('.yplt')){const t=[...lb.childNodes].find(n=>n.nodeType===3&&n.textContent.trim());if(!t)return;const sp=document.createElement('span');sp.className='yplt';
       sp.innerHTML=esc(t.textContent.trim())+' <i class="ypreq need">ต้องกรอก</i>'+(isSt?'<i class="ypreq nocd">ยังไม่มีค่ากลาง</i>':'');lb.replaceChild(sp,t);}
-    const v=String(el.value||'').trim();lb.classList.toggle('ypneed',!v);if(isSt)lb.classList.toggle('ypnocd',!!v&&!ST.some(y=>y.n===v));});}
+    const v=String(el.value||'').trim();lb.classList.toggle('ypneed',!v);if(isSt){lb.classList.toggle('ypnocd',!!v&&!ST.some(y=>y.n===v));
+      let ii=lb.querySelector('.ypsti');if(!ii){ii=document.createElement('span');ii.className='ypsti';lb.appendChild(ii);}ii.innerHTML=ypStInfo(v);}});
+  if(!MPIN.by&&ypLive())mpinLoad();}
 async function ypPinDel(m,poi,btn){const p=m.p||{},L=ypShopPins(p),x=L.find(y=>y.id===poi);if(!x)return;
   if(!(await askModal({icon:'📌',title:'เอาหมุดออกจากร้านนี้?',html:'<p>ร้าน <b>'+esc(p.shop||'')+'</b><br>จะไม่ดึงหมุด <b>'+esc(x.n)+'</b> ('+esc(x.id)+') มาให้อีก<br><span class="note">ไม่กระทบแพลน/ออเดอร์ที่ลงไปแล้ว · ผูกใหม่ได้ด้วยไฟล์ 📍 จุดส่งร้าน</span></p>',ok:'เอาออก',cancel:'ไม่เอาออก',danger:1})))return;
   const to=ypPoTo(p),keys=[to?ypNorm(p.shop+'@'+to):'',ypNorm(p.shop)].filter(k=>k&&(YP.spins.get(k)||[]).some(y=>y.id===poi));btn.disabled=true;
