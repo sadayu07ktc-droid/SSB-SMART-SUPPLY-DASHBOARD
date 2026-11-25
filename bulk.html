@@ -613,7 +613,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25a</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25b</span></div>
   </div>
   </div></main>
 </div>
@@ -1583,13 +1583,13 @@ const CX_COLS=[
   {k:'pin_name',h:'ชื่อหมุด DTC',w:18,ro:1,get:c=>c.dtc_poi_name||''},
   {k:'dtc_loc',h:'พิกัดหมุด DTC',w:22,ro:1,get:c=>c.dtc_location||''},
   {k:'location',h:'พิกัดกรอกเอง',w:24,help:'lat,lng เช่น 13.157902,101.333302 หรือลิงก์ Google Maps · ใส่แล้วใช้แทนหมุด DTC'},
-  {k:'radius_m',h:'รัศมีเช็คอิน (ม.)',w:12,help:'50–5000 · ว่าง = 300 ม. เท่ารถไร่'},
-  {k:'has_dest_scale',h:'ตาชั่งปลายทาง',w:12,get:c=>c._plan?'':c.has_dest_scale?'มี':'ไม่มี',help:'มี / ไม่มี'},
-  {k:'need_slip_out',h:'ใบชั่งตอนออก',w:12,get:c=>c._plan?'':c.need_slip_out?'ต้องมี':'ไม่ต้อง',help:'ต้องมี / ไม่ต้อง'},
-  {k:'weight_basis',h:'ยึดน้ำหนัก',w:12,get:c=>c._plan?'':WB_TH[c.weight_basis]||'',help:'ต้นทาง (ตาชั่ง SSB) / ปลายทาง (ตาชั่งลูกค้า) · ว่าง = คงค่าเดิม / ยังไม่ระบุ'},
-  {k:'need_coa',h:'แนบใบ COA',w:12,get:c=>c._plan?'':c.need_coa?'ต้องแนบ':'ไม่ต้อง',help:'ต้องแนบ / ไม่ต้อง · ต้องแนบ = ใบขนส่งติ๊ก "ใบ COA" ให้เอง'},
-  {k:'filter_bags',h:'ถุงกรอง (ใบ)',w:11,get:c=>c._plan?'':String(c.filter_bags==null?3:c.filter_bags),help:'ตัวเลข 0–99 · ค่าเริ่ม 3 ทุกลูกค้า · 0 = ไม่ใช้ถุงกรอง · ใบขนส่งเติมจำนวนให้เอง ผู้รับ = ชื่อคนขับ'},
-  {k:'confirm',h:'ยืนยันหมุด',w:12,get:c=>c._plan?'':/^auto/.test(c.match_note||'')?'รอยืนยัน':'ยืนยันแล้ว',help:'ยืนยันแล้ว / รอยืนยัน · แก้หมุดหรือพิกัด = ยืนยันให้เอง (เหมือนกดบันทึกในเว็บ)'},
+  {k:'radius_m',h:'รัศมีเช็คอิน (ม.)',w:12,dv:{min:50,max:5000},help:'50–5000 · ว่าง = 300 ม. เท่ารถไร่'},
+  {k:'has_dest_scale',h:'ตาชั่งปลายทาง',w:12,dv:{list:['มี','ไม่มี']},get:c=>c._plan?'':c.has_dest_scale?'มี':'ไม่มี',help:'มี / ไม่มี'},
+  {k:'need_slip_out',h:'ใบชั่งตอนออก',w:12,dv:{list:['ต้องมี','ไม่ต้อง']},get:c=>c._plan?'':c.need_slip_out?'ต้องมี':'ไม่ต้อง',help:'ต้องมี / ไม่ต้อง'},
+  {k:'weight_basis',h:'ยึดน้ำหนัก',w:12,dv:{list:['ต้นทาง','ปลายทาง']},get:c=>c._plan?'':WB_TH[c.weight_basis]||'',help:'ต้นทาง (ตาชั่ง SSB) / ปลายทาง (ตาชั่งลูกค้า) · ว่าง = คงค่าเดิม / ยังไม่ระบุ'},
+  {k:'need_coa',h:'แนบใบ COA',w:12,dv:{list:['ต้องแนบ','ไม่ต้อง']},get:c=>c._plan?'':c.need_coa?'ต้องแนบ':'ไม่ต้อง',help:'ต้องแนบ / ไม่ต้อง · ต้องแนบ = ใบขนส่งติ๊ก "ใบ COA" ให้เอง'},
+  {k:'filter_bags',h:'ถุงกรอง (ใบ)',w:11,dv:{min:0,max:99},get:c=>c._plan?'':String(c.filter_bags==null?3:c.filter_bags),help:'ตัวเลข 0–99 · ค่าเริ่ม 3 ทุกลูกค้า · 0 = ไม่ใช้ถุงกรอง · ใบขนส่งเติมจำนวนให้เอง ผู้รับ = ชื่อคนขับ'},
+  {k:'confirm',h:'ยืนยันหมุด',w:12,dv:{list:['ยืนยันแล้ว','รอยืนยัน']},get:c=>c._plan?'':/^auto/.test(c.match_note||'')?'รอยืนยัน':'ยืนยันแล้ว',help:'ยืนยันแล้ว / รอยืนยัน · แก้หมุดหรือพิกัด = ยืนยันให้เอง (เหมือนกดบันทึกในเว็บ)'},
   {k:'note',h:'หมายเหตุ',w:46,help:'เช่น เข้าประตู 3 · ต้องจองคิวก่อน · ข้อความยาวขึ้นบรรทัดใหม่ในช่องเอง'},
   {k:'central',h:'ค่ากลาง (กม.)',w:16,ro:1,get:c=>((CUST&&CUST.central||{})[c.dtc_poi_name]||[]).map(x=>x.km+(x.jt?' ('+x.jt+')':'')).join(' · ')},
   {k:'status',h:'สถานะ',w:22,ro:1,get:c=>c._plan?'ยังไม่ตั้งค่า (อยู่ในแพลน)':custState(c)[1]}];
@@ -1628,7 +1628,7 @@ async function custXDownload(b){
     ['A1','B1','C1','D1'].forEach(a=>{ wp[a].s=sh; }); wp['!cols']=[{wch:12},{wch:30},{wch:16},{wch:24}]; wp['!freeze']={xSplit:0,ySplit:1};
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'ลูกค้า Bulk'); X.utils.book_append_sheet(wb,wh,'วิธีใช้'); X.utils.book_append_sheet(wb,wp,'หมุด DTC');
     const d=new Date(), p2=n=>('0'+n).slice(-2);
-    repSave(new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),'ลูกค้า Bulk_'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.xlsx');
+    repSave(new Blob([await xlsxDropdowns(X.write(wb,{bookType:'xlsx',type:'array'}),1,CX_COLS,aoa.length+300)],{type:'application/octet-stream'}),'ลูกค้า Bulk_'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.xlsx');
   }catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
   finally{ b.disabled=false; b.innerHTML=t; }
 }
@@ -1816,6 +1816,30 @@ function repLoad(k){
     s.onload=()=>{ if(k==='xlsx'&&window.XLSX) window.XLSX.__styled=true; ok(); };
     s.onerror=()=>{ delete REP_LOADED[k]; s.remove(); no(new Error('โหลดตัวสร้างไฟล์ไม่ได้ ลองใหม่อีกครั้ง')); }; document.head.appendChild(s); });
   return REP_LOADED[k];
+}
+/* 🔽 dropdown ใน Excel (25 พ.ย. คุณน้อง: "ควรทำดรอปดาวน์ให้เลยว่ากรอกอะไร") · skill webapp-excel-roundtrip
+   SheetJS / xlsx-js-style เขียน data validation ไม่ได้ → เปิด zip ด้วย JSZip แทรก <dataValidations> ในชีต แล้วบีบกลับ
+   cols[i].dv = {list:[...]} (เลือกจากรายการ) หรือ {min,max} (ตัวเลขเต็ม) · แถว 3..toRow (แถว 1 หัวไทย · แถว 2 คีย์) · พัง = คืนไฟล์เดิม (ไม่มี dropdown แต่ยังดาวน์โหลดได้) */
+let JSZIP_P=null;
+function jszipLib(){ if(window.JSZip) return Promise.resolve(window.JSZip);
+  return JSZIP_P||(JSZIP_P=new Promise((ok,no)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload=()=>ok(window.JSZip); s.onerror=()=>{ JSZIP_P=null; s.remove(); no(new Error('โหลด JSZip ไม่ได้')); }; document.head.appendChild(s); })); }
+async function xlsxDropdowns(buf,sheetNo,cols,toRow){
+  const rules=cols.map((x,i)=>x.dv&&!x.ro?Object.assign({col:i,title:x.h},x.dv):null).filter(Boolean); if(!rules.length) return buf;
+  try{ const JSZip=await jszipLib(), zip=await JSZip.loadAsync(buf), path='xl/worksheets/sheet'+sheetNo+'.xml', f=zip.file(path); if(!f) return buf;
+    let xml=await f.async('string');
+    const L=i=>{ let s=''; i++; while(i){ const m=(i-1)%26; s=String.fromCharCode(65+m)+s; i=(i-m-1)/26; } return s; };
+    const xe=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    const cut=(s,n)=>s.length>n?s.slice(0,n-1)+'…':s;
+    const dv=rules.map(r=>{ const ref=L(r.col)+'3:'+L(r.col)+toRow, isL=!!r.list, txt=isL?r.list.join(' / '):'ตัวเลข '+r.min+'–'+r.max;
+      const at=' allowBlank="1" showInputMessage="1" showErrorMessage="1" errorStyle="stop" errorTitle="'+xe(cut('ค่าไม่ถูกต้อง',32))+'" error="'+xe(cut((isL?'เลือกจากรายการ: ':'ใส่')+txt,220))+'" promptTitle="'+xe(cut(r.title,32))+'" prompt="'+xe(cut((isL?'เลือก: ':'')+txt,250))+'" sqref="'+ref+'"';
+      return isL?'<dataValidation type="list"'+at+'><formula1>"'+xe(r.list.join(','))+'"</formula1></dataValidation>'
+        :'<dataValidation type="whole" operator="between"'+at+'><formula1>'+(+r.min)+'</formula1><formula2>'+(+r.max)+'</formula2></dataValidation>'; }).join('');
+    // ลำดับใน XML ต้องถูก: dataValidations อยู่ก่อนแท็กพวกนี้ (SheetJS ใส่ <ignoredErrors> ท้ายชีต — วางหลังมัน Excel เปิดไฟล์ไม่ได้)
+    const pos=['<hyperlinks','<printOptions','<pageMargins','<pageSetup','<headerFooter','<rowBreaks','<colBreaks','<customProperties','<cellWatches','<ignoredErrors','<smartTags','<drawing','<legacyDrawing','<picture','<oleObjects','<controls','<webPublishItems','<tableParts','<extLst','</worksheet>'].map(t=>xml.indexOf(t)).filter(i=>i>=0).sort((a,b)=>a-b)[0];
+    xml=xml.slice(0,pos)+'<dataValidations count="'+rules.length+'">'+dv+'</dataValidations>'+xml.slice(pos); zip.file(path,xml);
+    return await zip.generateAsync({type:'arraybuffer',compression:'DEFLATE'});
+  }catch(e){ console.warn('xlsxDropdowns',e); return buf; }
 }
 function repSave(blob,name){ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),5000); toast('ออกไฟล์แล้ว: '+name); }
@@ -2170,12 +2194,13 @@ const PX_COLS=[
   {k:'aliases',h:'ชื่อเรียกในกลุ่มไลน์',w:44,get:p=>(p.aliases||[]).join(', '),help:'ตัวย่อที่เซลส์พิมพ์ คั่นด้วย , เช่น RPO, Palm Oil Mix TBHQ · ใส่ใหม่ทั้งชุด · ชื่อเดียวใช้ได้กับสินค้าเดียว'},
   {k:'dept',h:'บริษัท',w:14,get:p=>p.dept+' · '+((deptOf(p.dept)||{}).name||''),help:''},
   {k:'bill',h:'รหัสบิล',w:12,ro:1,get:p=>p.dept+'A / '+p.dept+'B'},
-  {k:'active',h:'สถานะ',w:10,get:p=>p.active===false?'เลิกใช้':'ใช้งาน',help:'ใช้งาน / เลิกใช้ (ไม่ลบประวัติ)'},
+  {k:'active',h:'สถานะ',w:10,dv:{list:['ใช้งาน','เลิกใช้']},get:p=>p.active===false?'เลิกใช้':'ใช้งาน',help:'ใช้งาน / เลิกใช้ (ไม่ลบประวัติ)'},
   {k:'note',h:'หมายเหตุ',w:30,help:''}];
 let PX_UP=null, PX_BUSY=false;
 async function pdXDownload(b){
   const t=b.innerHTML; b.disabled=true; b.textContent='กำลังสร้าง…';
   try{ await repLoad('xlsx'); const X=window.XLSX, LN='C9D6CE', ds=DATA.depts||[];
+    PX_COLS.find(x=>x.k==='dept').dv=ds.length?{list:ds.map(d=>d.code+' · '+(d.name||''))}:null;   // 🔽 dropdown บริษัท ตรงกับที่ดาวน์โหลดออก
     PX_COLS.find(x=>x.k==='dept').help='ใส่อักษร '+ds.map(d=>d.code+' ('+d.name+')').join(' / ')+' → บิล ?A / ?B';
     const bd={top:{style:'thin',color:{rgb:LN}},bottom:{style:'thin',color:{rgb:LN}},left:{style:'thin',color:{rgb:LN}},right:{style:'thin',color:{rgb:LN}}};
     const F=o=>Object.assign({name:'Tahoma',sz:10,color:{rgb:'14251C'}},o||{});
@@ -2203,7 +2228,7 @@ async function pdXDownload(b){
     ['A1','B1','C1','D1','E1'].forEach(a=>{ wd[a].s=sh; }); wd['!cols']=[{wch:8},{wch:12},{wch:44},{wch:12},{wch:8}];
     const wb=X.utils.book_new(); X.utils.book_append_sheet(wb,ws,'ชนิดสินค้า'); X.utils.book_append_sheet(wb,wh,'วิธีใช้'); X.utils.book_append_sheet(wb,wd,'บริษัท');
     const d=new Date(), p2=n=>('0'+n).slice(-2);
-    repSave(new Blob([X.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/octet-stream'}),'ชนิดสินค้า Bulk_'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.xlsx');
+    repSave(new Blob([await xlsxDropdowns(X.write(wb,{bookType:'xlsx',type:'array'}),1,PX_COLS,aoa.length+300)],{type:'application/octet-stream'}),'ชนิดสินค้า Bulk_'+d.getFullYear()+p2(d.getMonth()+1)+p2(d.getDate())+'.xlsx');
   }catch(e){ toast('สร้างไฟล์ไม่สำเร็จ: '+(e.message||e),true); }
   finally{ b.disabled=false; b.innerHTML=t; }
 }
