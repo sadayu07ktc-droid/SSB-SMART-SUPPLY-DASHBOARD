@@ -1662,6 +1662,8 @@ function dtcPoiHtml(d){
   const A=d.added||[],R=d.renamed||[],M=d.moved||[],G=d.gone||[];
   const tagC=x=>x.inCentral?'<span class="poitag c">อยู่ในค่ากลาง</span>':'';
   const idTx=x=>' <span class="id">'+esc(x.id)+'</span>';
+  const RM=d.removed||[],HD=d.held||[];
+  const goneTx=x=>RM.some(r=>r.id===x.id)?'ลบออกจากระบบแล้ว (เก็บสำรองไว้ กู้คืนได้)':HD.some(r=>r.id===x.id)?'ยังมีสถานีค่ากลางใช้ชื่อนี้ ระบบจึงเก็บพิกัดเดิมไว้ก่อน — เปลี่ยนชื่อสถานีตามหมุดใหม่ หรือลบสถานี แล้วรอบถัดไปจะลบหมุดให้เอง':'ระบบยังเก็บพิกัดเดิมไว้';
   let h='<div class="note">ดึงเมื่อ '+poiWhen(d.at)+' · หมุดใน DTC '+nf(d.total,0)+' จุด · เทียบกับรอบก่อน '+poiWhen(d.prevSync)+'</div>'
     +'<div class="poisum"><div><b>'+A.length+'</b>เพิ่มใหม่</div><div><b>'+R.length+'</b>เปลี่ยนชื่อ</div><div><b>'+M.length+'</b>ย้ายพิกัด</div><div><b>'+G.length+'</b>หายจาก DTC</div></div>';
   if(!A.length&&!R.length&&!M.length&&!G.length)h+='<div class="msg" style="padding:16px 6px;line-height:1.7">✅ ระบบดึงหมุดจาก DTC เองทุกคืนตี 2 แล้ว<br>รอบนี้ไม่มีอะไรเปลี่ยนเพิ่มจากรอบ '+poiWhen(d.prevSync)+'<br><small>ดูที่เปลี่ยนช่วง '+((d.recent&&d.recent.days)||7)+' วันล่าสุดด้านล่าง</small></div>';
@@ -1670,8 +1672,13 @@ function dtcPoiHtml(d){
     +(x.movedM?'<br><span class="poitag w" style="margin-left:0">ย้ายพิกัดด้วย '+poiDist(x.movedM)+'</span> <small>ระบบไม่เปลี่ยนชื่อในค่ากลางให้อัตโนมัติ — DEV ตรวจเอง</small>':'')+'</div>').join('');
   if(M.length)h+='<div class="poisec">📍 ย้ายพิกัด <span>'+M.length+' จุด</span></div>'+M.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)
     +' <span class="poitag '+(x.movedM>=1000?'b':'w')+'">ห่างจากเดิม '+poiDist(x.movedM)+'</span><br><small>เดิม '+poiMap(x.from)+' → ใหม่ '+poiMap(x.to)+'</small></div>').join('');
-  if(G.length)h+='<div class="poisec">❌ หายจาก DTC <span>'+G.length+' จุด</span></div>'+G.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)+'<br><small>DTC ไม่ส่งหมุดนี้มารอบนี้ (ถูกลบหรือปิดใน DTC) · ระบบยังเก็บพิกัดเดิมไว้</small></div>').join('');
-  if(d.goneOld)h+='<div class="note" style="margin-top:8px">อีก '+d.goneOld+' หมุดหายจาก DTC ไปก่อนหน้านี้แล้ว (ไม่นับรอบนี้)</div>';
+  if(G.length)h+='<div class="poisec">❌ หายจาก DTC <span>'+G.length+' จุด</span></div>'+G.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+tagC(x)+'<br><small>DTC ไม่ส่งหมุดนี้มารอบนี้ (ถูกลบหรือปิดใน DTC) · '+goneTx(x)+'</small></div>').join('');
+  /* 🧹 25 พ.ย. 69: หมุดที่หายจาก DTC ระบบลบออกเองทุกรอบดึง (เก็บสำรองใน dtc_poi_gone) · ยกเว้นหมุดที่ยังมีสถานีค่ากลางใช้ชื่อนี้ (held) */
+  const HO=HD.filter(x=>!G.some(g=>g.id===x.id)), RO=RM.filter(x=>!G.some(g=>g.id===x.id));
+  if(HO.length)h+='<div class="poisec">⏸️ ถูกลบจาก DTC แล้ว แต่ยังมีสถานีใช้ชื่อนี้ <span>'+HO.length+' จุด</span></div>'+HO.map(x=>'<div class="poir"><b>'+esc(x.name)+'</b>'+idTx(x)+'<span class="poitag c">อยู่ในค่ากลาง</span><br><small>DTC ส่งมาครั้งสุดท้าย '+poiWhen(x.last)+' · ระบบยังเก็บพิกัดเดิมไว้ให้สถานีนี้ก่อน — เปลี่ยนชื่อสถานีตามหมุดใหม่ หรือลบสถานี แล้วรอบถัดไปจะลบหมุดให้เอง</small></div>').join('');
+  if(RO.length)h+='<div class="note" style="margin-top:8px">🧹 ลบหมุดที่หายจาก DTC ไปก่อนหน้านี้ออกจากระบบแล้ว '+RO.length+' จุด: '+RO.map(x=>esc(x.name)).join(' · ')+'</div>';
+  if(d.sweepSkip)h+='<div class="errbox" style="margin-top:8px">ยังไม่ได้ลบหมุดที่หายจาก DTC รอบนี้ — '+esc(d.sweepSkip)+'</div>';
+  if(d.goneOld&&!d.held&&!d.removed)h+='<div class="note" style="margin-top:8px">อีก '+d.goneOld+' หมุดหายจาก DTC ไปก่อนหน้านี้แล้ว (ไม่นับรอบนี้)</div>';
   if(R.length||d.renamePending)h+='<div class="note" style="margin-top:10px">🔁 ชื่อที่เปลี่ยน ระบบจะเปลี่ยนตามในค่ากลาง / คู่ปลายทาง / ออเดอร์ / แพลน PK ให้เองตอน <b>02:10 น.</b>'+(d.renamePending?' (รออยู่ '+d.renamePending+' รายการ)':'')+'</div>';
   return h+dtcPoiRecent(d.recent);
 }
