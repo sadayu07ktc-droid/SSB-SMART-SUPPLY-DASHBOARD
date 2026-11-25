@@ -321,6 +321,11 @@ main{padding-block:14px 190px}   /* เผื่อ FAB Pending ยี่ปั�
 /* ช่องระบุสถานที่ขากลับ: ให้เต็มความกว้างลิ้นชัก (ปุ่ม ↑↓✕ ลงไปแถวล่าง) อ่านง่ายขึ้น */
 .stop.rt{grid-template-columns:26px 1fr}.stop.rt>.ac{grid-column:1/-1;justify-content:flex-end}
 .rtloc .in{font-size:15px;padding:10px 12px}.rtloc .res button{font-size:14.5px;padding:10px 12px;align-items:center;line-height:1.4}.rtloc .res .km{flex:none;font-size:12.5px;color:var(--muted)}
+.res .mpo{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:9px 12px;border-top:1px solid var(--line);background:var(--surface2);font-size:14px;color:var(--muted)}
+.res .mpo:first-child{border-top:0}
+.res .mpo .km b{color:#8a5a0b;white-space:nowrap}
+.res .km{white-space:normal;text-align:right;max-width:58%}
+.res .km i{font-style:normal;white-space:nowrap}
 .rtsent{color:var(--good);font-weight:600}
 .lcard{max-width:330px;margin:10px auto;border-radius:14px;overflow:hidden;border:1px solid var(--line);background:#fff;color:#14261C;box-shadow:0 8px 22px -14px rgba(0,0,0,.4);font-size:13.5px}
 .lch{background:#1B4332;color:#fff;padding:10px 14px;font-weight:700}
@@ -1605,6 +1610,13 @@ function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),m
 async function jHpSync(j){if(!frLive()||!j.fr||!j.fr.rid||!/^PKR-/.test(j.fr.rid))return;const sig=JSON.stringify(jHp(j));if(j.hsent===sig)return;
   try{await lpCall({action:'farmHelpers',requestId:j.fr.rid,helpers:jHp(j)});[j,MJ.find(x=>x.id===j.id)].forEach(x=>{if(x)x.hsent=sig;});toast('อัปเดตเด็กรถในคำขอ '+j.fr.rid+' แล้ว · '+(jHpTxt(j)||'ยังไม่ระบุ'));}
   catch(e){toast('⚠️ อัปเดตเด็กรถในคำขอ '+j.fr.rid+' ไม่สำเร็จ: '+(e.message||e)+' — กดบันทึกงานอีกครั้ง');}}
+/* 25 พ.ย. คุณน้อง "เพิ่มงานห้าง สถานที่ ให้โชว์ค่ากลาง ถ้ายังไม่เข้าตารางก็ให้แจ้ง พร้อมรหัส ST ด้วย"
+   ผลค้นหาจุดส่งห้าง = จังหวัด · ค่ากลาง กม. · รหัสหมุด DTC (ชื่อตรง) · หมุดห้างใน DTC ที่ยังไม่อยู่ในค่ากลาง = แถวแจ้ง + รหัส ST (กดเพิ่มไม่ได้)
+   หมุดมาจาก pk-yp ?action=dests (ตัวเดียวกับปุ่ม 📍 จุดส่งร้าน) · โหลดครั้งแรกที่พิมพ์ค้น · แคช 10 นาที · โหลดไม่ได้ = โชว์ กม. อย่างเดียว */
+const MPIN={by:null,all:[],at:0,busy:false};
+function mpinLoad(){if(MPIN.busy||(MPIN.at&&Date.now()-MPIN.at<600e3))return;MPIN.busy=true;
+  ypDestData().then(x=>{MPIN.all=x.pins||[];MPIN.by=new Map(MPIN.all.map(([id,n,ll,k])=>[n,{id,n,ll,k}]));}).catch(e=>{console.warn('mpin',e);})
+    .finally(()=>{MPIN.busy=false;MPIN.at=Date.now();const q=$('jsq');if(JE&&JE.j&&q&&JE.q){const p=q.selectionStart;syncJ();drawJob();const n=$('jsq');if(n){n.focus();n.setSelectionRange(p,p);}}});}
 function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
   let h='<aside class="drawer" aria-label="งานห้าง '+esc(j.id)+'"><div class="dh"><div><div class="stc">'+(j.isNew?'<span class="rv w">งานใหม่</span>':jstPill(j))+'</div><h3>'+esc(j.id)+' · งานห้าง</h3><div class="m">'+esc(SZL[j.size])+(j.head?' · '+esc(plOf(j.head)):' · ยังไม่มีทะเบียน')+'</div></div><button class="x" id="jx" aria-label="ปิด">✕</button></div><div class="db">';
   h+='<div class="box"><span class="lb">① ขนาดรถ</span><div class="seg">'+SIZES.map(z=>'<button data-sz="'+z+'" class="'+(j.size===z?'on':'')+'">'+SZL[z]+'</button>').join('')+'</div>'
@@ -1633,8 +1645,13 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
     +'<div class="ac"><button class="ib" data-jup="'+i+'" aria-label="เลื่อนขึ้น"'+(i?'':' disabled')+'>↑</button><button class="ib" data-jdn="'+i+'" aria-label="เลื่อนลง"'+(i<j.stops.length-1?'':' disabled')+'>↓</button><button class="ib" data-jrm="'+i+'" aria-label="ลบจุดนี้">✕</button></div>'+(x.items&&x.items.length?'':mpBox(x,i))+'</div>';});
   h+='<input class="in" id="jsq" placeholder="＋ เพิ่มจุดส่ง: พิมพ์ชื่อห้าง" value="'+esc(JE.q)+'" autocomplete="off">';
   if(JE.q){const sN=s=>String(s||'').replace(/\s/g,'').toLowerCase().replace(/เอฟซี/g,'fc').replace(/ดีซี/g,'dc').replace(/แมคโคร|makro/g,'แม็คโคร');   /* "FC" เจอ "เอฟซี" ด้วย */
-    const nq=sN(JE.q);const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&sN(x.n).includes(nq)).slice(0,12);
-    h+='<div class="res">'+(r.length?r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+esc(pvOf(x)||'')+'</span></button>').join(''):'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้</div>')+'</div>';}
+    const nq=sN(JE.q);const r=ST.filter(x=>tyOf({id:x.id})==='ห้าง'&&sN(x.n).includes(nq)).slice(0,12);mpinLoad();
+    const P=MPIN.by,stN=new Set(ST.map(x=>x.n)),po=P?MPIN.all.filter(p=>/^ลูกค้าห้าง/.test(p[3])&&!stN.has(p[1])&&sN(p[1]).includes(nq)).slice(0,8):[];
+    const tail=x=>{const pn=P&&P.get(x.n);return [pvOf(x)||'',x.km!=null&&x.km!==''?'ค่ากลาง '+x.km+' กม.':'ค่ากลางยังไม่มี กม.',P?(pn?pn.id:'ไม่มีหมุดชื่อตรง'):''].filter(Boolean).map(t=>'<i>'+esc(t)+'</i>').join(' · ');};
+    h+='<div class="res">'+r.map(x=>'<button data-jadd="'+x.id+'"><span>'+esc(x.n)+'</span><span class="km">'+tail(x)+'</span></button>').join('')
+      +po.map(p=>'<div class="mpo"><span>📍 '+esc(p[1])+'</span><span class="km"><b>'+esc(p[0])+'</b> · ยังไม่อยู่ในค่ากลาง แจ้ง DEV เพิ่มที่หน้าค่ากลาง</span></div>').join('')
+      +(r.length||po.length?'':'<div class="note" style="padding:8px">ไม่พบร้านห้างชื่อนี้'+(P?' (ทั้งในค่ากลางและหมุด DTC)':'')+'</div>')
+      +(MPIN.busy&&!P?'<div class="note" style="padding:6px 10px">กำลังโหลดรหัสหมุด DTC…</div>':'')+'</div>';}
   h+=jRtBox(j)+'</div>'+jCostBox(j)+mpSum(Object.assign({},j,{v:j.head?VEH.find(x=>x.head===j.head):null}))+'<div class="box"><span class="lb">ใบแจ้งงาน <span class="note">(ขึ้นในรูป / PDF / Excel ที่ส่งคลัง-บัญชี)</span></span><div class="q2">'
     +'<label class="note">รถขนส่ง<input class="in" id="jcar" list="carL" value="'+esc(j.carrier||'SSB')+'"></label>'
     +'<label class="note">เบิกค่าลงสินค้า<input class="in" id="junl" placeholder="'+esc(jUnlAuto(j)||'เช่น โอนค่าลงสินค้า 1500 บาท')+'" value="'+esc(j.unl||'')+'"></label></div>'
