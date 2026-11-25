@@ -196,6 +196,13 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .cf input::placeholder,.cf textarea::placeholder{color:var(--muted);opacity:.6;font-size:12.5px}
 .cf input:focus-visible,.cf textarea:focus-visible{outline:2px solid var(--brand2);outline-offset:1px}
 .cf .hint{font-size:11.5px;color:var(--muted);margin-top:3px}
+/* 🔎 ช่องผูกลูกค้าในฟอร์มเที่ยว (25 พ.ย.) · ค้นได้ · ขวา = ST · ค่ากลาง */
+.tf>.cpk{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);position:relative}
+.cpk .pchosen{color:var(--ink)}.cpk .pchosen.gs{background:var(--warnTint)}
+.cpk .plist{position:absolute;left:0;right:0;top:100%;z-index:30;margin-top:2px;background:var(--surface);box-shadow:0 10px 28px rgba(0,0,0,.16);max-height:300px}
+.cpk .plist button{justify-content:space-between}.cpk .plist small{white-space:normal;text-align:right;margin-left:12px}
+.cusq{width:240px;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:var(--surface);color:var(--ink)}
+.ctbl .cust small{display:block;color:var(--muted);font-size:11px;font-weight:400;margin-top:2px}
 .plist{max-height:220px;overflow:auto;border:1px solid var(--line);border-radius:10px;margin-top:6px}
 .plist button{display:flex;width:100%;gap:8px;align-items:baseline;text-align:left;font:inherit;font-size:13px;background:var(--surface);color:var(--ink);border:0;border-bottom:1px solid var(--line);padding:7px 10px;cursor:pointer}
 .plist button:hover,.plist button:focus-visible{background:var(--tint);outline:none}
@@ -613,7 +620,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25b</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25c</span></div>
   </div>
   </div></main>
 </div>
@@ -909,7 +916,7 @@ function renderAdmin(){
     +rows.map((r,i)=>{ const x=pl[r.key], off=offTag(r.tag);
       return `<tr class="${off?'off':''}${chg[r.key]!=null?' hl':''}${add[r.key]?' nw':''}"><td class="num">${r.no}</td>
         <td class="cust">${esc(r.cust)}${add[r.key]?' <span class="tag info">ใหม่</span>':''}${chg[r.key]!=null?`<span class="chg">${esc(chg[r.key])}</span>`:''}</td>
-        <td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td>${esc(r.bill)}</td><td>${tagHtml(r.tag)}</td>
+        <td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td class="bcode" title="${esc(billTitle(r.prod,r.bill))}">${esc(billCode({bill:r.bill,prod_name:r.prod}))}</td><td>${tagHtml(r.tag)}</td>
         <td>${r.co?'<span class="co y">✓</span>':'<span class="co n">✗</span>'}</td><td class="num sm">${esc(r.so)}</td><td class="r num">${esc(r.price)}</td>
         <td class="nt">${esc(r.note)}</td><td class="nt">${esc(r.time)}</td><td>${plannedHtml(r,x)}${drvList(r.key)}${off&&x?' <span class="tag bad">แอดมิน'+(/ยกเลิก/.test(r.tag)?'ยกเลิก':'เลื่อนส่ง')+'</span>':''}</td>
         <td>${ed&&!off?rowBtn(r,i,x):''}</td></tr>`; }).join('')+'</tbody></table></div>';
@@ -1007,7 +1014,7 @@ function renderPlan(){
       <td class="sel">${j.status==='_snap'||j.cancelled?'':`<input type="checkbox" data-sel="${j.id}"${SEL.has(j.id)?' checked':''} aria-label="เลือกเที่ยว #${j.line_no}">`}</td>
       <td class="num">${j.line_no}</td><td class="num">${j.round_no||''}</td>
       <td class="cust">${esc(j.cust_name)}${warn}</td><td>${esc(j.dest)}</td>
-      <td class="prod">${esc(j.prod_name)}</td><td class="r num">${esc(qtyTx(j).replace(/ ตัน$/,''))}</td><td class="bcode" title="${esc(prodOf(j.prod_name)?'บิล '+(j.bill||'')+' · บริษัท '+((deptOf(prodOf(j.prod_name).dept)||{}).name||''):'ชนิดสินค้านี้ยังไม่อยู่ในฐานข้อมูล')}">${esc(billCode(j))}</td>
+      <td class="prod">${esc(j.prod_name)}</td><td class="r num">${esc(qtyTx(j).replace(/ ตัน$/,''))}</td><td class="bcode" title="${esc(billTitle(j.prod_name,j.bill))}">${esc(billCode(j))}</td>
       <td>${isCo(j)?'<span class="kd company">บริษัท</span> ':''}${who}</td>
       <td>${tg(j,'co',j.co)}</td><td>${tg(j,'co_closed',j.co_closed)}</td><td>${tg(j,'loaded',j.loaded)}</td>
       <td class="nt">${esc(j.deliver_time||'')}</td><td>${j.doc_no?`<span class="docno">${esc(j.doc_no)}</span>${j.printed_at?'<small class="sub" style="display:block">พิมพ์ '+thTime(j.printed_at)+'</small>':''}`:'<span class="sub">—</span>'}</td>
@@ -1039,12 +1046,20 @@ $('planSel').addEventListener('change',e=>load(e.target.value));
    ใบขนส่งติ๊ก/เติมให้เอง · เที่ยวที่บันทึกแบบใหม่ (form5.v=2) = ใช้ตามที่บันทึก · ผู้รับถุงกรอง = ชื่อคนขับ */
 function custDocOf(code,name){
   const cs=(DATA&&DATA.customers)||[], n=nrm(name);
-  const c=(code&&cs.find(x=>x.cust_code===code))||(n&&cs.find(x=>nrm(x.cust_name)===n||(x.aliases||[]).some(a=>nrm(a)===n)))||null;
-  return c?{coa:!!c.need_coa,bags:c.filter_bags==null?3:+c.filter_bags,name:c.cust_name}:{coa:false,bags:3,name:''};
+  const c0=(code&&cs.find(x=>x.cust_code===code))||(n&&cs.find(x=>nrm(x.cust_name)===n||(x.aliases||[]).some(a=>nrm(a)===n)))||null, c=c0||custGuess(name);
+  return c?{coa:!!c.need_coa,bags:c.filter_bags==null?3:+c.filter_bags,name:c.cust_name,guess:!c0}:{coa:false,bags:3,name:''};
 }
-function f5Fill(f,cd){ if(!cd||f.v===2) return f;
+/* 25 พ.ย. คุณน้อง "COA ทำไมไม่ติ๊ก ไปเซ็ทที่ฐานแล้ว" — ชื่อในแผนแอดมินมีต่อท้าย (เป๊ปซี่ โรจนะ ร.ค. 69 · CPF (โคราช) · วันไทย 2)
+   เฉพาะค่าเอกสาร (COA/ถุงกรอง): ชื่อลูกค้าในฐานที่อยู่ในชื่อแผน (ตัดวรรณยุกต์ · ≥3 ตัว) ยาวสุดชนะ · ยาวเท่ากันคนละราย = ไม่เดา · รหัสลูกค้ายังต้องเลือกเอง */
+const thk=s=>nrm(s).replace(/[\u0E47-\u0E4E]/g,'');
+function custGuess(name){ const n=thk(name); if(n.length<3) return null; let best=null, bl=0, tie=false;
+  ((DATA&&DATA.customers)||[]).forEach(c=>[c.cust_name,...(c.aliases||[])].forEach(a=>{ const k=thk(a); if(k.length<3||!n.includes(k)) return;
+    if(k.length>bl){ best=c; bl=k.length; tie=false; } else if(k.length===bl&&best!==c) tie=true; }));
+  return tie?null:best; }
+function f5Fill(f,cd){ if(f.v===2) return f; if(!f.cond) f.cond='ok';   // 🚚 สภาพรถค่าเริ่ม = ปกติ (25 พ.ย. คุณน้อง: ไม่ปกติเขาไม่ให้ขนอยู่แล้ว)
+  if(!cd) return f;
   if(!f.coa&&cd.coa) f.coa=true; if(!String(f.bags||'').trim()&&cd.bags>0) f.bags=String(cd.bags); return f; }
-const F5_DEF={coa:false,coNo:'',bags:'',bagTo:'',cond:'',n2:false,flush:false,flushTxt:'',leaveBy:'',arriveBy:'',prevManual:false,prev:['','','']};
+const F5_DEF={coa:false,coNo:'',bags:'',bagTo:'',cond:'ok',n2:false,flush:false,flushTxt:'',leaveBy:'',arriveBy:'',prevManual:false,prev:['','','']};
 function openTrip(j,pre,opt){
   const d=DATA, me=d.me, p=d.plan;
   if(!p){ toast('ยังไม่มีแพลนของวันส่งนี้ — กด "📅 วันส่งใหม่" ก่อน',true); return; }
@@ -1062,7 +1077,6 @@ function openTrip(j,pre,opt){
   m.onmousedown=e=>{ if(e.target===m) close(); };
   const o=(v,l,sel)=>`<option value="${esc(v)}"${sel?' selected':''}>${esc(l)}</option>`;
   const drvOpts=o('','— ยังไม่เลือกคนขับ —',!dv)+d.drivers.map(x=>o(x.code,x.name+' · '+(x.plate||'ไม่มีทะเบียน')+(x.linked?(x.active?'':' · LINE ยังไม่ Active'):' · ยังไม่ผูก LINE'),dv&&dv.code===x.code)).join('');
-  const custOpts=o('','— ไม่ผูกลูกค้า —',!t.custCode)+(d.customers||[]).map(c=>o(c.cust_code,c.cust_name+(c.dtc_poi_name?' · '+c.dtc_poi_name:''),c.cust_code===t.custCode)).join('');
   const dis=ro?' disabled':'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="tT">
     <div class="dlghd"><div><div class="sub">ส่ง ${thDate(p.send_date)} · โหลด ${thDate(p.load_date)}${j?' · เที่ยว #'+j.line_no:''}${j&&j.doc_no?' · ใบขนส่ง '+esc(j.doc_no):''}</div>
@@ -1073,7 +1087,7 @@ function openTrip(j,pre,opt){
       <div class="sub" id="tKindHint"></div>
       <div class="tf">
         <label>บริษัท (ลูกค้า) *<input id="tCust" list="tCustL" value="${esc(t.custName)}"${dis}><datalist id="tCustL">${(d.customers||[]).flatMap(c=>[c.cust_name].concat(c.aliases||[])).filter((v,i,a)=>v&&a.indexOf(v)===i).map(v=>`<option value="${esc(v)}">`).join('')}</datalist></label>
-        <label>ผูกลูกค้า <small>(ใช้เช็คอินถึงลูกค้าอัตโนมัติ)</small><select id="tCode"${dis}>${custOpts}</select></label>
+        <div class="cpk"><span>ผูกลูกค้า <small>(เช็คอินถึงลูกค้า · ใบ COA/ถุงกรอง)</small></span><input type="hidden" id="tCode" value="${esc(t.custCode)}"><div class="pchosen" id="tCodeShow"></div>${ro?'':'<input type="search" id="tCodeQ" placeholder="ค้นลูกค้า / ชื่อเรียกในไลน์ / ST" autocomplete="off" aria-label="ค้นลูกค้า"><div class="plist" id="tCodeList" role="listbox" hidden></div>'}</div>
         <label>สถานที่จัดส่ง<input id="tDest" value="${esc(t.dest)}"${dis}></label>
         <label>ชนิดน้ำมัน *<input id="tProd" value="${esc(t.prod)}"${dis}></label>
         <label>จำนวน *<input id="tQty" value="${esc(t.qtyText)}" placeholder="30 = ตัน · หรือ 10 ถัง / 40,000 ลิตร"${dis}><small class="hint" id="tQtyH"></small></label>
@@ -1129,12 +1143,35 @@ function openTrip(j,pre,opt){
   applyKind();
   const qh=()=>{ const v=$('tQty').value.trim(), n=tonOf(v); $('tQtyH').textContent=!v?'':n?'= '+tons(n)+' ตัน ('+fmt(n*1000)+' กก.)':'ไม่ใช่ตัน — เก็บตามที่เขียน'; };
   $('tQty').oninput=qh; qh();
-  $('tCust').addEventListener('change',()=>{ const c=custMatch($('tCust').value); if(c&&!$('tCode').value) $('tCode').value=c; docSync(); });
+  /* 🔎 25 พ.ย. คุณน้อง "ต้องแมชเหมือนออเดอร์ไลน์ · ขวามือโชว์ ST และระยะกลาง" — ช่องผูกลูกค้าค้นได้ (ชื่อ / ชื่อเรียกในไลน์ / หมุด / ST)
+     ชื่อในแผนตรงชื่อ/ชื่อเรียก = ผูกให้เลย · ไม่ตรง = เดาจากชื่อ (custGuess) ป้ายส้ม ตรวจก่อนบันทึก · บันทึกแล้วระบบจำชื่อในแผนเป็นชื่อเรียกของรายนั้น */
+  const CS=d.customers||[], csBy=c=>CS.find(x=>x.cust_code===c)||null;
+  let codeGuess=false;
+  const csTail=c=>(c.dtc_poi_id||'ไม่มีหมุด DTC')+' · '+(c.km!=null&&c.km!==''?'ค่ากลาง '+c.km+' กม.':'ค่ากลางยังไม่มี');
+  const drawCode=()=>{ const c=csBy($('tCode').value), el=$('tCodeShow');
+    el.className='pchosen'+(c&&codeGuess?' gs':'');
+    el.innerHTML=c?`📌 <b>${esc(c.cust_name)}</b> <span class="sub">${esc(csTail(c))}</span>${codeGuess?' <span class="tag warn">เดาจากชื่อ — ตรวจก่อนบันทึก</span>':''}${ro?'':'<button class="btn sm" type="button" id="tCodeX" style="margin-left:auto">ไม่ผูก</button>'}`
+      :'<span class="sub">ยังไม่ผูกลูกค้า — ค้นแล้วเลือกด้านล่าง (ไม่ผูก = คนขับกด "ถึงลูกค้า" เอง · ใบ COA ไม่ติ๊กให้)</span>';
+    if($('tCodeX')) $('tCodeX').onclick=()=>setCode('',false); };
+  const setCode=(code,g)=>{ $('tCode').value=code||''; codeGuess=!!(code&&g); drawCode(); docSync(); const L=$('tCodeList'); if(L) L.hidden=true; if($('tCodeQ')) $('tCodeQ').value=''; };
+  const drawCodeList=()=>{ const L=$('tCodeList'); if(!L) return; const q=thk($('tCodeQ').value);
+    const key=c=>thk([c.cust_name,c.dtc_poi_name,c.dtc_poi_id,...(c.aliases||[])].join(' '));
+    const hit=CS.filter(c=>!q||key(c).includes(q)).slice(0,40);
+    L.innerHTML=hit.length?hit.map(c=>{ const al=q?(c.aliases||[]).filter(a=>thk(a).includes(q)):[];
+        return `<button type="button" role="option" class="${c.cust_code===$('tCode').value?'on':''}" data-cc="${esc(c.cust_code)}"><span>${esc(c.cust_name)}${al.length?' <span class="sub">(เรียก '+esc(al.join(', '))+')</span>':''}</span><small>${esc(csTail(c))}</small></button>`; }).join('')
+      :'<div class="sub" style="padding:10px">ไม่พบลูกค้า — เพิ่มลูกค้า/ใส่ชื่อเรียกที่ ลูกค้า Bulk</div>';
+    L.hidden=false; L.querySelectorAll('[data-cc]').forEach(b=>b.onmousedown=e=>{ e.preventDefault(); setCode(b.dataset.cc,false); }); };
+  if($('tCodeQ')){ const Q=$('tCodeQ'); Q.oninput=drawCodeList; Q.onfocus=drawCodeList; Q.onblur=()=>setTimeout(()=>{ const L=$('tCodeList'); if(L) L.hidden=true; },150);
+    Q.onkeydown=e=>{ if(e.key==='Escape'){ const L=$('tCodeList'); if(L) L.hidden=true; } }; }
+  if(!$('tCode').value&&!ro&&t.kind!=='pickup'){ const g=custGuess(t.custName); if(g){ $('tCode').value=g.cust_code; codeGuess=true; } }
+  drawCode();
+  $('tCust').addEventListener('change',()=>{ if($('tCode').value&&!codeGuess){ docSync(); return; } const c=custMatch($('tCust').value), g=c?null:custGuess($('tCust').value);
+    if(c) setCode(c,false); else if(g) setCode(g.cust_code,true); else docSync(); });
   // 🧾 ค่าตั้งลูกค้า → ติ๊ก COA / ถุงกรอง ให้เอง (จนกว่าจะแก้เอง) · เที่ยวที่บันทึกแบบใหม่แล้วไม่แตะ
   let docTouched=!!(j&&j.form5&&j.form5.v===2);
   ['fCoa','fBags'].forEach(id=>$(id).addEventListener('input',()=>{ docTouched=true; }));
   function docSync(init){ const cd=custDocOf($('tCode').value,$('tCust').value.trim());
-    $('fDocH').textContent=cd.name?'ค่าตั้งลูกค้า '+cd.name+': '+(cd.coa?'ต้องแนบใบ COA':'ไม่ต้องแนบ COA')+' · ถุงกรอง '+cd.bags+' ใบ':'ไม่ได้ผูกลูกค้า — ถุงกรองค่าเริ่ม 3 ใบ';
+    $('fDocH').textContent=cd.name?(cd.guess?'เดาจากชื่อ → ':'')+'ค่าตั้งลูกค้า '+cd.name+': '+(cd.coa?'ต้องแนบใบ COA':'ไม่ต้องแนบ COA')+' · ถุงกรอง '+cd.bags+' ใบ'+(cd.guess?' (ไม่ใช่รายนี้ = เลือกรหัสลูกค้าให้ถูก)':''):'ไม่ได้ผูกลูกค้า — ถุงกรองค่าเริ่ม 3 ใบ';
     if(init||docTouched||ro) return; $('fCoa').checked=cd.coa; $('fBags').value=cd.bags>0?String(cd.bags):''; }
   $('tCode').addEventListener('change',()=>docSync()); docSync(1);
   let lastAuto=dv?dv.plate:'';
@@ -1227,7 +1264,7 @@ function confirmAdmin(p,name,b64){
       <div class="tf"><label>วันที่ส่งสินค้า *<input type="date" id="aSend" value="${p.ds}"></label><label>วันที่โหลด<input type="date" id="aLoad" value="${p.dl}"></label></div>
       <div class="sub" id="aHint">${p.ds?(ex?'วันส่งนี้มีแผนอยู่แล้ว → บันทึกเป็นแผนแอดมินฉบับใหม่ (เทียบกับฉบับก่อนให้) · ตารางแผนเดิมไม่ถูกแก้':'วันส่งใหม่ → สร้างแพลนให้'):'อ่านวันที่ในไฟล์ไม่ได้ — เลือกวันที่ส่งเอง'}</div>
       <div class="pvwrap"><table><thead><tr><th>บริษัท</th><th>สถานที่</th><th>ชนิดน้ำมัน</th><th class="r">จำนวน</th><th>บิล</th><th>สถานะ/PO</th><th>CO</th><th>SO</th><th>หมายเหตุ</th><th>เวลา</th></tr></thead><tbody>
-        ${p.rows.map(r=>`<tr class="${offTag(r.tag)?'same':''}"><td class="cust">${esc(r.cust)}</td><td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td>${esc(r.bill)}</td><td>${tagHtml(r.tag)}</td><td>${r.co?'✓':'✗'}</td><td class="num">${esc(r.so)}</td><td class="nt">${esc(r.note)}</td><td class="nt">${esc(r.time)}</td></tr>`).join('')}</tbody></table></div>
+        ${p.rows.map(r=>`<tr class="${offTag(r.tag)?'same':''}"><td class="cust">${esc(r.cust)}</td><td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td class="bcode" title="${esc(billTitle(r.prod,r.bill))}">${esc(billCode({bill:r.bill,prod_name:r.prod}))}</td><td>${tagHtml(r.tag)}</td><td>${r.co?'✓':'✗'}</td><td class="num">${esc(r.so)}</td><td class="nt">${esc(r.note)}</td><td class="nt">${esc(r.time)}</td></tr>`).join('')}</tbody></table></div>
     </div>
     <div class="dlgft"><button type="button" class="btn" id="aNo">ยกเลิก</button><button type="button" class="btn gold" id="aYes">บันทึกแผนแอดมิน</button></div></div>`;
   m.hidden=false; $('aX').onclick=close; $('aNo').onclick=close; $('aYes').focus();
@@ -1501,7 +1538,7 @@ function fmTr01(j,pl,prev,by,cdoc){
    พิกัดลูกค้า = ใช้เช็คอิน "ถึงลูกค้า" อัตโนมัติ (รัศมีเดียวกับรถไร่) · พิกัดกรอกเอง ชนะ หมุด DTC
    ตาชั่งปลายทาง → คนขับมีขั้นชั่งปลายทาง · ใบชั่งตอนออก → ต้องถ่ายใบชั่งก่อนกดออกจากลูกค้า
    แก้ได้: DEV / ADMIN_BULK / MANAGER (Edge ตรวจสิทธิ์ซ้ำ) · คนอื่นดูอย่างเดียว */
-let CUST=null;
+let CUST=null, CUST_Q='';
 const mapUrl=ll=>'https://www.google.com/maps?q='+encodeURIComponent(ll);
 function custDlg(){ let m=$('dlgCust'); if(!m){ m=document.createElement('div'); m.id='dlgCust'; m.className='dlg'; document.body.appendChild(m);
     m.onmousedown=e=>{ if(e.target===m) closeCust(); }; document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&!m.hidden) closeCust(); }); }
@@ -1524,7 +1561,7 @@ function custState(c){
 function drawCustList(){
   const d=CUST, ed=d.me.canEdit, m=$('dlgCust');
   const rows=d.customers.map(c=>{ const ll=c.location||c.dtc_location, st=custState(c);
-    return `<tr><td class="cust">${esc(c.cust_name||'—')}</td>
+    return `<tr data-q="${esc(thk([c.cust_name,c.dtc_poi_name,c.dtc_poi_id,c.note,...(c.aliases||[])].join(' ')))}"><td class="cust">${esc(c.cust_name||'—')}${(c.aliases||[]).length?'<small>เรียก: '+esc(c.aliases.join(', '))+'</small>':''}</td>
       <td class="pin">${c.dtc_poi_name?esc(c.dtc_poi_name)+`<small>${esc(c.dtc_poi_id)}</small>`:'<span class="sub">ไม่ผูกหมุด</span>'}</td>
       <td>${ll?`<a href="${mapUrl(ll)}" target="_blank" rel="noopener" title="เปิดใน Google Maps">${esc(ll)}</a><span class="src">${c.location?'กรอกเอง':'DTC'}</span>`:'<span class="sub">—</span>'}
         ${c.radius_m?`<div class="sub" style="font-size:11.5px">รัศมี ${c.radius_m} ม.</div>`:''}</td>
@@ -1543,7 +1580,7 @@ function drawCustList(){
     <div class="dlgbd">
       <div class="cinfo"><span>คนขับเข้าใกล้พิกัดลูกค้า = ระบบเช็คอิน "ถึงลูกค้า" ให้เอง (รัศมีเดียวกับรถไร่ · ตั้งรายลูกค้าได้) · พิกัดกรอกเอง ใช้ก่อนหมุด DTC
         · หมุด DTC อัปเดต ${thTime(d.poiAt)||'—'} (${d.poi.length} หมุด)</span>
-        <span class="cxbar"><button class="btn sm xl" type="button" id="cXd" title="ไฟล์นี้ใช้เป็นแม่แบบอัปโหลดกลับ">⬇ ดาวน์โหลด Excel</button>${ed?`<button class="btn sm" type="button" id="cXu" title="แก้หลายรายพร้อมกันจากไฟล์ที่ดาวน์โหลด">⬆ อัปโหลด</button><input type="file" id="cXf" accept=".xlsx,.xls,.csv" hidden>`:''}
+        <span class="cxbar"><input type="search" id="cQ" class="cusq" placeholder="🔍 ค้นชื่อ / ชื่อเรียก / ST" value="${esc(CUST_Q)}" aria-label="ค้นลูกค้า" autocomplete="off"><span class="sub" id="cQn" aria-live="polite"></span><button class="btn sm xl" type="button" id="cXd" title="ไฟล์นี้ใช้เป็นแม่แบบอัปโหลดกลับ">⬇ ดาวน์โหลด Excel</button>${ed?`<button class="btn sm" type="button" id="cXu" title="แก้หลายรายพร้อมกันจากไฟล์ที่ดาวน์โหลด">⬆ อัปโหลด</button><input type="file" id="cXf" accept=".xlsx,.xls,.csv" hidden>`:''}
         ${ed?`<button class="btn sm pri" type="button" id="cAdd">＋ เพิ่มลูกค้า</button>`:''}
         ${ed?`<button class="btn sm" type="button" id="cRef" title="หลังปักหมุดเพิ่มในเว็บ DTC">🔄 ดึงหมุดใหม่จาก DTC</button>`:''}</span></div>
       <div class="ctbl"><table><thead><tr><th>ลูกค้า</th><th>หมุด DTC</th><th>พิกัดที่ใช้</th><th>ตาชั่งปลายทาง</th><th>ใบชั่งตอนออก</th><th>ยึดน้ำหนัก</th><th>ใบ COA</th><th>ถุงกรอง (ใบ)</th><th>สถานะ</th>${ed?'<th></th>':''}</tr></thead>
@@ -1552,6 +1589,11 @@ function drawCustList(){
       ${ed?'':'<div class="sub">ดูอย่างเดียว · แก้ได้เฉพาะ DEV / แอดมิน Bulk / ผู้จัดการ</div>'}
     </div></div>`;
   $('cX').onclick=closeCust;
+  // 🔍 25 พ.ย. คุณน้อง "เพิ่มปุ่มค้นหา" — กรองแถวตามชื่อ / ชื่อเรียก / ชื่อหมุด / ST / หมายเหตุ (ตัดวรรณยุกต์ · จำคำค้นไว้ตอนวาดใหม่)
+  const cq=()=>{ CUST_Q=$('cQ').value; const q=thk(CUST_Q); let n=0;
+    m.querySelectorAll('.ctbl tbody tr[data-q]').forEach(tr=>{ const ok=!q||tr.dataset.q.includes(q); tr.hidden=!ok; if(ok) n++; });
+    $('cQn').textContent=q?'พบ '+n+' ราย':''; };
+  $('cQ').oninput=cq; cq();
   $('cXd').onclick=()=>custXDownload($('cXd'));   // 📥 Excel 19 พ.ย.
   if($('cXu')){ $('cXu').onclick=()=>$('cXf').click(); $('cXf').onchange=()=>custXUpload($('cXf')); }
   m.querySelectorAll('[data-ed]').forEach(b=>b.onclick=()=>editCust(d.customers.find(c=>c.cust_code===b.dataset.ed)));
@@ -1579,6 +1621,7 @@ function drawCustList(){
 const WB_TH={origin:'ต้นทาง',dest:'ปลายทาง'};
 const CX_COLS=[
   {k:'cust_name',h:'ชื่อลูกค้า',w:40,req:1,help:'ใช้จับคู่ลูกค้าเดิม (ไม่มีรหัส SAP แล้ว) · ชื่อไม่ตรงลูกค้าไหน = เพิ่มลูกค้าใหม่ · เปลี่ยนชื่อทำในเว็บ'},
+  {k:'aliases',h:'ชื่อเรียก (ในไลน์/แผน)',w:30,get:c=>(c.aliases||[]).join(', '),help:'ชื่อที่เซลส์/แผนแอดมินใช้เรียก คั่นด้วย , · ทั้งช่อง = รายการใหม่ (ลบชื่อออก = เลิกใช้ชื่อนั้น) · ว่าง = คงเดิม · ซ้ำกับลูกค้ารายอื่นไม่ได้'},
   {k:'pin',h:'หมุด DTC',w:13,help:'รหัสหมุด เช่น ST-32551 (ดูในแผ่น "หมุด DTC") หรือชื่อหมุดตรงตัว'},
   {k:'pin_name',h:'ชื่อหมุด DTC',w:18,ro:1,get:c=>c.dtc_poi_name||''},
   {k:'dtc_loc',h:'พิกัดหมุด DTC',w:22,ro:1,get:c=>c.dtc_location||''},
@@ -1701,6 +1744,9 @@ function editCust(c){
       <label for="eName">ชื่อลูกค้า</label>
       <div><input type="text" id="eName" maxlength="120" value="${esc(c.cust_name||'')}" placeholder="เช่น บริษัท ฟูจิ ออยล์ (ไทยแลนด์) จำกัด">
         <div class="hint">ใช้ชื่อนี้จับคู่กับแพลน/ไฟล์ Excel (ไม่ใช้รหัส SAP แล้ว)</div></div>
+      <label for="eAl">ชื่อเรียก (ในไลน์/แผน)</label>
+      <div><textarea id="eAl" rows="2" placeholder="ชื่อที่เซลส์/แผนแอดมินพิมพ์มา คั่นด้วย , เช่น เป๊ปซี่ โรจนะ, PEPSI RJ">${esc((c.aliases||[]).join(', '))}</textarea>
+        <div class="hint">แผนแอดมิน/ไลน์พิมพ์ชื่อไหนในนี้ = จับเป็นลูกค้ารายนี้ (เหมือนชื่ออื่นของสินค้า Packing) · ซ้ำกับลูกค้ารายอื่นบันทึกไม่ได้ · เลือกลูกค้าให้เที่ยวในตารางแผน = ระบบจำชื่อให้เอง</div></div>
       <div class="lb">หมุดใน DTC</div>
       <div><div class="pchosen" id="ePin"></div>
         <input type="text" id="eQ" placeholder="ค้นหมุด เช่น ฟูจิ, บีบีจีไอ" value="${esc(pick?'':guess)}" style="margin-top:6px" aria-label="ค้นหมุด DTC">
@@ -1746,7 +1792,7 @@ function editCust(c){
   $('eYes').onclick=()=>{ const loc=$('eLoc').value.trim();
     if(!pick&&!loc&&!confirmNoLoc()) return;
     const nm=$('eName').value.trim(); if(!nm){ toast('ใส่ชื่อลูกค้า',true); $('eName').focus(); return; }
-    saveCust($('eYes'),{custCode:c.cust_code,custName:nm,poiId:pick,location:loc,radiusM:$('eRad').value,
+    saveCust($('eYes'),{custCode:c.cust_code,custName:nm,aliases:$('eAl').value,poiId:pick,location:loc,radiusM:$('eRad').value,
       hasDestScale:$('eScale').checked,needSlipOut:$('eSlip').checked,weightBasis:$('eWB').value,needCoa:$('eCoa').checked,filterBags:$('eBags').value===''?3:$('eBags').value,note:$('eNote').value.trim()},'บันทึก '+nm+' แล้ว'); };
   // ยังไม่มีพิกัด: เตือนครั้งแรก (ปุ่มเปลี่ยนเป็นยืนยัน) กดซ้ำ = บันทึกจริง
   function confirmNoLoc(){ const b=$('eYes'); if(b.dataset.warned) return true;
@@ -2103,12 +2149,24 @@ function vsExport(){
 const FM_CO_DEF='บริษัท สุขสมบูรณ์น้ำมันพืช จำกัด';
 const PD_DOT={V:'#2F7D4F',P:'#C2410C',D:'#B7791F',E:'#3B6E8F'};
 const pdDot=c=>PD_DOT[c]||'#6B7280';
-let PD_IX=null, PD_SRC=null, PD_F='all', PD_Q='';
+let PD_IX=null, PD_GX={}, PD_SRC=null, PD_F='all', PD_Q='';
 function prodOf(name){
   const ps=DATA&&DATA.products;
-  if(PD_SRC!==ps||!PD_IX){ PD_IX={}; (ps||[]).forEach(p=>{ if(p.active===false) return; [p.name,...(p.aliases||[])].forEach(n=>{ const k=nrm(n); if(k&&!PD_IX[k]) PD_IX[k]=p; }); }); PD_SRC=ps; }
-  return PD_IX[nrm(name)]||null;
+  if(PD_SRC!==ps||!PD_IX){ PD_IX={}; PD_GX={}; (ps||[]).forEach(p=>{ if(p.active===false) return; [p.name,...(p.aliases||[])].forEach(n=>{ const k=nrm(n); if(k&&!PD_IX[k]) PD_IX[k]=p; const k2=k.replace(/#/g,''); if(k2&&!PD_IX[k2]) PD_IX[k2]=p; }); }); PD_SRC=ps; }
+  const k=nrm(name); if(!k) return null; const x=PD_IX[k]||PD_IX[k.replace(/#/g,'')]; if(x) return x;
+  return k in PD_GX?PD_GX[k]:(PD_GX[k]=prodGuess(String(name)));
 }
+/* 🔎 25 พ.ย. คุณน้อง "บิลต้องขึ้นตามสินค้า 2 หลัก" — ชื่อในแผนแอดมินยาวกว่าในฐาน (น้ำมันปาล์มโอเลอีน OL · ไขมันปาล์ม (RBD.PS) · Milk Fat 02)
+   ไม่ตรงตัว → ดูคำภาษาอังกฤษในชื่อ (ทั้งก้อน + แยกที่ - . + /) เทียบชื่อ/ชื่ออื่นในฐาน · เจอหลายตัวแต่บริษัทเดียวกัน = ใช้บริษัทนั้น · คนละบริษัท/ไม่เจอ = ไม่เดา (ขึ้นบิลเดิม) */
+function prodGuess(name){
+  const ks=new Set(), add=t=>{ const w=nrm(t).replace(/#/g,''); if(w.length>=2&&/[a-z]/.test(w)) ks.add(w); };
+  (name.match(/[A-Za-z0-9][A-Za-z0-9#+.\-\/ ]*/g)||[]).forEach(t=>{ add(t); t.split(/[\s+.\-\/]+/).forEach(add); });
+  const hit=[...new Set([...ks].map(k=>PD_IX[k]).filter(Boolean))]; if(!hit.length) return null;
+  if(new Set(hit.map(p=>p.dept)).size!==1) return null;
+  return Object.assign({},hit[0],{_guess:true,_from:hit.map(p=>p.name)});
+}
+function billTitle(name,bill){ const p=prodOf(name); if(!p) return 'ชนิดสินค้านี้ยังไม่อยู่ในฐานข้อมูล — เพิ่มชื่อนี้เป็นชื่ออื่นของสินค้าในฐานข้อมูล';
+  return 'บิล '+(bill||'')+' · บริษัท '+((deptOf(p.dept)||{}).name||'')+(p._guess?' · จับจากรหัสในชื่อ ('+p._from.join(', ')+')':''); }
 const pdReset=()=>{ PD_IX=null; };
 const deptOf=c=>(DATA&&DATA.depts||[]).find(d=>d.code===c)||null;
 // รหัสบิลเต็ม: บิล "A" + สินค้า CPO (P) → "PA" · บิลกรอกเป็น 2 ตัวอักษรอยู่แล้ว = ใช้ตามนั้น · ไม่รู้จักสินค้า = บิลเดิม
