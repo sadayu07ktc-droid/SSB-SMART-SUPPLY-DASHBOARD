@@ -620,7 +620,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25d</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25e</span></div>
   </div>
   </div></main>
 </div>
@@ -1150,9 +1150,18 @@ function openTrip(j,pre,opt){
   const csTail=c=>(c.dtc_poi_id||'ไม่มีหมุด DTC')+' · '+(c.km!=null&&c.km!==''?'ค่ากลาง '+c.km+' กม.':'ค่ากลางยังไม่มี');
   const drawCode=()=>{ const c=csBy($('tCode').value), el=$('tCodeShow');
     el.className='pchosen'+(c&&codeGuess?' gs':'');
-    el.innerHTML=c?`📌 <b>${esc(c.cust_name)}</b> <span class="sub">${esc(csTail(c))}</span>${codeGuess?' <span class="tag warn">เดาจากชื่อ — ตรวจก่อนบันทึก</span>':''}${ro?'':'<button class="btn sm" type="button" id="tCodeX" style="margin-left:auto">ไม่ผูก</button>'}`
+    el.innerHTML=c?`📌 <b>${esc(c.cust_name)}</b> <span class="sub">${esc(csTail(c))}</span>${codeGuess?' <span class="tag warn">เดาจากชื่อ — ตรวจก่อนบันทึก</span>':''}${ro?'':(codeGuess?'<button class="btn sm pri" type="button" id="tCodeOk" style="margin-left:auto" title="บันทึกชื่อในแผนเป็นชื่อเรียกของลูกค้ารายนี้ ครั้งหน้าผูกให้เลย">✓ ใช่ จำชื่อนี้</button>':'')+'<button class="btn sm" type="button" id="tCodeX"'+(codeGuess?'':' style="margin-left:auto"')+'>ไม่ผูก</button>'}`
       :'<span class="sub">ยังไม่ผูกลูกค้า — ค้นแล้วเลือกด้านล่าง (ไม่ผูก = คนขับกด "ถึงลูกค้า" เอง · ใบ COA ไม่ติ๊กให้)</span>';
-    if($('tCodeX')) $('tCodeX').onclick=()=>setCode('',false); };
+    if($('tCodeX')) $('tCodeX').onclick=()=>setCode('',false);
+    if($('tCodeOk')) $('tCodeOk').onclick=()=>aliasOk(c);   // ✓ 25 พ.ย. ยืนยันชื่อในแผน = ลูกค้ารายนี้ (เก็บเป็นชื่อเรียกทันที ไม่ต้องรอบันทึกเที่ยว)
+  };
+  const aliasOk=async c=>{ const nm=$('tCust').value.trim(), b=$('tCodeOk'); if(!nm){ toast('ช่องบริษัท (ลูกค้า) ว่าง',true); return; }
+    b.disabled=true; b.textContent='กำลังบันทึก…';
+    try{ const r=await postB({action:'addAlias',custCode:c.cust_code,name:nm});
+      if(!r.ok){ toast(r.error||'บันทึกไม่สำเร็จ',true); drawCode(); return; }
+      c.aliases=r.aliases||c.aliases; codeGuess=false; drawCode(); docSync();
+      toast('จำแล้ว: "'+nm+'" = '+c.cust_name+' · ครั้งหน้าผูกให้เลย'); }
+    catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — ลองกดอีกครั้ง',true); drawCode(); } };
   const setCode=(code,g)=>{ $('tCode').value=code||''; codeGuess=!!(code&&g); drawCode(); docSync(); const L=$('tCodeList'); if(L) L.hidden=true; if($('tCodeQ')) $('tCodeQ').value=''; };
   const drawCodeList=()=>{ const L=$('tCodeList'); if(!L) return; const q=thk($('tCodeQ').value);
     const key=c=>thk([c.cust_name,c.dtc_poi_name,c.dtc_poi_id,...(c.aliases||[])].join(' '));
