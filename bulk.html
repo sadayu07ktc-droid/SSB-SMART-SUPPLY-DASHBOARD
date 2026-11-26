@@ -588,7 +588,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26c</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26d</span></div>
   </div>
   </div></main>
 </div>
@@ -2492,16 +2492,24 @@ function pdDeptEdit(d){
 }
 function bulkReport(){
   const v=REP_VIEW; if(!v||!v.plan) return;
-  const p=v.plan, rn=v.rev==null?'ยังไม่ส่งบัญชี':revName(v.rev), rows=v.jobs.slice().sort((a,b)=>String(a.prod_name||'').localeCompare(String(b.prod_name||''))||a.line_no-b.line_no);
+  /* 26 พ.ย. คุณน้อง "ควรดึงหน้านี้มาเลย ก็คงสถานะ ยังไม่ระบุคนขับ" → แถวแผนแอดมินที่ยังไม่ลงตารางแผน (หรือลงไม่ครบตัน) ออกรายงานด้วย
+     สถานะ "ยังไม่ระบุคนขับ" · ฉบับที่ส่งบัญชีแล้ว (v.old) = ตารางแผนอย่างเดียวเหมือนเดิม · เรียงตามชนิดสินค้าแบบเดียวกับแผนแอดมิน */
+  const ad=!v.old&&DATA.admin&&DATA.plan&&DATA.plan.id===v.plan.id?DATA.admin.rows||[]:[], apl=ad.length?adminPlanned():{};
+  const pend=ad.filter(r=>!offTag(r.tag)).map(r=>{ const x=apl[r.key], pk=/รับเอง/.test(r.place||''); let q=r.qty;
+    if(x){ if(!(r.qty_ton&&x.ton<r.qty_ton-0.0005)) return null; q=String(Math.round((r.qty_ton-x.ton)*1000)/1000); }
+    return {_pend:1,line_no:'',cust_name:r.cust,dest:r.place,prod_name:r.prod,qty_text:q,bill:r.bill||'A',co:!!r.co,kind:pk?'pickup':'company',carrier:pk?'รับเอง':'',note:r.note}; }).filter(Boolean);
+  const pkey=j=>{ const x=prodOf(j.prod_name); return x?'0'+x.name:'1'+String(j.prod_name||''); };
+  const p=v.plan, rn=v.rev==null?'ยังไม่ส่งบัญชี':revName(v.rev), rows=v.jobs.concat(pend).sort((a,b)=>pkey(a).localeCompare(pkey(b),'th',{numeric:true})||String(a.prod_name||'').localeCompare(String(b.prod_name||''),'th')||(a._pend?1:0)-(b._pend?1:0)||a.line_no-b.line_no);
   const total=rows.reduce((s,j)=>s+tonOf(j.qty_text),0), co=rows.filter(isCo), nco=rows.filter(j=>j.co).length;
   const drv=new Set(co.filter(j=>j.driver_name).map(j=>j.driver_name)).size;
-  const stTx=j=>v.old?(v.chg[j.line_no]!=null?'แก้ในฉบับนี้':v.add[j.line_no]?'เพิ่มในฉบับนี้':'—')
+  const stTx=j=>j._pend?(isCo(j)?'ยังไม่ระบุคนขับ':'ยังไม่ลงแผน'):v.old?(v.chg[j.line_no]!=null?'แก้ในฉบับนี้':v.add[j.line_no]?'เพิ่มในฉบับนี้':'—')
     :!isCo(j)?(j.loaded?'โหลดแล้ว':KIND[j.kind]||''):!j.driver_name?'รอจัดรถ':(j.needs_ack&&j.status==='sent'?'แก้ไข · รอรับใหม่':(ST[j.status]||j.status||''));
   docReportPick({
     title:'แผนการส่งมอบ SSB · ส่ง '+thDate(p.send_date)+(v.rev==null?'':' · '+rn)+(v.old?' (ฉบับที่ส่งบัญชี)':''),
     file:'แผนส่งมอบBulk_ส่ง'+p.send_date+(v.rev==null?'':'_'+rn.replace(/\s/g,'')),
-    sub:'วันโหลด '+thDate(p.load_date)+' · จุดโหลด พันตัน · '+rows.length+' เที่ยว',
-    kpis:[['เที่ยว',rows.length+' เที่ยว','#1B4332'],['รวม (ตัน)',tons(total),'#2D6A4F'],['คนขับรถบริษัท',drv+' คน','#C9A227'],['รถนอก/รับเอง',(rows.length-co.length)+' เที่ยว','#157A40']],
+    sub:'วันโหลด '+thDate(p.load_date)+' · จุดโหลด พันตัน · '+v.jobs.length+' เที่ยว'+(pend.length?' · ยังไม่ระบุคนขับ '+pend.length+' รายการ':''),
+    kpis:[['เที่ยว',rows.length+' เที่ยว','#1B4332'],['รวม (ตัน)',tons(total),'#2D6A4F'],['คนขับรถบริษัท',drv+' คน','#C9A227'],
+      pend.length?['ยังไม่ระบุคนขับ',pend.length+' รายการ','#B42318']:['รถนอก/รับเอง',(rows.length-co.length)+' เที่ยว','#157A40']],
     cols:[{h:'#',w:26,a:'center',x:5},{h:'รอบ',w:30,a:'center',x:5},{h:'ลูกค้า',w:0,x:30},{h:'ส่งที่',w:62,x:12},{h:'สินค้า',w:100,x:20},
       {h:'จำนวน',w:66,a:'right',x:12},{h:'บิล',w:28,a:'center',x:6},{h:'ใบขนย้าย',w:50,a:'center',x:9},
       {h:'ขนส่ง',w:70,x:14},{h:'ทะเบียน',w:96,x:18},{h:'คนขับ',w:100,x:20},{h:'เลขที่ใบ',w:64,x:11},{h:v.old?'เปลี่ยน':'สถานะ',w:88,a:'center',x:16}],
@@ -2512,7 +2520,7 @@ function bulkReport(){
       if(!nx||nx.prod_name!==j.prod_name){ const g=rows.filter(x=>x.prod_name===j.prod_name), gt=g.reduce((s,x)=>s+tonOf(x.qty_text),0);
         out.push({sub:['','','รวม '+(j.prod_name||'—'),'',g.length+' เที่ยว',gt?tons(gt)+' ตัน':'','','','','','','','']}); }
       return out; },[]),
-    status:{col:12,map:{'รอจัดรถ':['#5f5e5a','#efefef'],'ยังไม่แจก':['#5f5e5a','#efefef'],'แจกแล้ว · รอคนขับรับ':['#185fa5','#e6f1fb'],'รับงานแล้ว':['#8a5a0b','#fef0d9'],
+    status:{col:12,map:{'ยังไม่ระบุคนขับ':['#a32d2d','#fceded'],'ยังไม่ลงแผน':['#5f5e5a','#efefef'],'รอจัดรถ':['#5f5e5a','#efefef'],'ยังไม่แจก':['#5f5e5a','#efefef'],'แจกแล้ว · รอคนขับรับ':['#185fa5','#e6f1fb'],'รับงานแล้ว':['#8a5a0b','#fef0d9'],
       'ชั่งต้นทางแล้ว':['#8a5a0b','#fef0d9'],'โหลดเสร็จ · ออกจาก SSB':['#185fa5','#e6f1fb'],'ส่งแล้ว':['#127a2e','#e7f5ee'],'โหลดแล้ว':['#127a2e','#e7f5ee'],
       'แก้ไข · รอรับใหม่':['#a33b0b','#fde9d9'],'แก้ในฉบับนี้':['#a33b0b','#fde9d9'],'เพิ่มในฉบับนี้':['#185fa5','#e6f1fb']}},
     tint:{col:7,map:{'✓ มี':'#157A40','✗':'#B42318'}},
