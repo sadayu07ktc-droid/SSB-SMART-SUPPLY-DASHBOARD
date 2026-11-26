@@ -588,7 +588,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26b</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26c</span></div>
   </div>
   </div></main>
 </div>
@@ -862,6 +862,9 @@ function plannedHtml(r,x){
     return `<span class="tag ${full?'okk':'warn'}">${full?'✓ ครบ':'ลงแล้ว '+tons(x.ton)+'/'+tons(r.qty_ton)+' ตัน'} · ${x.n} เที่ยว</span>`; }
   return `<span class="tag okk">✓ ${x.n} เที่ยว</span>`;
 }
+/* 26 พ.ย. คุณน้อง "มันควรเรียงตามชนิดสินค้า" → เรียงตามชื่อสินค้าในฐาน (ชื่อเรียกต่างกันแต่สินค้าเดียวกัน = กลุ่มเดียวกัน) แล้วตามลำดับเดิม · i = index เดิมใน rows (ปุ่ม data-add ใช้) */
+function admSorted(rows){ const k=r=>{ const p=prodOf(r.prod); return p?'0'+p.name:'1'+String(r.prod||''); };   // ไม่อยู่ในฐาน = ไว้ท้าย
+  return rows.map((r,i)=>[r,i,k(r)]).sort((a,b)=>a[2].localeCompare(b[2],'th',{numeric:true})||a[1]-b[1]); }
 function renderAdmin(){
   const d=DATA, a=d.admin, box=$('adminBox'), me=d.me, p=d.plan;
   if(!d.sendDate){ box.innerHTML=`<div class="empty">ยังไม่มีแผน — แผนแอดมินจะมาจาก Order Hub เองเมื่อแอดมินลงแผนส่งรายวัน (แถว BULK)${me.canEdit?' · หรือกด "📅 วันส่งใหม่" เพื่อกรอกเอง':''}</div>`; return; }
@@ -881,8 +884,8 @@ function renderAdmin(){
     h+=`<div class="anote">แผนแอดมิน ${revName(a.rev)} เปลี่ยนจากฉบับก่อน: แก้ ${(df.chg||[]).length} · เพิ่ม ${(df.add||[]).length} · ตัดออก ${(df.del||[]).length}${(df.del||[]).length?' ('+df.del.map(x=>esc(x.cust+' '+x.prod)).join(', ')+')':''}
       ${gone.length?`<br><b>⚠️ ตัดออกจากแผนแอดมินแล้ว แต่ยังอยู่ในตารางแผน:</b> ${gone.map(x=>esc(x.cust+' '+x.prod)).join(', ')} — ตรวจแล้วยกเลิกเที่ยวเอง`:''}</div>`;
   if(ADM_OPEN) h+=`<div class="tbl atbl"><table><thead><tr><th>#</th><th>บริษัท</th><th>สถานที่</th><th>ชนิดน้ำมัน</th><th class="r">จำนวน</th><th>บิล</th><th>สถานะ/PO</th><th>CO</th><th>เลขที่ SO</th><th class="r">ราคา</th><th>หมายเหตุ</th><th>เวลา</th><th>ตารางแผน</th><th></th></tr></thead><tbody>`
-    +rows.map((r,i)=>{ const x=pl[r.key], off=offTag(r.tag);
-      return `<tr class="${off?'off':''}${chg[r.key]!=null?' hl':''}${add[r.key]?' nw':''}"><td class="num">${r.no}</td>
+    +admSorted(rows).map(([r,i],n)=>{ const x=pl[r.key], off=offTag(r.tag);
+      return `<tr class="${off?'off':''}${chg[r.key]!=null?' hl':''}${add[r.key]?' nw':''}"><td class="num" title="แถวที่ ${esc(r.no)} ในแผนแอดมิน">${n+1}</td>
         <td class="cust">${esc(r.cust)}${add[r.key]?' <span class="tag info">ใหม่</span>':''}${chg[r.key]!=null?`<span class="chg">${esc(chg[r.key])}</span>`:''}</td>
         <td>${esc(r.place)}</td><td>${esc(r.prod)}</td><td class="r num">${esc(r.qty)}</td><td class="bcode" title="${esc(billTitle(r.prod,r.bill))}">${esc(billCode({bill:r.bill,prod_name:r.prod}))}</td><td>${tagHtml(r.tag)}</td>
         <td>${r.co?'<span class="co y">✓</span>':'<span class="co n">✗</span>'}</td><td class="num sm">${esc(r.so)}</td><td class="r num">${esc(r.price)}</td>
@@ -1077,7 +1080,7 @@ function openTrip(j,pre,opt){
       </div></fieldset>
       <details class="fs" open><summary>📄 ใบขนส่งน้ำมัน FM-TR-01 (ใบ 5 ส่วน)</summary><div class="tf" style="margin-top:10px">
         <label>ออกจากโรงงานก่อนเวลา<input id="fLeave" value="${esc(f5.leaveBy)}"${dis}></label>
-        <label>ส่งถึงลูกค้าก่อนเวลา<input id="fArr" value="${esc(f5.arriveBy)}" placeholder="เว้นว่าง = ใช้เวลาส่งสินค้า"${dis}></label>
+        <label>ส่งถึงลูกค้าก่อนเวลา<input id="fArr" value="${esc(f5.arriveBy)}" placeholder="เว้นว่าง = เวลาในหมายเหตุ (ไม่มี = ว่าง)"${dis}></label>
         <div class="full ckrow"><span class="lbx">เอกสารแนบ</span><label class="ck"><input type="checkbox" id="fCoa"${f5.coa?' checked':''}${dis}> ใบ COA</label>
           <label class="ck nw">ใบ CO เลขที่ <input id="fCoNo" class="mini" value="${esc(f5.coNo)}" placeholder="ตามช่อง CO"${dis}></label>
           <label class="ck nw">ถุงกรอง <input id="fBags" class="mini" style="width:52px;text-align:center" inputmode="numeric" value="${esc(f5.bags)}"${dis}> ใบ</label>
@@ -1456,6 +1459,11 @@ async function printTrips(ids){
     setTimeout(()=>{ window.print(); load(DATA.sendDate); },250);
   }catch(e){ toast('ไม่แน่ใจว่าออกเลขสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(DATA.sendDate); }
 }
+/* 26 พ.ย. คุณน้อง: "ส่งถึงลูกค้าก่อนเวลา" ดึงจากหมายเหตุ ถ้าไม่ระบุก็ว่าง · "ออกจากโรงงานก่อนเวลา" ว่าง (คนขับรู้เอง)
+   หมายเหตุ "ถึง 08.00 น." / "เช้า 8.00" / "ถึงก่อน 11 โมง" / "บ่าย 2 โมง" / "15:30" → 08.00 น. · ไม่มีเวลาในข้อความ = ว่าง */
+function noteTime(t){ t=String(t||''); let m=t.match(/(?<![\d/])(\d{1,2})\s*[.:]\s*(\d{2})(?![\d/])/), h, mi='00';
+  if(m){ h=+m[1]; mi=m[2]; } else if((m=t.match(/(?<![\d/])(\d{1,2})\s*(โมง|น\.|นาฬิกา|ทุ่ม)/))){ h=+m[1]; if(m[2]==='ทุ่ม'&&h<12) h+=18; else if(/บ่าย|เย็น/.test(t)&&h<12) h+=12; } else return '';
+  return h>23||+mi>59?'':('0'+h).slice(-2)+'.'+mi+' น.'; }
 function fmTr01(j,pl,prev,by,cdoc){
   /* 26 พ.ย. คุณน้อง "ให้เหมือนของจริง" → วางทุกช่องตามตำแหน่งในใบจริง (มม. จากขอบกรอบ · y = กึ่งกลางบรรทัด) */
   const f=f5Fill(Object.assign({},F5_DEF,j.form5||{}),cdoc||custDocOf(j.cust_code,j.cust_name)), e=esc, now=new Date(), hm=p2(now.getHours())+':'+p2(now.getMinutes());
@@ -1477,7 +1485,7 @@ function fmTr01(j,pl,prev,by,cdoc){
   <div class="fq" style="height:90.1mm">
     ${C(54,5.5,`<b>${e(CO)}</b>`,'f12')}${T(22,22.5,'SSB','flogo')}${T(75,14.4,'ใบขนส่งน้ำมัน','f11')}${T(70,26.6,'ส่วนที่ 1 สำหรับฝ่ายขนส่ง','f9')}
     <div class="fdoc">${T(1.2,5.8,'<b>เลขที่เอกสาร</b>','f12')}<div class="fdno">${e(j.doc_no||'')}</div>
-      ${T(1.2,14.7,'ออกจากโรงงานก่อนเวลา')}${V(60,14.7,f.leaveBy,17,'fb')}${T(1.2,24.9,'ส่งถึงลูกค้าก่อนเวลา')}${V(60,24.9,f.arriveBy||j.deliver_time||'',17,'fb')}</div>
+      ${T(1.2,14.7,'ออกจากโรงงานก่อนเวลา')}${V(60,14.7,f.leaveBy,17,'fb')}${T(1.2,24.9,'ส่งถึงลูกค้าก่อนเวลา')}${V(60,24.9,f.arriveBy||noteTime(j.note)||noteTime(j.deliver_time),17,'fb')}</div>
     ${T(112,38.4,'<b>ชนิดน้ำมัน</b>','f12')}${V(149,38.4,j.prod_name,34,'fb f11')}
     ${T(1.2,49.1,'ชื่อลูกค้า')}${V(16.6,49.1,j.cust_name,32)}${T(50,49.1,`<b><u>${e(billCode(j))}</u></b>`,'f13')}
     ${T(61.8,49.1,'สถานที่จัดส่ง')}${V(87.6,49.1,j.dest,17)}${T(105.8,49.1,'จำนวนที่ต้องเติม')}${V(144.8,49.1,qv,16)}${isT||!qt?T(162,49.1,'ตัน'):''}
