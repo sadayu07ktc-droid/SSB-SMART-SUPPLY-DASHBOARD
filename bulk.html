@@ -588,7 +588,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26d</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26e</span></div>
   </div>
   </div></main>
 </div>
@@ -2514,7 +2514,7 @@ function bulkReport(){
       {h:'จำนวน',w:66,a:'right',x:12},{h:'บิล',w:28,a:'center',x:6},{h:'ใบขนย้าย',w:50,a:'center',x:9},
       {h:'ขนส่ง',w:70,x:14},{h:'ทะเบียน',w:96,x:18},{h:'คนขับ',w:100,x:20},{h:'เลขที่ใบ',w:64,x:11},{h:v.old?'เปลี่ยน':'สถานะ',w:88,a:'center',x:16}],
     rows:rows.reduce((out,j,i)=>{
-      out.push([j.line_no,j.round_no||'',j.cust_name||'',j.dest||'',j.prod_name||'',qtyTx(j).replace(/ ตัน$/,''),billCode(j),j.co?'✓ มี':'✗',
+      out.push([j.line_no,j.round_no||'',j.cust_name||'',j.dest||'',j.prod_name||'',qtyTx(j).replace(/ ตัน$/,''),billCode(j),j.co?'✓':'✗',
         j.carrier||(isCo(j)?'บริษัท':KIND[j.kind]||''),String(j.plate||'').replace(/\s*[,/]\s*/g,' / '),j.driver_name||'',j.doc_no||'',stTx(j)]);
       const nx=rows[i+1];
       if(!nx||nx.prod_name!==j.prod_name){ const g=rows.filter(x=>x.prod_name===j.prod_name), gt=g.reduce((s,x)=>s+tonOf(x.qty_text),0);
@@ -2523,7 +2523,7 @@ function bulkReport(){
     status:{col:12,map:{'ยังไม่ระบุคนขับ':['#a32d2d','#fceded'],'ยังไม่ลงแผน':['#5f5e5a','#efefef'],'รอจัดรถ':['#5f5e5a','#efefef'],'ยังไม่แจก':['#5f5e5a','#efefef'],'แจกแล้ว · รอคนขับรับ':['#185fa5','#e6f1fb'],'รับงานแล้ว':['#8a5a0b','#fef0d9'],
       'ชั่งต้นทางแล้ว':['#8a5a0b','#fef0d9'],'โหลดเสร็จ · ออกจาก SSB':['#185fa5','#e6f1fb'],'ส่งแล้ว':['#127a2e','#e7f5ee'],'โหลดแล้ว':['#127a2e','#e7f5ee'],
       'แก้ไข · รอรับใหม่':['#a33b0b','#fde9d9'],'แก้ในฉบับนี้':['#a33b0b','#fde9d9'],'เพิ่มในฉบับนี้':['#185fa5','#e6f1fb']}},
-    tint:{col:7,map:{'✓ มี':'#157A40','✗':'#B42318'}},
+    tint:{col:7,map:{'✓':'#157A40','✗':'#B42318'}},
     total:['','','รวม '+rows.length+' เที่ยว','','',tons(total)+' ตัน','','','','','','',''] });
 }
 function docReportPick(spec){
