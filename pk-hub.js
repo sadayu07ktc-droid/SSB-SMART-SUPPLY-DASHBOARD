@@ -1,9 +1,14 @@
 /* 🚚 ขอรถ PK จาก Order Hub · 2026-11-20 (คุณน้อง: ถัง/กล่อง/ปี๊บ/ลัง ต้องขอรถ PK · คำขอเกิดจาก Order Hub แผนส่งรายวัน)
  * ปุ่มลอยที่ 3 ในหน้าแพลนรถ Packing (ซ้อนเหนือ PO รอส่ง) → ลิ้นชักคำขอ → แอดมิน PK เลือกคนขับ+ทะเบียน ยืนยัน
  * → Edge pk-hub: การ์ด LINE ถึงคนขับ PK + แจ้งแอดมิน Bulk + ลงหน้าจัดรถ Bulk (รถ PK) ให้พิมพ์ใบ 5 ส่วน · สถานะเด้งกลับ Order Hub
+ * 🚜 26 พ.ย. ใช้ซ้ำกับ "ขอรถไร่" (งานกาก): farm-hub.html ตั้ง window.PKHUB_DEPT='FARM' + PKHUB_PAGE=1 → แสดงเต็มหน้า ไม่มีปุ่มลอย
+ *    ยืนยันแล้ว = งานเข้าฟอร์มคนขับ + ค่าแรงตามกลุ่มคนขับ (Edge pk-hub สร้างออเดอร์ ORD-BK)
  * ไฟล์แยก ไม่แตะโค้ดหลักของ pk-daily.html (ใช้แค่ MY_UID / toast / askModal / esc / $ ที่หน้าหลักมีอยู่แล้ว) */
 (function () {
   const URL_ = 'https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/pk-hub';
+  const DP = window.PKHUB_DEPT === 'FARM' ? 'FARM' : 'PK', PAGE = !!window.PKHUB_PAGE;
+  const LB = DP === 'FARM' ? { who: 'ไร่', title: '🚜 ขอรถไร่ จาก Order Hub', sub: 'งานกาก (Bulk) ที่แอดมินขาย Bulk ขอรถไร่ · ยืนยันแล้ว: การ์ดไลน์ถึงคนขับไร่ + งานเข้าฟอร์มคนขับ/ค่าแรงไร่ + แจ้งแอดมิน Bulk + ลงหน้าจัดรถ Bulk ให้พิมพ์ใบ 5 ส่วน' }
+    : { who: 'PK', title: '🚚 ขอรถ PK จาก Order Hub', sub: 'งานถัง / กล่อง / ปี๊บ / ลัง ที่แอดมินขาย Bulk ขอรถ · ยืนยันแล้วแจ้งไลน์คนขับ + แอดมิน Bulk + งานเข้าฟอร์มคนขับ/ค่าแรง Packing และลงหน้าจัดรถ Bulk ให้พิมพ์ใบ 5 ส่วน' };
   const HB = { rows: [], drv: [], canEdit: false, loaded: false, tab: 'wait', open: false, busy: '', edit: '' };
   const E = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const T = m => { try { toast(m); } catch (e) { alert(m); } };
@@ -50,6 +55,7 @@
   function boot() {
     if (document.getElementById('bHub')) return;
     const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+    if (PAGE) { openD(); setInterval(() => { if (!document.hidden && !HB.edit) load(); }, 60000); return; }
     const b = document.createElement('button');
     b.className = 'fab hub'; b.id = 'bHub'; b.type = 'button';
     b.title = 'ขอรถ PK จาก Order Hub · งานถัง/กล่อง/ปี๊บ/ลัง ที่แอดมินขาย Bulk ขอรถ'; b.setAttribute('aria-label', 'ขอรถ PK จาก Order Hub');
@@ -63,8 +69,8 @@
   async function load(force) {
     if (!uid()) return;
     try {
-      const r = await fetch(URL_ + '?action=list&userId=' + encodeURIComponent(uid()) + '&t=' + Date.now()).then(x => x.json());
-      if (r.denied) { const b = document.getElementById('bHub'); if (b) b.hidden = true; return; }
+      const r = await fetch(URL_ + '?action=list&dept=' + DP + '&userId=' + encodeURIComponent(uid()) + '&t=' + Date.now()).then(x => x.json());
+      if (r.denied) { const b = document.getElementById('bHub'); if (b) b.hidden = true; const hb = PAGE && document.getElementById('hbBody'); if (hb) hb.innerHTML = '<div class="hbe">' + E(r.error || 'ไม่มีสิทธิ์') + '</div>'; return; }
       if (!r.ok) throw new Error(r.error || 'โหลดไม่ได้');
       HB.rows = r.rows || []; HB.drv = r.drv || []; HB.canEdit = !!r.canEdit; HB.loaded = true;
       badge(); if (HB.open && (force || !HB.edit)) draw();
@@ -76,15 +82,21 @@
   }
   function openD() {
     if (HB.open) return; HB.open = true; HB.edit = '';
+    if (PAGE) {
+      const host = document.getElementById('hbPage') || document.body;
+      host.innerHTML = '<div class="dh pg"><div><h3>' + LB.title + '</h3><div class="m">' + LB.sub + '</div></div><div class="xs"><button class="x" type="button" data-hr title="โหลดใหม่" aria-label="โหลดใหม่">↻</button></div></div><div class="db" id="hbBody"></div>';
+      host.addEventListener('click', onClick); host.addEventListener('change', onChange);
+      draw(); load(true); return;
+    }
     const host = document.createElement('div'); host.id = 'hbHost';
-    host.innerHTML = '<div class="scrim" data-hx></div><aside class="drawer pod" role="dialog" aria-modal="true" aria-label="ขอรถ PK จาก Order Hub"><div class="dh"><div><h3>🚚 ขอรถ PK จาก Order Hub</h3><div class="m">งานถัง / กล่อง / ปี๊บ / ลัง ที่แอดมินขาย Bulk ขอรถ · ยืนยันแล้วแจ้งไลน์คนขับ + แอดมิน Bulk และลงหน้าจัดรถ Bulk ให้พิมพ์ใบ 5 ส่วน</div></div><div class="xs"><button class="x" type="button" data-hr title="โหลดใหม่">↻</button><button class="x" type="button" data-hx title="ปิด">✕</button></div></div><div class="db" id="hbBody"></div></aside>';
+    host.innerHTML = '<div class="scrim" data-hx></div><aside class="drawer pod" role="dialog" aria-modal="true" aria-label="' + LB.title + '"><div class="dh"><div><h3>' + LB.title + '</h3><div class="m">' + LB.sub + '</div></div><div class="xs"><button class="x" type="button" data-hr title="โหลดใหม่">↻</button><button class="x" type="button" data-hx title="ปิด">✕</button></div></div><div class="db" id="hbBody"></div></aside>';
     document.body.appendChild(host);
     host.addEventListener('click', onClick);
     host.addEventListener('change', onChange);
     document.addEventListener('keydown', onKey);
     draw(); load(true);
   }
-  function closeD() { HB.open = false; HB.edit = ''; const h = document.getElementById('hbHost'); if (h) h.remove(); document.removeEventListener('keydown', onKey); }
+  function closeD() { if (PAGE) return; HB.open = false; HB.edit = ''; const h = document.getElementById('hbHost'); if (h) h.remove(); document.removeEventListener('keydown', onKey); }
   function onKey(e) { if (e.key === 'Escape') closeD(); }
 
   function draw() {
@@ -129,7 +141,7 @@
     if (r.status === 'reject' || r.status === 'cancel') h += '<div class="nt">เหตุผล: ' + E(r.reason || '-') + (r.by_name && r.status === 'reject' ? ' — ' + E(r.by_name) : '') + '</div>';
     if (ed) {
       const cur = r.driver_code || '';
-      h += '<div class="hbf"><select data-hd="' + id + '" aria-label="คนขับ"><option value="">— เลือกคนขับ PK —</option>' + HB.drv.map(d =>
+      h += '<div class="hbf"><select data-hd="' + id + '" aria-label="คนขับ"><option value="">— เลือกคนขับ' + LB.who + ' —</option>' + HB.drv.map(d =>
         '<option value="' + E(d[0]) + '" data-pl="' + E(d[2]) + '"' + (d[0] === cur ? ' selected' : '') + '>' + E(d[1]) + (d[2] ? ' · ' + E(d[2]) : '') + (d[3] ? '' : ' (ยังไม่ผูก LINE)') + '</option>').join('') + '</select>'
         + '<input data-hp="' + id + '" placeholder="ทะเบียน" aria-label="ทะเบียนรถ" value="' + E(r.plate || '') + '">'
         + '<input class="w" data-hn="' + id + '" placeholder="หมายเหตุถึงคนขับ (ถ้ามี)" aria-label="หมายเหตุ" value="' + E(r.pk_note || '') + '"></div>'
@@ -181,7 +193,7 @@
           ln.bulk && ln.bulk.sent ? 'แจ้งแอดมิน Bulk ' + ln.bulk.sent + ' คน' : '', x.bulk && x.bulk.id ? 'ลงหน้าจัดรถ Bulk แล้ว' : '⚠️ ยังไม่ลงหน้าจัดรถ Bulk'].filter(Boolean).join(' · ');
         HB.edit = ''; T(msg);
       } else if (act === 'no' || act === 'cx') {
-        const why = await ask({ icon: act === 'no' ? '⛔' : '❌', title: act === 'no' ? 'ตอบว่าไม่มีรถ — ' + (r ? r.company : '') : 'ยกเลิกรถ PK — ' + (r ? r.company : ''), ok: act === 'no' ? 'ส่งกลับ Order Hub' : 'ยกเลิกรถ', cancel: 'ไม่ใช่', danger: 1,
+        const why = await ask({ icon: act === 'no' ? '⛔' : '❌', title: act === 'no' ? 'ตอบว่าไม่มีรถ — ' + (r ? r.company : '') : 'ยกเลิกรถ' + LB.who + ' — ' + (r ? r.company : ''), ok: act === 'no' ? 'ส่งกลับ Order Hub' : 'ยกเลิกรถ', cancel: 'ไม่ใช่', danger: 1,
           input: { placeholder: 'เหตุผล (ขึ้นที่ Order Hub + แจ้งแอดมิน Bulk)', required: true },
           html: act === 'cx' ? '<p>ยกเลิกเที่ยวในหน้าจัดรถ Bulk และแจ้งคนขับ ' + E(r && r.driver_name) + ' ทางไลน์</p>' : '' });
         if (!why) return;

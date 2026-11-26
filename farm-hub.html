@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>ขอรถไร่ — SSB</title>
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anuphan:wght@600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* 🚜 ขอรถไร่ (งานกาก Bulk) · 26 พ.ย. 2569 คุณน้อง: "ขอรถเกิดก่อนแอดมินจัดรถ · ถัง/กล่อง ขอรถ PK · กาก ขอรถไร่ · ต้องมีแถบสถานะรถไร่"
+   Order Hub กดขอรถไร่ → การ์ด LINE ถึงแอดมินไร่ (ลิงก์มาหน้านี้) → เลือกคนขับไร่ + ทะเบียน ยืนยัน
+   → Edge pk-hub (dept FARM): การ์ดถึงคนขับไร่ + ออเดอร์ ORD-BK (ฟอร์มคนขับ/ค่าแรงไร่) + แจ้งแอดมิน Bulk + ลงหน้าจัดรถ Bulk · สถานะเด้งกลับปุ่ม "สถานะรถไร่" ใน Order Hub
+   ตัวรายการ/ปุ่มทั้งหมดอยู่ใน pk-hub.js (ตัวเดียวกับขอรถ PK ในหน้าแพลนรถ Packing) */
+:root{
+  --bg:#EDF2EE; --surface:#FFFFFF; --surface2:#F4F7F4; --ink:#14261C; --muted:#5D6E63; --line:#D7E1D9;
+  --head:#1B4332; --head-ink:#F3F7F4; --brand:#1F6B48; --brand-ink:#FFFFFF; --gold:#C9A227;
+  --good:#17703F; --goodbg:#E2F2E7; --bad:#B42318; --badbg:#FCEBE9; --warn:#9A5B06; --warnbg:#FFF2D8;
+  --display:"Anuphan","IBM Plex Sans Thai",system-ui,sans-serif; --body:"IBM Plex Sans Thai",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0D1611; --surface:#14211A; --surface2:#1A2A21; --ink:#E4EDE7; --muted:#9AAEA1; --line:#2A3C31;
+  --head:#123023; --head-ink:#E9F2EC; --brand:#3C8F66; --brand-ink:#FFFFFF; --gold:#D9B743;
+  --good:#6BCB93; --goodbg:#173326; --bad:#F2877C; --badbg:#3A1C19; --warn:#F0B95A; --warnbg:#3A2C12; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--body)}
+button,select,input,textarea{font:inherit;color:inherit}
+main{max-width:760px;margin:0 auto;padding:0 0 32px}
+.dh{background:var(--head);color:var(--head-ink);padding:16px 18px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.dh h3{margin:0;font-family:var(--display);font-size:20px}
+.dh .m{opacity:.85;font-size:13px;margin-top:2px}
+.dh .xs{display:flex;gap:6px;flex:none}
+.dh .x{background:rgba(255,255,255,.14);border:0;color:var(--head-ink);border-radius:9px;width:38px;height:38px;cursor:pointer;font-size:18px}
+.dh .x:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.db{padding:16px 16px 24px;display:flex;flex-direction:column;gap:14px}
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 16px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--brand)}
+.btn.pri{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.btn.dz{background:var(--bad);border-color:var(--bad);color:#fff}
+.btn:disabled{opacity:.55;cursor:default}
+.msg{text-align:center;color:var(--muted);padding:40px 16px}
+.mov{position:fixed;inset:0;background:rgba(10,20,14,.45);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+.mbox{background:var(--surface);border-radius:14px;max-width:440px;width:100%;padding:18px 18px 14px;box-shadow:0 18px 40px -12px rgba(0,0,0,.35)}
+.mbox .mic{font-size:26px}.mbox h3{margin:4px 0 8px;font-family:var(--display);font-size:17px}
+.mbox .mbody p{margin:0 0 8px;color:var(--muted);font-size:14px}
+.mact{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+#toastHost{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:60;width:max-content;max-width:calc(100% - 32px)}
+.toast{background:#14261C;color:#fff;border-radius:10px;padding:10px 16px;font-size:14px;box-shadow:0 10px 24px -8px rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+<main id="hbPage"><div class="msg">กำลังเข้าระบบ LINE…</div></main>
+<div id="toastHost" aria-live="polite"></div>
+<script>
+const LIFF_ID = '2010274217-Ot7vGhri';
+let MY_UID = '';
+const $ = id => document.getElementById(id);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function toast(m) { const h = $('toastHost'); h.innerHTML = '<div class="toast" role="status">' + esc(m) + '</div>'; clearTimeout(toast.t); toast.t = setTimeout(() => { h.innerHTML = ''; }, 3800); }
+function askModal(o) { return new Promise(res => { const ov = document.createElement('div'); ov.className = 'mov';
+  ov.innerHTML = '<div class="mbox" role="dialog" aria-modal="true"><div class="mic">' + (o.icon || '⚠️') + '</div><h3>' + esc(o.title) + '</h3><div class="mbody">' + (o.html || '') + '</div><div class="mact">'
+    + (o.cancel ? '<button class="btn" data-r="0">' + esc(o.cancel) + '</button>' : '') + '<button class="btn pri' + (o.danger ? ' dz' : '') + '" data-r="1">' + esc(o.ok || 'ตกลง') + '</button></div></div>';
+  const done = r => { ov.remove(); res(r); };
+  ov.onclick = e => { if (e.target === ov) done(false); const b = e.target.closest('[data-r]'); if (b) done(b.dataset.r === '1'); };
+  document.body.appendChild(ov); ov.querySelector('[data-r="1"]').focus(); }); }
+window.PKHUB_DEPT = 'FARM'; window.PKHUB_PAGE = 1;
+(async function init() {
+  try {
+    await liff.init({ liffId: LIFF_ID });
+    if (!liff.isLoggedIn()) { liff.login({ redirectUri: location.href }); return; }
+    const p = await liff.getProfile(); MY_UID = p.userId || '';
+  } catch (e) { $('hbPage').innerHTML = '<div class="msg">เข้าระบบ LINE ไม่สำเร็จ — เปิดจากไลน์อีกครั้ง</div>'; return; }
+  if (!MY_UID) { $('hbPage').innerHTML = '<div class="msg">ไม่พบบัญชี LINE</div>'; return; }
+  window.__D = 1;   // pk-hub.js รอสัญญาณนี้ก่อนเริ่ม
+})();
+</script>
+<script src="pk-hub.js?v=20261126a"></script>
+</body>
+</html>

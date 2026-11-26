@@ -602,7 +602,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26g</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26h</span></div>
   </div>
   </div></main>
 </div>
@@ -1059,13 +1059,13 @@ function openTrip(j,pre,opt){
     :Object.assign({kind:'company',custName:'',custCode:'',dest:'',prod:'',qtyText:'',bill:'A',co:false,coClosed:false,loaded:false,soNo:'',price:'',roundNo:'',deliverTime:'',note:'',
       carrier:'',driverName:'',plate:'',adminKey:''},pre||{});
   const f5=f5Fill(Object.assign({},F5_DEF,(j&&j.form5)||{}),custDocOf(t.custCode,t.custName)); f5.prev=[0,1,2].map(i=>(f5.prev||[])[i]||'');
-  const dv=t.kind==='company'&&t.driverName?(d.drivers.find(x=>x.name===t.driverName)||null):null;
+  const dv=t.kind==='company'&&t.driverName?(allDrv().find(x=>x.name===t.driverName)||null):null;
   let m=$('dlgTrip'); if(!m){ m=document.createElement('div'); m.id='dlgTrip'; m.className='dlg'; document.body.appendChild(m); }
   const close=()=>{ m.hidden=true; m.innerHTML=''; document.removeEventListener('keydown',onKey); };
   const onKey=e=>{ if(e.key==='Escape') close(); };
   m.onmousedown=e=>{ if(e.target===m) close(); };
   const o=(v,l,sel)=>`<option value="${esc(v)}"${sel?' selected':''}>${esc(l)}</option>`;
-  const drvOpts=o('','— ยังไม่เลือกคนขับ —',!dv)+d.drivers.map(x=>o(x.code,x.name+' · '+(x.plate||'ไม่มีทะเบียน')+(x.linked?(x.active?'':' · LINE ยังไม่ Active'):' · ยังไม่ผูก LINE'),dv&&dv.code===x.code)).join('');
+  const drvOpts=o('','— ยังไม่เลือกคนขับ —',!dv)+d.drivers.map(x=>o(x.code,x.name+' · '+(x.plate||'ไม่มีทะเบียน')+(x.linked?(x.active?'':' · LINE ยังไม่ Active'):' · ยังไม่ผูก LINE'),dv&&dv.code===x.code)).join('')+xdrvGroups(x=>o(x.code,x.name+' · '+(x.plate||'ไม่มีทะเบียน')+(x.active?'':' · LINE ยังไม่ Active'),dv&&dv.code===x.code));
   const dis=ro?' disabled':'';
   m.innerHTML=`<div class="dlgbox wide" role="dialog" aria-modal="true" aria-labelledby="tT">
     <div class="dlghd"><div><div class="sub">ส่ง ${thDate(p.send_date)} · โหลด ${thDate(p.load_date)}${j?' · เที่ยว #'+j.line_no:''}${j&&j.doc_no?' · ใบขนส่ง '+esc(j.doc_no):''}</div>
@@ -1181,7 +1181,7 @@ function openTrip(j,pre,opt){
     if(init||docTouched||ro) return; $('fCoa').checked=cd.coa; $('fBags').value=cd.bags>0?String(cd.bags):''; }
   $('tCode').addEventListener('change',()=>docSync()); docSync(1);
   let lastAuto=dv?dv.plate:'';
-  $('tDrv').onchange=()=>{ const x=d.drivers.find(y=>y.code===$('tDrv').value); const pl=$('tPlate');
+  $('tDrv').onchange=()=>{ const x=allDrv().find(y=>y.code===$('tDrv').value); const pl=$('tPlate');
     if(x&&(!pl.value||pl.value===lastAuto)){ pl.value=x.plate||''; lastAuto=pl.value; prevLoad(); } };
   $('fPrevM').onchange=()=>{ $('fPrevBox').hidden=!$('fPrevM').checked; if($('fPrevM').checked&&PREV_AUTO.length&&![0,1,2].some(i=>$('fPrev'+i).value)) PREV_AUTO.slice(0,3).forEach((x,i)=>$('fPrev'+i).value=x.prod||''); };
   let PREV_AUTO=[], pt=0;
@@ -1197,7 +1197,7 @@ function openTrip(j,pre,opt){
   const collect=()=>({ id:j?j.id:undefined, kind, adminKey:t.adminKey, custName:$('tCust').value.trim(), custCode:$('tCode').value, dest:$('tDest').value.trim(), prod:$('tProd').value.trim(),
     qtyText:$('tQty').value.trim(), bill:$('tBill').value.trim(), roundNo:$('tRound').value, deliverTime:$('tTime').value.trim(), soNo:$('tSo').value.trim(), price:$('tPrice').value.trim(),
     note:$('tNote').value.trim(), co:$('tCo').checked, coClosed:$('tCoC').checked, loaded:$('tLoaded').checked,
-    driverCode:kind==='company'?$('tDrv').value:'', carrier:kind==='company'?'บริษัท':$('tCar').value.trim(), driverName:kind==='company'?'':$('tDName').value.trim(), plate:$('tPlate').value.trim(),
+    driverCode:kind==='company'?$('tDrv').value:'', carrier:kind==='company'?drvCar($('tDrv').value):$('tCar').value.trim(), driverName:kind==='company'?'':$('tDName').value.trim(), plate:$('tPlate').value.trim(),
     form5:{coa:$('fCoa').checked, coNo:$('fCoNo').value.trim(), bags:$('fBags').value.trim(), bagTo:'', v:2, cond:(m.querySelector('[name=fCond]:checked')||{}).value||'',
       n2:$('fN2').checked, flush:$('fFlush').checked, flushTxt:$('fFlushT').value.trim(), leaveBy:$('fLeave').value.trim(), arriveBy:$('fArr').value.trim(),
       prevManual:$('fPrevM').checked, prev:[0,1,2].map(i=>$('fPrev'+i).value.trim())} });
@@ -1299,8 +1299,14 @@ function confirmAdmin(p,name,b64){
    คนขับ: ชื่อ (ตัด นาย/นาง) → ชื่อซ้ำดูทะเบียนหัว → ไม่เจอชื่อดูทะเบียน · ขนส่งไม่ใช่ "บริษัท" = รถนอก · บริษัท(PK)/(ฝ่ายไร่) ที่ไม่ใช่คนขับ Bulk = รถนอก (ไม่ส่งการ์ด)
    เลขที่ใบ 5 ส่วน = ใช้ตามไฟล์ (Edge saveTrip docNo) แล้วระบบรันต่อจากเลขนั้น ── */
 /* 26 พ.ย. คุณน้อง: "ฝ่ายไร่ คือ ขอรถฝ่ายไร่ · PK คือ ขอรถ Packing" — ในไฟล์แอดมินเขียน บริษัท(ฝ่ายไร่) / บริษัท(PK) → เรียกตามนี้ทุกที่ */
-const carTx=c=>{ c=String(c||'').trim(); return /ไร่/.test(c)&&/^(บริษัท|ขอรถ|ฝ่าย|ไร่)/.test(c)?'ขอรถฝ่ายไร่':/(^|[\s(])(pk|packing)([\s)]|$)/i.test(c)&&/^(บริษัท|ขอรถ|pk|packing)/i.test(c)?'ขอรถ Packing':c; };
+const carTx=c=>{ c=String(c||'').trim(); return /ไร่/.test(c)&&/^(บริษัท|ขอรถ|ฝ่าย|ไร่)/.test(c)?'ขอรถฝ่ายไร่':/(^|[\s(])(pk|packing)([\s)]|$)/i.test(c)&&/^(บริษัท|ขอรถ|รถ|pk|packing)/i.test(c)?'ขอรถ Packing':c; };
 const isBorrow=c=>/^ขอรถ/.test(carTx(c));
+/* 🚜 26 พ.ย. คุณน้อง "ส่งการ์ด+คิดค่าแรง" — คนขับไร่/Packing ที่ขอรถมา (DATA.xdrivers) เลือกได้เป็นรถบริษัท:
+   การ์ด LINE + ฟอร์มคนขับ + ออเดอร์ ORD-BK → ค่าแรงไปหน้ากลุ่มของคนขับ (ไร่/Packing) · carrier = ขอรถฝ่ายไร่ / ขอรถ Packing */
+const GRP_CAR={'ไร่':'ขอรถฝ่ายไร่','Packing':'ขอรถ Packing'};
+const allDrv=()=>[...((DATA&&DATA.drivers)||[]),...((DATA&&DATA.xdrivers)||[])];
+const drvCar=c=>{ const d=c&&((DATA&&DATA.xdrivers)||[]).find(x=>x.code===c); return d?GRP_CAR[d.group]||'บริษัท':'บริษัท'; };
+const xdrvGroups=(opt)=>['ไร่','Packing'].map(g=>{ const L=((DATA&&DATA.xdrivers)||[]).filter(x=>x.group===g); return L.length?`<optgroup label="${GRP_CAR[g]} · คนขับ${g==='ไร่'?'ไร่':' Packing'} (ค่าแรงไป${g==='ไร่'?'ไร่':' Packing'})">${L.map(opt).join('')}</optgroup>`:''; }).join('');
 const XJ_COL=[['cust',/^บริษัท$|^ลูกค้า/],['place',/^สถานที่/],['prod',/^ชนิด/],['qty',/^จำนวน/],['bill',/^บิล/],['carrier',/^ขนส่ง/],['drv',/^รายชื่อ|คนขับ/],['plate',/^ทะเบียน/],
   ['coc',/^ปิดco/i],['co',/^co$/i],['loaded',/^โหลด/],['time',/^เวลา/],['note',/^หมายเหตุ/],['round',/^รอบ/],['doc',/^เลขที่ใบ|ใบ5ส่วน|ใบขนส่ง/],['so',/so$/i],['price',/^ราคา/],['tag',/^สถานะ/]];
 function parseJobFile(aoa){
@@ -1320,22 +1326,24 @@ const xjProd=n=>{ const p=prodOf(n); return p?'#'+p.name:nrm(n); };
 const xjPlates=s=>{ const out=[]; let pre=''; String(s||'').split(/[\/,\s]+/).forEach(t=>{ const d=t.replace(/[^\d-]/g,''); let m=d.match(/^(\d{1,2})-?(\d{4})$/);
   if(m){ pre=m[1]; out.push(m[1]+m[2]); } else if((m=d.match(/^(\d{4})$/))&&pre) out.push(pre+m[1]); }); return out; };
 const xjNm=s=>thk(String(s||'').trim().replace(/^(นางสาว|นาง|นาย|น\.ส\.)\s*/,''));
-function xjDriver(name,plate){
-  const ds=(DATA&&DATA.drivers)||[], f=xjNm(name), fp=xjPlates(plate);
+function xjDriver(name,plate,list,lab){
+  const ds=list||(DATA&&DATA.drivers)||[], f=xjNm(name), fp=xjPlates(plate); lab=lab||'คนขับ Bulk';
   const first=d=>xjNm(String(d.name||'').trim().replace(/^(นางสาว|นาง|นาย|น\.ส\.)\s*/,'').split(/\s+/)[0]);
   const byN=f?ds.filter(d=>first(d)===f||xjNm(d.name)===f||(f.length>=4&&xjNm(d.name).startsWith(f))):[];
   const byP=fp.length?ds.filter(d=>xjPlates(d.plate)[0]===fp[0]):[];
   let d=null, why='';
   if(byN.length===1) d=byN[0];
   else if(byN.length>1){ const b=byN.filter(x=>byP.indexOf(x)>=0); if(b.length===1) d=b[0]; else why='ชื่อ "'+name+'" ตรงหลายคน ('+byN.map(x=>x.name).join(', ')+') — เลือกเอง'; }
-  else if(byP.length===1){ d=byP[0]; if(f) why='ไม่พบชื่อ "'+name+'" ในคนขับ Bulk — จับจากทะเบียน'; }
+  else if(byP.length===1){ d=byP[0]; if(f) why='ไม่พบชื่อ "'+name+'" ใน'+lab+' — จับจากทะเบียน'; }
   if(d&&byP.length&&byP.indexOf(d)<0) why=(why?why+' · ':'')+'ทะเบียน '+fp[0].replace(/^(\d\d)/,'$1-')+' ในระบบผูกกับ '+byP.map(x=>x.name).join(', ');
   return {d,why};
 }
 function xjDefault(x){
   const c=x.carrier; x.why='';
   if(/รับเอง/.test(c)) return {kind:'pickup',carrier:'รับเอง'};
-  if(isBorrow(c)){ x.why=c+' — คนขับของฝ่ายนั้น ไม่ส่งการ์ด LINE จาก Bulk · เปลี่ยนเป็นคนขับ Bulk ได้'; return {kind:'outside',carrier:c,name:x.drv}; }
+  if(isBorrow(c)){ const g=/ไร่/.test(c)?'ไร่':'Packing', r=xjDriver(x.drv,x.plate,((DATA&&DATA.xdrivers)||[]).filter(d=>d.group===g),'คนขับ'+g);
+    if(r.d){ x.why=c+' — การ์ด LINE + ค่าแรง'+(g==='ไร่'?'ไร่':' Packing')+(r.why?' · '+r.why:''); return {kind:'company',code:r.d.code}; }
+    x.why=(x.drv?'ไม่พบ "'+x.drv+'" ในคนขับ'+g:'ไฟล์ไม่มีชื่อคนขับ')+' — เลือกคนขับ'+g+' (การ์ด + ค่าแรง) หรือคงเป็น '+c+' (ไม่มีการ์ด/ค่าแรง)'; return {kind:'outside',carrier:c,name:x.drv}; }
   if(c&&!/^บริษัท/.test(c)) return {kind:'outside',carrier:c,name:x.drv};
   const r=xjDriver(x.drv,x.plate); x.why=r.why;
   if(r.d) return {kind:'company',code:r.d.code};
@@ -1373,7 +1381,7 @@ function xjAdminDiff(rows,arows){
 function xjExist(rows){
   const js=(DATA.jobs||[]).filter(j=>!j.cancelled), used=new Set();
   rows.forEach(x=>{ x.j=null; let j=x.doc?js.find(j=>!used.has(j.id)&&j.doc_no===x.doc):null;
-    if(!j){ const dn=x.pick.kind==='company'&&x.pick.code?((DATA.drivers||[]).find(d=>d.code===x.pick.code)||{}).name:'';
+    if(!j){ const dn=x.pick.kind==='company'&&x.pick.code?(allDrv().find(d=>d.code===x.pick.code)||{}).name:'';
       const same=j=>x.a?j.admin_key===x.a.key:thk(j.cust_name)===thk(x.cust)&&xjProd(j.prod_name)===xjProd(x.prod);
       const rd=j=>!j.round_no||!x.round||String(j.round_no)===String(x.round);
       const cand=js.filter(j=>!used.has(j.id)&&same(j)&&rd(j)&&!(x.doc&&j.doc_no&&j.doc_no!==x.doc));
@@ -1383,7 +1391,7 @@ function xjExist(rows){
 }
 function xjTrip(x,useDoc){
   const s=x.pick, j=x.j;
-  const t={kind:s.kind, carrier:s.kind==='company'?'บริษัท':s.carrier||'', driverCode:s.kind==='company'?s.code||'':'', driverName:s.kind==='company'?'':s.name||'', plate:x.plateIn,
+  const t={kind:s.kind, carrier:s.kind==='company'?drvCar(s.code):s.carrier||'', driverCode:s.kind==='company'?s.code||'':'', driverName:s.kind==='company'?'':s.name||'', plate:x.plateIn,
     custName:x.cust, custCode:custMatch(x.cust)||(x.a&&!x.weak?custMatch(x.a.cust):'')||(j&&j.cust_code)||'', dest:x.place, prod:x.prodIn||x.prod, qtyText:x.qty, bill:x.bill||'A',
     co:x.co, coClosed:x.coc||!!(j&&j.co_closed), loaded:x.loaded||!!(j&&j.loaded), deliverTime:x.time, note:[x.note, x.prodIn&&nrm(x.prodIn)!==nrm(x.prod)?'สินค้าตามไฟล์: '+x.prod:''].filter(Boolean).join(' · '), roundNo:x.round, soNo:x.so.trim(), price:x.price,
     adminKey:x.a?x.a.key:(j&&j.admin_key)||''};
@@ -1391,7 +1399,7 @@ function xjTrip(x,useDoc){
   if(useDoc&&x.doc&&!(j&&j.doc_no)) t.docNo=x.doc;
   return t;
 }
-function xjWho(t){ return t.kind==='company'?(t.driverCode?((DATA.drivers||[]).find(d=>d.code===t.driverCode)||{}).name||t.driverCode:'ยังไม่เลือกคนขับ'):(t.carrier+(t.driverName?' '+t.driverName:'')); }
+function xjWho(t){ return t.kind==='company'?(t.driverCode?(allDrv().find(d=>d.code===t.driverCode)||{}).name||t.driverCode:'ยังไม่เลือกคนขับ'):(t.carrier+(t.driverName?' '+t.driverName:'')); }
 function xjJobDiff(x,t){
   const j=x.j, d=[], pr=(l,a,b)=>{ a=String(a==null?'':a).trim(); b=String(b==null?'':b).trim(); if(a!==b) d.push(l+' '+(a||'—')+' → '+(b||'—')); };
   pr('คนขับ',isCo(j)?(j.driver_name||'ยังไม่เลือกคนขับ'):((j.carrier||'')+(j.driver_name?' '+j.driver_name:'')),xjWho(t));
@@ -1437,7 +1445,8 @@ function openJobImport(p){
     ${left.length?`<ul class="xjl b">${lst(left,j=>`<li>#${j.line_no} <b>${esc(j.cust_name)}</b> <span class="sub">${esc(j.prod_name)} · ${esc(qtyTx(j))}${j.driver_name?' · '+esc(j.driver_name):''}</span> — อยู่ในตารางแผน แต่ไม่มีในไฟล์ (ไม่ลบให้ — ตรวจแล้วยกเลิกเองถ้าไม่ใช้)</li>`)}</ul>`:''}</div>`;
   const opts=x=>{ const s=x.pick, ds=d.drivers||[];
     let o=`<option value=""${s.kind==='company'&&!s.code?' selected':''}>— รถบริษัท · ยังไม่เลือกคนขับ —</option>`
-      +ds.map(v=>`<option value="D:${esc(v.code)}"${s.kind==='company'&&s.code===v.code?' selected':''}>${esc(v.name)} · ${esc(v.plate||'—')}${v.linked?'':' (ยังไม่ผูก LINE)'}</option>`).join('');
+      +ds.map(v=>`<option value="D:${esc(v.code)}"${s.kind==='company'&&s.code===v.code?' selected':''}>${esc(v.name)} · ${esc(v.plate||'—')}${v.linked?'':' (ยังไม่ผูก LINE)'}</option>`).join('')
+      +xdrvGroups(v=>`<option value="D:${esc(v.code)}"${s.kind==='company'&&s.code===v.code?' selected':''}>${esc(v.name)} · ${esc(v.plate||'—')}</option>`);
     if(x.carrier&&x.carrier!=='บริษัท'&&!/รับเอง/.test(x.carrier)) o+=`<option value="X"${s.kind==='outside'?' selected':''}>${isBorrow(x.carrier)?'':'รถนอก · '}${esc(x.carrier)}${x.drv?' · '+esc(x.drv):''}</option>`;
     return o+`<option value="P"${s.kind==='pickup'?' selected':''}>ลูกค้ารับเอง</option>`; };
   const res=x=>{ const t=xjTrip(x,$('xjDoc')?$('xjDoc').checked:useDoc0);
@@ -1471,7 +1480,7 @@ function openJobImport(p){
   const redo=x=>{ const tr=m.querySelector('tr[data-i="'+x.i+'"]'); if(tr) tr.querySelector('.xjr').innerHTML=res(x); };
   m.querySelectorAll('.xjs').forEach(s=>s.onchange=()=>{ const x=R(s.dataset.i), v=s.value;
     x.pick=v.startsWith('D:')?{kind:'company',code:v.slice(2)}:v==='X'?{kind:'outside',carrier:x.carrier,name:x.drv}:v==='P'?{kind:'pickup',carrier:'รับเอง'}:{kind:'company',code:''};
-    if(v.startsWith('D:')&&!x.plateIn.trim()){ const dv=(d.drivers||[]).find(y=>y.code===x.pick.code); if(dv){ x.plateIn=String(dv.plate||'').replace(/\s*,\s*/g,'/'); m.querySelector('.xjp[data-i="'+x.i+'"]').value=x.plateIn; } }
+    if(v.startsWith('D:')&&!x.plateIn.trim()){ const dv=allDrv().find(y=>y.code===x.pick.code); if(dv){ x.plateIn=String(dv.plate||'').replace(/\s*,\s*/g,'/'); m.querySelector('.xjp[data-i="'+x.i+'"]').value=x.plateIn; } }
     redo(x); if(x.st!=='same') m.querySelector('.xjc[data-i="'+x.i+'"]').checked=true; sum(); });
   m.querySelectorAll('.xjd').forEach(s=>s.onchange=()=>{ const x=R(s.dataset.i); x.prodIn=s.value; x.pguess=false; s.parentNode.querySelector('.xjpn').innerHTML=pnote(x); redo(x); if(x.st!=='same') m.querySelector('.xjc[data-i="'+x.i+'"]').checked=true; sum(); });
   m.querySelectorAll('.xjp').forEach(s=>s.oninput=()=>{ const x=R(s.dataset.i); x.plateIn=s.value.trim(); redo(x); sum(); });
