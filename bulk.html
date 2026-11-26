@@ -167,6 +167,7 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 .xjo input{margin:0 6px 0 0;vertical-align:-2px;width:auto}
 .xjt{min-width:1180px}
 .xjt select{max-width:230px;font-size:12.5px;padding:4px 6px}
+.xjt select.xjd{max-width:170px;font-weight:600}
 .xjt input.xjp{width:128px;font-size:12.5px;padding:4px 6px}
 .xjw{display:block;font-size:11px;color:var(--warn);margin-top:3px;max-width:240px;white-space:normal}
 .xjt .chg{display:block;font-size:11px;max-width:240px;white-space:normal}
@@ -373,7 +374,7 @@ td.sel input,th.sel input{width:17px;height:17px;accent-color:var(--brand2);curs
 .tgl.on{background:var(--okTint);border-color:var(--ok)}
 .tgl:disabled{cursor:default;opacity:.7}
 .kd{display:inline-block;font-size:11px;font-weight:700;border-radius:6px;padding:0 6px;white-space:nowrap;color:var(--brandInk);background:var(--tint)}
-.kd.outside{color:var(--info);background:var(--infoTint)}.kd.pickup{color:var(--goldInk);background:var(--goldTint)}
+.kd.outside{color:var(--info);background:var(--infoTint)}.kd.borrow{color:var(--ok);background:var(--okTint)}.kd.pickup{color:var(--goldInk);background:var(--goldTint)}
 .docno{font-family:var(--f-num);font-weight:700;color:var(--brandInk)}
 .btn.sm.pri,.btn.sm.gold{font-weight:700}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:12px;overflow:hidden;align-self:flex-start}
@@ -601,7 +602,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26f</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26g</span></div>
   </div>
   </div></main>
 </div>
@@ -823,11 +824,13 @@ function render(){
   $('acts').innerHTML=`<button class="btn" type="button" id="custBtn">📍 ลูกค้า Bulk</button>`
     +(p?`<button class="btn" type="button" id="repBtn">🖨️ รายงาน</button>`:'')
     +(me.canEdit?`<button class="btn" type="button" id="dayBtn">📅 วันส่งใหม่</button>
+      ${(p||d.dates.length)?`<label class="btn up" for="xjTop" title="ไฟล์ Excel ที่แอดมินจัดรถไว้ (ขนส่ง/รายชื่อ/ทะเบียน/เลขที่ใบ 5 ส่วน) → เทียบกับแผน + จับคู่คนขับ/สินค้า → ลงตารางแผน → พิมพ์ → แจกงาน"><span class="upic" aria-hidden="true">📥</span>นำเข้าไฟล์จัดรถ<input type="file" id="xjTop" class="vh" accept=".xlsx,.xls"></label>`:''}
       ${me.isDev?`<label class="btn up" for="fileIn" title="สำรองเฉพาะ DEV — ปกติแผนแอดมินมาจาก Order Hub เอง"><span class="upic" aria-hidden="true">⬆</span>อัปโหลด Excel (สำรอง)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>`:''}`:'');
   $('custBtn').onclick=openCustomers;
   if($('repBtn')) $('repBtn').onclick=bulkReport;
   if($('dayBtn')) $('dayBtn').onclick=()=>askDay();
   if($('fileIn')) $('fileIn').addEventListener('change',onAdminFile);
+  if($('xjTop')) $('xjTop').addEventListener('change',onJobFile);
   const ld=(p&&p.load_date)||(d.admin&&d.admin.load_date);
   $('meta').innerHTML=d.sendDate?`<span>โหลด <b>${thDate(ld)}</b></span><span>ส่ง <b>${thDate(d.sendDate)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`:'';
   renderRevs(); renderAdmin(); renderPlan();
@@ -995,7 +998,7 @@ function renderPlan(){
     const ak=j.admin_key&&admin?akeys[j.admin_key]:null;
     const warn=j.status==='_snap'||j.cancelled?'':(j.admin_key&&admin&&!ak?'<span class="ina">ไม่อยู่ในแผนแอดมินล่าสุด</span>':ak&&offTag(ak.tag)?'<span class="ina">แอดมิน: '+esc(ak.tag)+'</span>':'');
     const who=isCo(j)?(j.driver_name?`${esc(j.driver_name)} · <span class="num">${esc(j.plate||'—')}</span>`:'<span class="sub">ยังไม่เลือกคนขับ</span>')
-      :`<span class="kd ${j.kind}">${esc(j.carrier||KIND[j.kind])}</span> ${esc(j.driver_name||'')}${j.plate?' · <span class="num">'+esc(j.plate)+'</span>':''}`;
+      :`<span class="kd ${j.kind}${isBorrow(j.carrier)?' borrow':''}">${esc(carTx(j.carrier)||KIND[j.kind])}</span> ${esc(j.driver_name||'')}${j.plate?' · <span class="num">'+esc(j.plate)+'</span>':''}`;
     return `<tr class="${j.cancelled?'cx':''}${SEL.has(j.id)?' picked':''}">
       <td class="sel">${j.status==='_snap'||j.cancelled?'':`<input type="checkbox" data-sel="${j.id}"${SEL.has(j.id)?' checked':''} aria-label="เลือกเที่ยว #${j.line_no}">`}</td>
       <td class="num">${j.line_no}</td><td class="num">${j.round_no||''}</td>
@@ -1250,8 +1253,15 @@ async function onAdminFile(e){
   try{
     const buf=await f.arrayBuffer();
     const X=await loadXLSX(), wb=X.read(buf,{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
-    const p=parseAdminPlan(X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
+    const aoa=X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}), p=parseAdminPlan(aoa);
     if(p.hdr<0||!p.rows.length){ toast('ไม่พบรายการในไฟล์ — ต้องเป็นแผนการส่งมอบจากแอดมิน (มีหัวตาราง "บริษัท")',true); return; }
+    /* 26 พ.ย. คุณน้องอัปไฟล์จัดรถ (มี ขนส่ง/รายชื่อ/ทะเบียน) ผ่านปุ่มนี้ → คอลัมน์เลื่อน บันทึกเป็นแผนแอดมินเพี้ยน (ดึงกลับแล้ว)
+       ไฟล์ที่มีคอลัมน์คนขับ/ทะเบียน = ไฟล์จัดรถ → ไปหน้านำเข้าไฟล์จัดรถ (เทียบ + จับคู่คนขับ) แทน */
+    const H=(aoa[p.hdr]||[]).map(h=>String(h||'').replace(/\s+/g,''));
+    if(H.some(h=>/^(ทะเบียน|รายชื่อ|ขนส่ง|คนขับ)/.test(h))){
+      if(!DATA.plan||(p.ds&&p.ds!==DATA.sendDate)){ if(p.ds&&DATA.dates.indexOf(p.ds)>=0){ await load(p.ds); } }
+      if(!DATA.plan){ toast('ไฟล์จัดรถ — วันส่ง '+thDate(p.ds)+' ยังไม่มีตารางแผน กด "📅 วันส่งใหม่" ก่อน',true); return; }
+      const q=parseJobFile(aoa); q.name=f.name; openJobImport(q); return; }
     let b64=''; if(buf.byteLength<=8*1024*1024){ const u=new Uint8Array(buf); let s=''; for(let i=0;i<u.length;i+=0x8000) s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000)); b64=btoa(s); }
     confirmAdmin(p,f.name,b64);
   }catch(err){ toast(String(err.message||err),true); }
@@ -1288,6 +1298,9 @@ function confirmAdmin(p,name,b64){
    แผนแอดมิน ↔ ไฟล์: จับด้วยเลข SO (CABK6911-100074 = SOB1/69110074) ก่อน · ไม่มี SO = ชื่อลูกค้า + ชนิดสินค้า
    คนขับ: ชื่อ (ตัด นาย/นาง) → ชื่อซ้ำดูทะเบียนหัว → ไม่เจอชื่อดูทะเบียน · ขนส่งไม่ใช่ "บริษัท" = รถนอก · บริษัท(PK)/(ฝ่ายไร่) ที่ไม่ใช่คนขับ Bulk = รถนอก (ไม่ส่งการ์ด)
    เลขที่ใบ 5 ส่วน = ใช้ตามไฟล์ (Edge saveTrip docNo) แล้วระบบรันต่อจากเลขนั้น ── */
+/* 26 พ.ย. คุณน้อง: "ฝ่ายไร่ คือ ขอรถฝ่ายไร่ · PK คือ ขอรถ Packing" — ในไฟล์แอดมินเขียน บริษัท(ฝ่ายไร่) / บริษัท(PK) → เรียกตามนี้ทุกที่ */
+const carTx=c=>{ c=String(c||'').trim(); return /ไร่/.test(c)&&/^(บริษัท|ขอรถ|ฝ่าย|ไร่)/.test(c)?'ขอรถฝ่ายไร่':/(^|[\s(])(pk|packing)([\s)]|$)/i.test(c)&&/^(บริษัท|ขอรถ|pk|packing)/i.test(c)?'ขอรถ Packing':c; };
+const isBorrow=c=>/^ขอรถ/.test(carTx(c));
 const XJ_COL=[['cust',/^บริษัท$|^ลูกค้า/],['place',/^สถานที่/],['prod',/^ชนิด/],['qty',/^จำนวน/],['bill',/^บิล/],['carrier',/^ขนส่ง/],['drv',/^รายชื่อ|คนขับ/],['plate',/^ทะเบียน/],
   ['coc',/^ปิดco/i],['co',/^co$/i],['loaded',/^โหลด/],['time',/^เวลา/],['note',/^หมายเหตุ/],['round',/^รอบ/],['doc',/^เลขที่ใบ|ใบ5ส่วน|ใบขนส่ง/],['so',/so$/i],['price',/^ราคา/],['tag',/^สถานะ/]];
 function parseJobFile(aoa){
@@ -1295,7 +1308,7 @@ function parseJobFile(aoa){
   const col={}; (aoa[b.hdr]||[]).forEach((h,c)=>{ h=String(h==null?'':h).replace(/\s+/g,''); if(!h) return; const x=XJ_COL.find(([k,re])=>col[k]==null&&re.test(h)); if(x) col[x[0]]=c; });
   const g=(r,k)=>col[k]==null?'':cell(r[col[k]]), yes=v=>!!v&&!/^(o|✗|x|0|-|ไม่.*|no)$/i.test(v), rows=[];
   aoa.slice(b.hdr+1).forEach((r,i)=>{ const cust=g(r,'cust'); if(!cust||/^รวม/.test(cust)) return;
-    rows.push({i:rows.length, xr:b.hdr+2+i, cust, place:g(r,'place'), prod:g(r,'prod'), qty:g(r,'qty'), bill:g(r,'bill').toUpperCase(), carrier:g(r,'carrier'), drv:g(r,'drv'), plate:g(r,'plate'),
+    rows.push({i:rows.length, xr:b.hdr+2+i, cust, place:g(r,'place'), prod:g(r,'prod'), qty:g(r,'qty'), bill:g(r,'bill').toUpperCase(), carrier:carTx(g(r,'carrier')), drv:g(r,'drv'), plate:g(r,'plate'),
       co:/^[P✓/]$/i.test(g(r,'co')), coc:yes(g(r,'coc')), loaded:yes(g(r,'loaded')), time:g(r,'time'), note:g(r,'note'), round:(g(r,'round').match(/\d+/)||[''])[0],
       doc:(g(r,'doc').replace(/\D/g,'').match(/^\d{8}$/)||[''])[0], so:g(r,'so'), price:g(r,'price'), tag:g(r,'tag')}); });
   return {rows, dl:b.dl, ds:b.ds, hdr:b.hdr};
@@ -1322,6 +1335,7 @@ function xjDriver(name,plate){
 function xjDefault(x){
   const c=x.carrier; x.why='';
   if(/รับเอง/.test(c)) return {kind:'pickup',carrier:'รับเอง'};
+  if(isBorrow(c)){ x.why=c+' — คนขับของฝ่ายนั้น ไม่ส่งการ์ด LINE จาก Bulk · เปลี่ยนเป็นคนขับ Bulk ได้'; return {kind:'outside',carrier:c,name:x.drv}; }
   if(c&&!/^บริษัท/.test(c)) return {kind:'outside',carrier:c,name:x.drv};
   const r=xjDriver(x.drv,x.plate); x.why=r.why;
   if(r.d) return {kind:'company',code:r.d.code};
@@ -1370,8 +1384,8 @@ function xjExist(rows){
 function xjTrip(x,useDoc){
   const s=x.pick, j=x.j;
   const t={kind:s.kind, carrier:s.kind==='company'?'บริษัท':s.carrier||'', driverCode:s.kind==='company'?s.code||'':'', driverName:s.kind==='company'?'':s.name||'', plate:x.plateIn,
-    custName:x.cust, custCode:custMatch(x.cust)||(x.a&&!x.weak?custMatch(x.a.cust):'')||(j&&j.cust_code)||'', dest:x.place, prod:x.prod, qtyText:x.qty, bill:x.bill||'A',
-    co:x.co, coClosed:x.coc||!!(j&&j.co_closed), loaded:x.loaded||!!(j&&j.loaded), deliverTime:x.time, note:x.note, roundNo:x.round, soNo:x.so.trim(), price:x.price,
+    custName:x.cust, custCode:custMatch(x.cust)||(x.a&&!x.weak?custMatch(x.a.cust):'')||(j&&j.cust_code)||'', dest:x.place, prod:x.prodIn||x.prod, qtyText:x.qty, bill:x.bill||'A',
+    co:x.co, coClosed:x.coc||!!(j&&j.co_closed), loaded:x.loaded||!!(j&&j.loaded), deliverTime:x.time, note:[x.note, x.prodIn&&nrm(x.prodIn)!==nrm(x.prod)?'สินค้าตามไฟล์: '+x.prod:''].filter(Boolean).join(' · '), roundNo:x.round, soNo:x.so.trim(), price:x.price,
     adminKey:x.a?x.a.key:(j&&j.admin_key)||''};
   if(j) t.id=j.id;
   if(useDoc&&x.doc&&!(j&&j.doc_no)) t.docNo=x.doc;
@@ -1389,17 +1403,22 @@ function xjJobDiff(x,t){
 }
 async function onJobFile(e){
   const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
-  if(!DATA.plan){ toast('วันส่งนี้ยังไม่มีตารางแผน — กด "📅 วันส่งใหม่" ก่อน',true); return; }
   toast('กำลังอ่านไฟล์ '+f.name+' …');
   try{ const X=await loadXLSX(), wb=X.read(await f.arrayBuffer(),{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
     const p=parseJobFile(X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
     if(p.hdr<0||!p.rows.length){ toast('ไม่พบรายการในไฟล์ — ต้องเป็นไฟล์แผน/จัดรถของแอดมิน (มีหัวตาราง "บริษัท")',true); return; }
+    if(p.ds&&p.ds!==DATA.sendDate&&DATA.dates.indexOf(p.ds)>=0) await load(p.ds);   // ไฟล์บอกวันส่ง → เปิดแพลนวันนั้นให้เอง
+    if(!DATA.plan){ toast('วันส่ง '+thDate(p.ds||DATA.sendDate)+' ยังไม่มีตารางแผน — กด "📅 วันส่งใหม่" ก่อน',true); return; }
     p.name=f.name; openJobImport(p);
   }catch(err){ toast(String(err.message||err),true); }
 }
 function openJobImport(p){
   const d=DATA, pl=d.plan;
-  p.rows.forEach(x=>{ x.pick=xjDefault(x); x.plateIn=x.plate; });
+  p.rows.forEach(x=>{ x.pick=xjDefault(x); x.plateIn=x.plate; const pd=prodOf(x.prod); x.prodIn=pd?pd.name:''; x.pguess=!!(pd&&pd._guess); });
+  /* 26 พ.ย. คุณน้อง "รายการสินค้าควรแมชตามฐานสินค้าเลย" → ช่องเลือกชนิดสินค้าจากฐาน (ค่าเริ่ม = จับคู่ชื่อ/ชื่ออื่น/รหัสในชื่อ) */
+  const PDN=[...new Set(((d.products||[]).filter(q=>q.active!==false)).map(q=>q.name))].sort((a,b)=>a.localeCompare(b,'th',{numeric:true}));
+  const popts=x=>`<option value=""${x.prodIn?'':' selected'}>⚠️ ไม่อยู่ในฐาน — ใช้ "${esc(x.prod)}"</option>`+PDN.map(n=>`<option${n===x.prodIn?' selected':''}>${esc(n)}</option>`).join('');
+  const pnote=x=>!x.prodIn?'<small class="xjw">ชนิดสินค้านี้ยังไม่อยู่ในฐาน — เลือกจากฐาน หรือเพิ่มที่ ฐานข้อมูล › ชนิดสินค้า</small>':nrm(x.prodIn)!==nrm(x.prod)?`<small class="sub" style="display:block">ไฟล์: ${esc(x.prod)}${x.pguess?' · จับจากรหัสในชื่อ':''} → เก็บในหมายเหตุ</small>`:'';
   const arows=xjMatch(p.rows), left=xjExist(p.rows), ad=d.admin?xjAdminDiff(p.rows,arows):null;
   const docs=p.rows.filter(x=>x.doc), useDoc0=docs.length>0;
   const docNx=(()=>{ const nx=docNext(), ym=nx.slice(0,4), mx=docs.map(x=>x.doc).filter(s=>s.slice(0,4)===ym).sort().pop(); return mx&&String(+mx+1)>nx?String(+mx+1):nx; })();   // = Edge saveTrip ขยับเลขถัดไปให้
@@ -1419,7 +1438,7 @@ function openJobImport(p){
   const opts=x=>{ const s=x.pick, ds=d.drivers||[];
     let o=`<option value=""${s.kind==='company'&&!s.code?' selected':''}>— รถบริษัท · ยังไม่เลือกคนขับ —</option>`
       +ds.map(v=>`<option value="D:${esc(v.code)}"${s.kind==='company'&&s.code===v.code?' selected':''}>${esc(v.name)} · ${esc(v.plate||'—')}${v.linked?'':' (ยังไม่ผูก LINE)'}</option>`).join('');
-    if(x.carrier&&x.carrier!=='บริษัท'&&!/รับเอง/.test(x.carrier)) o+=`<option value="X"${s.kind==='outside'?' selected':''}>รถนอก · ${esc(x.carrier)}${x.drv?' · '+esc(x.drv):''}</option>`;
+    if(x.carrier&&x.carrier!=='บริษัท'&&!/รับเอง/.test(x.carrier)) o+=`<option value="X"${s.kind==='outside'?' selected':''}>${isBorrow(x.carrier)?'':'รถนอก · '}${esc(x.carrier)}${x.drv?' · '+esc(x.drv):''}</option>`;
     return o+`<option value="P"${s.kind==='pickup'?' selected':''}>ลูกค้ารับเอง</option>`; };
   const res=x=>{ const t=xjTrip(x,$('xjDoc')?$('xjDoc').checked:useDoc0);
     if(!x.j){ x.st='new'; return '<span class="tag info">ใหม่</span>'; }
@@ -1428,7 +1447,7 @@ function openJobImport(p){
   const nm=x=>x.pick.kind==='company'&&!x.pick.code;
   const body=p.rows.map(x=>{ const r=res(x); return `<tr data-i="${x.i}"><td><input type="checkbox" class="xjc" data-i="${x.i}"${x.st!=='same'?' checked':''} aria-label="นำเข้าแถว ${x.xr}"></td><td class="num">${x.xr}</td>
         <td class="cust">${esc(x.cust)}<small class="sub" style="display:block">${esc(x.place)}${x.a?'':' · <span style="color:var(--info)">ไม่อยู่ในแผนแอดมิน</span>'}</small></td>
-        <td>${esc(x.prod)}<small class="sub" style="display:block">${esc(x.qty)} · ${esc(x.bill)}${x.co?' · CO':''}</small></td>
+        <td><select class="xjd" data-i="${x.i}" aria-label="ชนิดสินค้าแถว ${x.xr}">${popts(x)}</select><span class="xjpn">${pnote(x)}</span><small class="sub" style="display:block">${esc(x.qty)} · ${esc(x.bill)}${x.co?' · CO':''}</small></td>
         <td class="nt">${x.round?'รอบ '+esc(x.round)+'<br>':''}${esc(x.time)}</td>
         <td><select class="xjs" data-i="${x.i}" aria-label="คนขับแถว ${x.xr}">${opts(x)}</select><small class="sub" style="display:block">ไฟล์: ${esc(x.carrier||'—')}${x.drv?' · '+esc(x.drv):''}</small>${x.why?`<small class="xjw">${esc(x.why)}</small>`:''}</td>
         <td><input class="xjp" data-i="${x.i}" value="${esc(x.plateIn)}" aria-label="ทะเบียนแถว ${x.xr}"></td>
@@ -1454,6 +1473,7 @@ function openJobImport(p){
     x.pick=v.startsWith('D:')?{kind:'company',code:v.slice(2)}:v==='X'?{kind:'outside',carrier:x.carrier,name:x.drv}:v==='P'?{kind:'pickup',carrier:'รับเอง'}:{kind:'company',code:''};
     if(v.startsWith('D:')&&!x.plateIn.trim()){ const dv=(d.drivers||[]).find(y=>y.code===x.pick.code); if(dv){ x.plateIn=String(dv.plate||'').replace(/\s*,\s*/g,'/'); m.querySelector('.xjp[data-i="'+x.i+'"]').value=x.plateIn; } }
     redo(x); if(x.st!=='same') m.querySelector('.xjc[data-i="'+x.i+'"]').checked=true; sum(); });
+  m.querySelectorAll('.xjd').forEach(s=>s.onchange=()=>{ const x=R(s.dataset.i); x.prodIn=s.value; x.pguess=false; s.parentNode.querySelector('.xjpn').innerHTML=pnote(x); redo(x); if(x.st!=='same') m.querySelector('.xjc[data-i="'+x.i+'"]').checked=true; sum(); });
   m.querySelectorAll('.xjp').forEach(s=>s.oninput=()=>{ const x=R(s.dataset.i); x.plateIn=s.value.trim(); redo(x); sum(); });
   m.querySelectorAll('.xjc').forEach(c=>c.onchange=sum);
   $('xjAll').onchange=e=>{ m.querySelectorAll('.xjc').forEach(c=>c.checked=e.target.checked); sum(); };
@@ -1550,7 +1570,7 @@ function askDispatch(){
         ${by[k].map(tripLi).join('')}</div>`).join('')}</div>`
         :'<div class="sub" style="color:var(--bad)">ยังไม่มีเที่ยวรถบริษัทที่เลือกคนขับ — เลือกคนขับก่อน</div>'}
       ${wait.length?`<div class="dsec">⏳ รอจัดรถ · ยังไม่แจก (${wait.length})</div><div class="dlglist">${wait.map(j=>`<div>${tripLi(j)}</div>`).join('')}</div>`:''}
-      ${outs.length?`<div class="dsec">🚚 รถนอก/รับเอง · ไม่แจก (${outs.length})</div><div class="dlglist">${outs.map(j=>`<div><span class="dlgplate">${esc(j.carrier||KIND[j.kind]||'รถนอก')}${j.plate?' · '+esc(j.plate):''}</span>${tripLi(j)}</div>`).join('')}</div>`:''}
+      ${outs.length?`<div class="dsec">🚚 รถนอก/รับเอง · ไม่แจก (${outs.length})</div><div class="dlglist">${outs.map(j=>`<div><span class="dlgplate">${esc(carTx(j.carrier)||KIND[j.kind]||'รถนอก')}${j.plate?' · '+esc(j.plate):''}</span>${tripLi(j)}</div>`).join('')}</div>`:''}
       <div class="sub">คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที${wait.length?' · เที่ยวที่รอจัดรถ ใส่คนขับทีหลังแล้วบันทึก = ส่งการ์ดให้เอง':''} · หลังแจกงาน แก้เที่ยว = ส่งการ์ดแก้ไข/ยกเลิกให้อัตโนมัติ</div>
       ${firstPub?`<label class="sub" style="display:flex;gap:8px;align-items:center;color:var(--ink)"><input type="checkbox" id="dPub" checked> ✉️ ส่งแผนฉบับแรกให้บัญชี/พันตันพร้อมกัน
         <button type="button" class="btn sm" id="dPv" style="margin-left:auto">👀 พรีวิวแผน</button></label>`:''}
