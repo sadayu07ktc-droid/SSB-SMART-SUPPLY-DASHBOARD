@@ -157,6 +157,19 @@ tr.cx td.cust,tr.cx td.prod,tr.cx td.r{text-decoration:line-through}
 @media(max-width:760px){.tk-label{padding:0 11px;font-size:11px;max-width:46%}.tk-date{display:none}.tk-item{padding:8px 13px;gap:6px}.tk-view::before,.tk-view::after{width:22px}}
 /* 📍 ลูกค้า Bulk (พิกัด/หมุด DTC/ตาชั่งปลายทาง/ใบชั่งตอนออก) · 2026-10-15 */
 .dlgbox.wide{max-width:980px}
+/* 📥 นำเข้าไฟล์จัดรถ (26 พ.ย.) */
+.dlgbox.xj{max-width:1240px}
+.xjb{font-size:13px;margin:0 0 8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.xjl{margin:6px 0 0;padding-left:18px;font-size:12.5px;line-height:1.55}
+.xjl.w li::marker{color:var(--warn)}.xjl.i li::marker{color:var(--info)}.xjl.b li::marker{color:var(--bad)}
+.xjn{margin:6px 0 0;padding-left:20px;font-size:13px;line-height:1.7}
+.xjo{display:block;font-size:13px;margin:2px 0 6px;line-height:1.5}
+.xjo input{margin:0 6px 0 0;vertical-align:-2px;width:auto}
+.xjt{min-width:1180px}
+.xjt select{max-width:230px;font-size:12.5px;padding:4px 6px}
+.xjt input.xjp{width:128px;font-size:12.5px;padding:4px 6px}
+.xjw{display:block;font-size:11px;color:var(--warn);margin-top:3px;max-width:240px;white-space:normal}
+.xjt .chg{display:block;font-size:11px;max-width:240px;white-space:normal}
 /* 👀 พรีวิวก่อนส่งแผน (การ์ด LINE + อีเมล + ผู้รับ) · แจกงานโชว์รายละเอียดทุกเที่ยว · 2026-11-19 */
 #dlgPub{z-index:70}
 .pvmode{border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.55}
@@ -588,7 +601,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26e</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26f</span></div>
   </div>
   </div></main>
 </div>
@@ -956,13 +969,15 @@ function renderPlan(){
   if(!F[FILT]) FILT='all';
   const ed=me.canEdit&&!VIEWING;
   $('planTools').innerHTML=Object.keys(F).map(k=>`<button type="button" class="fchip${FILT===k?' on':''}" data-f="${k}" aria-pressed="${FILT===k}">${F[k][0]}<span class="n">${cnt(F[k][1])}</span></button>`).join('')
-    +(ed?`<span class="sp"><button type="button" class="btn sm" id="tAdd">+ เพิ่มเที่ยว</button>
+    +(ed?`<span class="sp"><label class="btn sm" for="xjIn" title="ไฟล์ Excel ที่แอดมินจัดรถไว้ (ขนส่ง/รายชื่อ/ทะเบียน/เลขที่ใบ 5 ส่วน) → เทียบกับแผน + เลือกคนขับ + ลงตารางแผน">📥 นำเข้าไฟล์จัดรถ (Excel)<input type="file" id="xjIn" class="vh" accept=".xlsx,.xls"></label>
+      <button type="button" class="btn sm" id="tAdd">+ เพิ่มเที่ยว</button>
       <button type="button" class="btn sm" id="tPrint"${SEL.size?'':' disabled'}>🖨️ พิมพ์ใบขนส่ง${SEL.size?' ('+SEL.size+')':''}</button>
       ${!p.dispatched_at?`<button type="button" class="btn sm pri" id="tDisp">📤 แจกงานรถบริษัท</button>`:''}
       <button type="button" class="btn sm gold" id="tPub">✉️ ส่งแผนให้บัญชี</button></span>`:'')
     +`<div class="docinfo sub">เลขที่ใบขนส่งถัดไป <b class="num">${esc(docNext())}</b>${d.doc&&d.doc.next==null?' (เดือนนี้ยังไม่เคยออก)':''}${me.isDev&&!VIEWING?' · <button type="button" class="lnk" id="tDoc">ตั้งเลขถัดไป</button>':''}</div>`;
   $('planTools').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{ FILT=b.dataset.f; renderPlan(); });
   if($('tAdd')) $('tAdd').onclick=()=>openTrip(null,null);
+  if($('xjIn')) $('xjIn').addEventListener('change',onJobFile);
   if($('tPrint')) $('tPrint').onclick=()=>printTrips([...SEL]);
   if($('tDisp')) $('tDisp').onclick=askDispatch;
   if($('tPub')) $('tPub').onclick=askPublish;
@@ -1265,6 +1280,212 @@ function confirmAdmin(p,name,b64){
       toast('บันทึกแผนแอดมิน '+revName(r.rev)+' · '+r.rows+' แถว'+(r.rev?' · แก้ '+df.chg.length+' เพิ่ม '+df.add.length+' ตัด '+df.del.length:''));
       ADM_OPEN=true; load(sd);
     }catch(e){ toast('ไม่แน่ใจว่าบันทึกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); close(); load(sd); } };
+}
+/* ── 📥 นำเข้าไฟล์จัดรถของแอดมิน · 26 พ.ย. 69 คุณน้อง
+   "แอดมินทำใน Excel ยังไม่ได้ทำในระบบ → เอาไฟล์ไปแมชกับแพลนที่เปิด ขึ้นว่าต่างกันตรงไหน แมชคนขับ เลือก ลงใบ 5 ส่วน ปริ้น แจ้งงาน"
+   ไฟล์ = รายงานแอดมิน (A1 แผนการส่งมอบ SSB · A2 วันโหลด/วันส่ง · หัว "บริษัท") คอลัมน์อ่านจากชื่อหัว ไม่ยึดตำแหน่ง:
+   บริษัท · สถานที่ · ชนิดน้ำมัน · จำนวน · บิล · ขนส่ง · รายชื่อ · ทะเบียน · CO · ปิด CO · โหลดแล้ว · เวลาส่งสินค้า · หมายเหตุ · รอบ · เลขที่ใบ 5 ส่วน · เลขที่SO · ราคา
+   แผนแอดมิน ↔ ไฟล์: จับด้วยเลข SO (CABK6911-100074 = SOB1/69110074) ก่อน · ไม่มี SO = ชื่อลูกค้า + ชนิดสินค้า
+   คนขับ: ชื่อ (ตัด นาย/นาง) → ชื่อซ้ำดูทะเบียนหัว → ไม่เจอชื่อดูทะเบียน · ขนส่งไม่ใช่ "บริษัท" = รถนอก · บริษัท(PK)/(ฝ่ายไร่) ที่ไม่ใช่คนขับ Bulk = รถนอก (ไม่ส่งการ์ด)
+   เลขที่ใบ 5 ส่วน = ใช้ตามไฟล์ (Edge saveTrip docNo) แล้วระบบรันต่อจากเลขนั้น ── */
+const XJ_COL=[['cust',/^บริษัท$|^ลูกค้า/],['place',/^สถานที่/],['prod',/^ชนิด/],['qty',/^จำนวน/],['bill',/^บิล/],['carrier',/^ขนส่ง/],['drv',/^รายชื่อ|คนขับ/],['plate',/^ทะเบียน/],
+  ['coc',/^ปิดco/i],['co',/^co$/i],['loaded',/^โหลด/],['time',/^เวลา/],['note',/^หมายเหตุ/],['round',/^รอบ/],['doc',/^เลขที่ใบ|ใบ5ส่วน|ใบขนส่ง/],['so',/so$/i],['price',/^ราคา/],['tag',/^สถานะ/]];
+function parseJobFile(aoa){
+  const b=parseAdminPlan(aoa); if(b.hdr<0) return {hdr:-1,rows:[]};
+  const col={}; (aoa[b.hdr]||[]).forEach((h,c)=>{ h=String(h==null?'':h).replace(/\s+/g,''); if(!h) return; const x=XJ_COL.find(([k,re])=>col[k]==null&&re.test(h)); if(x) col[x[0]]=c; });
+  const g=(r,k)=>col[k]==null?'':cell(r[col[k]]), yes=v=>!!v&&!/^(o|✗|x|0|-|ไม่.*|no)$/i.test(v), rows=[];
+  aoa.slice(b.hdr+1).forEach((r,i)=>{ const cust=g(r,'cust'); if(!cust||/^รวม/.test(cust)) return;
+    rows.push({i:rows.length, xr:b.hdr+2+i, cust, place:g(r,'place'), prod:g(r,'prod'), qty:g(r,'qty'), bill:g(r,'bill').toUpperCase(), carrier:g(r,'carrier'), drv:g(r,'drv'), plate:g(r,'plate'),
+      co:/^[P✓/]$/i.test(g(r,'co')), coc:yes(g(r,'coc')), loaded:yes(g(r,'loaded')), time:g(r,'time'), note:g(r,'note'), round:(g(r,'round').match(/\d+/)||[''])[0],
+      doc:(g(r,'doc').replace(/\D/g,'').match(/^\d{8}$/)||[''])[0], so:g(r,'so'), price:g(r,'price'), tag:g(r,'tag')}); });
+  return {rows, dl:b.dl, ds:b.ds, hdr:b.hdr};
+}
+// เลข SO เทียบกันได้: CABK6911-100074 / SOB1/69110074 / PA/69090025 → 69110074 / 69090025
+const xjSo=(...ss)=>{ const k=new Set(); ss.forEach(s=>{ s=String(s||'').replace(/\s/g,''); let m=s.match(/(\d{4})-(\d{6})$/); if(m) k.add(m[1]+m[2].slice(-4)); m=s.match(/(\d{8})$/); if(m) k.add(m[1]); }); return k; };
+const xjProd=n=>{ const p=prodOf(n); return p?'#'+p.name:nrm(n); };
+// ทะเบียน "85-5973/5975" → 855973, 855975 (ตัวท้ายไม่มีจังหวัด = ใช้ของตัวหน้า)
+const xjPlates=s=>{ const out=[]; let pre=''; String(s||'').split(/[\/,\s]+/).forEach(t=>{ const d=t.replace(/[^\d-]/g,''); let m=d.match(/^(\d{1,2})-?(\d{4})$/);
+  if(m){ pre=m[1]; out.push(m[1]+m[2]); } else if((m=d.match(/^(\d{4})$/))&&pre) out.push(pre+m[1]); }); return out; };
+const xjNm=s=>thk(String(s||'').trim().replace(/^(นางสาว|นาง|นาย|น\.ส\.)\s*/,''));
+function xjDriver(name,plate){
+  const ds=(DATA&&DATA.drivers)||[], f=xjNm(name), fp=xjPlates(plate);
+  const first=d=>xjNm(String(d.name||'').trim().replace(/^(นางสาว|นาง|นาย|น\.ส\.)\s*/,'').split(/\s+/)[0]);
+  const byN=f?ds.filter(d=>first(d)===f||xjNm(d.name)===f||(f.length>=4&&xjNm(d.name).startsWith(f))):[];
+  const byP=fp.length?ds.filter(d=>xjPlates(d.plate)[0]===fp[0]):[];
+  let d=null, why='';
+  if(byN.length===1) d=byN[0];
+  else if(byN.length>1){ const b=byN.filter(x=>byP.indexOf(x)>=0); if(b.length===1) d=b[0]; else why='ชื่อ "'+name+'" ตรงหลายคน ('+byN.map(x=>x.name).join(', ')+') — เลือกเอง'; }
+  else if(byP.length===1){ d=byP[0]; if(f) why='ไม่พบชื่อ "'+name+'" ในคนขับ Bulk — จับจากทะเบียน'; }
+  if(d&&byP.length&&byP.indexOf(d)<0) why=(why?why+' · ':'')+'ทะเบียน '+fp[0].replace(/^(\d\d)/,'$1-')+' ในระบบผูกกับ '+byP.map(x=>x.name).join(', ');
+  return {d,why};
+}
+function xjDefault(x){
+  const c=x.carrier; x.why='';
+  if(/รับเอง/.test(c)) return {kind:'pickup',carrier:'รับเอง'};
+  if(c&&!/^บริษัท/.test(c)) return {kind:'outside',carrier:c,name:x.drv};
+  const r=xjDriver(x.drv,x.plate); x.why=r.why;
+  if(r.d) return {kind:'company',code:r.d.code};
+  if(c&&c!=='บริษัท'){ x.why='ไม่ใช่คนขับกลุ่ม Bulk → บันทึกเป็นรถนอก "'+c+'" (ไม่ส่งการ์ด LINE) · เลือกคนขับ Bulk ได้'; return {kind:'outside',carrier:c,name:x.drv}; }
+  if(x.drv) x.why=x.why||'ไม่พบ "'+x.drv+'" ในรายชื่อคนขับ Bulk — เลือกเอง';
+  return {kind:'company',code:''};
+}
+function xjMatch(rows){
+  const A=((DATA.admin&&DATA.admin.rows)||[]).map(r=>({r, so:xjSo(r.so,r.tag), c:custMatch(r.cust), cn:thk(r.cust), p:xjProd(r.prod)})), live=a=>!offTag(a.r.tag);
+  rows.forEach(x=>{ const so=xjSo(x.so), c=custMatch(x.cust), cn=thk(x.cust), p=xjProd(x.prod);
+    const bySo=so.size?A.filter(a=>[...so].some(k=>a.so.has(k))):[];
+    let hit=bySo.filter(live)[0]||bySo[0]||null; x.weak=false;
+    if(!hit){ const cc=A.filter(a=>(c&&a.c===c)||(cn.length>=3&&a.cn.length>=3&&(a.cn.includes(cn)||cn.includes(a.cn))));
+      hit=cc.filter(a=>live(a)&&a.p===p)[0]||cc.filter(live)[0]||null; x.weak=!!hit; }
+    x.a=hit?hit.r:null; });
+  return A.map(a=>a.r);
+}
+function xjAdminDiff(rows,arows){
+  const g={}; rows.forEach(x=>{ if(x.a) (g[x.a.key]=g[x.a.key]||[]).push(x); });
+  const chg=[], miss=[], same=[];
+  arows.forEach(r=>{ const xs=g[r.key]; if(!xs){ if(!offTag(r.tag)) miss.push(r); return; }
+    const d=[], f=xs[0], ton=xs.reduce((s,x)=>s+tonOf(x.qty),0), co=xs.some(x=>x.co);
+    if(offTag(r.tag)) d.push('แอดมิน "'+r.tag+'" แต่ในไฟล์มี');
+    if(r.qty_ton&&ton&&Math.abs(ton-r.qty_ton)>0.0005) d.push('จำนวน '+tons(r.qty_ton)+' → '+tons(ton)+' ตัน ('+xs.length+' เที่ยว)');
+    else if(!(r.qty_ton&&ton)&&xs.length===1&&nrm(r.qty)!==nrm(f.qty)) d.push('จำนวน '+(r.qty||'—')+' → '+(f.qty||'—'));
+    if(xjProd(r.prod)!==xjProd(f.prod)) d.push('สินค้า '+r.prod+' → '+f.prod);
+    if(r.place&&f.place&&thk(r.place)!==thk(f.place)) d.push('สถานที่ '+r.place+' → '+f.place);
+    if(noteTime(r.time||r.note)!==noteTime(f.time||f.note)) d.push('เวลา '+(r.time||r.note||'—')+' → '+(f.time||'—'));
+    if(!!r.co!==co) d.push('CO '+(r.co?'มี':'ไม่มี')+' → '+(co?'มี':'ไม่มี'));
+    if(r.price&&f.price&&parseFloat(r.price)!==parseFloat(f.price)) d.push('ราคา '+r.price+' → '+f.price);
+    (d.length?chg:same).push({r,xs,d}); });
+  return {chg,miss,same,add:rows.filter(x=>!x.a)};
+}
+// เที่ยวที่มีในตารางแผนแล้ว: เลขที่ใบตรง → แถวแผนแอดมินเดียวกัน/ลูกค้า+สินค้า + คนขับเดียวกัน (หรือยังไม่มีคนขับ)
+function xjExist(rows){
+  const js=(DATA.jobs||[]).filter(j=>!j.cancelled), used=new Set();
+  rows.forEach(x=>{ x.j=null; let j=x.doc?js.find(j=>!used.has(j.id)&&j.doc_no===x.doc):null;
+    if(!j){ const dn=x.pick.kind==='company'&&x.pick.code?((DATA.drivers||[]).find(d=>d.code===x.pick.code)||{}).name:'';
+      const same=j=>x.a?j.admin_key===x.a.key:thk(j.cust_name)===thk(x.cust)&&xjProd(j.prod_name)===xjProd(x.prod);
+      const rd=j=>!j.round_no||!x.round||String(j.round_no)===String(x.round);
+      const cand=js.filter(j=>!used.has(j.id)&&same(j)&&rd(j)&&!(x.doc&&j.doc_no&&j.doc_no!==x.doc));
+      j=cand.find(j=>dn?j.driver_name===dn:!!x.drv&&xjNm(j.driver_name)===xjNm(x.drv))||cand.find(j=>!j.driver_name&&!j.plate)||null; }
+    if(j){ used.add(j.id); x.j=j; } });
+  return js.filter(j=>!used.has(j.id));
+}
+function xjTrip(x,useDoc){
+  const s=x.pick, j=x.j;
+  const t={kind:s.kind, carrier:s.kind==='company'?'บริษัท':s.carrier||'', driverCode:s.kind==='company'?s.code||'':'', driverName:s.kind==='company'?'':s.name||'', plate:x.plateIn,
+    custName:x.cust, custCode:custMatch(x.cust)||(x.a&&!x.weak?custMatch(x.a.cust):'')||(j&&j.cust_code)||'', dest:x.place, prod:x.prod, qtyText:x.qty, bill:x.bill||'A',
+    co:x.co, coClosed:x.coc||!!(j&&j.co_closed), loaded:x.loaded||!!(j&&j.loaded), deliverTime:x.time, note:x.note, roundNo:x.round, soNo:x.so.trim(), price:x.price,
+    adminKey:x.a?x.a.key:(j&&j.admin_key)||''};
+  if(j) t.id=j.id;
+  if(useDoc&&x.doc&&!(j&&j.doc_no)) t.docNo=x.doc;
+  return t;
+}
+function xjWho(t){ return t.kind==='company'?(t.driverCode?((DATA.drivers||[]).find(d=>d.code===t.driverCode)||{}).name||t.driverCode:'ยังไม่เลือกคนขับ'):(t.carrier+(t.driverName?' '+t.driverName:'')); }
+function xjJobDiff(x,t){
+  const j=x.j, d=[], pr=(l,a,b)=>{ a=String(a==null?'':a).trim(); b=String(b==null?'':b).trim(); if(a!==b) d.push(l+' '+(a||'—')+' → '+(b||'—')); };
+  pr('คนขับ',isCo(j)?(j.driver_name||'ยังไม่เลือกคนขับ'):((j.carrier||'')+(j.driver_name?' '+j.driver_name:'')),xjWho(t));
+  pr('ทะเบียน',j.plate,t.plate); pr('จำนวน',j.qty_text,t.qtyText); pr('สินค้า',j.prod_name,t.prod); pr('สถานที่',j.dest,t.dest); pr('ลูกค้า',j.cust_name,t.custName);
+  pr('เวลา',j.deliver_time,t.deliverTime); pr('รอบ',j.round_no,t.roundNo); pr('บิล',j.bill,t.bill); pr('SO',j.so_no,t.soNo); pr('หมายเหตุ',j.note,t.note);
+  if(!!j.co!==!!t.co) d.push('CO '+(j.co?'มี':'ไม่มี')+' → '+(t.co?'มี':'ไม่มี'));
+  if(t.docNo) d.push('เลขที่ใบ — → '+t.docNo);
+  return d;
+}
+async function onJobFile(e){
+  const f=e.target.files&&e.target.files[0]; e.target.value=''; if(!f) return;
+  if(!DATA.plan){ toast('วันส่งนี้ยังไม่มีตารางแผน — กด "📅 วันส่งใหม่" ก่อน',true); return; }
+  toast('กำลังอ่านไฟล์ '+f.name+' …');
+  try{ const X=await loadXLSX(), wb=X.read(await f.arrayBuffer(),{type:'array'}), ws=wb.Sheets[wb.SheetNames[0]];
+    const p=parseJobFile(X.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}));
+    if(p.hdr<0||!p.rows.length){ toast('ไม่พบรายการในไฟล์ — ต้องเป็นไฟล์แผน/จัดรถของแอดมิน (มีหัวตาราง "บริษัท")',true); return; }
+    p.name=f.name; openJobImport(p);
+  }catch(err){ toast(String(err.message||err),true); }
+}
+function openJobImport(p){
+  const d=DATA, pl=d.plan;
+  p.rows.forEach(x=>{ x.pick=xjDefault(x); x.plateIn=x.plate; });
+  const arows=xjMatch(p.rows), left=xjExist(p.rows), ad=d.admin?xjAdminDiff(p.rows,arows):null;
+  const docs=p.rows.filter(x=>x.doc), useDoc0=docs.length>0;
+  const docNx=(()=>{ const nx=docNext(), ym=nx.slice(0,4), mx=docs.map(x=>x.doc).filter(s=>s.slice(0,4)===ym).sort().pop(); return mx&&String(+mx+1)>nx?String(+mx+1):nx; })();   // = Edge saveTrip ขยับเลขถัดไปให้
+  let m=$('dlgXJ'); if(!m){ m=document.createElement('div'); m.id='dlgXJ'; m.className='dlg'; document.body.appendChild(m); }
+  const close=()=>{ m.hidden=true; m.innerHTML=''; };
+  m.onmousedown=e=>{ if(e.target===m) close(); };
+  const wrong=!!p.ds&&p.ds!==d.sendDate;
+  const lst=(a,f)=>a.map(f).join('');
+  const aSec=!ad?`<div class="xjb"><b>แผนแอดมิน</b> · วันส่งนี้ยังไม่มีแผนจาก Order Hub ให้เทียบ</div>`
+    :`<div class="xjb"><b>เทียบกับแผนแอดมิน</b> <span class="tag okk">ตรงกัน ${ad.same.length} แถว</span>${ad.chg.length?` <span class="tag warn">ต่าง ${ad.chg.length}</span>`:''}${ad.add.length?` <span class="tag info">มีแต่ในไฟล์ ${ad.add.length}</span>`:''}${ad.miss.length?` <span class="tag bad">มีแต่ในแผนแอดมิน ${ad.miss.length}</span>`:''}
+      ${ad.chg.length?`<ul class="xjl w">${lst(ad.chg,c=>`<li><b>${esc(c.r.cust)}</b> <span class="sub">${esc(c.r.prod)}</span> — ${c.d.map(esc).join(' · ')}</li>`)}</ul>`:''}
+      ${ad.add.length?`<ul class="xjl i">${lst(ad.add,x=>`<li><b>${esc(x.cust)}</b> <span class="sub">${esc(x.prod)} · ${esc(x.qty)} · แถว ${x.xr}</span> — ไม่อยู่ในแผนแอดมิน</li>`)}</ul>`:''}
+      ${ad.miss.length?`<ul class="xjl b">${lst(ad.miss,r=>`<li><b>${esc(r.cust)}</b> <span class="sub">${esc(r.prod)} · ${esc(r.qty)}</span> — อยู่ในแผนแอดมิน แต่ไม่มีในไฟล์</li>`)}</ul>`:''}</div>`;
+  const ex=p.rows.filter(x=>x.j).length;
+  const jSec=`<div class="xjb"><b>เทียบกับตารางแผน</b> ${d.jobs.filter(j=>!j.cancelled).length?`<span class="tag wait">มีอยู่แล้ว ${ex} เที่ยว</span>`:'<span class="sub">ยังไม่มีเที่ยว — ลงใหม่ทั้งหมด</span>'}
+    ${left.length?`<ul class="xjl b">${lst(left,j=>`<li>#${j.line_no} <b>${esc(j.cust_name)}</b> <span class="sub">${esc(j.prod_name)} · ${esc(qtyTx(j))}${j.driver_name?' · '+esc(j.driver_name):''}</span> — อยู่ในตารางแผน แต่ไม่มีในไฟล์ (ไม่ลบให้ — ตรวจแล้วยกเลิกเองถ้าไม่ใช้)</li>`)}</ul>`:''}</div>`;
+  const opts=x=>{ const s=x.pick, ds=d.drivers||[];
+    let o=`<option value=""${s.kind==='company'&&!s.code?' selected':''}>— รถบริษัท · ยังไม่เลือกคนขับ —</option>`
+      +ds.map(v=>`<option value="D:${esc(v.code)}"${s.kind==='company'&&s.code===v.code?' selected':''}>${esc(v.name)} · ${esc(v.plate||'—')}${v.linked?'':' (ยังไม่ผูก LINE)'}</option>`).join('');
+    if(x.carrier&&x.carrier!=='บริษัท'&&!/รับเอง/.test(x.carrier)) o+=`<option value="X"${s.kind==='outside'?' selected':''}>รถนอก · ${esc(x.carrier)}${x.drv?' · '+esc(x.drv):''}</option>`;
+    return o+`<option value="P"${s.kind==='pickup'?' selected':''}>ลูกค้ารับเอง</option>`; };
+  const res=x=>{ const t=xjTrip(x,$('xjDoc')?$('xjDoc').checked:useDoc0);
+    if(!x.j){ x.st='new'; return '<span class="tag info">ใหม่</span>'; }
+    const df=xjJobDiff(x,t); x.st=df.length?'upd':'same';
+    return df.length?`<span class="tag warn">อัปเดต #${x.j.line_no}</span><span class="chg">${df.map(esc).join(' · ')}</span>`:`<span class="tag okk">ตรงแล้ว #${x.j.line_no}</span>`; };
+  const nm=x=>x.pick.kind==='company'&&!x.pick.code;
+  const body=p.rows.map(x=>{ const r=res(x); return `<tr data-i="${x.i}"><td><input type="checkbox" class="xjc" data-i="${x.i}"${x.st!=='same'?' checked':''} aria-label="นำเข้าแถว ${x.xr}"></td><td class="num">${x.xr}</td>
+        <td class="cust">${esc(x.cust)}<small class="sub" style="display:block">${esc(x.place)}${x.a?'':' · <span style="color:var(--info)">ไม่อยู่ในแผนแอดมิน</span>'}</small></td>
+        <td>${esc(x.prod)}<small class="sub" style="display:block">${esc(x.qty)} · ${esc(x.bill)}${x.co?' · CO':''}</small></td>
+        <td class="nt">${x.round?'รอบ '+esc(x.round)+'<br>':''}${esc(x.time)}</td>
+        <td><select class="xjs" data-i="${x.i}" aria-label="คนขับแถว ${x.xr}">${opts(x)}</select><small class="sub" style="display:block">ไฟล์: ${esc(x.carrier||'—')}${x.drv?' · '+esc(x.drv):''}</small>${x.why?`<small class="xjw">${esc(x.why)}</small>`:''}</td>
+        <td><input class="xjp" data-i="${x.i}" value="${esc(x.plateIn)}" aria-label="ทะเบียนแถว ${x.xr}"></td>
+        <td class="num">${x.j&&x.j.doc_no?esc(x.j.doc_no):x.doc?esc(x.doc):'<span class="sub">ระบบออก</span>'}</td><td class="xjr">${r}</td></tr>`; }).join('');
+  m.innerHTML=`<div class="dlgbox wide xj" role="dialog" aria-modal="true" aria-labelledby="xjT">
+    <div class="dlghd"><div><div class="sub">${esc(p.name)}${p.ds?' · ไฟล์: โหลด '+thDate(p.dl)+' ส่ง '+thDate(p.ds):''}</div><h2 id="xjT" style="color:#fff">📥 นำเข้าไฟล์จัดรถ · ${p.rows.length} เที่ยว → ส่ง ${thDate(d.sendDate)}</h2></div><button type="button" class="dlgx" aria-label="ปิด" id="xjX">✕</button></div>
+    <div class="dlgbd">
+      ${wrong?`<div class="anote" style="margin:0 0 8px">⚠️ ไฟล์นี้เป็นของวันส่ง <b>${thDate(p.ds)}</b> แต่หน้านี้เปิดวันส่ง <b>${thDate(d.sendDate)}</b>${d.dates.indexOf(p.ds)>=0?` — <button type="button" class="lnk" id="xjGo">เปิดวันส่ง ${thDate(p.ds)} แล้วเทียบใหม่</button>`:' — สร้างวันส่งนั้นก่อน (📅 วันส่งใหม่) หรือตรวจไฟล์'}</div>`:''}
+      ${aSec}${jSec}
+      ${docs.length?`<label class="xjo"><input type="checkbox" id="xjDoc"${useDoc0?' checked':''}> ใช้ <b>เลขที่ใบ 5 ส่วนตามไฟล์</b> (${docs.length} ใบ · ${esc(docs[0].doc)}–${esc(docs[docs.length-1].doc)}) <span class="sub">— เที่ยวที่ไม่มีเลขในไฟล์ ระบบออกให้ตอนพิมพ์ ต่อจากเลขสุดท้าย (${esc(docNx)}${docNx!==docNext()?' · เดิมระบบถัดไป '+esc(docNext()):''}) · ไม่ติ๊ก = ระบบออกเลขเองทุกใบ</span></label>`:''}
+      <div class="pvwrap"><table class="xjt"><thead><tr><th><input type="checkbox" id="xjAll" aria-label="เลือกทั้งหมด"></th><th>แถว</th><th>บริษัท · สถานที่</th><th>สินค้า · จำนวน</th><th>รอบ · เวลา</th><th>ขนส่ง / คนขับ</th><th>ทะเบียน</th><th>เลขที่ใบ</th><th>ผล</th></tr></thead><tbody>${body}</tbody></table></div>
+    </div>
+    <div class="dlgft"><span class="sub" id="xjSum" style="margin-right:auto"></span><button type="button" class="btn" id="xjNo">ยกเลิก</button><button type="button" class="btn gold" id="xjYes">บันทึกลงตารางแผน</button></div></div>`;
+  m.hidden=false; $('xjX').onclick=close; $('xjNo').onclick=close;
+  if($('xjGo')) $('xjGo').onclick=async()=>{ close(); await load(p.ds); if(DATA.sendDate===p.ds) openJobImport(p); };
+  const R=i=>p.rows[+i], chk=()=>[...m.querySelectorAll('.xjc')].filter(c=>c.checked).map(c=>R(c.dataset.i));
+  const sum=()=>{ const c=chk(), nd=c.filter(nm).length;
+    $('xjSum').textContent='เลือก '+c.length+' เที่ยว · ใหม่ '+c.filter(x=>x.st==='new').length+' · อัปเดต '+c.filter(x=>x.st==='upd').length+(nd?' · ยังไม่เลือกคนขับ '+nd:'');
+    $('xjYes').disabled=!c.length; $('xjYes').textContent='บันทึก '+c.length+' เที่ยวลงตารางแผน';
+    $('xjAll').checked=[...m.querySelectorAll('.xjc')].every(c=>c.checked); };
+  const redo=x=>{ const tr=m.querySelector('tr[data-i="'+x.i+'"]'); if(tr) tr.querySelector('.xjr').innerHTML=res(x); };
+  m.querySelectorAll('.xjs').forEach(s=>s.onchange=()=>{ const x=R(s.dataset.i), v=s.value;
+    x.pick=v.startsWith('D:')?{kind:'company',code:v.slice(2)}:v==='X'?{kind:'outside',carrier:x.carrier,name:x.drv}:v==='P'?{kind:'pickup',carrier:'รับเอง'}:{kind:'company',code:''};
+    if(v.startsWith('D:')&&!x.plateIn.trim()){ const dv=(d.drivers||[]).find(y=>y.code===x.pick.code); if(dv){ x.plateIn=String(dv.plate||'').replace(/\s*,\s*/g,'/'); m.querySelector('.xjp[data-i="'+x.i+'"]').value=x.plateIn; } }
+    redo(x); if(x.st!=='same') m.querySelector('.xjc[data-i="'+x.i+'"]').checked=true; sum(); });
+  m.querySelectorAll('.xjp').forEach(s=>s.oninput=()=>{ const x=R(s.dataset.i); x.plateIn=s.value.trim(); redo(x); sum(); });
+  m.querySelectorAll('.xjc').forEach(c=>c.onchange=sum);
+  $('xjAll').onchange=e=>{ m.querySelectorAll('.xjc').forEach(c=>c.checked=e.target.checked); sum(); };
+  if($('xjDoc')) $('xjDoc').onchange=()=>{ p.rows.forEach(redo); sum(); };
+  sum();
+  $('xjYes').onclick=async()=>{
+    const c=chk(), b=$('xjYes'); if(!c.length) return;
+    if(wrong&&!(await askYes('วันส่งไม่ตรงกับไฟล์','ไฟล์เป็นวันส่ง '+thDate(p.ds)+' แต่จะบันทึกลงวันส่ง '+thDate(d.sendDate),'บันทึกต่อ'))) return;
+    const useDoc=$('xjDoc')?$('xjDoc').checked:false, ok=[], bad=[];
+    b.disabled=true; $('xjNo').disabled=true;
+    for(const x of c){ b.textContent='กำลังบันทึก '+(ok.length+bad.length+1)+'/'+c.length+' …';
+      if(x.st==='same'){ ok.push({x,id:x.j.id}); continue; }
+      try{ const r=await postB({action:'saveTrip',planId:pl.id,trip:xjTrip(x,useDoc)});
+        if(r.ok) ok.push({x,id:r.trip.id,line:r.line}); else bad.push({x,err:r.error||'ไม่สำเร็จ'}); }
+      catch(e){ bad.push({x,err:'ไม่แน่ใจว่าบันทึกสำเร็จ (เน็ต) — ดูในตารางแผน'}); } }
+    await load(d.sendDate);
+    xjDone(m,close,ok,bad);
+  };
+}
+function xjDone(m,close,ok,bad){
+  const pl=DATA.plan, ids=ok.map(o=>o.id), live=new Set((DATA.jobs||[]).filter(j=>!j.cancelled).map(j=>j.id));
+  const co=(DATA.jobs||[]).filter(j=>ids.indexOf(j.id)>=0&&isCo(j)&&j.driver_name).length;
+  const sentLine=ok.filter(o=>o.line&&o.line.pushed).length;
+  m.querySelector('.dlgbd').innerHTML=`<div class="xjb"><b>บันทึกลงตารางแผนแล้ว ${ok.length} เที่ยว</b>${bad.length?` · <span style="color:var(--bad)">ไม่สำเร็จ ${bad.length}</span>`:''}
+      ${bad.length?`<ul class="xjl b">${bad.map(o=>`<li>แถว ${o.x.xr} <b>${esc(o.x.cust)}</b> — ${esc(o.err)}</li>`).join('')}</ul>`:''}</div>
+    <div class="xjb"><b>ขั้นต่อไป</b><ol class="xjn"><li>🖨️ พิมพ์ใบ 5 ส่วน ${ids.length} ใบ (เลขที่ใบตามไฟล์ · ใบที่ไม่มีเลข ระบบออกให้)</li>
+      <li>${pl.dispatched_at?`📤 แพลนนี้แจกงานแล้ว — เที่ยวรถบริษัทที่มีคนขับ ส่งการ์ดให้คนขับตอนบันทึกแล้ว${sentLine?' ('+sentLine+' เที่ยว)':''}`:`📤 แจกงานรถบริษัท — ส่งการ์ดงานทางไลน์ให้คนขับ (${co} เที่ยวที่มีคนขับ) + แผนให้บัญชี/พันตัน`}</li></ol></div>`;
+  m.querySelector('.dlgft').innerHTML=`<button type="button" class="btn" id="xjC">ปิด</button>${ids.length?`<button type="button" class="btn" id="xjPr">🖨️ พิมพ์ใบ 5 ส่วน (${ids.length})</button>`:''}${!pl.dispatched_at&&co?`<button type="button" class="btn pri" id="xjDs">📤 แจกงานรถบริษัท</button>`:''}`;
+  $('xjC').onclick=close;
+  if($('xjPr')) $('xjPr').onclick=()=>{ $('xjPr').textContent='🖨️ พิมพ์อีกครั้ง'; printTrips(ids.filter(id=>live.has(id))); };
+  if($('xjDs')) $('xjDs').onclick=()=>{ close(); askDispatch(); };
+  toast('บันทึก '+ok.length+' เที่ยว'+(bad.length?' · ไม่สำเร็จ '+bad.length:''),!!bad.length);
 }
 function askDay(){
   let m=$('dlgDay'); if(!m){ m=document.createElement('div'); m.id='dlgDay'; m.className='dlg'; document.body.appendChild(m); }
