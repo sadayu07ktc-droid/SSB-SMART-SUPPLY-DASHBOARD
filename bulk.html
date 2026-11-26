@@ -588,7 +588,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26a</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26b</span></div>
   </div>
   </div></main>
 </div>
@@ -1472,7 +1472,7 @@ function fmTr01(j,pl,prev,by,cdoc){
   const L=(x,y,x2,lab,v,suf)=>`<div class="fa fd" style="left:${x}mm;top:${y}mm;width:${(x2-x).toFixed(1)}mm">${lab}<i${v?` style="${fit(v,x2-x-12)}"`:''}>${v?e(v):''}</i>${suf||''}</div>`;
   const B=(x,y,on,w,h)=>{ w=w||6; h=h||5; return `<div class="fx" style="left:${x}mm;top:${(y-h/2).toFixed(1)}mm;width:${w}mm;height:${h}mm">${on?'✓':''}</div>`; };
   const DT=(x,y,x2)=>`<div class="fa fd" style="left:${x}mm;top:${y}mm;width:${x2-x}mm">วันที่<i></i>/<i></i>/<i></i></div>`;
-  const CK=['ความสะอาดรถภายนอก','ความสะอาดภายใน TANK','สภาพและความสะอาดซีลฝาปิด','สภาพและความสะอาดหม้อกรอง','ความสะอาดสายยางโหลดน้ำมัน','ความสะอาดท่อโหลดน้ำมัน','สภาพและความสะอาดของวาล์ว','ปราศจากสัตว์พาหะ','ตรวจสอบเศษลวดซีลบนTANK'], CKY=[32.7,39.5,46.2,53,59.8,66.6,72.5,79.8,86.5];
+  const CK=['ความสะอาดรถภายนอก','ความสะอาดภายใน TANK','สภาพและความสะอาดซีลฝาปิด','สภาพและความสะอาดหม้อกรอง','ความสะอาดสายยางโหลดน้ำมัน','ความสะอาดท่อโหลดน้ำมัน','สภาพและความสะอาดของวาล์ว','ปราศจากสัตว์พาหะ','ตรวจสอบเศษลวดซีลบนTANK'], CKY=[0,1,2,3,4,5,6,7,8].map(i=>+(32.7+i*6.725).toFixed(2))   /* ระยะเท่ากันทุกแถว */;
   return `<section class="fm"><div class="fbox">
   <div class="fq" style="height:90.1mm">
     ${C(54,5.5,`<b>${e(CO)}</b>`,'f12')}${T(22,22.5,'SSB','flogo')}${T(75,14.4,'ใบขนส่งน้ำมัน','f11')}${T(70,26.6,'ส่วนที่ 1 สำหรับฝ่ายขนส่ง','f9')}
@@ -1516,11 +1516,11 @@ function fmTr01(j,pl,prev,by,cdoc){
     <div class="fbx1" style="left:132mm;height:8.1mm">เวลาโหลดไม่เกิน 1.30 นาที</div>
     ${T(132.6,12,'ชื่อลูกค้า')}${V(146,9.6,j.cust_name||'',37,'fb fdn')}
     ${T(15.6,26.1,'<b><u>ตรวจเช็ครถน้ำมัน</u></b>')}${C(99.4,26.1,'<b><u>โหลดน้ำมันจาก TANK</u></b>')}
-    <table class="ftk" style="top:29.3mm;width:103.3mm"><colgroup><col style="width:9.3mm"><col style="width:15.2mm"><col style="width:25.1mm"><col style="width:13.5mm"><col style="width:17.6mm"><col></colgroup>
-      <tr><th>RPO</th><th style="font-size:8pt">PO ( MIX)</th><th>RPS</th><th>ROL</th><th>PFAD</th><th>อื่นๆ</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+    <table class="ftk" style="top:29.3mm;width:103.3mm"><colgroup><col style="width:16.6%"><col style="width:16.6%"><col style="width:16.6%"><col style="width:16.6%"><col style="width:16.6%"><col></colgroup>
+      <tr><th>RPO</th><th>PO (MIX)</th><th>RPS</th><th>ROL</th><th>PFAD</th><th>อื่นๆ</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
     ${CK.map((x,i)=>B(10.2,CKY[i],false,7.3,3.7)+T(20,CKY[i],x)).join('')}
-    <div class="fa fd" style="left:59.6mm;top:66.6mm;width:43.4mm">เดนหน้าท่อ<i style="flex:none;width:9mm"></i>ถัง<i></i>kg.</div>
-    ${L(67,72.5,110,'เลขที่ซีล')}
+    <div class="fa fd" style="left:59.6mm;top:${CKY[5]}mm;width:43.4mm">เดนหน้าท่อ<i style="flex:none;width:9mm"></i>ถัง<i></i>kg.</div>
+    ${L(67,CKY[6],110,'เลขที่ซีล')}
     ${L(1.2,95.3,41.8,'ลงชื่อผู้ตรวจสอบ')}${L(59.6,95.3,106,'เวลาเรียกเก็บแล็ป')}${L(106.5,95.3,159.2,'ผู้รับแจ้ง')}
     ${L(1.2,101.9,41.8,'หมายเหตุ')}${T(49.1,101.9,'ตรวจเช็คการติดซีลที่ฝาถังและวาล์วน้ำมัน')}${L(108.9,101.9,157.5,'เวลาตีซีล')}
     <div class="fa fd" style="left:1.2mm;top:108.9mm;width:51mm"><i></i></div>${B(59.6,108.9,false,6,4.5)}${T(70.3,108.9,'เรียบร้อย')}${B(83.3,108.9,false,6,4.5)}${T(91.8,108.9,'ไม่เรียบร้อย')}${L(108.9,108.9,157.5,'เวลาปล่อยรถ')}
