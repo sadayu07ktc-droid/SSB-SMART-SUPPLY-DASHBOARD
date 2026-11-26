@@ -1569,11 +1569,14 @@ function jRtWire(D,j){const R=JE.rt;
 /* 👷 13 พ.ย. คุณน้อง "เด็กรถ แอดมินต้องระบุเอง · การ์ดระบุตรงทีมลง ว่ามีเด็กรถ … คน" (เลิกใช้ชื่อ/เบอร์ทีมลงจากไฟล์ Excel)
  *   j.helpers=[รหัสเด็กใน] · j.hout=เด็กนอก(คน) · j.hnone=ไม่มีเด็กรถ · ไม่เลือกอะไร = ยังไม่ระบุ
  *   ขอรถไร่ = ส่งไปกับคำขอ (pk_requests.helpers) · แก้ทีหลัง + บันทึกงาน = อัปเดตคำขอ (Edge pk-daily farmHelpers) · การ์ดมอบหมายงานคนขับอ่านค่าล่าสุด */
-function jHp(j){if(j.hnone)return {in:[],out:0,none:true};const a=(j.helpers||[]).filter(x=>HELP.some(h=>h.id===x&&h.status==='ใช้งาน')),o=+j.hout||0;return a.length||o?{in:a,out:o}:null;}
+/* 26 พ.ย. คุณน้อง "เด็กรถใน ยังไม่รู้ว่าชื่อใคร ใส่จำนวนไปก่อน ค่อยระบุชื่อทีหลัง"
+ *   j.hin = จำนวนเด็กในทั้งหมด (คน) · ติ๊กชื่อ = เติมทีละที่ · ยังไม่มีชื่อ = hin − ที่ติ๊ก → helpers.inN (Edge เก็บ + การ์ด "เด็กใน N คน (รอระบุชื่อ)") */
+const jHinT=j=>Math.max(+j.hin||0,jHinA(j).length),jHinA=j=>(j.helpers||[]).filter(x=>HELP.some(h=>h.id===x&&h.status==='ใช้งาน'));
+function jHp(j){if(j.hnone)return {in:[],out:0,none:true};const a=jHinA(j),o=+j.hout||0,n=jHinT(j)-a.length;return a.length||o||n?Object.assign({in:a,out:o},n?{inN:n}:{}):null;}
 /* 👷 เด็กรถงานห้างที่ยืมรถไร่ → แถว 🚜 รถไร่ (บนจอ + ใบแจ้งงาน) โชว์ชื่อ + เบอร์ (คุณน้อง 13 พ.ย.) */
-function hlOfHp(h){if(!h)return [];if(h.none)return [{t:'ไม่มีเด็กรถ',ph:''}];return (h.in||[]).map(x=>{const hh=helpOf(x);return hh?{t:hh.nick||hh.name,ph:hh.phone||''}:{t:String(x),ph:''};}).concat(+h.out?[{t:'เด็กนอก '+h.out+' คน',ph:''}]:[]);}
+function hlOfHp(h){if(!h)return [];if(h.none)return [{t:'ไม่มีเด็กรถ',ph:''}];return (h.in||[]).map(x=>{const hh=helpOf(x);return hh?{t:hh.nick||hh.name,ph:hh.phone||''}:{t:String(x),ph:''};}).concat(+h.inN?[{t:'เด็กใน '+h.inN+' คน (รอระบุชื่อ)',ph:''}]:[],+h.out?[{t:'เด็กนอก '+h.out+' คน',ph:''}]:[]);}
 function frHl(j,r){return hlOfHp(j?jHp(j):(r&&r.helpers)||null);}
-function jHpTxt(j){const h=jHp(j);return !h?'':h.none?'ไม่มีเด็กรถ':[h.in.map(x=>{const hh=helpOf(x);return hh?hh.nick||hh.name:x;}).join(' · '),h.out?'เด็กนอก '+h.out+' คน':''].filter(Boolean).join(' + ');}
+function jHpTxt(j){const h=jHp(j);return !h?'':h.none?'ไม่มีเด็กรถ':[h.in.map(x=>{const hh=helpOf(x);return hh?hh.nick||hh.name:x;}).join(' · '),h.inN?'เด็กใน '+h.inN+' คน (รอระบุชื่อ)':'',h.out?'เด็กนอก '+h.out+' คน':''].filter(Boolean).join(' + ');}
 /* 13 พ.ย. คุณน้อง "มอบหมายไป 2 คน ทำไมแท็บเด็กรถในไม่ขึ้นสถานะ" → นับงานห้าง (MJ) ด้วย ไม่ใช่แค่แพลนรวม */
 /* 13 พ.ย. คุณน้อง "งานห้าง H3 ระบุหน่อย สถานที่" → ต่อท้ายด้วยจุดส่ง (2 จุดแรก + อีก N จุด) */
 const hbW=st=>{const n=(st||[]).filter(s=>!s.rt&&s.n).map(s=>s.n);return n.length?' · '+n.slice(0,2).join(' → ')+(n.length>2?' +'+(n.length-2)+' จุด':''):'';};
@@ -1609,11 +1612,12 @@ function jCostBox(j){const seen={},C=COST(),g=szG(j.size),rows=[];
     rows.push('<div style="padding:6px 0;border-top:1px dashed var(--line)">📍 <b>'+esc(s.n)+'</b>'+(t||'<br><span class="warn">⚠️ ร้านนี้ยังไม่มีข้อมูลค่าใช้จ่ายในฐาน — ถามแอดมิน</span>')+'</div>');});
   if(!rows.length)return '';
   return '<div class="box"><span class="lb">💰 ค่าใช้จ่าย + พาเลท รายจุดส่ง <span class="note">(ฐานร้าน · แก้ได้ที่หน้าค่ากลาง)</span></span><div class="note" style="color:var(--ink);line-height:1.7">'+rows.join('')+'</div></div>';}
-function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),mine=j.helpers||[],o=+j.hout||0,no=!!j.hnone;
+function jHelpBox(j){const act=HELP.filter(x=>x.status==='ใช้งาน'),mine=j.helpers||[],o=+j.hout||0,no=!!j.hnone,iT=no?0:jHinT(j),iA=no?0:jHinA(j).length;
   const other=helpBusy(j.id);
   const t=jHpTxt(j),is4=j.size==='4 ล้อ';
   return '<div class="box"><span class="lb">④ เด็กรถ <span class="note">(ขึ้นการ์ดคนขับ ตรง 👷 ทีมลง)</span></span>'
-    +'<span class="lb" style="font-weight:600">เด็กรถใน <span class="note">(เลือกได้หลายคน)</span></span><div class="hl">'
+    +'<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="lb" style="font-weight:600">เด็กรถใน</span><span class="step"><button type="button" id="jim" aria-label="ลดจำนวนเด็กใน"'+(no||iT<=iA?' disabled':'')+'>−</button><span>'+iT+'</span><button type="button" id="jip" aria-label="เพิ่มจำนวนเด็กใน"'+(no||iT>=10?' disabled':'')+'>＋</button></span><span class="note">คน'+(iT?' · ระบุชื่อแล้ว <b>'+iA+'/'+iT+'</b>'+(iT>iA?' <b class="or">รอระบุชื่อ '+(iT-iA)+' คน</b>':''):'')+'</span></div>'
+    +'<span class="note">ยังไม่รู้ชื่อ = ใส่จำนวนไว้ก่อน แล้วค่อยติ๊กชื่อทีหลัง (ติ๊ก 1 ชื่อ = เติม 1 ที่) · เลือกได้หลายคน</span><div class="hl">'
     +(act.length?act.map(x=>{const on=mine.includes(x.id),el=other[x.id]||[];return '<label class="'+((el.length&&!on)||no?'dis':'')+'"><input type="checkbox" data-jh="'+esc(x.id)+'"'+(on&&!no?' checked':'')+(no?' disabled':'')+'><span>'+esc(x.nick)+' · '+esc(x.name)+'<small>'+(x.phone?esc(x.phone)+' · ':'')+(el.length?'อยู่งาน '+esc(el.join(', ')):'ว่าง')+'</small></span></label>';}).join(''):'<div class="note">ยังไม่มีเด็กรถใน (เพิ่มที่แท็บ เด็กรถใน)</div>')
     +'</div><div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><span class="lb">เด็กนอก</span><span class="step"><button type="button" id="jhm" aria-label="ลดเด็กนอก"'+(no?' disabled':'')+'>−</button><span>'+(no?0:o)+'</span><button type="button" id="jhp" aria-label="เพิ่มเด็กนอก"'+(no?' disabled':'')+'>＋</button></span><span class="note">คน</span></div>'
     +'<label class="note" style="display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink)"><input type="checkbox" id="jhn"'+(no?' checked':'')+'> ไม่มีเด็กรถ (คนขับลงเอง / ร้านมีคนลงให้)</label>'
@@ -1685,6 +1689,8 @@ function drawJob(){const j=JE.j,s=j.isNew?'draft':jst(j),{dc}=busy();
     j.head=jv.value;if(j.head&&j.fr){delete j.fr;if(j.carrier==='รถไร่')j.carrier='';toast('ได้รถ Packing แล้ว · ยกเลิกงานที่ส่งไร่ให้ (เดโม)');}const m=DRV.find(d=>d.head===j.head);j.driver=j.head?(m?m.code:''):'';drawJob();};
   const dr=$('jdrv');if(dr)dr.onchange=()=>{syncJ();j.driver=dr.value;drawJob();};
   D.querySelectorAll('[data-jh]').forEach(b=>b.onchange=()=>{syncJ();const id=b.dataset.jh,a=j.helpers||[];j.helpers=b.checked?[...a.filter(x=>x!==id),id]:a.filter(x=>x!==id);drawJob();});
+  if($('jim'))$('jim').onclick=()=>{syncJ();j.hin=Math.max(jHinA(j).length,jHinT(j)-1);drawJob();};
+  if($('jip'))$('jip').onclick=()=>{syncJ();j.hin=Math.min(10,jHinT(j)+1);drawJob();};
   if($('jhm'))$('jhm').onclick=()=>{syncJ();j.hout=Math.max(0,(+j.hout||0)-1);drawJob();};
   if($('jhp'))$('jhp').onclick=()=>{syncJ();j.hout=Math.min(20,(+j.hout||0)+1);drawJob();};
   if($('jhn'))$('jhn').onchange=()=>{syncJ();j.hnone=$('jhn').checked;drawJob();};
