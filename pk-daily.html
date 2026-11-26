@@ -1275,18 +1275,20 @@ document.addEventListener('click',e=>{const tr=e.target.closest&&e.target.closes
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('mdHost')&&$('mdHost').classList.contains('show')){e.stopPropagation();mdClose();}},true);
 /* 12 พ.ย. คุณน้อง "ทำไม 2 บรรทัดแรกไม่มีชิปห้าง": แถวที่งานห้างไม่อยู่ในหน้า (ใช้ร้านจากคำขอ PKR) เดิมไม่ใส่ชิปเลย → ขอรถไร่ = งานห้างเสมอ · จุดรับของคืน/ของเสีย = ↩ ขากลับ */
 const frStChip=n=>/↩|รับสินค้าคืน|ของเสีย/.test(n)?'<span class="tchip rtc">↩ ขากลับ</span>':tchip('ห้าง');
-function frPlanList(){if(!frLive())return [];const d=$('pdate').value;return FRL.filter(x=>x.date===d&&frAct(x)&&(x.drv||x.plate));}
+/* 26 พ.ย. คุณน้อง "แพลนห้างที่ขอรถไร่ไป 28/11 ทำไมไม่โชว์ในแพลนหลัก … โชว์ด้วย ทำเลย" → คำขอที่ไร่ยังไม่จัดรถก็ขึ้น (⏳ รอไร่จัดรถ) · ได้รถแล้วอยู่บน */
+const frWait=x=>!x.drv&&!String(x.plate||'').trim();
+function frPlanList(){if(!frLive())return [];const d=$('pdate').value;return FRL.filter(x=>x.date===d&&frAct(x)).sort((a,b)=>frWait(a)-frWait(b));}
 function frPlanRows(){const L=frPlanList();if(!L.length||!(FILTER==='all'||FILTER==='job'))return '';
   const q=(Q||'').trim().toLowerCase(),dash='<span class="m">—</span>',ln=x=>'<div class="ln">'+x+'</div>';
   /* งานห้างในหน้าไม่อยู่แล้ว (ลบ/เปิดวันอื่น) → ใช้ร้าน/เวลา/พาเลท/นน./จังหวัด จากคำขอ PKR (Edge farm[].stops) */
   const rows=L.map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),JS=!!(j&&j.stops&&j.stops.length),S=JS?j.stops:(r.stops&&r.stops.length?r.stops:null);return {r,S,JS,jn:j?String(j.note||'').trim():'',hl:frHl(j,r)};})
-    .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord].concat(S?S.map(s=>s.n||jsN(s)):[]).join(' ').toLowerCase().includes(q));
-  if(!rows.length)return '';
-  return '<tr class="gr"><td colspan="16"><b>🚜 รถไร่</b> <span>'+rows.length+' คัน · งานห้างที่ขอรถไร่ (แอดมินไร่จัดรถ/คนขับ · แก้ที่แดชบอร์ดไร่)</span></td></tr>'
+    .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord,frWait(r)?'รอไร่จัดรถ':''].concat(S?S.map(s=>s.n||jsN(s)):[]).join(' ').toLowerCase().includes(q));
+  if(!rows.length)return '';const nW=rows.filter(x=>frWait(x.r)).length;
+  return '<tr class="gr"><td colspan="16"><b>🚜 รถไร่</b> <span>'+rows.length+' คัน'+(nW?' · <b class="or">⏳ รอไร่จัดรถ '+nW+'</b>':'')+' · งานห้างที่ขอรถไร่ (แอดมินไร่จัดรถ/คนขับ · แก้ที่แดชบอร์ดไร่)</span></td></tr>'
     +rows.map(({r,S,JS,jn,hl})=>{const pl=String(r.plate||'').split(',').map(x=>x.trim()).filter(Boolean),f=frOf(r),done=/เสร็จ/.test(r.ost||'');
       const cell=fn=>S?S.map(fn).map(ln).join(''):'';
-      return '<tr class="vr2 frv"'+(r.drv||pl.length?' data-frd="1" data-pl="'+esc(pl.join(','))+'" data-dn="'+esc(r.drv||'')+'" data-or="'+esc(r.ord||'')+'" title="กดดูข้อมูลคนขับ (เหมือนหน้าจัดการคนขับ)"':'')+'><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
-        +'<td class="stk1">'+(r.drv?esc(r.drv):'<span class="or">รอคนขับไร่</span>')+'</td>'
+      return '<tr class="vr2 frv"'+(r.drv||pl.length?' data-frd="1" data-pl="'+esc(pl.join(','))+'" data-dn="'+esc(r.drv||'')+'" data-or="'+esc(r.ord||'')+'" title="กดดูข้อมูลคนขับ (เหมือนหน้าจัดการคนขับ)"':'')+'><td class="stk0"><div class="pc"><i class="dotc" style="color:#2d6a4f;background:#2d6a4f"></i><div><b>'+(pl.length?pl.map(esc).join('<br>'):frWait(r)?'<span class="or">⏳ รอไร่จัดรถ</span>':'<span class="m">รอทะเบียน</span>')+'</b><small>🚜 รถไร่'+(r.vt?' · '+esc(r.vt):'')+'</small></div></div></td>'
+        +'<td class="stk1">'+(r.drv?esc(r.drv):'<span class="or">'+(frWait(r)?'ไร่ยังไม่จัดรถ':'รอคนขับไร่')+'</span>')+'</td>'
         +'<td class="cu">'+(S?S.map((s,i)=>{const nm=s.n||jsN(s);return '<span class="ell" title="'+esc(nm)+'">'+esc(nm)+'</span> '+(JS?stChip(s):frStChip(nm))+(i?'':' <span class="frtag">🚜 รถไร่</span>');}).map(ln).join(''):'<span class="ell" title="'+esc(r.dest)+'">'+esc(r.dest||'—')+'</span> <span class="frtag">🚜 รถไร่</span>')+(jn?'<div class="jnote">📝 '+esc(jn)+'</div>':'')+'</td>'
         +'<td>'+cell(s=>esc(pvOf(s))||'<span class="m">—</span>')+'</td>'
         +'<td class="n">'+cell(s=>s.at?'<b class="tm">'+esc(s.at)+'</b>':'<span class="m">—</span>')+'</td>'
@@ -2014,7 +2016,7 @@ function planSheet(){const iso=$('pdate').value,dt=new Date(iso+'T00:00:00'),ok=
     const fr=frPlanList().map(r=>{const j=MJ.find(x=>frRef(x)===r.ref),JS=!!(j&&j.stops&&j.stops.length);return {r,j,JS,S:JS?j.stops:(r.stops||[])};})
       .filter(({r,S})=>!q||[r.plate,r.drv,r.dest,r.rid,r.ord].concat(S.map(s=>s.n||jsN(s))).join(' ').toLowerCase().includes(q));
     const rows=fr.map(({r,j,JS,S})=>{const pls=String(r.plate||'').split(',').map(s=>s.trim()).filter(Boolean),jn=j?String(j.note||'').trim():'';
-      return {no:++no,plate:pls.join(' / ')||'รอทะเบียน',pls:pls.length?pls:['รอทะเบียน'],shape:'🚜 รถไร่'+(r.vt?' · '+r.vt:''),drv:r.drv||'',k:'job',status:'',
+      const wt=frWait(r);return {no:++no,plate:pls.join(' / ')||(wt?'รอไร่จัดรถ':'รอทะเบียน'),pls:pls.length?pls:[wt?'รอไร่จัดรถ':'รอทะเบียน'],shape:'🚜 รถไร่'+(r.vt?' · '+r.vt:''),drv:r.drv||'',k:'job',status:wt?'⏳ รอไร่จัดรถ':'',
         stops:(S.length?S:[{n:r.dest}]).map(s=>({n:s.n||jsN(s),ty:JS?tyOf(s):'ห้าง',pv:pvShort(s),at:tmTH(s.at),pal:n0(s.pal),cs:n0(s.cs),fee:0})),
         hl:frHl(j,r),ht:'',note:[jn&&'📝 '+jn,'ใบขอ '+r.rid,r.ord,r.need&&'เข้าโหลด '+r.need].filter(Boolean).join(' · ')};});
     if(rows.length)groups.push({g:'🚜 รถไร่',rows});}
