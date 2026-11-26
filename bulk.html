@@ -385,7 +385,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
 .prevl{font-size:13px;line-height:1.7;margin:4px 0}
 #printArea{display:none}
 @media(max-width:640px){.tf{grid-template-columns:1fr}.seg button{padding:8px 11px}}
-/* ใบขนส่ง FM-TR-01 Rev.05 · A4 ตั้ง · ตามไฟล์ Excel "ใบขนส่ง ใบ 5 ส่วน" */
+/* ใบขนส่ง FM-TR-01 Rev.05 · A4 ตั้ง · 26 พ.ย. วางตำแหน่งตามใบจริงที่พิมพ์จาก Excel (สแกน doc51588520261126103859.pdf) — ตัวเลขทุกตัวเป็น มม. จากขอบกรอบ */
 @media print{
   @page{size:A4 portrait;margin:9mm 10mm}
   html,body{background:#fff!important}
@@ -393,64 +393,32 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
   body>*:not(#printArea){display:none!important}
   #printArea{display:block}
 }
-.fm{width:190mm;font-family:"Sarabun","IBM Plex Sans Thai",Tahoma,sans-serif;font-size:10.5pt;line-height:1.35;color:#000;break-after:page;page-break-after:always}
+/* ตัวอังกฤษ/ตัวเลข = Times แบบใบจริง · ตัวไทยตกไปที่ Sarabun */
+@font-face{font-family:"FmLat";src:local("Times New Roman"),local("TimesNewRomanPSMT"),local("Times");unicode-range:U+0020-007E,U+00A0-00FF;font-weight:400}
+@font-face{font-family:"FmLat";src:local("Times New Roman Bold"),local("TimesNewRomanPS-BoldMT"),local("Times-Bold");unicode-range:U+0020-007E,U+00A0-00FF;font-weight:700}
+.fm{width:184mm;margin:4mm auto 0;font-family:"FmLat","Sarabun","IBM Plex Sans Thai",serif;font-size:10pt;line-height:1.25;color:#000;break-after:page;page-break-after:always}
 .fm:last-child{break-after:auto;page-break-after:auto}
-.fbox{border:1.4px solid #000}
-.frow{display:flex}
-.fhead{border-bottom:1.4px solid #000;min-height:31mm}
-.fco{flex:1;position:relative;padding:2mm 3mm}
-.fname{font-weight:700;font-size:13pt;text-align:center}
-.flogo{position:absolute;left:8mm;top:11mm;font:italic 700 34pt/1 "Times New Roman",serif;letter-spacing:1px}
-.ftitle{position:absolute;right:3mm;top:10mm;display:flex;flex-direction:column;align-items:flex-end;gap:2mm;font-size:10.5pt}
-.fm table{min-width:0;width:auto;font-size:inherit;border-collapse:collapse}
-.fm th,.fm td{background:none;color:#000;font-size:inherit;white-space:normal;vertical-align:middle;border:0}
-.fdoc{width:84mm;flex:none;border-left:1.4px solid #000!important}
-.fdoc th{text-align:left;font-weight:700;padding:1.6mm 2mm;border-bottom:1px solid #000;white-space:nowrap}
-.fdoc td{padding:1.6mm 2mm;border-bottom:1px solid #000;border-left:1px solid #000;text-align:center;min-width:22mm;font-weight:700}
-.fdoc tr:last-child th,.fdoc tr:last-child td{border-bottom:0}
-.fdoc td.dno{font-size:12pt;letter-spacing:.5px}
-.fsec{border-bottom:1.4px solid #000;padding:2mm 3mm}
-.fsec.last{border-bottom:0}
-.fsec.s1{border-bottom:1.4px solid #000;padding-top:3mm}
-.fsec.s1b{display:flex;flex-direction:column;gap:3mm;padding:4mm 3mm 5mm}
-.fl{margin:1.3mm 0;white-space:nowrap}
-.fl.c,.fst.c{text-align:center}
-.fl.ind{padding-left:58mm}.fl.ind2{padding-left:24mm}.fl.ind3{padding-left:38mm}
-.fl .ml{margin-left:8mm}
-.fl b.bill{font-size:12pt;margin:0 3mm}
-.uv{display:inline-block;border-bottom:1px solid #000;padding:0 1.5mm;text-align:center;font-weight:600;min-width:12mm}
-.dt{display:inline-block;border-bottom:1px dotted #000;height:1em;vertical-align:baseline;margin:0 .5mm}
-.xb{display:inline-flex;align-items:center;justify-content:center;width:4.6mm;height:4.6mm;border:1px solid #000;font-weight:800;font-size:10pt;line-height:1;vertical-align:-1mm;margin-right:1mm}
-.fck{display:grid;grid-template-columns:1fr 1fr;gap:3mm 10mm;padding:0 6mm}
-.fsig{display:flex;justify-content:space-between;align-items:flex-start;padding-left:8mm}
-.sg{padding-top:6mm}
-.fprev{width:78mm;min-height:30mm;border:1.4px solid #000;padding:2mm 4mm}
-.fprev>b{display:block;text-align:center;font-weight:400;margin-bottom:1.5mm}
-.fprev div{margin:1.2mm 0}.fprev span{display:inline-block;width:10mm;text-align:center}
-.fst{font-weight:700;margin-bottom:1mm}
-.ftop{display:flex;justify-content:space-between;align-items:flex-end;font-size:8.5pt;margin-bottom:1mm}
-.fhead2{border-bottom:1.4px solid #000}
-.fco2{flex:1;text-align:center;padding:2mm;display:flex;flex-direction:column;gap:1.5mm}
-.fside{width:62mm;display:flex;flex-direction:column;gap:3mm;padding:0 0 2mm 0}
-.fbx{border:1.4px solid #000;border-top:0;border-right:0;padding:1.6mm 3mm;font-weight:700;text-align:center}
-.fside>div:last-child{padding-left:4mm}
-.f4{display:grid;grid-template-columns:1fr 92mm;gap:4mm;margin:1mm 0 2mm}
-.f4 .ci{margin:1.3mm 0}
-.ftank{border-collapse:collapse;width:100%;margin-top:1.5mm}
-.ftank th,.ftank td{border:1px solid #000;text-align:center;font-weight:400;font-size:9pt;padding:1mm}
-.ftank td{height:11mm}
-.fst2{justify-content:space-between;align-items:stretch;margin:-2mm -3mm 2mm;border-bottom:1.4px solid #000}
-.fst2>b{padding:1.6mm 3mm;flex:1;text-align:center}
-.fst2 .fbx2{border-left:1.4px solid #000}
-.ffoot{text-align:right;font-size:8.5pt;margin-top:1mm}
-/* 18 พ.ย. คุณน้อง "สัดส่วนไม่ได้" → ใบเต็มหน้า A4 เหมือน Excel: กรอบยืดเต็มความสูง ส่วนต่างๆ แบ่งที่ว่างกัน (บรรทัดกระจายในส่วน) */
-.fm{height:275mm;display:flex;flex-direction:column;font-size:11pt}
-.fm>.fbox{flex:1 1 auto;display:flex;flex-direction:column;min-height:0}
-.fm>.fbox>.fhead,.fm>.fbox>.fhead2{flex:none}
-.fm>.fbox>.fsec{flex:1 1 auto;display:flex;flex-direction:column;justify-content:space-evenly}
-.fm>.fbox>.fsec.s1b{justify-content:space-around}
-.fm .fhead{min-height:34mm}
-.fm .ftank td{height:16mm}
+.fm .fbox{border:1.3px solid #000}
+.fm .fq{position:relative;border-bottom:1.3px solid #000;overflow:hidden}
+.fm .fq:last-child{border-bottom:0}
+.fm .fa{position:absolute;white-space:nowrap;transform:translateY(-55%)}
+.fm .fcx{transform:translate(-50%,-55%)}
+.fm .fdn{transform:none}   /* ชื่อลูกค้าหน้า 2 ยาว → ล้นลงล่าง ไม่ชนกล่องเวลาโหลด */
+.fm .fd{display:flex;align-items:baseline}
+.fm .fd i{flex:1 1 auto;min-width:3mm;margin:0 .4mm;padding:0 1mm;border-bottom:1px dotted #000;font-style:normal;text-align:center;line-height:1.05;overflow:hidden}
+.fm u{text-underline-offset:2px}
+.fm .fx{position:absolute;border:1.2px solid #000;display:flex;align-items:center;justify-content:center;font:700 13pt/1 "Sarabun",sans-serif}
+.fm .fb{font-weight:700}
+.fm .f8{font-size:8pt}.fm .f9{font-size:9pt}.fm .f11{font-size:11pt}.fm .f10{font-size:10pt}.fm .f12{font-size:12pt}.fm .f13{font-size:13pt}.fm .f14{font-size:14pt}.fm .f15{font-size:15pt}
+.fm .flogo{font:italic 700 58pt/1 "Times New Roman",Georgia,serif;letter-spacing:.5mm}
+.fm .fdoc{position:absolute;right:0;top:0;width:79mm;height:30mm;border-left:1.3px solid #000;border-bottom:1.3px solid #000}
+.fm .fdno{position:absolute;right:0;top:0;width:22.4mm;height:9.7mm;border-left:1.3px solid #000;border-bottom:1.3px solid #000;display:flex;align-items:center;justify-content:center;font-size:12pt}
+.fm .fpv{position:absolute;right:0;border:1.3px solid #000;border-right:0}
+.fm .fbx1{position:absolute;right:0;top:0;border-left:1.3px solid #000;border-bottom:1.3px solid #000;display:flex;align-items:center;justify-content:center;font-weight:700}
+.fm .ftk{position:absolute;right:0;border-collapse:collapse;table-layout:fixed;min-width:0}
+.fm .ftk th,.fm .ftk td{border:1.3px solid #000;border-right:0;background:none;color:#000;font-weight:400;font-size:10pt;text-align:center;vertical-align:top;padding:1.2mm 0 0;height:13.5mm;white-space:nowrap}
+.fm .ftk td{vertical-align:middle;padding:0}
+.fm .ffoot{display:flex;justify-content:space-between;align-items:baseline;font-size:8.5pt;margin-top:2.5mm}
 /* 🚛 สรุปสถานะรถ Bulk · 2026-11-19 */
 .vsbox{max-width:1180px}
 .vskpi{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
@@ -620,7 +588,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-25e</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26a</span></div>
   </div>
   </div></main>
 </div>
@@ -1489,66 +1457,92 @@ async function printTrips(ids){
   }catch(e){ toast('ไม่แน่ใจว่าออกเลขสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(DATA.sendDate); }
 }
 function fmTr01(j,pl,prev,by,cdoc){
-  const f=f5Fill(Object.assign({},F5_DEF,j.form5||{}),cdoc||custDocOf(j.cust_code,j.cust_name)), bagTo=f.bagTo||j.driver_name||'', e=esc, now=new Date(), hm=p2(now.getHours())+':'+p2(now.getMinutes());
+  /* 26 พ.ย. คุณน้อง "ให้เหมือนของจริง" → วางทุกช่องตามตำแหน่งในใบจริง (มม. จากขอบกรอบ · y = กึ่งกลางบรรทัด) */
+  const f=f5Fill(Object.assign({},F5_DEF,j.form5||{}),cdoc||custDocOf(j.cust_code,j.cust_name)), e=esc, now=new Date(), hm=p2(now.getHours())+':'+p2(now.getMinutes());
+  const bagTo=f.bags?(f.bagTo||j.driver_name||''):'';
   const pv=f.prevManual?(f.prev||[]):prev.map(x=>x.prod), p3=[0,1,2].map(i=>pv[i]||'');
-  const X=on=>`<span class="xb">${on?'✓':''}</span>`, U=(v,w)=>`<span class="uv"${w?` style="min-width:${w}mm"`:''}>${e(v)||'&nbsp;'}</span>`, D=w=>`<span class="dt" style="width:${w}mm"></span>`;
   const qt=String(j.qty_text||'').trim(), isT=tonOf(qt)>0&&!/^\s*[\d.,]+\s*(ถัง|ลิตร|ตู้|กก|kg)/i.test(qt);
   const qv=qt?(isT?qt.replace(/\s*ตัน\s*/,' ').trim():qt):tons((j.qty_kg||0)/1000);
   const FOOT='FM-TR-01 Rev.05 ประกาศใช้วันที่ 21 กุมภาพันธ์ 2569', CO=coOf(j);   // 🗂️ 19 พ.ย. บริษัทตามชนิดสินค้า
-  return `<section class="fm"><div class="ftop"><span></span><span>${FOOT}</span></div><div class="fbox">   <!-- 18 พ.ย. คุณน้อง: หน้า 1 ต้องมีเลขเอกสาร ISO ด้วย -->
-  <div class="frow fhead"><div class="fco"><div class="fname">${e(CO)}</div><div class="flogo">SSB</div>
-      <div class="ftitle"><b>ใบขนส่งน้ำมัน</b><b>ส่วนที่ 1 สำหรับฝ่ายขนส่ง</b></div></div>
-    <table class="fdoc"><tr><th>เลขที่เอกสาร</th><td class="dno">${e(j.doc_no||'')}</td></tr><tr><th>ออกจากโรงงานก่อนเวลา</th><td>${e(f.leaveBy)}</td></tr><tr><th>ส่งถึงลูกค้าก่อนเวลา</th><td>${e(f.arriveBy||j.deliver_time||'')}</td></tr></table></div>
-  <div class="fsec s1">
-    <div class="fl c"><b>ชนิดน้ำมัน</b> ${U(j.prod_name,60)}</div>
-    <div class="fl"><b>ชื่อลูกค้า</b> ${U(j.cust_name,40)} <b class="bill">${e(billCode(j))}</b> <b>สถานที่จัดส่ง</b> ${U(j.dest,34)} <b>จำนวนที่ต้องเติม</b> ${U(qv,14)} ${isT||!qt?'ตัน':''}</div>
-    <div class="fl"><span>วันที่ส่งสินค้า</span> ${U(thDate(pl.send_date),24)} <span class="ml">เอกสารแนบ</span> ${X(f.coa)} ใบ Certificate of Analysis (COA.) ${X(j.co)} ใบ CO ${f.coNo?U(f.coNo,22):D(22)}</div>
-    <div class="fl ind">${X(!!f.bags)} ถุงกรองจำนวน ${f.bags?U(f.bags,8):D(8)} ใบ ${bagTo?U(bagTo,40):D(40)} ผู้รับ</div>
-    <div class="fl"><span>บริษัทขนส่ง</span> ${U(j.carrier||'',36)} <span>ทะเบียนรถ</span> ${U(j.plate||'',38)} <span>ชื่อคนขับ</span> ${U(j.driver_name||'',42)}</div>
-    <div class="fl"><span>ผู้สั่งจ่าย</span> ${U(by||'',40)} <span>วันที่</span> ${U(thDate(pl.load_date||pl.send_date),26)} <span>เวลา</span> ${U(hm,14)} น.</div>
+  const sd=iso=>{ const m=String(iso||'').match(/^(\d{4})-(\d{2})-(\d{2})/); return m?m[3]+'/'+m[2]+'/'+String(+m[1]+543).slice(-2):''; };   // 25/11/69 แบบใบจริง
+  const fit=(v,mm,pt)=>{ pt=pt||10; const n=String(v||'').replace(/[ัิ-ฺ็-๎]/g,'').length, w=n*pt*.2; if(w<=mm) return ''; let z=pt*mm/w; if(z<8) z=Math.max(7,Math.min(pt,pt*1.9*mm/w)); return `font-size:${z.toFixed(1)}pt;`; };   /* ยาวมาก = ขึ้น 2 บรรทัดในช่องตัวเอง */   // ชื่อยาวเกินช่อง → ย่อตัวอักษร
+  const T=(x,y,h,c)=>`<div class="fa ${c||''}" style="left:${x}mm;top:${y}mm">${h}</div>`;
+  const C=(x,y,h,c)=>`<div class="fa fcx ${c||''}" style="left:${x}mm;top:${y}mm">${h}</div>`;
+  const V=(x,y,v,mm,c)=>v?`<div class="fa ${c||''}" style="left:${x}mm;top:${y}mm;${mm?`max-width:${mm}mm;white-space:normal;line-height:1.1;`+fit(v,mm,c&&/f1[1-3]/.test(c)?+c.match(/f(1[1-3])/)[1]:10):''}"><u>${e(v)}</u></div>`:'';
+  const L=(x,y,x2,lab,v,suf)=>`<div class="fa fd" style="left:${x}mm;top:${y}mm;width:${(x2-x).toFixed(1)}mm">${lab}<i${v?` style="${fit(v,x2-x-12)}"`:''}>${v?e(v):''}</i>${suf||''}</div>`;
+  const B=(x,y,on,w,h)=>{ w=w||6; h=h||5; return `<div class="fx" style="left:${x}mm;top:${(y-h/2).toFixed(1)}mm;width:${w}mm;height:${h}mm">${on?'✓':''}</div>`; };
+  const DT=(x,y,x2)=>`<div class="fa fd" style="left:${x}mm;top:${y}mm;width:${x2-x}mm">วันที่<i></i>/<i></i>/<i></i></div>`;
+  const CK=['ความสะอาดรถภายนอก','ความสะอาดภายใน TANK','สภาพและความสะอาดซีลฝาปิด','สภาพและความสะอาดหม้อกรอง','ความสะอาดสายยางโหลดน้ำมัน','ความสะอาดท่อโหลดน้ำมัน','สภาพและความสะอาดของวาล์ว','ปราศจากสัตว์พาหะ','ตรวจสอบเศษลวดซีลบนTANK'], CKY=[32.7,39.5,46.2,53,59.8,66.6,72.5,79.8,86.5];
+  return `<section class="fm"><div class="fbox">
+  <div class="fq" style="height:90.1mm">
+    ${C(54,5.5,`<b>${e(CO)}</b>`,'f12')}${T(22,22.5,'SSB','flogo')}${T(75,14.4,'ใบขนส่งน้ำมัน','f11')}${T(70,26.6,'ส่วนที่ 1 สำหรับฝ่ายขนส่ง','f9')}
+    <div class="fdoc">${T(1.2,5.8,'<b>เลขที่เอกสาร</b>','f12')}<div class="fdno">${e(j.doc_no||'')}</div>
+      ${T(1.2,14.7,'ออกจากโรงงานก่อนเวลา')}${V(60,14.7,f.leaveBy,17,'fb')}${T(1.2,24.9,'ส่งถึงลูกค้าก่อนเวลา')}${V(60,24.9,f.arriveBy||j.deliver_time||'',17,'fb')}</div>
+    ${T(112,38.4,'<b>ชนิดน้ำมัน</b>','f12')}${V(149,38.4,j.prod_name,34,'fb f11')}
+    ${T(1.2,49.1,'ชื่อลูกค้า')}${V(16.6,49.1,j.cust_name,32)}${T(50,49.1,`<b><u>${e(billCode(j))}</u></b>`,'f13')}
+    ${T(61.8,49.1,'สถานที่จัดส่ง')}${V(87.6,49.1,j.dest,17)}${T(105.8,49.1,'จำนวนที่ต้องเติม')}${V(144.8,49.1,qv,16)}${isT||!qt?T(162,49.1,'ตัน'):''}
+    ${T(1.2,59.6,'วันที่ส่งสินค้า')}${V(20.5,59.6,sd(pl.send_date),30)}${T(61.8,61.6,'เอกสารแนบ')}
+    ${B(81.3,59.6,f.coa)}${T(88.9,59.6,'ใบ Certificate of Analysis (COA.)','f9')}${B(132.6,59.6,j.co)}${L(142.3,59.6,171.5,'ใบ CO',f.coNo)}
+    ${B(81.3,66.4,!!f.bags)}<div class="fa fd" style="left:88.9mm;top:66.4mm;width:66.6mm">ถุงกรองจำนวน<i style="flex:none;width:7mm">${f.bags?e(f.bags):''}</i>ใบ<i>${e(bagTo)}</i>ผู้รับ</div>
+    ${T(1.2,74.3,'บริษัทขนส่ง')}${V(32.2,74.3,j.carrier||'',29)}${T(63,74.3,'ทะเบียนรถ')}${V(90.3,74.3,j.plate||'',38)}${T(130.9,74.3,'ชื่อคนขับ')}${V(161.7,74.3,j.driver_name||'',21)}
+    ${T(1.2,83,'ผู้สั่งจ่าย')}${V(33.4,83,by||'',31)}${T(66.6,83,'วันที่')}${V(100.3,83,sd(pl.load_date||pl.send_date),28)}${T(131.8,83,'เวลา')}${V(149.5,83,hm)}${T(162.2,83,'น.')}
   </div>
-  <div class="fsec s1b"><div class="fck">
-      <div>${X(f.cond==='ok')} สภาพรถปกติ ไม่เป็นสนิม สีไม่ลอกร่อน</div><div>${X(f.cond==='rust')} สภาพรถเป็นสนิม สีลอกร่อน</div>
-      <div>${X(f.n2)} เติมไนโตรเจน</div><div>${X(f.flush)} ฟลัสล้างวิ่ง ${e(f.flushTxt||'')}</div></div>
-    <div class="fsig"><div class="sg">ลงชื่อ${D(56)}ผู้บันทึก</div>
-      <div class="fprev"><b>ชนิดสินค้า ที่บรรทุกย้อนหลัง</b>${p3.map((x,i)=>`<div><span>${i+1}</span>${x?e(x):D(46)}</div>`).join('')}</div></div></div>
-  <div class="fsec"><div class="fst">ส่วนที่ 2 สำหรับป้อมยาม</div>
-    <div class="fl">วันที่รับเอกสาร${D(40)} เวลา${D(40)} ผู้รับเอกสาร${D(40)}</div>
-    <div class="fl"><u>ตรวจสอบรถภายนอก</u></div>
-    <div class="fl ind2">${X(false)} ไม่มีถังน้ำทั้งภายในและภายนอกรถขนส่ง <span class="ml">${X(false)} ไม่มีผู้ติดตาม</span></div>
-    <div class="fl">ผู้ตรวจสอบ${D(44)} วันที่${D(44)} เวลา${D(40)}</div>
-    <div class="fl">วันที่เรียกรถเข้าเติมน้ำมัน${D(26)} เวลา${D(44)} ผู้แจ้ง${D(42)}</div>
-    <div class="fl">วันที่รถออกจากป้อมยาม${D(30)} เวลา${D(44)} ผู้รับคืนเอกสาร${D(34)}</div></div>
-  <div class="fsec last"><div class="fst">ส่วนที่ 3 สำหรับห้องชั่ง</div>
-    <div class="fl c">เวลารถเข้า${D(40)} เวลารถออก${D(40)} รวมเวลา${D(34)}</div>
-    <div class="fl">น้ำหนักรถเข้า${D(32)} กก. น้ำหนักรถออก${D(32)} กก. น้ำหนักสุทธิ${D(32)} กก.</div>
-    <div class="fl">เลขที่ใบชั่ง${D(26)} ชื่อผู้ชั่ง${D(30)} ซีลทั้งหมด${D(14)} ตัว เลขที่ตีซีล${D(40)}</div></div>
-  </div></section>
-  <section class="fm"><div class="ftop"><b>มีต่อด้านหลัง</b><span>${FOOT}</span></div><div class="fbox">
-  <div class="frow fhead2"><div class="fco2"><div class="fname">${e(CO)}</div><b>ใบขนส่งน้ำมัน (ต่อ)</b></div>
-    <div class="fside"><div class="fbx">เวลาโหลดไม่เกิน 1.30 นาที</div><div>ชื่อลูกค้า <b class="uv">${e(j.cust_name||'')}</b></div></div></div>
-  <div class="fsec"><div class="fst c">ส่วนที่ 4 สำหรับฝ่ายผลิตและโหลดสินค้า</div>
-    <div class="f4"><div><div><u><b>ตรวจเช็ครถน้ำมัน</b></u></div>
-      ${['ความสะอาดรถภายนอก','ความสะอาดภายใน TANK','สภาพและความสะอาดซีลฝาปิด','สภาพและความสะอาดหม้อกรอง','ความสะอาดสายยางโหลดน้ำมัน'].map(x=>`<div class="ci">${X(false)} ${x}</div>`).join('')}
-      <div class="ci">${X(false)} ความสะอาดท่อโหลดน้ำมัน &nbsp;เดนหน้าท่อ${D(12)} ถัง${D(16)}kg.</div>
-      <div class="ci">${X(false)} สภาพและความสะอาดของวาล์ว เลขที่ซีล${D(40)}</div>
-      <div class="ci">${X(false)} ปราศจากสัตว์พาหะ</div><div class="ci">${X(false)} ตรวจสอบเศษลวดซีลบน TANK</div></div>
-      <div><div><u><b>โหลดน้ำมันจาก TANK</b></u></div><table class="ftank"><tr><th>RPO</th><th>PO (MIX)</th><th>RPS</th><th>ROL</th><th>PFAD</th><th>อื่นๆ</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table></div></div>
-    <div class="fl">ลงชื่อผู้ตรวจสอบ${D(30)} เวลาเรียกเก็บแล็ป${D(36)} ผู้รับแจ้ง${D(44)}</div>
-    <div class="fl">หมายเหตุ${D(50)} ตรวจเช็คการติดซีลที่ฝาถังและวาล์วน้ำมัน &nbsp;เวลาตีซีล${D(36)}</div>
-    <div class="fl">${D(60)} ${X(false)} เรียบร้อย ${X(false)} ไม่เรียบร้อย &nbsp;เวลาปล่อยรถ${D(40)}</div>
-    <div class="fl">ผู้ถ่ายน้ำมัน${D(56)} <span class="ml">วันที่${D(14)}/${D(14)}/${D(14)}</span></div></div>
-  <div class="fsec"><div class="frow fst2"><b>ส่วนที่ 5 สำหรับฝ่ายตรวจสอบคุณภาพ</b><b class="fbx2">เวลาทำแลปไม่เกิน 15 นาที</b></div>
-    <div class="fl">เวลาเก็บตัวอย่าง${D(34)} ผู้เก็บตัวอย่าง${D(34)} เดรนหน้าท่อ${D(30)}กก.</div>
-    <div class="fl"><b>ผลทดสอบคุณภาพ &nbsp; Test report no.</b>${D(50)}</div><div class="fl"><b>อ้างอิง : ตารางบันทึกผลวิเคราะห์น้ำมันขายออก FM-QC-27</b></div>
-    <div class="fl">ผู้ตรวจสอบ${D(40)} วันที่${D(12)}/${D(12)}/${D(12)} เวลาบันทึก${D(40)}</div></div>
-  <div class="fsec"><div class="fst">ส่วนที่ 6 สำหรับฝ่ายบัญชี</div>
-    <div class="fl ind3">เวลารับเอกสาร${D(40)} ผู้รับเอกสาร${D(50)}</div>
-    <div class="fl">เลขที่ใบส่งของ${D(30)} เลขที่ใบชั่ง${D(40)} ผู้จัดทำ${D(50)}</div>
-    <div class="fl ind3">ผู้รับใบส่งของ${D(40)} เวลารับใบส่งของ${D(44)}</div></div>
-  <div class="fsec last"><div class="fst">ส่วนที่ 7 สำหรับฝ่ายผู้บันทึกลงในคอมพิวเตอร์</div>
-    <div class="fl ind2">วันที่รับเอกสาร${D(34)} เวลาที่รับเอกสาร${D(26)} ผู้บันทึก${D(34)}</div></div>
-  </div><div class="ffoot">${FOOT}</div></section>`;
+  <div class="fq" style="height:83.8mm">
+    ${B(7.3,9.7,f.cond==='ok',6,5.3)}${T(16.4,9.7,'สภาพรถปกติ ไม่เป็นสนิม สีไม่ลอกร่อน')}${B(94.8,9.7,f.cond==='rust',6,5.3)}${T(105.5,9.7,'สภาพรถเป็นสนิม สีลอกร่อน')}
+    ${B(7.3,19.1,f.n2,6,5.3)}${T(16.4,19.1,'เติมไนโตรเจน')}${B(94.8,19.1,f.flush,6,5.3)}${T(105.5,19.1,'ฟลัสล้างวิ่ง '+e(f.flushTxt||''))}
+    ${L(17.8,32.2,72,'ลงชื่อ',by||'','ผู้บันทึก')}
+    <div class="fpv" style="left:104.9mm;top:26.6mm;height:45.4mm">${C(39.6,4.6,'ชนิดสินค้า ที่บรรทุกย้อนหลัง')}
+      ${p3.map((x,i)=>T(12.9,[13.2,21.3,28.8][i],String(i+1))+(x?T(26,[13.2,21.3,28.8][i],e(x)):`<div class="fa fd" style="left:26mm;top:${[13.2,21.3,28.8][i]}mm;width:44mm"><i></i></div>`)).join('')}</div>
+  </div>
+  <div class="fq" style="height:59.3mm">
+    ${C(92,4.2,'<b>ส่วนที่ 2 สำหรับป้อมยาม</b>')}
+    ${L(1.2,14.4,48.3,'วันที่รับเอกสาร')}${L(58.1,14.4,97.4,'เวลา')}${L(105.2,14.4,144.8,'ผู้รับเอกสาร')}
+    ${T(1.2,23.7,'<u>ตรวจสอบรถภายนอก</u>')}
+    ${B(26.2,31.7,false,6.4,4.7)}${T(33.4,31.7,'ไม่มีถังน้ำทั้งภายในและภายนอกรถขนส่ง')}${B(93.6,31.7,false,6.4,4.7)}${T(105.5,31.7,'ไม่มีผู้ติดตาม')}
+    ${L(1.2,38.4,48.3,'ผู้ตรวจสอบ')}${L(58.1,38.4,97.4,'วันที่')}${L(105.2,38.4,144.8,'เวลา')}
+    ${L(1.2,45.4,48.3,'วันที่เรียกรถเข้าเติมน้ำมัน')}${L(58.1,45.4,97.4,'เวลา')}${L(105.2,45.4,144.8,'ผู้แจ้ง')}
+    ${L(1.2,51.7,48.3,'วันที่รถออกจากป้อมยาม')}${L(58.1,51.7,97.4,'เวลา')}${L(105.2,51.7,144.8,'ผู้รับคืนเอกสาร')}
+  </div>
+  <div class="fq" style="height:32.2mm">
+    ${C(92,3.6,'<b>ส่วนที่ 3 สำหรับห้องชั่ง</b>')}
+    ${L(22.9,9.8,72,'เวลารถเข้า')}${L(73.2,9.8,122.8,'เวลารถออก')}${L(124,9.8,160.4,'รวมเวลา')}
+    ${L(9,16.4,56.5,'น้ำหนักรถเข้า','','กก.')}${L(57.6,16.4,111.8,'น้ำหนักรถออก','','กก.')}${L(113.5,16.4,173.3,'น้ำหนักสุทธิ','','กก.')}
+    ${L(1.2,23.7,38,'เลขที่ใบชั่ง')}${L(40.1,23.7,78.7,'ชื่อผู้ชั่ง')}${L(81.8,23.7,116.5,'ซีลทั้งหมด','','ตัว')}${L(119.4,23.7,164.3,'เลขที่ตีซีล')}
+  </div>
+  </div><div class="ffoot"><b>มีต่อด้านหลัง</b><span>${FOOT}</span></div></section>
+  <section class="fm"><div class="fbox">
+  <div class="fq" style="height:125.8mm">
+    ${C(87.2,4.2,`<b>${e(CO)}</b>`,'f15')}${C(87.2,12.4,'<b>ใบขนส่งน้ำมัน (ต่อ)</b>','f11')}${C(87.2,19.5,'<b>ส่วนที่ 4 สำหรับฝ่ายผลิตและโหลดสินค้า</b>','f9')}
+    <div class="fbx1" style="left:132mm;height:8.1mm">เวลาโหลดไม่เกิน 1.30 นาที</div>
+    ${T(132.6,12,'ชื่อลูกค้า')}${V(146,9.6,j.cust_name||'',37,'fb fdn')}
+    ${T(15.6,26.1,'<b><u>ตรวจเช็ครถน้ำมัน</u></b>')}${C(99.4,26.1,'<b><u>โหลดน้ำมันจาก TANK</u></b>')}
+    <table class="ftk" style="top:29.3mm;width:103.3mm"><colgroup><col style="width:9.3mm"><col style="width:15.2mm"><col style="width:25.1mm"><col style="width:13.5mm"><col style="width:17.6mm"><col></colgroup>
+      <tr><th>RPO</th><th style="font-size:8pt">PO ( MIX)</th><th>RPS</th><th>ROL</th><th>PFAD</th><th>อื่นๆ</th></tr><tr><td></td><td></td><td></td><td></td><td></td><td></td></tr></table>
+    ${CK.map((x,i)=>B(10.2,CKY[i],false,7.3,3.7)+T(20,CKY[i],x)).join('')}
+    <div class="fa fd" style="left:59.6mm;top:66.6mm;width:43.4mm">เดนหน้าท่อ<i style="flex:none;width:9mm"></i>ถัง<i></i>kg.</div>
+    ${L(67,72.5,110,'เลขที่ซีล')}
+    ${L(1.2,95.3,41.8,'ลงชื่อผู้ตรวจสอบ')}${L(59.6,95.3,106,'เวลาเรียกเก็บแล็ป')}${L(106.5,95.3,159.2,'ผู้รับแจ้ง')}
+    ${L(1.2,101.9,41.8,'หมายเหตุ')}${T(49.1,101.9,'ตรวจเช็คการติดซีลที่ฝาถังและวาล์วน้ำมัน')}${L(108.9,101.9,157.5,'เวลาตีซีล')}
+    <div class="fa fd" style="left:1.2mm;top:108.9mm;width:51mm"><i></i></div>${B(59.6,108.9,false,6,4.5)}${T(70.3,108.9,'เรียบร้อย')}${B(83.3,108.9,false,6,4.5)}${T(91.8,108.9,'ไม่เรียบร้อย')}${L(108.9,108.9,157.5,'เวลาปล่อยรถ')}
+    ${L(1.2,115.7,58.1,'ผู้ถ่ายน้ำมัน')}${DT(106.7,115.7,157)}
+  </div>
+  <div class="fq" style="height:36.4mm">
+    ${C(53.3,3.4,'<b>ส่วนที่ 5 สำหรับฝ่ายตรวจสอบคุณภาพ</b>')}<div class="fbx1" style="left:106mm;height:6.4mm">เวลาทำแลปไม่เกิน 15 นาที</div>
+    ${L(1.2,11,52.2,'เวลาเก็บตัวอย่าง')}${L(59.6,11,106,'ผู้เก็บตัวอย่าง')}${L(106.7,11,150,'เดรนหน้าท่อ','','กก.')}
+    ${T(1.2,18.5,'ผลทดสอบคุณภาพ')}${L(34.2,18.5,89.8,'<b>Test report no.</b>')}${T(91.4,18.5,'<b>อ้างอิง : ตารางบันทึกผลวิเคราะห์น้ำมันขายออก FM-QC-27</b>')}
+    ${L(1.2,26.2,50.5,'ผู้ตรวจสอบ')}${DT(59.6,26.2,101.3)}${L(106.7,26.2,156.6,'เวลาบันทึก')}
+  </div>
+  <div class="fq" style="height:34.7mm">
+    ${T(1.2,4.2,'<b>ส่วนที่ 6 สำหรับฝ่ายบัญชี</b>')}
+    ${L(48.8,11.3,100.8,'เวลารับเอกสาร')}${L(104.7,11.3,162.6,'ผู้รับเอกสาร')}
+    ${L(1.2,18.1,47.4,'เลขที่ใบส่งของ')}${L(48.8,18.1,100.8,'เลขที่ใบชั่ง')}${L(104.7,18.1,162.6,'ผู้จัดทำ')}
+    ${L(48.8,24.9,100.8,'ผู้รับใบส่งของ')}${L(104.7,24.9,162.6,'เวลารับใบส่งของ')}
+  </div>
+  <div class="fq" style="height:20.3mm">
+    ${T(1.2,3.7,'<b>ส่วนที่ 7 สำหรับฝ่ายผู้บันทึกลงในคอมพิวเตอร์</b>')}
+    ${L(16.9,10.5,58.1,'วันที่รับเอกสาร')}${L(62.7,10.5,105.5,'เวลาที่รับเอกสาร')}${L(106,10.5,147.3,'ผู้บันทึก')}
+  </div>
+  </div><div class="ffoot"><span></span><span>${FOOT}</span></div></section>`;
 }
 
 /* ── 📍 ลูกค้า Bulk · 2026-10-15 ──
