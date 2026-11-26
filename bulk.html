@@ -602,7 +602,7 @@ input.mini{font:inherit;font-size:13px;width:120px;color:var(--ink);background:v
     <div class="kpis" id="kpis"></div>
     <div class="ptools" id="planTools"></div>
     <div class="tbl"><table class="ptbl"><thead id="thead"></thead><tbody id="rows"></tbody></table></div>
-    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26h</span></div>
+    <div class="note">1 แถวในตารางแผน = 1 เที่ยว (แบ่ง 60 ตัน เป็น 30+30 ได้) · <b>รถบริษัท</b> = แจกงาน/การ์ดไลน์/ค่าแรง · <b>รถนอก</b> = เก็บไว้คิดค่าขนส่ง · <b>ลูกค้ารับเอง</b> = ใบขนส่งอย่างเดียว · เลขที่ใบขนส่งออกตอนพิมพ์ครั้งแรก (ปปดด + 4 หลัก) <span style="opacity:.6">· build 2026-11-26i</span></div>
   </div>
   </div></main>
 </div>
@@ -971,18 +971,22 @@ function renderPlan(){
   const F={all:['ทั้งหมด',()=>true],company:['รถบริษัท',isCo],outside:['รถนอก',j=>j.kind==='outside'],pickup:['รับเอง',j=>j.kind==='pickup'],nodrv:['ยังไม่จัดรถ',noDrv],nodoc:['ยังไม่ออกใบ',j=>!j.doc_no]};
   if(!F[FILT]) FILT='all';
   const ed=me.canEdit&&!VIEWING;
+  /* ☑️ 26 พ.ย. คุณน้อง "ติ๊ก ส่งแค่คนเดียว" — เที่ยวที่ติ๊ก + รถบริษัทที่มีคนขับ + ยังไม่แจก (ไม่นับเที่ยวที่ฝ่ายไร่/PK จัดเอง) */
+  const selGo=VIEWING?[]:live.filter(j=>SEL.has(j.id)&&dispOk(j));
   $('planTools').innerHTML=Object.keys(F).map(k=>`<button type="button" class="fchip${FILT===k?' on':''}" data-f="${k}" aria-pressed="${FILT===k}">${F[k][0]}<span class="n">${cnt(F[k][1])}</span></button>`).join('')
     +(ed?`<span class="sp"><label class="btn sm" for="xjIn" title="ไฟล์ Excel ที่แอดมินจัดรถไว้ (ขนส่ง/รายชื่อ/ทะเบียน/เลขที่ใบ 5 ส่วน) → เทียบกับแผน + เลือกคนขับ + ลงตารางแผน">📥 นำเข้าไฟล์จัดรถ (Excel)<input type="file" id="xjIn" class="vh" accept=".xlsx,.xls"></label>
       <button type="button" class="btn sm" id="tAdd">+ เพิ่มเที่ยว</button>
       <button type="button" class="btn sm" id="tPrint"${SEL.size?'':' disabled'}>🖨️ พิมพ์ใบขนส่ง${SEL.size?' ('+SEL.size+')':''}</button>
-      ${!p.dispatched_at?`<button type="button" class="btn sm pri" id="tDisp">📤 แจกงานรถบริษัท</button>`:''}
+      ${selGo.length?`<button type="button" class="btn sm pri" id="tDispSel" title="ส่งการ์ดเฉพาะเที่ยวที่ติ๊ก (รถบริษัทที่มีคนขับ ยังไม่แจก)">📤 แจกงานที่เลือก (${selGo.length})</button>`:''}
+      ${!p.dispatched_at?`<button type="button" class="btn sm${selGo.length?'':' pri'}" id="tDisp">📤 แจกงานรถบริษัท${selGo.length?'ทั้งหมด':''}</button>`:''}
       <button type="button" class="btn sm gold" id="tPub">✉️ ส่งแผนให้บัญชี</button></span>`:'')
     +`<div class="docinfo sub">เลขที่ใบขนส่งถัดไป <b class="num">${esc(docNext())}</b>${d.doc&&d.doc.next==null?' (เดือนนี้ยังไม่เคยออก)':''}${me.isDev&&!VIEWING?' · <button type="button" class="lnk" id="tDoc">ตั้งเลขถัดไป</button>':''}</div>`;
   $('planTools').querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{ FILT=b.dataset.f; renderPlan(); });
   if($('tAdd')) $('tAdd').onclick=()=>openTrip(null,null);
   if($('xjIn')) $('xjIn').addEventListener('change',onJobFile);
   if($('tPrint')) $('tPrint').onclick=()=>printTrips([...SEL]);
-  if($('tDisp')) $('tDisp').onclick=askDispatch;
+  if($('tDisp')) $('tDisp').onclick=()=>askDispatch();
+  if($('tDispSel')) $('tDispSel').onclick=()=>askDispatch(selGo.map(j=>j.id));
   if($('tPub')) $('tPub').onclick=askPublish;
   if($('tDoc')) $('tDoc').onclick=askDocNext;
   const admin=d.admin, akeys={}; if(admin) (admin.rows||[]).forEach(r=>akeys[r.key]=r);
@@ -1004,7 +1008,7 @@ function renderPlan(){
       <td class="num">${j.line_no}</td><td class="num">${j.round_no||''}</td>
       <td class="cust">${esc(j.cust_name)}${warn}</td><td>${esc(j.dest)}</td>
       <td class="prod">${esc(j.prod_name)}</td><td class="r num">${esc(qtyTx(j).replace(/ ตัน$/,''))}</td><td class="bcode" title="${esc(billTitle(j.prod_name,j.bill))}">${esc(billCode(j))}</td>
-      <td>${isCo(j)?'<span class="kd company">บริษัท</span> ':''}${who}</td>
+      <td>${isCo(j)?(isBorrow(j.carrier)?'<span class="kd company borrow" title="'+(j.hub?'ฝ่าย'+(j.hub==='FARM'?'ไร่':' Packing')+'จัดรถ + ส่งการ์ดเองจาก Order Hub · ไม่ต้องแจกงาน':'คนขับฝ่ายอื่น · การ์ด + ค่าแรงตามกลุ่มคนขับ')+'">'+(j.hub==='FARM'||/ไร่/.test(carTx(j.carrier))?'🚜 ':'📦 ')+esc(carTx(j.carrier))+'</span> ':'<span class="kd company">บริษัท</span> '):''}${who}${j.hub?'<small class="sub" style="display:block">ฝ่าย'+(j.hub==='FARM'?'ไร่':' Packing')+'จัดรถเอง · ไม่อยู่ในแจกงาน</small>':''}</td>
       <td>${tg(j,'co',j.co)}</td><td>${tg(j,'co_closed',j.co_closed)}</td><td>${tg(j,'loaded',j.loaded)}</td>
       <td class="nt">${esc(j.deliver_time||'')}</td><td>${j.doc_no?`<span class="docno">${esc(j.doc_no)}</span>${j.printed_at?'<small class="sub" style="display:block">พิมพ์ '+thTime(j.printed_at)+'</small>':''}`:'<span class="sub">—</span>'}</td>
       <td>${st}${j.change_txt&&j.status!=='_snap'?`<span class="chg">${esc(j.change_txt)}</span>`:''}${j.note?`<small class="sub nt" style="display:block">📝 ${esc(j.note)}</small>`:''}</td>
@@ -1559,25 +1563,31 @@ function lineTxt(l,withAdmins){
 }
 
 /* ── 📤 แจกงาน (เฉพาะรถบริษัทที่มีคนขับ) ── */
-function askDispatch(){
-  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled), co=live.filter(isCo), go=co.filter(j=>j.driver_name), wait=co.filter(j=>!j.driver_name), outs=live.filter(j=>!isCo(j));
+/* ☑️ ids = แจกเฉพาะที่ติ๊ก · 🚜 เที่ยวที่ฝ่ายไร่/PK จัดรถเอง (j.hub) หรือส่งการ์ดไปแล้ว = แยกไว้ ไม่แจกซ้ำ */
+const dispOk=j=>!j.cancelled&&isCo(j)&&j.driver_name&&j.status==='new'&&!j.hub;
+function askDispatch(ids){
+  const part=Array.isArray(ids)&&ids.length>0, pick=part?new Set(ids):null;
+  const p=DATA.plan, live=DATA.jobs.filter(j=>!j.cancelled&&(!pick||pick.has(j.id))), co=live.filter(isCo), go=co.filter(dispOk), hub=co.filter(j=>j.hub),
+    done=co.filter(j=>j.driver_name&&!j.hub&&j.status!=='new'), wait=co.filter(j=>!j.driver_name&&!j.hub), outs=live.filter(j=>!isCo(j));
   const by={}; go.forEach(j=>{ (by[j.driver_name]=by[j.driver_name]||[]).push(j); });
-  const firstPub=!DATA.revs.length;
+  const firstPub=!part&&!DATA.revs.length;
   /* 19 พ.ย. คุณน้อง: รีเช็คก่อนแจก — ลูกค้า · สถานที่ส่ง · สินค้า · จำนวน ทุกเที่ยว */
   const tripLi=j=>`<span class="dlgtrip"><span class="num">#${j.line_no}</span> <b>${esc(j.cust_name||'—')}</b><br>📍 ${esc(j.dest||'—')}<br><span class="pd">${esc(j.prod_name||'—')}</span> · <b>${esc(qtyTx(j))}</b>${j.round_no?'<span class="num"> · รอบ '+esc(j.round_no)+'</span>':''}${j.deliver_time?'<span class="num"> · '+esc(j.deliver_time)+'</span>':''}</span>`;
   let m=$('dlgDisp'); if(!m){ m=document.createElement('div'); m.id='dlgDisp'; m.className='dlg'; document.body.appendChild(m); }
   const close=()=>{ m.hidden=true; m.innerHTML=''; };
   m.onmousedown=e=>{ if(e.target===m) close(); };
   m.innerHTML=`<div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="dlgT">
-    <div class="dlghd"><div><div class="sub">📤 แจกงานรถบริษัท</div><h2 id="dlgT" style="color:#fff">ส่ง ${thDate(p.send_date)}</h2></div>
+    <div class="dlghd"><div><div class="sub">📤 ${part?'แจกงานเฉพาะที่เลือก':'แจกงานรถบริษัท'}</div><h2 id="dlgT" style="color:#fff">ส่ง ${thDate(p.send_date)}${part?' · '+ids.length+' เที่ยวที่ติ๊ก':''}</h2></div>
       <button type="button" class="dlgx" aria-label="ปิด" id="dNo2">✕</button></div>
     <div class="dlgbd">
       <div class="kpis" style="padding:0;border:0"><div class="kpi"><div class="k">แจกตอนนี้</div><div class="v">${go.length}</div></div><div class="kpi"><div class="k">คนขับ</div><div class="v">${Object.keys(by).length}</div></div>
-        <div class="kpi"><div class="k">รอจัดรถ</div><div class="v">${wait.length}</div></div><div class="kpi"><div class="k">รถนอก/รับเอง</div><div class="v">${live.length-co.length}</div></div></div>
+        <div class="kpi"><div class="k">รอจัดรถ</div><div class="v">${wait.length}</div></div><div class="kpi"><div class="k">รถนอก/รับเอง</div><div class="v">${live.length-co.length}</div></div>${hub.length?`<div class="kpi"><div class="k">ฝ่ายไร่/PK จัดเอง</div><div class="v">${hub.length}</div></div>`:''}</div>
       ${go.length?`<div class="dsec">📤 แจกตอนนี้ (${go.length})</div><div class="dlglist">${Object.keys(by).map(k=>`<div><b>${esc(k)} <span class="sub" style="font-weight:400">· ${by[k].length} เที่ยว</span></b>
         <span class="dlgplate">🚛 ${[...new Set(by[k].map(j=>String(j.plate||'—').replace(/\s*[,/]\s*/g,' / ')))].map(esc).join(' · ')}</span>
         ${by[k].map(tripLi).join('')}</div>`).join('')}</div>`
         :'<div class="sub" style="color:var(--bad)">ยังไม่มีเที่ยวรถบริษัทที่เลือกคนขับ — เลือกคนขับก่อน</div>'}
+      ${hub.length?`<div class="dsec">🚜 ฝ่ายไร่/PK จัดรถเองจาก Order Hub · ส่งการ์ดแล้ว ไม่แจกซ้ำ (${hub.length})</div><div class="dlglist">${hub.map(j=>`<div><span class="dlgplate">${esc(carTx(j.carrier))} · ${esc(j.driver_name||'')}${j.plate?' · '+esc(j.plate):''}</span>${tripLi(j)}</div>`).join('')}</div>`:''}
+      ${done.length?`<div class="dsec">✅ ส่งการ์ดไปแล้ว · ไม่แจกซ้ำ (${done.length})</div><div class="dlglist">${done.map(j=>`<div><span class="dlgplate">${esc(j.driver_name)}${j.plate?' · '+esc(j.plate):''}</span>${tripLi(j)}</div>`).join('')}</div>`:''}
       ${wait.length?`<div class="dsec">⏳ รอจัดรถ · ยังไม่แจก (${wait.length})</div><div class="dlglist">${wait.map(j=>`<div>${tripLi(j)}</div>`).join('')}</div>`:''}
       ${outs.length?`<div class="dsec">🚚 รถนอก/รับเอง · ไม่แจก (${outs.length})</div><div class="dlglist">${outs.map(j=>`<div><span class="dlgplate">${esc(carTx(j.carrier)||KIND[j.kind]||'รถนอก')}${j.plate?' · '+esc(j.plate):''}</span>${tripLi(j)}</div>`).join('')}</div>`:''}
       <div class="sub">คนขับที่ Active ใน LINE ได้การ์ดใบงานทันที${wait.length?' · เที่ยวที่รอจัดรถ ใส่คนขับทีหลังแล้วบันทึก = ส่งการ์ดให้เอง':''} · หลังแจกงาน แก้เที่ยว = ส่งการ์ดแก้ไข/ยกเลิกให้อัตโนมัติ</div>
@@ -1588,8 +1598,8 @@ function askDispatch(){
   m.hidden=false; $('dNo').onclick=close; $('dNo2').onclick=close; (go.length?$('dYes'):$('dNo')).focus();
   if(firstPub) $('dPv').onclick=e=>{ e.preventDefault(); openPubPreview(p,{view:1}); };
   $('dYes').onclick=async()=>{ const b=$('dYes'); b.disabled=true; b.textContent='กำลังแจก…';
-    try{ const d=await post({action:'dispatch',planId:p.id,publish:firstPub?$('dPub').checked:false});
-      if(d.ok){ close(); toast('แจกงานแล้ว '+d.trips+' เที่ยว · '+lineTxt(d.line,false)+(d.publish&&d.publish.ok?' · ส่งแผน'+d.publish.revName+'ให้บัญชีแล้ว':'')); load(p.send_date); }
+    try{ const d=await post(Object.assign({action:'dispatch',planId:p.id,publish:firstPub?$('dPub').checked:false},part?{jobIds:go.map(j=>j.id)}:{}));
+      if(d.ok){ close(); if(part) go.forEach(j=>SEL.delete(j.id)); toast((part?'แจกงานที่เลือกแล้ว ':'แจกงานแล้ว ')+d.trips+' เที่ยว · '+lineTxt(d.line,false)+(d.publish&&d.publish.ok?' · ส่งแผน'+d.publish.revName+'ให้บัญชีแล้ว':'')); load(p.send_date); }
       else { toast(d.error||'แจกงานไม่สำเร็จ',true); b.disabled=false; b.textContent='ยืนยันแจกงาน'; }
     }catch(e){ toast('ไม่แน่ใจว่าแจกสำเร็จ — โหลดข้อมูลใหม่ให้ตรวจ',true); load(p.send_date); } };
 }
