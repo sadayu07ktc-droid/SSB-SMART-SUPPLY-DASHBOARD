@@ -314,6 +314,16 @@
   .dvs-warn{font-size:12.5px;line-height:1.55;color:#8a5a0b;background:#fef0d9;padding:10px 12px;border-radius:12px}
   .dvs-save{margin-top:4px;padding:12px;border:0;border-radius:12px;font:inherit;font-weight:700;color:#fff;background:linear-gradient(135deg,#1F8A6F,#0A5C4C);cursor:pointer}
   .dvs-save:disabled{opacity:.5;cursor:not-allowed}
+  /* 🎭 สลับโรล (27 พ.ย.) */
+  .rp-now{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:14px;background:var(--chip,rgba(10,92,76,.06))}
+  .rp-now .ic{font-size:26px}
+  .rp-now small{display:block;font-size:12px;color:var(--ink-faint)}
+  .rp-now b{font-size:16px}
+  .rp-now em{font-style:normal;font-size:11.5px;font-weight:700;color:#8a5a0b;background:#fef0d9;border-radius:999px;padding:2px 8px;margin-left:8px}
+  button.rp-opt{font:inherit;color:inherit;text-align:left;width:100%}
+  button.rp-opt.on{border-color:var(--pine,#1F8A6F);box-shadow:inset 0 0 0 1px var(--pine,#1F8A6F);cursor:default}
+  #gate .rp-gate{max-width:420px;width:100%}
+  #gate .rp-gate .dvs{text-align:left;padding:14px 0 0}
   /* 💬 หน้าจอ LINE ของงาน (27 พ.ย.) — วาดใหม่จากโค้ดจริง ไม่ได้ส่ง */
   .lc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
   .lc-chips .chip.on{background:var(--pine-deep);border-color:var(--pine-deep);color:#fff}
@@ -358,7 +368,9 @@
   <nav id="roles" role="tablist" aria-orientation="vertical" aria-label="ฟอร์มของใคร"></nav>
   <div class="nsec">ตั้งค่า</div>
   <nav aria-label="ตั้งค่า"><button class="rtab" type="button" onclick="openDevSettings()" title="ตั้งค่า DEV — เลือกรับแจ้งเตือนทีละหน่วยงาน">
-    <span class="ic" aria-hidden="true">⚙️</span><span class="tx"><b>ตั้งค่า DEV</b><small>รับแจ้งเตือนหน่วยงาน</small></span></button></nav>
+    <span class="ic" aria-hidden="true">⚙️</span><span class="tx"><b>ตั้งค่า DEV</b><small>รับแจ้งเตือนหน่วยงาน</small></span></button>
+    <button class="rtab" type="button" onclick="openRolePanel()" title="สลับโรล — เล่นเป็นแอดมินไร่/Bulk/Packing/ผู้บริหาร ฯลฯ">
+    <span class="ic" aria-hidden="true">🎭</span><span class="tx"><b>สลับโรล</b><small>เล่นเป็นแอดมินชนิดอื่น</small></span></button></nav>
 </aside>
 <main>
   <div class="pgt"><h1>ดูหน้างานทุกฟอร์ม</h1><span class="rl" id="pgRole"></span><span class="devtag pgdev">DEV ONLY</span></div>
@@ -687,7 +699,11 @@ function openForm(k){
 async function load(){
   drawRoles();
   const r=await apiGet({action:'drivers'});
-  if(r.denied){ $('#gate').innerHTML='<div class="box"><div class="deny">🚫</div><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>หน้านี้สำหรับ DEV เท่านั้น</p></div>'; return; }
+  if(r.denied){
+    // 🎭 27 พ.ย. DEV ที่กำลังเล่นโรล = สิทธิ์ DEV ปิดชั่วคราว → โชว์แผงสลับโรล/กลับเป็น DEV แทนหน้า 🚫
+    let rs=null; try{ rs=await apiGet({action:'roleState'}); }catch(e){}
+    if(rs&&rs.ok&&rs.playing){ RST=rs; $('#gate').innerHTML=`<div class="box rp-gate"><div class="deny">🎭</div><h2>กำลังเล่นเป็น ${esc(rs.label)}</h2><p>หน้า Developer ปิดระหว่างเล่นโรล — กลับเป็น DEV เพื่อใช้งาน</p>${roleHtml(rs)}</div>`; return; }
+    $('#gate').innerHTML='<div class="box"><div class="deny">🚫</div><h2>ไม่มีสิทธิ์เข้าถึง</h2><p>หน้านี้สำหรับ DEV เท่านั้น</p></div>'; return; }
   $('#gate').style.display='none';
   if(!r.ok){ $('#list').innerHTML=`<div class="empty">${esc(r.error||'โหลดไม่สำเร็จ')}</div>`; return; }
   DRIVERS=r.drivers||[]; DRV_OK=true;
@@ -1073,7 +1089,7 @@ function drawDevSettings(){
     ${DEV_DEPT_UI.map(([k,ic,t,d])=>`<label class="dvs-opt${on?'':' dis'}"><input type="checkbox" value="${k}"${cur.has(k)?' checked':''}${on?'':' disabled'} onchange="dvsDirty()">
       <span class="ic" aria-hidden="true">${ic}</span><span><b>${t}</b><small>${d}</small></span></label>`).join('')}
     <div class="dvs-note">🛠️ ข้อความเฉพาะ DEV (เช่น เส้นทางไม่มีค่ากลาง · รายงานค่ากลางรายเดือน · อุปกรณ์ติดรถ · การ์ดทดสอบ Packing) <b>ได้เสมอ</b> ไม่ขึ้นกับที่ติ๊ก<br>
-      สลับโรลในเฟสถัดไป การรับแจ้งเตือนยังตามที่ติ๊กตรงนี้</div>
+      ตอนเล่นโรล 🎭 แจ้งเตือนเป็นตามโรลที่เล่น · กลับเป็น DEV = กลับมาตามที่ติ๊กตรงนี้</div>
     ${r.pinSet?'':`<div class="dvs-warn">บัญชีนี้ยังไม่ได้ตั้ง PIN — ตั้งที่หน้า 🔑 ตั้งค่าสิทธิ์แอดมินก่อน แล้วค่อยกลับมาบันทึก</div>`}
     <button class="dvs-save" id="dvsSave" type="button" onclick="saveDevSettings()" disabled>💾 บันทึก (ใส่ PIN)</button></div>`;
 }
@@ -1093,6 +1109,45 @@ async function saveDevSettings(){
     await ssbAlert('❌ บันทึกไม่สำเร็จ\n'+((d&&d.error)||'ไม่ทราบสาเหตุ'));
   }catch(e){ await ssbAlert('❌ บันทึกไม่สำเร็จ\n'+e); }
   BUSY=false; b.textContent='💾 บันทึก (ใส่ PIN)'; dvsDirty();
+}
+
+/* ── 🎭 สลับโรล (เฟส 2 · 27 พ.ย. คุณน้องเคาะ) ──
+   เล่นเป็นแอดมินชนิดอื่นจริงชั่วคราว: แจ้งเตือน LINE · ริชเมนู · หน้าเว็บ ตามโรลนั้น · สิทธิ์ DEV ปิดจนกลับเป็น DEV · ไม่ต้อง PIN
+   ⚠️ ตรงกับ Edge dev-drivers roleState/playRole · ในไลน์พิมพ์ "โรล" ได้การ์ดเดียวกัน */
+let RST=null;
+function roleHtml(r){
+  if(!r||!r.ok) return `<div class="empty">${esc((r&&r.error)||'โหลดไม่สำเร็จ')}</div>`;
+  const cur=r.current;
+  return `<div class="dvs">
+    <div class="rp-now"><span class="ic" aria-hidden="true">${r.icon||'👤'}</span><span><small>ตอนนี้เป็น</small><b>${esc(r.label)}</b>${r.playing?'<em>เล่นโรลอยู่</em>':''}</span></div>
+    ${r.playing?`<button class="dvs-save" type="button" onclick="playRole('DEV',this)">🛠️ กลับเป็น DEV</button>`:''}
+    ${r.canPlay?(r.roles||[]).map(x=>`<button class="dvs-opt rp-opt${x.type===cur?' on':''}" type="button"${x.type===cur?' disabled':''} onclick="playRole('${x.type}',this)">
+        <span class="ic" aria-hidden="true">${x.icon}</span><span><b>${esc(x.label)}</b><small>${x.type===cur?'กำลังเล่นโรลนี้':'แตะเพื่อเล่นเป็นโรลนี้'}</small></span></button>`).join('')
+      :`<div class="dvs-warn">บัญชีนี้ยังไม่ใช่ชนิด DEV — เล่นโรลไม่ได้</div>`}
+    <div class="dvs-note">เล่นโรล = เป็นแอดมินชนิดนั้นจริงชั่วคราว: <b>แจ้งเตือน LINE · ริชเมนู · หน้าเว็บ</b> ตามโรลนี้ · สิทธิ์ DEV (หน้านี้/ค่ากลาง/สิทธิ์แอดมิน) ปิดไว้จนกลับเป็น DEV<br>
+      ข้อความเฉพาะ DEV ยังได้เสมอ · บัญชีคนขับ = ปิดคนขับชั่วคราว · ในไลน์พิมพ์ <b>"โรล"</b> เพื่อสลับ/กลับได้ทุกเมื่อ · หน้าเว็บที่เปิดค้างไว้ให้รีเฟรช</div></div>`;
+}
+async function openRolePanel(){
+  $('#dw').innerHTML=`<div class="dwhead"><div class="top"><h2>🎭 สลับโรล</h2><button class="xbtn" onclick="closeDw()" aria-label="ปิด">✕</button></div>
+    <div class="sub">เล่นเป็นแอดมินชนิดอื่น · เฉพาะบัญชีนี้</div></div><div id="rpBody">${ldr('กำลังโหลด…')}</div>`;
+  $('#dw').classList.add('on'); $('#scrim').classList.add('on'); document.body.style.overflow='hidden';
+  let r; try{ r=await apiGet({action:'roleState'}); }catch(e){ r={ok:false,error:'โหลดไม่สำเร็จ'}; }
+  RST=r; if($('#rpBody')) $('#rpBody').innerHTML=roleHtml(r);
+}
+async function playRole(to,btn){
+  if(BUSY) return;
+  const lab=to==='DEV'?'DEV':(((RST&&RST.roles)||[]).find(x=>x.type===to)||{}).label||to;
+  const msg=to==='DEV'?'คืนสิทธิ์ DEV · แจ้งเตือนกลับมาตามที่ติ๊ก · ริชเมนูเดิม'
+    :`แจ้งเตือน LINE · ริชเมนู · หน้าเว็บ จะเป็นแบบ ${lab}\nสิทธิ์ DEV ปิดชั่วคราว — กลับได้จากหน้านี้ หรือพิมพ์ "โรล" ในไลน์`;
+  if(!(await ssbConfirm({icon:'🎭',title:to==='DEV'?'กลับเป็น DEV':'เล่นเป็น '+lab,msg,okText:'ยืนยัน'}))) return;
+  BUSY=true; if(btn) btn.disabled=true;
+  try{
+    const d=await apiPost({action:'playRole',to});
+    BUSY=false;
+    if(d&&d.ok){ toast((d.same?'เป็น ':'เปลี่ยนเป็น ')+d.label+(d.menu?' · ริชเมนู: '+d.menu:'')); setTimeout(()=>location.reload(),900); return; }
+    await ssbAlert('❌ สลับไม่สำเร็จ\n'+((d&&d.error)||'ไม่ทราบสาเหตุ'));
+  }catch(e){ BUSY=false; await ssbAlert('❌ สลับไม่สำเร็จ\n'+e); }
+  if(btn) btn.disabled=false;
 }
 
 /* ── บันทึก ── */
