@@ -934,7 +934,8 @@ function lcCat(uid){   // บทบาทผู้รับ → หมวด
 }
 function lcSendInfo(s){
   const to=(Array.isArray(s.to)?s.to:[s.to]).filter(Boolean), by={};
-  to.forEach(u=>{ const c=lcCat(u); (by[c]=by[c]||[]).push(u); });
+  const drvSend=to.some(u=>((LC.people||{})[u]||{}).role==='Driver');   // ส่งหาคนขับ (เช่น งานใหม่) → DEV ในชุดนี้นับเป็นคนขับ
+  to.forEach(u=>{ let c=lcCat(u); if(drvSend&&((LC.people||{})[u]||{}).role==='DEV') c='driver'; (by[c]=by[c]||[]).push(u); });
   const nm=u=>{ const p=(LC.people||{})[u]; const n=p&&p.name||u.slice(0,8)+'…'; return u===LC.order.driver_uid?n+' (คนขับงานนี้)':p&&p.role==='DEV'?n+' (DEV)':n; };
   const parts=Object.keys(by).map(c=>{ const lab=(LC_CATS.find(x=>x[0]===c)||[c,c])[1], us=by[c];
     const names=us.length<=4?us.map(nm).join(', '):us.slice(0,3).map(nm).join(', ')+` และอีก ${us.length-3} คน`;
@@ -955,10 +956,16 @@ function lcHtml(){
         <div class="lc-chat"><div class="lc-msgs"><div class="lc-av" title="LINE OA SSB">SSB</div><div class="lc-col">${(s.messages||[]).map(fxMsg).join('')}</div></div></div></div>`; }).join('');
     const anyShow=LC_CAT==='all'||(c.sends||[]).some(s=>lcSendInfo(s).cats.includes(LC_CAT));
     if(!anyShow) return '';
-    return `<div class="lc-step"><div class="lc-hd"><b>${esc(c.label||c.step)}</b>${c.at?`<span class="mono">${esc(c.at)}</span>`:''}<span class="lc-fn">${esc(c.fn||'')}</span></div>
+    return `<div class="lc-step"><div class="lc-hd"><b>${esc(c.label||c.step)}</b>${c.at?`<span class="mono">${esc(lcAt(c.at))}</span>`:''}<span class="lc-fn">${esc(c.fn||'')}</span></div>
       ${c.error?`<div class="lc-err" style="margin:8px 12px">${esc(c.error)}</div>`:''}${c.note?`<div class="lc-note" style="margin-top:8px">ℹ️ ${esc(c.note)}</div>`:''}
       ${sends||'<div class="note" style="margin:8px 12px 10px">ขั้นนี้ไม่มีข้อความ</div>'}</div>`; }).join('');
   return h+'<div class="note">ผู้รับคิดจากรายชื่อ/การติ๊กแจ้งเตือน "ปัจจุบัน" · ชี้ปุ่มในการ์ดเพื่อดูลิงก์/postback · ไม่ได้ส่งจริง</div>';
+}
+function lcAt(s){   // ISO → วว/ดด/ปปปป ชช:นน (เวลาไทย) · แบบไทยเดิม = คงไว้
+  s=String(s||''); if(!/^\d{4}-\d{2}-\d{2}T/.test(s)) return s;
+  const d=new Date(s); if(isNaN(d)) return s;
+  const t=new Date(d.getTime()+7*3600000), p=n=>String(n).padStart(2,'0');
+  return `${t.getUTCDate()}/${t.getUTCMonth()+1}/${t.getUTCFullYear()} ${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`;
 }
 function lcFilter(k){ LC_CAT=k; const b=$('#lcBox'); if(b) b.innerHTML=lcHtml(); }
 
