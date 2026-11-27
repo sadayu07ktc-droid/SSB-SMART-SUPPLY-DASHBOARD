@@ -302,6 +302,18 @@
   .ldr{padding:34px 10px;text-align:center;color:var(--ink-faint);font-size:13px}
   .ldr .ring{width:30px;height:30px;border:3px solid var(--line-strong);border-top-color:var(--dev);border-radius:50%;margin:0 auto 10px;animation:spin 1s linear infinite}
   @media(prefers-reduced-motion:reduce){#dw,#scrim,.card{transition:none}.ring{animation-duration:3s}}
+  /* ⚙️ ตั้งค่า DEV (27 พ.ย.) */
+  .dvs{padding:14px 18px 22px;display:flex;flex-direction:column;gap:10px}
+  .dvs-opt{display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer}
+  .dvs-opt input{width:20px;height:20px;accent-color:var(--pine-deep,#0A5C4C);flex:none}
+  .dvs-opt .ic{font-size:20px;flex:none}
+  .dvs-opt b{display:block;font-size:14px}
+  .dvs-opt small{display:block;font-size:12px;color:var(--ink-faint);margin-top:2px}
+  .dvs-opt.dis{opacity:.55;cursor:not-allowed}
+  .dvs-note{font-size:12.5px;line-height:1.55;color:var(--ink-faint);padding:10px 12px;border-radius:12px;background:var(--chip,rgba(10,92,76,.06))}
+  .dvs-warn{font-size:12.5px;line-height:1.55;color:#8a5a0b;background:#fef0d9;padding:10px 12px;border-radius:12px}
+  .dvs-save{margin-top:4px;padding:12px;border:0;border-radius:12px;font:inherit;font-weight:700;color:#fff;background:linear-gradient(135deg,#1F8A6F,#0A5C4C);cursor:pointer}
+  .dvs-save:disabled{opacity:.5;cursor:not-allowed}
 </style>
 
 <div class="dash" id="dash">
@@ -310,6 +322,9 @@
   <div class="brand"><span class="logo">🛠️</span><span class="bt">Developer<small><span class="devtag">DEV ONLY</span></small></span></div>
   <div class="nsec">ฟอร์มของใคร</div>
   <nav id="roles" role="tablist" aria-orientation="vertical" aria-label="ฟอร์มของใคร"></nav>
+  <div class="nsec">ตั้งค่า</div>
+  <nav aria-label="ตั้งค่า"><button class="rtab" type="button" onclick="openDevSettings()" title="ตั้งค่า DEV — เลือกรับแจ้งเตือนทีละหน่วยงาน">
+    <span class="ic" aria-hidden="true">⚙️</span><span class="tx"><b>ตั้งค่า DEV</b><small>รับแจ้งเตือนหน่วยงาน</small></span></button></nav>
 </aside>
 <main>
   <div class="pgt"><h1>ดูหน้างานทุกฟอร์ม</h1><span class="rl" id="pgRole"></span><span class="devtag pgdev">DEV ONLY</span></div>
@@ -841,6 +856,51 @@ async function ensurePin(){
   const d=await apiPost({action:'pinCheck',pin});
   if(d&&d.ok){ PIN=pin; PIN_AT=Date.now(); return true; }
   await ssbAlert('❌ '+((d&&d.error)||'ตรวจ PIN ไม่สำเร็จ')); return false;
+}
+
+/* ── ⚙️ ตั้งค่า DEV (27 พ.ย. คุณน้อง "ชนิด DEV แยก + เลือกรับแจ้งเตือนทีละหน่วยงาน") ──
+   แต่ละบัญชีตั้งของตัวเอง · ติ๊กหน่วยงานไหน = ได้ข้อความเหมือนแอดมินหน่วยงานนั้น · ข้อความเฉพาะ DEV ได้เสมอ · บันทึกต้องใส่ PIN
+   ชนิด DEV ตั้งจากหลังบ้านเท่านั้น (admins.admin_type='DEV') · ⚠️ ตรงกับ Edge dev-drivers devSettings/saveDevSettings */
+const DEV_DEPT_UI=[['ไร่','🌴','แอดมินไร่','งานไร่ทั้งหมด: ออเดอร์ใหม่ · คนขับรับงาน · ถึง/ออกสวน · ใบชั่ง · สมัครสมาชิก ฯลฯ'],
+  ['Bulk','🚛','แอดมิน Bulk','แจกงาน/คนขับรับงาน Bulk · เช็คอินถึงลูกค้า · คำขอรถจาก Order Hub'],
+  ['Packing','📦','แอดมิน Packing','แจกงาน PK · ใบชั่งรถออก · ทะเบียนผิด · ถึงร้าน']];
+let DVS=null;
+async function openDevSettings(){
+  $('#dw').innerHTML=`<div class="dwhead"><div class="top"><h2>⚙️ ตั้งค่า DEV</h2><button class="xbtn" onclick="closeDw()" aria-label="ปิด">✕</button></div>
+    <div class="sub">เลือกรับแจ้งเตือนทีละหน่วยงาน · ตั้งเฉพาะบัญชีนี้</div></div><div id="dvsBody">${ldr('กำลังโหลด…')}</div>`;
+  $('#dw').classList.add('on'); $('#scrim').classList.add('on'); document.body.style.overflow='hidden';
+  let r; try{ r=await apiGet({action:'devSettings'}); }catch(e){ r={ok:false,error:'โหลดไม่สำเร็จ'}; }
+  if(!$('#dvsBody')) return;
+  if(!r||!r.ok){ $('#dvsBody').innerHTML=`<div class="empty">${esc((r&&r.error)||'โหลดไม่สำเร็จ')}</div>`; return; }
+  DVS=r; drawDevSettings();
+}
+function drawDevSettings(){
+  const r=DVS, on=r.isDevType, cur=new Set(r.depts||[]);
+  $('#dvsBody').innerHTML=`<div class="dvs">
+    ${on?'':`<div class="dvs-warn">บัญชีนี้ยังไม่ใช่ <b>ชนิด DEV</b> (ตอนนี้: ${esc(r.adminType||'ไม่มีในตารางสิทธิ์')}) — ชนิด DEV ตั้งจากหลังบ้านเท่านั้น</div>`}
+    ${DEV_DEPT_UI.map(([k,ic,t,d])=>`<label class="dvs-opt${on?'':' dis'}"><input type="checkbox" value="${k}"${cur.has(k)?' checked':''}${on?'':' disabled'} onchange="dvsDirty()">
+      <span class="ic" aria-hidden="true">${ic}</span><span><b>${t}</b><small>${d}</small></span></label>`).join('')}
+    <div class="dvs-note">🛠️ ข้อความเฉพาะ DEV (เช่น เส้นทางไม่มีค่ากลาง · รายงานค่ากลางรายเดือน · อุปกรณ์ติดรถ · การ์ดทดสอบ Packing) <b>ได้เสมอ</b> ไม่ขึ้นกับที่ติ๊ก<br>
+      สลับโรลในเฟสถัดไป การรับแจ้งเตือนยังตามที่ติ๊กตรงนี้</div>
+    ${r.pinSet?'':`<div class="dvs-warn">บัญชีนี้ยังไม่ได้ตั้ง PIN — ตั้งที่หน้า 🔑 ตั้งค่าสิทธิ์แอดมินก่อน แล้วค่อยกลับมาบันทึก</div>`}
+    <button class="dvs-save" id="dvsSave" type="button" onclick="saveDevSettings()" disabled>💾 บันทึก (ใส่ PIN)</button></div>`;
+}
+function dvsPicked(){ return [...document.querySelectorAll('#dvsBody input[type=checkbox]:checked')].map(i=>i.value); }
+function dvsDirty(){ const a=dvsPicked().sort().join(','), b=(DVS.depts||[]).slice().sort().join(','); $('#dvsSave').disabled=!DVS.isDevType||a===b; }
+async function saveDevSettings(){
+  if(BUSY||!DVS||!DVS.isDevType) return;
+  const depts=dvsPicked();
+  const msg=DEV_DEPT_UI.map(([k,ic,t])=>`${depts.includes(k)?'✅':'⬜'} ${t}`).join('\n')+(depts.length?'':'\n\n⚠️ ไม่ติ๊กเลย = ได้เฉพาะข้อความเฉพาะ DEV');
+  if(!(await ssbConfirm({icon:'⚙️',title:'บันทึกการรับแจ้งเตือน',msg,okText:'บันทึก'}))) return;
+  if(!(await ensurePin())) return;
+  BUSY=true; const b=$('#dvsSave'); b.disabled=true; b.textContent='กำลังบันทึก…';
+  try{
+    const d=await apiPost({action:'saveDevSettings',pin:PIN,depts});
+    if(d&&d.ok){ DVS.depts=d.depts; BUSY=false; drawDevSettings(); toast('บันทึกแล้ว · รับ: '+(d.depts.join(', ')||'เฉพาะข้อความ DEV')); return; }
+    if(d&&(d.pinBad||d.pinRequired||d.pinLocked)) PIN='';
+    await ssbAlert('❌ บันทึกไม่สำเร็จ\n'+((d&&d.error)||'ไม่ทราบสาเหตุ'));
+  }catch(e){ await ssbAlert('❌ บันทึกไม่สำเร็จ\n'+e); }
+  BUSY=false; b.textContent='💾 บันทึก (ใส่ PIN)'; dvsDirty();
 }
 
 /* ── บันทึก ── */

@@ -148,6 +148,7 @@
     --t-EXECUTIVE:#9F1239; --t-EXECUTIVE-bg:#FCE7EC;
     --t-ACC_BULK:#6D28D9;  --t-ACC_BULK-bg:#EFE7FD;
     --t-YARD_BULK:#7C5A12; --t-YARD_BULK-bg:#F6EED9;
+    --t-DEV:#B42318;       --t-DEV-bg:#FDECEA;
     --t-none:#6B7A70;      --t-none-bg:#EEF1EE;
   }
   @media (prefers-color-scheme: dark){:root{
@@ -158,6 +159,7 @@
     --t-EXECUTIVE:#EE6B8B; --t-EXECUTIVE-bg:#351019;
     --t-ACC_BULK:#B49AF5;  --t-ACC_BULK-bg:#241A3D;
     --t-YARD_BULK:#D9B25A; --t-YARD_BULK-bg:#2E2510;
+    --t-DEV:#F97066;       --t-DEV-bg:#3A1411;
     --t-none:#8A9B91;      --t-none-bg:#1E2A24;}}
   :root[data-theme="dark"]{
     --t-ADMIN:#8B85F0;     --t-ADMIN-bg:#1E1C3A;
@@ -167,6 +169,7 @@
     --t-EXECUTIVE:#EE6B8B; --t-EXECUTIVE-bg:#351019;
     --t-ACC_BULK:#B49AF5;  --t-ACC_BULK-bg:#241A3D;
     --t-YARD_BULK:#D9B25A; --t-YARD_BULK-bg:#2E2510;
+    --t-DEV:#F97066;       --t-DEV-bg:#3A1411;
     --t-none:#8A9B91;      --t-none-bg:#1E2A24;}
   :root[data-theme="light"]{
     --t-ADMIN:#4F46E5;     --t-ADMIN-bg:#EEF0FE;
@@ -176,6 +179,7 @@
     --t-EXECUTIVE:#9F1239; --t-EXECUTIVE-bg:#FCE7EC;
     --t-ACC_BULK:#6D28D9;  --t-ACC_BULK-bg:#EFE7FD;
     --t-YARD_BULK:#7C5A12; --t-YARD_BULK-bg:#F6EED9;
+    --t-DEV:#B42318;       --t-DEV-bg:#FDECEA;
     --t-none:#6B7A70;      --t-none-bg:#EEF1EE;}
 
   /* การ์ด/แบดจ์รับสีจากตัวแปร --tc / --tbg ที่ JS ใส่ให้ตามประเภท */
@@ -270,7 +274,12 @@ const TYPES=[
 const BULK_ONLY=['ACC_BULK','YARD_BULK'];
 const packOK=(ty,mg)=> ty==='ADMIN' ? true : ty==='MANAGER' ? !!mg : false;
 /* สีประจำประเภท — ถ้าประเภทไม่รู้จักใช้สีกลาง */
-const TKEYS=['ADMIN','ADMIN_PK','ADMIN_BULK','MANAGER','EXECUTIVE','ACC_BULK','YARD_BULK'];
+const TKEYS=['DEV','ADMIN','ADMIN_PK','ADMIN_BULK','MANAGER','EXECUTIVE','ACC_BULK','YARD_BULK'];
+/* 🛠️ 27 พ.ย. ชนิด DEV — ตั้งจากหลังบ้านเท่านั้น (คุณน้องเคาะ) · หน้านี้โชว์ป้าย + กรองได้ แต่เลือก/เปลี่ยนชนิดเป็นหรือจาก DEV ไม่ได้
+   รับแจ้งเตือนของ DEV ตั้งที่ 🛠️ Developer → ⚙️ ตั้งค่า DEV (ไร่/Bulk/Packing) · ⚠️ Edge admin-perms ตีกลับเหมือนกัน */
+const DEV_T={v:'DEV',t:'🛠️ DEV',d:'นักพัฒนาระบบ · เข้าได้ทุกหน้า · เลือกรับแจ้งเตือนทีละหน่วยงานที่หน้า Developer'};
+const LEGEND_TYPES=[DEV_T].concat(TYPES);
+const isDevRow=()=>!!(ADMINS[IDX]&&ADMINS[IDX].type==='DEV');
 /* คนที่ได้แจ้งเตือน LINE จริง = เปิดแจ้งเตือน + Active + ไม่ใช่ ADMIN_BULK (utils.gs getAdminUids · 2026-10-08) */
 const notifyReal=()=>ADMINS.filter(a=>a.notify&&a.active&&a.type!=='ADMIN_BULK'&&BULK_ONLY.indexOf(a.type)<0).length;
 const tkey=t=>TKEYS.indexOf(t)>=0?t:'none';
@@ -371,7 +380,7 @@ function render(){
   $('#alertBox').innerHTML = NOTIFY_N===0
     ? `<div class="banner"><span style="font-size:15px">⚠️</span><div><b>ไม่มีแอดมินที่รับแจ้งเตือนเลย</b><br>
         ระบบจะส่งแจ้งเตือนออเดอร์ใหม่ · ชั่งเสร็จ · ขอลา · แจ้งซ่อม ไม่ได้ — เปิดให้อย่างน้อย 1 คน</div></div>` : '';
-  const used = TYPES.filter(t=>ADMINS.some(a=>a.type===t.v));
+  const used = LEGEND_TYPES.filter(t=>ADMINS.some(a=>a.type===t.v));
   [...FILT].forEach(v=>{ if(!used.some(t=>t.v===v)) FILT.delete(v); });   // ประเภทที่ไม่มีคนแล้ว ไม่ต้องค้างตัวกรอง
   $('#legend').innerHTML = (used.length>1 ? `<button type="button" class="lg all${FILT.size?'':' on'}" data-f="" aria-pressed="${!FILT.size}"><span class="dot"></span>
       ทั้งหมด <span class="n">${ADMINS.length}</span></button>` : '') + used.map(t=>{
@@ -409,6 +418,11 @@ function card(a,i){
 
 /* สิทธิ์ที่ได้จริง — ลอกเงื่อนไขจากโค้ดจริง */
 function effective(d){
+  if(d.type==='DEV') return [
+    {ic:'🔑',lb:'เข้าหน้าแอดมินทุกหน้า',st:'y',tx:'ได้',note:'DEV เข้าได้ทุกหน้า ทุกกลุ่ม (ไร่ · Bulk · Packing)'},
+    {ic:'🔔',lb:'รับแจ้งเตือน LINE',st:'w',tx:'ตามที่ติ๊ก',note:'ตั้งเองที่ 🛠️ Developer → ⚙️ ตั้งค่า DEV · ข้อความเฉพาะ DEV ได้เสมอ'},
+    {ic:'📦',lb:'ได้รับงาน Packing ให้อนุมัติ',st:d.notify?'y':'n',tx:d.notify?'ได้รับ':'ไม่ได้รับ',note:'ได้เมื่อติ๊ก ไร่ (เหมือนแอดมินไร่)'},
+    {ic:'📊',lb:'เข้า Dashboard',st:'w',tx:'ไม่มีผล',note:'ค่าในฐาน: "'+(d.dashRaw||'(ว่าง)')+'" — ยังไม่มีโค้ดตรวจค่านี้'}];
   const pk = d.type==='ADMIN' ? {v:true,why:'ADMIN ได้เสมอ'}
     : d.type==='MANAGER' ? (d.manage?{v:true,why:'MANAGER + เปิดอนุมัติ/จัดการ'}:{v:false,why:'MANAGER ที่ปิดอนุมัติ/จัดการ'})
     : d.type==='ADMIN_PK' ? {v:false,why:'ADMIN_PK เป็นผู้ส่งคำขอเอง'}
@@ -434,7 +448,7 @@ async function open_(i){
 function draw(){
   const eff=effective(D), o=ADMINS[IDX];
   const dirty = D.type!==o.type || D.notify!==o.notify || D.manage!==o.manage || (D.email||'')!==(o.email||'');
-  const bulkOnly = BULK_ONLY.indexOf(D.type)>=0;
+  const bulkOnly = BULK_ONLY.indexOf(D.type)>=0, devRow = o.type==='DEV';
   $('#dw').classList.toggle('ro-lock', !PERM.canEdit);
   $('#dw').innerHTML=`
     <div class="dwhead"><div class="top"><h2>${esc(D.name||'—')}</h2>
@@ -443,19 +457,26 @@ function draw(){
       ${D.active?'':' · <b style="color:#F2D28C">บัญชีถูกปิดใช้งาน</b>'}</div></div>
 
     <div class="sect"><h3>ประเภทแอดมิน</h3>
+      ${devRow?`<div class="opt sel" style="${tstyle('DEV')};cursor:default"><span class="radio"></span><span style="flex:1">
+        <span class="t">${esc(DEV_T.t)} <span class="code">DEV</span></span><span class="d">${esc(DEV_T.d)}</span>
+        <span class="d" style="color:#B45309;margin-top:4px">🔒 ชนิด DEV ตั้ง/เปลี่ยนจากหลังบ้านเท่านั้น — เปลี่ยนจากหน้านี้ไม่ได้</span></span></div>`:`
       ${D.type?'':'<div style="font-size:12px;color:#B45309;margin:0 0 8px">⚠️ ยังไม่ได้ระบุประเภท — เลือก 1 แบบด้านล่าง (ไม่เลือกก็บันทึกสวิตช์สิทธิ์ได้)</div>'}
       ${TYPES.map(t=>`<div class="opt ${D.type===t.v?'sel':''}" style="${tstyle(t.v)}" onclick="setType('${t.v}')" role="button" tabindex="0">
         <span class="radio"></span><span style="flex:1">
         <span class="t">${esc(t.t)} <span class="code">${t.v}</span></span>
-        <span class="d">${esc(t.d)}</span></span></div>`).join('')}
+        <span class="d">${esc(t.d)}</span></span></div>`).join('')}`}
     </div>
 
     <div class="sect"><h3>สิทธิ์</h3>
+      ${devRow?`<div class="sw"><div class="body"><div class="t">รับแจ้งเตือน</div>
+        <div class="d">บัญชี DEV เลือกรับทีละหน่วยงาน (ไร่ · Bulk · Packing) เองที่หน้า
+          <a href="/SSB-SMART-SUPPLY-DASHBOARD/dev-drivers.html" style="color:var(--tc,inherit);font-weight:700">🛠️ Developer → ⚙️ ตั้งค่า DEV</a></div>
+        <div class="val">ไร่ = "${D.notify?'รับแจ้งเตือน':'(ไม่ได้ติ๊ก)'}"</div></div></div>`:`
       <div class="sw"><div class="body"><div class="t">รับแจ้งเตือน</div>
         <div class="d">ได้รับ LINE เมื่อมีออเดอร์ใหม่ · ชั่งน้ำหนักเสร็จ · ขอลา · แจ้งซ่อม</div>
         <div class="val">รับแจ้งเตือน = "${D.notify?'รับแจ้งเตือน':'(ว่าง)'}"</div>
         ${bulkOnly?'<div class="val" style="color:#B45309">ประเภท '+D.type+' ปิดรับแจ้งเตือนงานไร่ให้อัตโนมัติ</div>':''}</div>
-        <button class="toggle ${D.notify?'on':''}" onclick="tog('notify')" ${bulkOnly?'disabled style="opacity:.4;cursor:not-allowed"':''}><span class="knob"></span></button></div>
+        <button class="toggle ${D.notify?'on':''}" onclick="tog('notify')" ${bulkOnly?'disabled style="opacity:.4;cursor:not-allowed"':''}><span class="knob"></span></button></div>`}
       ${D.type==='ACC_BULK'||D.type==='ADMIN_BULK'||D.email?`<div class="sw"><div class="body" style="flex:1"><div class="t">อีเมล ${D.type==='ACC_BULK'?'<span style="color:#B42318;font-size:11px">* จำเป็นสำหรับบัญชี</span>':D.type==='ADMIN_BULK'?'<span style="color:#B45309;font-size:11px">* ควรใส่ — รับสำเนาเป็นหลักฐาน</span>':''}</div>
         <div class="d">${D.type==='ADMIN_BULK'?'รับสำเนา (CC) อีเมลแพลนส่งมอบ Bulk ที่ส่งถึงบัญชี ทุกครั้งที่อัปโหลด':'ส่งแพลนส่งมอบ Bulk ไปที่อีเมลนี้ทุกครั้งที่อัปโหลด'}</div>
         <input id="dEmail" type="email" autocomplete="off" placeholder="name@company.com" value="${esc(D.email||'')}" ${PERM.canEdit?'':'disabled'}
@@ -488,12 +509,12 @@ function draw(){
     <div class="foot">บันทึกลงคอลัมน์: ประเภท · รับแจ้งเตือน · อนุมัติ/จัดการ · อีเมล (ตาราง admins)</div>`;
   $('#dw').focus();
 }
-function setType(v){ if(!PERM.canEdit) return; D.type=v; if(BULK_ONLY.indexOf(v)>=0) D.notify=false; draw(); }
+function setType(v){ if(!PERM.canEdit||isDevRow()||v==='DEV') return; D.type=v; if(BULK_ONLY.indexOf(v)>=0) D.notify=false; draw(); }
 /* พิมพ์อีเมลแล้วเปิดปุ่มบันทึกโดยไม่วาดลิ้นชักใหม่ (กันเคอร์เซอร์หลุด) */
 function syncDirty(){ const o=ADMINS[IDX]; const b=document.querySelector('#dw .savebar .btn:not(.ghost)'); if(!b) return;
   const dirty=D.type!==o.type||D.notify!==o.notify||D.manage!==o.manage||(D.email||'')!==(o.email||'');
   b.disabled=!dirty||BUSY; b.style.opacity=b.disabled?'.45':''; b.style.cursor=b.disabled?'not-allowed':''; }
-function tog(k){ if(!PERM.canEdit) return; if(k==='notify'&&BULK_ONLY.indexOf(D.type)>=0) return; D[k]=!D[k]; draw(); }
+function tog(k){ if(!PERM.canEdit) return; if(k==='notify'&&(BULK_ONLY.indexOf(D.type)>=0||isDevRow())) return; D[k]=!D[k]; draw(); }
 
 async function save(){
   if(BUSY) return;
