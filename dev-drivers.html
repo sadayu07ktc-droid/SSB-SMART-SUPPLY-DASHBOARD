@@ -314,6 +314,40 @@
   .dvs-warn{font-size:12.5px;line-height:1.55;color:#8a5a0b;background:#fef0d9;padding:10px 12px;border-radius:12px}
   .dvs-save{margin-top:4px;padding:12px;border:0;border-radius:12px;font:inherit;font-weight:700;color:#fff;background:linear-gradient(135deg,#1F8A6F,#0A5C4C);cursor:pointer}
   .dvs-save:disabled{opacity:.5;cursor:not-allowed}
+  /* 💬 หน้าจอ LINE ของงาน (27 พ.ย.) — วาดใหม่จากโค้ดจริง ไม่ได้ส่ง */
+  .lc-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .lc-chips .chip.on{background:var(--pine-deep);border-color:var(--pine-deep);color:#fff}
+  .lc-chips .chip.on .n{color:#CFE7DF}
+  .lc-step{border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden;background:var(--surface)}
+  .lc-hd{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:8px 12px;font-size:12.5px;border-bottom:1px solid var(--line);background:var(--surface-2)}
+  .lc-hd b{font-size:13px}
+  .lc-hd .mono{font-size:11.5px;color:var(--ink-soft)}
+  .lc-hd .lc-fn{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--ink-faint)}
+  .lc-send{padding:9px 12px 12px;border-top:1px dashed var(--line)}
+  .lc-send:first-of-type{border-top:0}
+  .lc-to{font-size:12px;color:var(--ink-soft);margin-bottom:7px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .lc-to b{color:var(--ink)}
+  .lc-to small{color:var(--ink-faint);font-size:11.5px}
+  .lc-tag{font-size:11px;font-weight:600;padding:1px 8px;border-radius:999px;background:var(--surface-3);color:var(--ink)}
+  .lc-chat{background:#9BB6D9;border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px;align-items:flex-start;overflow-x:auto}
+  .lc-msgs{display:flex;gap:8px;align-items:flex-start}
+  .lc-av{width:30px;height:30px;border-radius:50%;background:#0A5C4C;color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+  .lc-col{display:flex;flex-direction:column;gap:6px;align-items:flex-start;min-width:0}
+  .lc-note{font-size:11.5px;color:var(--amber);background:var(--amber-bg);border-radius:8px;padding:5px 9px;margin:0 12px 10px}
+  .lc-err{font-size:12px;color:var(--red);background:var(--red-bg);border-radius:8px;padding:6px 10px;margin-bottom:8px}
+  .lc-hide{display:none}
+  /* ตัววาด Flex — สีตามแอป LINE (การ์ดขาวเสมอ ไม่ตามโหมดมืด เหมือนในแอป) */
+  .fx-bub{background:#fff;color:#111;border-radius:14px;overflow:hidden;flex:none;max-width:100%;box-shadow:0 1px 2px rgba(0,0,0,.12);font-family:'Noto Sans Thai','Leelawadee UI',system-ui,sans-serif;line-height:1.35}
+  .fx-car{display:flex;gap:8px;max-width:100%;overflow-x:auto;padding-bottom:2px}
+  .fx-txt{background:#fff;color:#111;border-radius:18px;padding:8px 12px;font-size:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word;max-width:320px;box-shadow:0 1px 2px rgba(0,0,0,.1)}
+  .fx-alt{font-size:11px;color:#2c3e57;opacity:.8}
+  .fx-btn{display:flex;align-items:center;justify-content:center;border-radius:8px;font-size:15px;font-weight:600;padding:0 10px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fx-btn.link{font-weight:600}
+  .fx-noimg{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:#e9edf2;color:#6b7785;font-size:12px}
+  .fx-img img{display:block}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .lc-chat{background:#2B3A4C}:root:not([data-theme="light"]) .fx-alt{color:#c7d3e2}}
+  :root[data-theme="dark"] .lc-chat{background:#2B3A4C}
+  :root[data-theme="dark"] .fx-alt{color:#c7d3e2}
 </style>
 
 <div class="dash" id="dash">
@@ -764,6 +798,8 @@ function drawPanel(){
     ${lw.calc_wage_at?`<span class="kv">คิดเมื่อ <b>${esc(new Date(lw.calc_wage_at).toLocaleString('th-TH'))}</b></span>`:''}
     <span class="kv">${JOB.lw?'มีข้อมูลชั่ง (log_weight)':'ยังไม่มีข้อมูลชั่ง'}</span></div>
     <div class="note">งานที่ "เสร็จงาน" แล้ว → บันทึกเสร็จระบบคิดค่าแรงใหม่ทันที · งานยังไม่จบ → คิดตอนคนขับปิดงาน</div></div>`;
+  h+=`<div class="sec" id="lcSec"><h3>💬 ข้อความ LINE ของงานนี้<span class="r">วาดใหม่จากโค้ดจริง · ไม่ได้ส่ง</span></h3><div id="lcBox">${LC&&LC.orderId===o.order_id?lcHtml():`<button class="btn ghost" style="padding:7px 13px;font-size:12.5px" onclick="loadLine()">💬 ดูข้อความที่ส่งหาคนขับ / แอดมิน / เจ้าของสวน / ทีมตัด</button>
+    <div class="note">ระบบสร้างการ์ดด้วยโค้ดชุดเดียวกับที่ส่งจริง ผู้รับคิดจากรายชื่อปัจจุบัน (ไม่ใช่ ณ วันที่ส่ง) · ไม่บันทึกอะไรลงฐาน</div>`}</div></div>`;
   h+=`<div class="sec"><h3>🕘 ประวัติแก้ (DEV)<span class="r">${JOB.history.length} ครั้ง</span></h3>${JOB.history.length?JOB.history.map(histRow).join(''):'<div class="note" style="margin:0">ยังไม่เคยแก้</div>'}</div>`;
   h+=`<div class="savebar"><span class="chgn" id="chgn">ยังไม่มีการแก้</span><input id="why" placeholder="เหตุผลที่แก้ (จำเป็น) เช่น คนขับกดผิดขั้น / ไมล์พิมพ์ผิด" ${locked||cx?'disabled':''}>
     <button class="btn ghost" onclick="drawPanel()">ล้างที่แก้</button><button class="btn" id="saveBtn" onclick="save()" ${locked||cx?'disabled':''}>💾 บันทึก</button></div>`;
@@ -777,6 +813,155 @@ function histRow(x){
   return `<div class="hist"><div class="hd"><b>${esc(new Date(x.at).toLocaleString('th-TH'))}</b><span>👤 ${esc(x.by_name||'')}</span><span>📝 ${esc(x.reason||'')}</span>
     ${x.wage_before!=null||x.wage_after!=null?`<span>💰 ${x.wage_before??'—'} → ${x.wage_after??'—'}</span>`:''}</div><div class="ch">${esc(parts.join(' · '))}</div></div>`;
 }
+/* ═════════ 💬 ข้อความ LINE ของงาน (27 พ.ย.) ═════════
+   วาดใหม่จากโค้ดจริง (Edge lineCards → ฟังก์ชันที่ส่ง LINE จริงในโหมด dry) · ไม่ได้ส่ง · ไม่บันทึก */
+/* ── 💬 วาด LINE Flex/ข้อความ เป็น HTML (ดูอย่างเดียว · ไม่ส่งจริง) ── 27 พ.ย.
+   รองรับ: text · flex(bubble/carousel) · box(vertical/horizontal/baseline) · text+span · image · icon · button · separator · filler · spacer
+   ค่าขนาด/ระยะตามสเปก LINE (xxs…5xl / none…xxl) */
+const FX_SZ={xxs:11,xs:13,sm:14,md:16,lg:19,xl:22,xxl:29,'3xl':35,'4xl':48,'5xl':74};
+const FX_SP={none:0,xs:2,sm:4,md:8,lg:12,xl:16,xxl:20};
+const FX_IMG={xxs:40,xs:60,sm:80,md:100,lg:120,xl:140,xxl:160,'3xl':180,'4xl':200,'5xl':240,full:'100%'};
+const fxPx=(v,map)=>v==null?null:(map&&map[v]!=null?map[v]:/^\d+(\.\d+)?(px|%)$/.test(String(v))?v:null);
+const fxU=v=>v==null?'':(typeof v==='number'?v+'px':v);
+function fxBoxStyle(b){
+  const s=[];
+  if(b.backgroundColor) s.push('background:'+b.backgroundColor);
+  if(b.borderColor) s.push('border:'+(fxPx(b.borderWidth,{none:0,light:'0.5px',normal:'1px',medium:'2px','semi-bold':'3px',bold:'4px'})||'1px')+' solid '+b.borderColor);
+  if(b.cornerRadius) s.push('border-radius:'+fxU(fxPx(b.cornerRadius,FX_SP)));
+  ['paddingAll','paddingTop','paddingBottom','paddingStart','paddingEnd'].forEach(k=>{ if(b[k]==null) return;
+    const v=fxU(fxPx(b[k],FX_SP)); const p={paddingAll:'padding',paddingTop:'padding-top',paddingBottom:'padding-bottom',paddingStart:'padding-left',paddingEnd:'padding-right'}[k]; s.push(p+':'+v); });
+  if(b.width) s.push('width:'+b.width); if(b.height) s.push('height:'+b.height);
+  if(b.justifyContent) s.push('justify-content:'+b.justifyContent); if(b.alignItems) s.push('align-items:'+b.alignItems);
+  return s;
+}
+function fxItem(c,parent,first){
+  if(!c||typeof c!=='object') return '';
+  const horiz=parent==='horizontal'||parent==='baseline';
+  const st=[];
+  if(c.margin!=null&&!first) st.push((horiz?'margin-left:':'margin-top:')+fxU(fxPx(c.margin,FX_SP)));
+  if(c.flex!=null) st.push('flex:'+c.flex+' 1 0'+(horiz?';min-width:0':''));
+  else if(horiz && c.type!=='separator') st.push('flex:1 1 0;min-width:0');
+  if(c.position==='absolute'){ st.push('position:absolute'); ['offsetTop','offsetBottom','offsetStart','offsetEnd'].forEach(k=>{ if(c[k]!=null) st.push({offsetTop:'top',offsetBottom:'bottom',offsetStart:'left',offsetEnd:'right'}[k]+':'+fxU(fxPx(c[k],FX_SP))); }); }
+  if(c.gravity&&horiz) st.push('align-self:'+({top:'flex-start',center:'center',bottom:'flex-end'}[c.gravity]||'auto'));
+  const t=c.type;
+  if(t==='box') return fxBox(c,st);
+  if(t==='text'){
+    const sz=FX_SZ[c.size]||(/px$/.test(c.size||'')?parseFloat(c.size):14);
+    st.push('font-size:'+sz+'px','color:'+(c.color||'#111'));
+    if(c.weight==='bold') st.push('font-weight:700');
+    if(c.align) st.push('text-align:'+({start:'left',end:'right',center:'center'}[c.align]||c.align));
+    if(c.style==='italic') st.push('font-style:italic'); if(c.decoration) st.push('text-decoration:'+c.decoration);
+    if(c.wrap) st.push('white-space:pre-wrap;word-break:break-word'); else st.push('white-space:nowrap;overflow:hidden;text-overflow:ellipsis');
+    if(c.maxLines&&c.wrap) st.push('display:-webkit-box;-webkit-line-clamp:'+c.maxLines+';-webkit-box-orient:vertical;overflow:hidden');
+    if(c.lineSpacing) st.push('line-height:calc(1.35em + '+fxU(c.lineSpacing)+')');
+    const inner=Array.isArray(c.contents)&&c.contents.length ? c.contents.map(sp=>{ const ss=[];
+        if(sp.color) ss.push('color:'+sp.color); if(sp.weight==='bold') ss.push('font-weight:700'); if(sp.size&&FX_SZ[sp.size]) ss.push('font-size:'+FX_SZ[sp.size]+'px');
+        if(sp.decoration) ss.push('text-decoration:'+sp.decoration); if(sp.style==='italic') ss.push('font-style:italic');
+        return `<span style="${ss.join(';')}">${esc(sp.text||'')}</span>`; }).join('') : esc(c.text||'');
+    return `<div class="fx-t" style="${st.join(';')}">${inner}</div>`;
+  }
+  if(t==='image'){
+    const w=fxPx(c.size,FX_IMG)||100; const ar=String(c.aspectRatio||'1:1').split(':'); const pct=(+ar[1]/+ar[0]*100)||100;
+    st.push('width:'+fxU(w),'max-width:100%');
+    if(c.align==='start') st.push('margin-right:auto'); else if(c.align==='end') st.push('margin-left:auto'); else st.push('margin-left:auto;margin-right:auto');
+    if(c.backgroundColor) st.push('background:'+c.backgroundColor);
+    return `<div class="fx-img" style="${st.join(';')}"><div style="padding-top:${pct}%;position:relative"><img src="${esc(c.url||'')}" alt="" loading="lazy" referrerpolicy="no-referrer" style="position:absolute;inset:0;width:100%;height:100%;object-fit:${c.aspectMode==='fit'?'contain':'cover'}" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'fx-noimg',textContent:'🖼️ รูป'}))"></div></div>`;
+  }
+  if(t==='icon'){ const sz=FX_SZ[c.size]||14; st.push('width:'+sz+'px;height:'+sz+'px;flex:none'); return `<img class="fx-ic" src="${esc(c.url||'')}" alt="" style="${st.join(';')}">`; }
+  if(t==='button'){
+    const a=c.action||{}, prim=c.style==='primary', sec=c.style==='secondary';
+    const bg=c.color||(prim?'#17c950':sec?'#dcdfe5':'transparent'), fg=prim?'#fff':sec?'#111':(c.color||'#42659a');
+    st.push('background:'+(prim||sec?bg:'transparent'),'color:'+(prim||sec?fg:(c.color||'#42659a')),'height:'+(c.height==='sm'?40:52)+'px');
+    const tip=a.type==='uri'?'ลิงก์: '+(a.uri||''):a.type==='postback'?'postback: '+(a.data||''):a.type==='message'?'ส่งข้อความ: '+(a.text||''):(a.type||'');
+    return `<div class="fx-btn${prim||sec?'':' link'}" title="${esc(tip)}" style="${st.join(';')}">${esc(a.label||'')}</div>`;
+  }
+  if(t==='separator'){ const col=c.color||'#e5e5e5'; return `<div style="${st.join(';')};${horiz?'width:1px;align-self:stretch':'height:1px'};background:${col};flex:none"></div>`; }
+  if(t==='filler'){ return `<div style="flex:${c.flex!=null?c.flex:1} 1 0"></div>`; }
+  if(t==='spacer'){ const v=fxU(fxPx(c.size||'md',FX_SP)); return `<div style="flex:none;${horiz?'width':'height'}:${v}"></div>`; }
+  return '';
+}
+function fxBox(b,st){
+  st=st||[]; const lay=b.layout||'vertical', horiz=lay!=='vertical';
+  st.push('display:flex','flex-direction:'+(horiz?'row':'column'),'position:relative');
+  if(lay==='baseline') st.push('align-items:baseline');
+  st.push(...fxBoxStyle(b));
+  const gap=b.spacing?fxPx(b.spacing,FX_SP):0;
+  const kids=(b.contents||[]).map((c,i)=>{ let h=fxItem(c,lay,i===0);
+    if(gap&&i>0&&c&&c.margin==null) h=`<div style="flex:none;${horiz?'width':'height'}:${fxU(gap)}"></div>`+h; return h; }).join('');
+  const act=b.action&&b.action.type==='uri'?` title="ลิงก์: ${esc(b.action.uri||'')}"`:'';
+  return `<div style="${st.join(';')}"${act}>${kids}</div>`;
+}
+function fxBubble(bu){
+  const sty=bu.styles||{}, w={nano:120,micro:160,deca:220,hecto:241,kilo:260,mega:300,giga:386}[bu.size||'mega']||300;
+  const part=k=>{ const p=bu[k]; if(!p) return ''; const s=sty[k]||{};
+    const base={header:{paddingAll:'20px'},hero:{},body:{paddingAll:'20px'},footer:{paddingAll:'10px'}}[k];
+    if(k==='hero'&&p.type!=='box') return `<div class="fx-hero">${fxItem(Object.assign({},p,{size:'full'}),'vertical',true)}</div>`;
+    const bx=Object.assign({},base,p); if(s.backgroundColor&&!bx.backgroundColor) bx.backgroundColor=s.backgroundColor;
+    return (s.separator?`<div style="height:1px;background:${s.separatorColor||'#e5e5e5'}"></div>`:'')+fxBox(bx,[]);
+  };
+  return `<div class="fx-bub" style="width:${w}px">${part('header')}${part('hero')}${part('body')}${part('footer')}</div>`;
+}
+/* msg = LINE message object · คืน HTML บอลลูนแชท */
+function fxMsg(m){
+  if(!m) return '';
+  if(m.type==='text') return `<div class="fx-txt">${esc(m.text||'')}</div>`;
+  if(m.type==='image') return `<div class="fx-bub" style="width:200px">${fxItem({type:'image',url:m.previewImageUrl||m.originalContentUrl,size:'full',aspectRatio:'1:1'},'vertical',true)}</div>`;
+  if(m.type==='flex'){ const c=m.contents||{};
+    const body=c.type==='carousel'?`<div class="fx-car">${(c.contents||[]).map(fxBubble).join('')}</div>`:fxBubble(c);
+    return body+(m.altText?`<div class="fx-alt">🔔 ${esc(m.altText)}</div>`:''); }
+  return `<div class="fx-txt" style="opacity:.7">[${esc(m.type||'?')}]</div>`;
+}
+let LC=null, LC_CAT='all';
+const LC_CATS=[['all','ทั้งหมด'],['driver','🚚 คนขับ'],['admin','👔 แอดมิน'],['owner','🌴 เจ้าของสวน'],['team','✂️ ทีมตัด'],['ramp','🏭 ลาน'],['other','อื่นๆ']];
+async function loadLine(){
+  const box=$('#lcBox'); if(!box||!JOB) return;
+  const oid=JOB.order.order_id;
+  box.innerHTML=ldr('กำลังสร้างการ์ดจากโค้ดจริง…');
+  const r=await apiGet({action:'lineCards',order:oid});
+  if(!JOB||JOB.order.order_id!==oid) return;
+  if(!r.ok){ box.innerHTML=`<div class="lc-err">${esc(r.error||'โหลดไม่สำเร็จ')}</div><button class="btn ghost" style="padding:6px 12px;font-size:12px" onclick="loadLine()">ลองใหม่</button>`; return; }
+  LC=r; LC_CAT='all'; box.innerHTML=lcHtml();
+}
+function lcCat(uid){   // บทบาทผู้รับ → หมวด
+  const p=(LC.people||{})[uid]||{}, ro=p.role||'';
+  if(ro==='Admin'||ro==='DEV') return 'admin';
+  if(ro==='Driver') return 'driver';
+  if(ro==='Owner') return 'owner';
+  if(ro==='Team') return 'team';
+  if(ro==='Ramp') return 'ramp';
+  if(uid&&uid===LC.order.owner_uid) return 'owner';
+  return 'other';
+}
+function lcSendInfo(s){
+  const to=(Array.isArray(s.to)?s.to:[s.to]).filter(Boolean), by={};
+  to.forEach(u=>{ const c=lcCat(u); (by[c]=by[c]||[]).push(u); });
+  const nm=u=>{ const p=(LC.people||{})[u]; const n=p&&p.name||u.slice(0,8)+'…'; return u===LC.order.driver_uid?n+' (คนขับงานนี้)':p&&p.role==='DEV'?n+' (DEV)':n; };
+  const parts=Object.keys(by).map(c=>{ const lab=(LC_CATS.find(x=>x[0]===c)||[c,c])[1], us=by[c];
+    const names=us.length<=4?us.map(nm).join(', '):us.slice(0,3).map(nm).join(', ')+` และอีก ${us.length-3} คน`;
+    return `<span class="lc-tag">${esc(lab)} · ${us.length}</span><small>${esc(names)}</small>`; });
+  return { cats:Object.keys(by), html:(s.kind==='multicast'?'<b>ส่งหลายคน</b>':'<b>ส่งตรง</b>')+parts.join('') || '<small>ไม่มีผู้รับ</small>' };
+}
+function lcHtml(){
+  if(!LC) return '';
+  const cnt={all:0}; const steps=LC.cards||[];
+  steps.forEach(c=>(c.sends||[]).forEach(s=>{ cnt.all++; lcSendInfo(s).cats.forEach(k=>cnt[k]=(cnt[k]||0)+1); }));
+  let h=(LC.errors||[]).map(e=>`<div class="lc-err">⚠️ ${esc(e.fn)}: ${esc(e.error)}</div>`).join('');
+  h+=`<div class="lc-chips">${LC_CATS.filter(([k])=>k==='all'||cnt[k]).map(([k,t])=>`<button class="chip${LC_CAT===k?' on':''}" onclick="lcFilter('${k}')">${t}<span class="n">${cnt[k]||0}</span></button>`).join('')}
+    <button class="chip" style="margin-left:auto" onclick="loadLine()" title="สร้างใหม่">↻</button></div>`;
+  if(!steps.length) return h+'<div class="note" style="margin:0">ยังไม่มีข้อความ LINE ของงานนี้</div>';
+  h+=steps.map(c=>{
+    const sends=(c.sends||[]).map(s=>{ const inf=lcSendInfo(s), show=LC_CAT==='all'||inf.cats.includes(LC_CAT);
+      return `<div class="lc-send${show?'':' lc-hide'}"><div class="lc-to">${inf.html}</div>
+        <div class="lc-chat"><div class="lc-msgs"><div class="lc-av" title="LINE OA SSB">SSB</div><div class="lc-col">${(s.messages||[]).map(fxMsg).join('')}</div></div></div></div>`; }).join('');
+    const anyShow=LC_CAT==='all'||(c.sends||[]).some(s=>lcSendInfo(s).cats.includes(LC_CAT));
+    if(!anyShow) return '';
+    return `<div class="lc-step"><div class="lc-hd"><b>${esc(c.label||c.step)}</b>${c.at?`<span class="mono">${esc(c.at)}</span>`:''}<span class="lc-fn">${esc(c.fn||'')}</span></div>
+      ${c.error?`<div class="lc-err" style="margin:8px 12px">${esc(c.error)}</div>`:''}${c.note?`<div class="lc-note" style="margin-top:8px">ℹ️ ${esc(c.note)}</div>`:''}
+      ${sends||'<div class="note" style="margin:8px 12px 10px">ขั้นนี้ไม่มีข้อความ</div>'}</div>`; }).join('');
+  return h+'<div class="note">ผู้รับคิดจากรายชื่อ/การติ๊กแจ้งเตือน "ปัจจุบัน" · ชี้ปุ่มในการ์ดเพื่อดูลิงก์/postback · ไม่ได้ส่งจริง</div>';
+}
+function lcFilter(k){ LC_CAT=k; const b=$('#lcBox'); if(b) b.innerHTML=lcHtml(); }
+
 /* ── จุดส่ง Packing ── */
 function pkSec(){
   const pk=JOB.pk;
