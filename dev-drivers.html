@@ -374,7 +374,9 @@
   <nav aria-label="ตั้งค่า"><button class="rtab" type="button" onclick="openDevSettings()" title="ตั้งค่า DEV — เลือกรับแจ้งเตือนทีละหน่วยงาน">
     <span class="ic" aria-hidden="true">⚙️</span><span class="tx"><b>ตั้งค่า DEV</b><small>รับแจ้งเตือนหน่วยงาน</small></span></button>
     <button class="rtab" type="button" onclick="openRolePanel()" title="สลับโรล — เล่นเป็นแอดมินไร่/Bulk/Packing/ผู้บริหาร ฯลฯ">
-    <span class="ic" aria-hidden="true">🎭</span><span class="tx"><b>สลับโรล</b><small>เล่นเป็นแอดมินชนิดอื่น</small></span></button></nav>
+    <span class="ic" aria-hidden="true">🎭</span><span class="tx"><b>สลับโรล</b><small>เล่นเป็นแอดมินชนิดอื่น</small></span></button>
+    <button class="rtab" type="button" onclick="openTestClean()" title="ล้างงานทดสอบ — ลบเฉพาะงานที่เป็นงานทดสอบ (สำรองก่อนลบ · ใส่ PIN)">
+    <span class="ic" aria-hidden="true">🗑️</span><span class="tx"><b>ล้างงานทดสอบ</b><small>ไร่ · Bulk · Packing</small></span></button></nav>
 </aside>
 <main>
   <div class="pgt"><h1>ดูหน้างานทุกฟอร์ม</h1><span class="rl" id="pgRole"></span><span class="devtag pgdev">DEV ONLY</span></div>
@@ -1132,14 +1134,16 @@ function roleHtml(r){
     <div class="dvs-note">เล่นโรล = เป็นแอดมินชนิดนั้นจริงชั่วคราว: <b>แจ้งเตือน LINE · ริชเมนู · หน้าเว็บ</b> ตามโรลนี้ · สิทธิ์ DEV (หน้านี้/ค่ากลาง/สิทธิ์แอดมิน) ปิดไว้จนกลับเป็น DEV<br>
       ข้อความเฉพาะ DEV ยังได้เสมอ · บัญชีคนขับ = ปิดคนขับชั่วคราว · ในไลน์พิมพ์ <b>"โรล"</b> เพื่อสลับ/กลับได้ทุกเมื่อ · หน้าเว็บที่เปิดค้างไว้ให้รีเฟรช</div></div>`;
 }
-/* 🧪 เฟส 3ก: คนหน้างานทดสอบ (สวน/ทีมตัด/ลาน/คนขับไร่) · 1 โรล 1 คน · คนขับเลือกทะเบียนรถไร่ที่ใช้งานตอนเล่น */
+/* 🧪 เฟส 3ก: คนหน้างานทดสอบ (สวน/ทีมตัด/ลาน/คนขับไร่) · 1 โรล 1 คน · คนขับเลือกทะเบียนรถไร่ที่ใช้งานตอนเล่น
+   🧪 เฟส 3ข: + คนขับ Bulk / Packing ทดสอบ (x.group) · ทะเบียนเลือกจากรถกลุ่มเดียวกัน (platesBy) */
+const isDrvRole=x=>!!(x&&(x.group||x.type==='DRIVER'));
 function fieldHtml(r,cur){
-  const pl=r.plates||[], fr=(r.fieldRoles||[]).find(x=>x.type==='DRIVER')||{};
   return `<div class="rp-sec">🧪 คนหน้างาน (งานทดสอบ)</div>`+(r.fieldRoles||[]).map(x=>{
-    const on=x.type===cur, dis=on||x.busy;
+    const on=x.type===cur, dis=on||x.busy, grp=x.group||'ไร่';
+    const pl=(r.platesBy&&r.platesBy[grp])||(grp==='ไร่'?r.plates:null)||[];
     const sub=on?'กำลังเล่นโรลนี้'+(x.plate?' · '+esc(x.plate):''):x.busy?'🔒 '+esc(x.by||'DEV คนอื่น')+' เล่นอยู่':'แตะเพื่อเล่น · การ์ด LINE ไปเฉพาะ DEV';
-    const pick=x.type==='DRIVER'&&!dis?`<select id="rpPlate" class="rp-plate" aria-label="ทะเบียนรถที่ยืม" onclick="event.stopPropagation()">
-        <option value="">— เลือกทะเบียนรถไร่ —</option>${pl.map(p=>`<option value="${esc(p.plate)}"${p.plate===fr.plate?' selected':''}>${esc(p.plate)}${p.type?' · '+esc(p.type):''}</option>`).join('')}</select>`:'';
+    const pick=isDrvRole(x)&&!dis?`<select id="rpPlate_${esc(x.type)}" class="rp-plate" aria-label="ทะเบียนรถที่ยืม (${esc(grp)})" onclick="event.stopPropagation()">
+        <option value="">— เลือกทะเบียนรถ${esc(grp)} —</option>${pl.map(p=>`<option value="${esc(p.plate)}"${p.plate===x.plate?' selected':''}>${esc(p.plate)}${p.type?' · '+esc(p.type):''}</option>`).join('')}</select>`:'';
     return `<div class="rp-field"><button class="dvs-opt rp-opt${on?' on':''}" type="button"${dis?' disabled':''} onclick="playRole('${x.type}',this)">
         <span class="ic" aria-hidden="true">${x.icon}</span><span><b>${esc(x.label)}</b><small>${sub}</small></span></button>${pick}</div>`;
   }).join('');
@@ -1156,7 +1160,7 @@ async function playRole(to,btn){
   const fld=((RST&&RST.fieldRoles)||[]).find(x=>x.type===to);
   const lab=to==='DEV'?'DEV':(((RST&&RST.roles)||[]).concat((RST&&RST.fieldRoles)||[]).find(x=>x.type===to)||{}).label||to;
   let plate='';
-  if(to==='DRIVER'){ plate=(($('#rpPlate')||{}).value||'').trim(); if(!plate){ await ssbAlert('เลือกทะเบียนรถไร่ที่จะยืมก่อนครับ'); return; } }
+  if(isDrvRole(fld)){ plate=(($('#rpPlate_'+to)||{}).value||'').trim(); if(!plate){ await ssbAlert('เลือกทะเบียนรถ'+(fld.group||'ไร่')+'ที่จะยืมก่อนครับ'); return; } }
   const msg=fld?`เป็น ${lab}${plate?' (รถ '+plate+')':''} ชั่วคราว
 งานของโรลนี้ = งานทดสอบ 🧪: การ์ด LINE ไปเฉพาะ DEV · ไม่เข้ารายงาน/ค่าแรง/Order Hub
 สิทธิ์ DEV ปิดชั่วคราว — กลับได้จากหน้านี้ หรือพิมพ์ "โรล" ในไลน์`
@@ -1171,6 +1175,42 @@ async function playRole(to,btn){
     await ssbAlert('❌ สลับไม่สำเร็จ\n'+((d&&d.error)||'ไม่ทราบสาเหตุ'));
   }catch(e){ BUSY=false; await ssbAlert('❌ สลับไม่สำเร็จ\n'+e); }
   if(btn) btn.disabled=false;
+}
+
+/* ── 🗑️ ล้างงานทดสอบ (เฟส 3ข · 28 พ.ย. คุณน้องเคาะ) ──
+   ดูจำนวนก่อน (ไม่ต้อง PIN) → ยืนยัน → PIN → ลบเฉพาะ is_test · สำรองทุกแถวลง dev_test_trash ก่อนลบ (ธุรกรรมเดียว)
+   ไม่แตะแถวตั้งต้น (สวน/ทีม/ลาน/คนขับทดสอบ) · ⚠️ ตรงกับ Edge dev-drivers testPreview/testCleanup + SQL dev_test_cleanup */
+const TC_LAB={orders:'ออเดอร์ทดสอบ (ไร่/Bulk/Packing)',bulk_plans:'แผน Bulk ทดสอบ',bulk_jobs:'เที่ยว Bulk ทดสอบ',pk_plans:'แผน Packing ทดสอบ',pk_jobs:'ใบงาน Packing ทดสอบ',
+  log_weight:'ใบชั่ง',fuel_tokens:'คิวอาร์น้ำมัน',log_daily_ramp:'ลานรายวัน',log_ramp:'บันทึกลาน',order_dest_log:'ประวัติปลายทาง',order_pending:'งานรอ',
+  pk_slip_ocr:'อ่านใบชั่ง PK',pk_stop_arrivals:'ถึงจุดส่ง',pk_stop_logs:'บันทึกจุดส่ง',stop_departures:'ออกจากจุดส่ง',pk_requests:'คำขอรถไร่'};
+async function openTestClean(){
+  $('#dw').innerHTML=`<div class="dwhead"><div class="top"><h2>🗑️ ล้างงานทดสอบ</h2><button class="xbtn" onclick="closeDw()" aria-label="ปิด">✕</button></div>
+    <div class="sub">ลบเฉพาะงานทดสอบ 🧪 · สำรองก่อนลบ · ใส่ PIN</div></div><div id="tcBody">${ldr('กำลังนับงานทดสอบ…')}</div>`;
+  $('#dw').classList.add('on'); $('#scrim').classList.add('on'); document.body.style.overflow='hidden';
+  let r; try{ r=await apiGet({action:'testPreview'}); }catch(e){ r={ok:false,error:'โหลดไม่สำเร็จ'}; }
+  if(!$('#tcBody')) return;
+  if(!r||!r.ok){ $('#tcBody').innerHTML=`<div class="empty">${esc((r&&r.error)||'โหลดไม่สำเร็จ')}</div>`; return; }
+  const c=r.counts||{}, rows=Object.keys(c).filter(k=>k!=='batch'&&k!=='dry'&&Number(c[k])>0);
+  $('#tcBody').innerHTML=`<div class="dvs">
+    ${rows.length?`<div class="dvs-note" style="margin-top:0">จะลบ <b>${r.total}</b> แถว:</div>
+      ${rows.map(k=>`<div class="rp-now" style="padding:8px 12px"><span><b>${esc(TC_LAB[k]||k)}</b></span><b style="margin-left:auto">${Number(c[k]).toLocaleString()}</b></div>`).join('')}
+      <button class="dvs-save" type="button" id="tcGo" onclick="runTestClean(this)">🗑️ ลบงานทดสอบทั้งหมด (ใส่ PIN)</button>`
+      :`<div class="empty">ไม่มีงานทดสอบค้าง ✅</div>`}
+    <div class="dvs-note">ลบเฉพาะแถวที่เป็นงานทดสอบ (is_test) เท่านั้น — งานจริงไม่โดน · สวน/ทีม/ลาน/คนขับทดสอบยังอยู่ เล่นโรลต่อได้<br>ทุกแถวสำรองไว้ในระบบก่อนลบ (กู้คืนได้ถ้าต้องการ)</div></div>`;
+}
+async function runTestClean(b){
+  if(BUSY) return;
+  if(!(await ssbConfirm({icon:'🗑️',title:'ลบงานทดสอบ',msg:'ลบงานทดสอบทั้งหมดตามรายการ — งานจริงไม่โดน\nสำรองไว้ก่อนลบ',okText:'ลบเลย'}))) return;
+  if(!(await ensurePin())) return;
+  BUSY=true; b.disabled=true; b.textContent='กำลังลบ…';
+  try{
+    const d=await apiPost({action:'testCleanup',pin:PIN});
+    BUSY=false;
+    if(d&&d.ok){ toast('ลบงานทดสอบแล้ว '+d.total+' แถว · สำรองชุด #'+d.batch); openTestClean(); return; }
+    if(d&&(d.pinBad||d.pinRequired||d.pinLocked)) PIN='';
+    await ssbAlert('❌ ลบไม่สำเร็จ\n'+((d&&d.error)||'ไม่ทราบสาเหตุ'));
+  }catch(e){ BUSY=false; await ssbAlert('❌ ลบไม่สำเร็จ\n'+e); }
+  if(b.isConnected){ b.disabled=false; b.textContent='🗑️ ลบงานทดสอบทั้งหมด (ใส่ PIN)'; }
 }
 
 /* ── บันทึก ── */

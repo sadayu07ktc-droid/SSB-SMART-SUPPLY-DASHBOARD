@@ -764,6 +764,11 @@ const BOARD='https://abihhdjcrbvwlkzwvjio.supabase.co/functions/v1/bulk-board';
 async function postB(body){ const r=await fetch(BOARD,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(Object.assign({userId:MY_UID},body))}); return r.json(); }
 const KIND={company:'รถบริษัท',outside:'รถนอก',pickup:'ลูกค้ารับเอง'};
 let FILT='all', SEL=new Set(), VIEWING=null, ADM_OPEN=true;
+/* 🧪 เฟส 3ข (28 พ.ย.) แผนทดสอบ — DEV เท่านั้น · ?test=1 · แผนแยกจากแผนจริง (วันเดียวกันได้) · ผูกได้แค่คนขับทดสอบ · LINE → DEV · เมล → BULK_MAIL_TEST_TO */
+let TEST=new URLSearchParams(location.search).get('test')==='1';
+function setTest(on){ TEST=!!on; try{ const u=new URL(location.href); if(TEST) u.searchParams.set('test','1'); else u.searchParams.delete('test'); history.replaceState(null,'',u); }catch(e){}
+  if(DATA) DATA.sendDate=null;   /* บังคับล้างตัวเลือก/มุมมองเดิม */
+  load(); }
 try{ ADM_OPEN=localStorage.getItem('bulk_adm_open')!=='0'; }catch(e){}
 const isCo=j=>(j&&j.kind||'company')==='company';
 // จำนวน: "30" = ตัน · "10 ถัง" / "40,000 ลิตร" / "4 ตู้" = ตามที่เขียน (= Edge qtyT)
@@ -776,13 +781,14 @@ const docNext=()=>{ const d=DATA&&DATA.doc; return d?d.yymm+('000'+(d.next||1)).
 
 async function load(date){
   try{
-    const r=await fetch(BOARD+'?action=board&userId='+encodeURIComponent(MY_UID)+(date?'&date='+encodeURIComponent(date):''));
+    const r=await fetch(BOARD+'?action=board&userId='+encodeURIComponent(MY_UID)+(date?'&date='+encodeURIComponent(date):'')+(TEST?'&test=1':''));
     const d=await r.json();
     if(!d.ok){ if(!DATA) gate(d.denied?'🔒 ไม่มีสิทธิ์ดูแพลน Bulk':'โหลดไม่สำเร็จ', d.error||''); else toast(d.error||'โหลดไม่สำเร็จ',true); return; }
     const same=DATA&&DATA.sendDate===d.sendDate;
     DATA=d;
     if(!same){ VIEW=null; SEL=new Set(); }
     else { const ids=new Set(d.jobs.filter(j=>!j.cancelled).map(j=>j.id)); [...SEL].forEach(id=>{ if(!ids.has(id)) SEL.delete(id); }); }
+    if(TEST&&!d.test) TEST=false;   /* ไม่ใช่ DEV = เซิร์ฟเวอร์ไม่ให้โหมดทดสอบ */
     $('gate').hidden=true; $('app').hidden=false; render();
     runGo();
   }catch(e){ if(!DATA) gate('โหลดไม่สำเร็จ',String(e.message||e)); else toast('โหลดข้อมูลไม่สำเร็จ — ลองใหม่',true); }
@@ -821,18 +827,21 @@ function render(){
   $('planSel').innerHTML=d.dates.length?d.dates.map(x=>{ const pl=d.plans.find(y=>y.send_date===x);
     return `<option value="${x}"${x===d.sendDate?' selected':''}>ส่ง ${thDate(x)}${pl&&pl.dispatched_at?' · แจกแล้ว':''}</option>`; }).join(''):'<option>ยังไม่มีแพลน</option>';
   $('planSel').disabled=!d.dates.length;
-  $('acts').innerHTML=`<button class="btn" type="button" id="custBtn">📍 ลูกค้า Bulk</button>`
+  $('acts').innerHTML=(me.tester?`<button class="btn" type="button" id="testBtn" title="${TEST?'กลับไปดูแผนจริง':'สร้าง/ดูแผนทดสอบ — การ์ด LINE ส่งเฉพาะ DEV · ไม่ปนงานจริง'}" style="${TEST?'background:#7c3aed;color:#fff;border-color:#7c3aed':''}">${TEST?'↩ กลับแผนจริง':'🧪 แผนทดสอบ'}</button>`:'')
+    +`<button class="btn" type="button" id="custBtn">📍 ลูกค้า Bulk</button>`
     +(p?`<button class="btn" type="button" id="repBtn">🖨️ รายงาน</button>`:'')
     +(me.canEdit?`<button class="btn" type="button" id="dayBtn">📅 วันส่งใหม่</button>
       ${(p||d.dates.length)?`<label class="btn up" for="xjTop" title="ไฟล์ Excel ที่แอดมินจัดรถไว้ (ขนส่ง/รายชื่อ/ทะเบียน/เลขที่ใบ 5 ส่วน) → เทียบกับแผน + จับคู่คนขับ/สินค้า → ลงตารางแผน → พิมพ์ → แจกงาน"><span class="upic" aria-hidden="true">📥</span>นำเข้าไฟล์จัดรถ<input type="file" id="xjTop" class="vh" accept=".xlsx,.xls"></label>`:''}
-      ${me.isDev?`<label class="btn up" for="fileIn" title="สำรองเฉพาะ DEV — ปกติแผนแอดมินมาจาก Order Hub เอง"><span class="upic" aria-hidden="true">⬆</span>อัปโหลด Excel (สำรอง)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>`:''}`:'');
+      ${me.isDev&&!TEST?`<label class="btn up" for="fileIn" title="สำรองเฉพาะ DEV — ปกติแผนแอดมินมาจาก Order Hub เอง"><span class="upic" aria-hidden="true">⬆</span>อัปโหลด Excel (สำรอง)<input type="file" id="fileIn" class="vh" accept=".xlsx,.xls"></label>`:''}`:'');
   $('custBtn').onclick=openCustomers;
+  if($('testBtn')) $('testBtn').onclick=()=>setTest(!TEST);
   if($('repBtn')) $('repBtn').onclick=bulkReport;
   if($('dayBtn')) $('dayBtn').onclick=()=>askDay();
   if($('fileIn')) $('fileIn').addEventListener('change',onAdminFile);
   if($('xjTop')) $('xjTop').addEventListener('change',onJobFile);
   const ld=(p&&p.load_date)||(d.admin&&d.admin.load_date);
-  $('meta').innerHTML=d.sendDate?`<span>โหลด <b>${thDate(ld)}</b></span><span>ส่ง <b>${thDate(d.sendDate)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`:'';
+  $('meta').innerHTML=(d.test?`<span style="background:#ede9fe;color:#5b21b6;border-radius:8px;padding:2px 10px;font-weight:700">🧪 โหมดแผนทดสอบ — การ์ด LINE ส่งเฉพาะ DEV · ผูกได้แค่คนขับทดสอบ · ไม่นับรายงาน/ค่าแรง</span>`:'')
+    +(d.sendDate?`<span>โหลด <b>${thDate(ld)}</b></span><span>ส่ง <b>${thDate(d.sendDate)}</b></span><span>จุดโหลด <b>พันตัน</b></span>`:'');
   renderRevs(); renderAdmin(); renderPlan();
 }
 
@@ -1532,7 +1541,7 @@ function askDay(){
     <div class="dlgft"><button type="button" class="btn" id="dNo">ยกเลิก</button><button type="button" class="btn pri" id="dYes">สร้าง</button></div></div>`;
   m.hidden=false; $('dX').onclick=close; $('dNo').onclick=close; $('dSend').focus();
   $('dYes').onclick=async()=>{ const sd=$('dSend').value; if(!sd){ toast('เลือกวันที่ส่ง',true); return; }
-    try{ const r=await postB({action:'newPlan',sendDate:sd,loadDate:$('dLoad').value}); if(!r.ok){ toast(r.error||'ไม่สำเร็จ',true); return; } close(); load(sd); }
+    try{ const r=await postB({action:'newPlan',sendDate:sd,loadDate:$('dLoad').value,test:TEST}); if(!r.ok){ toast(r.error||'ไม่สำเร็จ',true); return; } close(); load(sd); }
     catch(e){ toast('ไม่สำเร็จ — ลองใหม่',true); } };
 }
 function askDocNext(){
@@ -1708,7 +1717,7 @@ async function printTrips(ids){
   { const iss=pdIssues(js);   /* 🗂️ ชนิดสินค้าที่ยังไม่อยู่ในฐาน → หัวใบยังเป็นชื่อเดิม + บิลตามแผน */
     if(iss.miss.length&&!(await askYes('ชนิดสินค้ายังไม่อยู่ในฐานข้อมูล',iss.miss.join(', ')+' — ใบขนส่งจะใช้ชื่อ '+FM_CO_DEF+' และบิลตามแผน (ไม่มีอักษรบริษัท) · เพิ่มได้ที่เมนู ฐานข้อมูล › ชนิดสินค้า','พิมพ์ต่อ'))) return;
     if(iss.noCo.length&&!(await askYes('บริษัทยังไม่มีชื่อเต็ม','รหัส '+iss.noCo.join(', ')+' ยังไม่ใส่ชื่อบริษัท — หัวใบจะเว้นช่องให้เขียนเอง · ใส่ได้ที่เมนู ฐานข้อมูล › ชนิดสินค้า','พิมพ์ต่อ'))) return; }
-  if(noDoc&&!(await askYes('ออกเลขที่ใบขนส่ง',noDoc+' เที่ยวยังไม่มีเลขที่ใบ — ระบบจะออกเลขใหม่ให้ (เริ่ม '+docNext()+') · ออกแล้วเลขผูกกับเที่ยวนั้น พิมพ์ซ้ำได้เลขเดิม','ออกเลข + พิมพ์'))) return;
+  if(noDoc&&!(DATA.plan&&DATA.plan.is_test)&&!(await askYes('ออกเลขที่ใบขนส่ง',noDoc+' เที่ยวยังไม่มีเลขที่ใบ — ระบบจะออกเลขใหม่ให้ (เริ่ม '+docNext()+') · ออกแล้วเลขผูกกับเที่ยวนั้น พิมพ์ซ้ำได้เลขเดิม','ออกเลข + พิมพ์'))) return;
   toast('กำลังเตรียมใบขนส่ง '+js.length+' ใบ…');
   try{
     const r=await postB({action:'printData',ids});
@@ -1744,7 +1753,7 @@ function fmTr01(j,pl,prev,by,cdoc){
   return `<section class="fm"><div class="fbox">
   <div class="fq" style="height:90.1mm">
     ${C(54,5.5,`<b>${e(CO)}</b>`,'f12')}${T(22,22.5,'SSB','flogo')}${T(75,14.4,'ใบขนส่งน้ำมัน','f11')}${T(70,26.6,'ส่วนที่ 1 สำหรับฝ่ายขนส่ง','f9')}
-    <div class="fdoc">${T(1.2,5.8,'<b>เลขที่เอกสาร</b>','f12')}<div class="fdno">${e(j.doc_no||'')}</div>
+    <div class="fdoc">${T(1.2,5.8,'<b>เลขที่เอกสาร</b>','f12')}<div class="fdno">${e(j.doc_no||(pl&&pl.is_test?'ทดสอบ':''))}</div>
       ${T(1.2,14.7,'ออกจากโรงงานก่อนเวลา')}${V(60,14.7,f.leaveBy,17,'fb')}${T(1.2,24.9,'ส่งถึงลูกค้าก่อนเวลา')}${V(60,24.9,f.arriveBy||noteTime(j.note)||noteTime(j.deliver_time),17,'fb')}</div>
     ${T(112,38.4,'<b>ชนิดน้ำมัน</b>','f12')}${V(149,38.4,j.prod_name,34,'fb f11')}
     ${T(1.2,49.1,'ชื่อลูกค้า')}${V(16.6,49.1,j.cust_name,32)}${T(50,49.1,`<b><u>${e(billCode(j))}</u></b>`,'f13')}
