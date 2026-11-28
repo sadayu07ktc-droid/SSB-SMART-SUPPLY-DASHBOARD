@@ -320,6 +320,10 @@
   .rp-now small{display:block;font-size:12px;color:var(--ink-faint)}
   .rp-now b{font-size:16px}
   .rp-now em{font-style:normal;font-size:11.5px;font-weight:700;color:#8a5a0b;background:#fef0d9;border-radius:999px;padding:2px 8px;margin-left:8px}
+  .rp-sec{margin:14px 2px 6px;font-size:12.5px;font-weight:700;color:var(--ink-faint)}
+  .rp-field{display:flex;flex-direction:column;gap:6px}
+  .rp-field .rp-opt[disabled]:not(.on){opacity:.55}
+  .rp-plate{width:100%;min-height:40px;padding:8px 10px;border-radius:12px;border:1px solid var(--line,#d8e2dd);background:var(--surface,#fff);color:inherit;font:inherit;font-size:14px}
   button.rp-opt{font:inherit;color:inherit;text-align:left;width:100%}
   button.rp-opt.on{border-color:var(--pine,#1F8A6F);box-shadow:inset 0 0 0 1px var(--pine,#1F8A6F);cursor:default}
   #gate .rp-gate{max-width:420px;width:100%}
@@ -1124,8 +1128,21 @@ function roleHtml(r){
     ${r.canPlay?(r.roles||[]).map(x=>`<button class="dvs-opt rp-opt${x.type===cur?' on':''}" type="button"${x.type===cur?' disabled':''} onclick="playRole('${x.type}',this)">
         <span class="ic" aria-hidden="true">${x.icon}</span><span><b>${esc(x.label)}</b><small>${x.type===cur?'กำลังเล่นโรลนี้':'แตะเพื่อเล่นเป็นโรลนี้'}</small></span></button>`).join('')
       :`<div class="dvs-warn">บัญชีนี้ยังไม่ใช่ชนิด DEV — เล่นโรลไม่ได้</div>`}
+    ${r.canPlay&&(r.fieldRoles||[]).length?fieldHtml(r,cur):''}
     <div class="dvs-note">เล่นโรล = เป็นแอดมินชนิดนั้นจริงชั่วคราว: <b>แจ้งเตือน LINE · ริชเมนู · หน้าเว็บ</b> ตามโรลนี้ · สิทธิ์ DEV (หน้านี้/ค่ากลาง/สิทธิ์แอดมิน) ปิดไว้จนกลับเป็น DEV<br>
       ข้อความเฉพาะ DEV ยังได้เสมอ · บัญชีคนขับ = ปิดคนขับชั่วคราว · ในไลน์พิมพ์ <b>"โรล"</b> เพื่อสลับ/กลับได้ทุกเมื่อ · หน้าเว็บที่เปิดค้างไว้ให้รีเฟรช</div></div>`;
+}
+/* 🧪 เฟส 3ก: คนหน้างานทดสอบ (สวน/ทีมตัด/ลาน/คนขับไร่) · 1 โรล 1 คน · คนขับเลือกทะเบียนรถไร่ที่ใช้งานตอนเล่น */
+function fieldHtml(r,cur){
+  const pl=r.plates||[], fr=(r.fieldRoles||[]).find(x=>x.type==='DRIVER')||{};
+  return `<div class="rp-sec">🧪 คนหน้างาน (งานทดสอบ)</div>`+(r.fieldRoles||[]).map(x=>{
+    const on=x.type===cur, dis=on||x.busy;
+    const sub=on?'กำลังเล่นโรลนี้'+(x.plate?' · '+esc(x.plate):''):x.busy?'🔒 '+esc(x.by||'DEV คนอื่น')+' เล่นอยู่':'แตะเพื่อเล่น · การ์ด LINE ไปเฉพาะ DEV';
+    const pick=x.type==='DRIVER'&&!dis?`<select id="rpPlate" class="rp-plate" aria-label="ทะเบียนรถที่ยืม" onclick="event.stopPropagation()">
+        <option value="">— เลือกทะเบียนรถไร่ —</option>${pl.map(p=>`<option value="${esc(p.plate)}"${p.plate===fr.plate?' selected':''}>${esc(p.plate)}${p.type?' · '+esc(p.type):''}</option>`).join('')}</select>`:'';
+    return `<div class="rp-field"><button class="dvs-opt rp-opt${on?' on':''}" type="button"${dis?' disabled':''} onclick="playRole('${x.type}',this)">
+        <span class="ic" aria-hidden="true">${x.icon}</span><span><b>${esc(x.label)}</b><small>${sub}</small></span></button>${pick}</div>`;
+  }).join('');
 }
 async function openRolePanel(){
   $('#dw').innerHTML=`<div class="dwhead"><div class="top"><h2>🎭 สลับโรล</h2><button class="xbtn" onclick="closeDw()" aria-label="ปิด">✕</button></div>
@@ -1136,13 +1153,19 @@ async function openRolePanel(){
 }
 async function playRole(to,btn){
   if(BUSY) return;
-  const lab=to==='DEV'?'DEV':(((RST&&RST.roles)||[]).find(x=>x.type===to)||{}).label||to;
-  const msg=to==='DEV'?'คืนสิทธิ์ DEV · แจ้งเตือนกลับมาตามที่ติ๊ก · ริชเมนูเดิม'
+  const fld=((RST&&RST.fieldRoles)||[]).find(x=>x.type===to);
+  const lab=to==='DEV'?'DEV':(((RST&&RST.roles)||[]).concat((RST&&RST.fieldRoles)||[]).find(x=>x.type===to)||{}).label||to;
+  let plate='';
+  if(to==='DRIVER'){ plate=(($('#rpPlate')||{}).value||'').trim(); if(!plate){ await ssbAlert('เลือกทะเบียนรถไร่ที่จะยืมก่อนครับ'); return; } }
+  const msg=fld?`เป็น ${lab}${plate?' (รถ '+plate+')':''} ชั่วคราว
+งานของโรลนี้ = งานทดสอบ 🧪: การ์ด LINE ไปเฉพาะ DEV · ไม่เข้ารายงาน/ค่าแรง/Order Hub
+สิทธิ์ DEV ปิดชั่วคราว — กลับได้จากหน้านี้ หรือพิมพ์ "โรล" ในไลน์`
+    :to==='DEV'?'คืนสิทธิ์ DEV · แจ้งเตือนกลับมาตามที่ติ๊ก · ริชเมนูเดิม'
     :`แจ้งเตือน LINE · ริชเมนู · หน้าเว็บ จะเป็นแบบ ${lab}\nสิทธิ์ DEV ปิดชั่วคราว — กลับได้จากหน้านี้ หรือพิมพ์ "โรล" ในไลน์`;
   if(!(await ssbConfirm({icon:'🎭',title:to==='DEV'?'กลับเป็น DEV':'เล่นเป็น '+lab,msg,okText:'ยืนยัน'}))) return;
   BUSY=true; if(btn) btn.disabled=true;
   try{
-    const d=await apiPost({action:'playRole',to});
+    const d=await apiPost(plate?{action:'playRole',to,plate}:{action:'playRole',to});
     BUSY=false;
     if(d&&d.ok){ toast((d.same?'เป็น ':'เปลี่ยนเป็น ')+d.label+(d.menu?' · ริชเมนู: '+d.menu:'')); setTimeout(()=>location.reload(),900); return; }
     await ssbAlert('❌ สลับไม่สำเร็จ\n'+((d&&d.error)||'ไม่ทราบสาเหตุ'));
